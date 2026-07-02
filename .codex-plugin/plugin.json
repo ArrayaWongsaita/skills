@@ -1,0 +1,27 @@
+{
+  "name": "personal-ai-skills-codex-adapter",
+  "version": "0.1.0",
+  "description": "Codex adapter for personal AI-agent skills.",
+  "license": "UNLICENSED",
+  "keywords": [
+    "ai-agents",
+    "skills"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Personal AI Skills",
+    "shortDescription": "Codex adapter for your reusable AI-agent workflows",
+    "developerName": "Personal",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use one of my personal AI-agent skills from this workspace when it matches the task."
+    ],
+    "brandColor": "#111827",
+    "screenshots": []
+  }
+}
