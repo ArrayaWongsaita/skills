@@ -1,35 +1,41 @@
 # Personal AI Skills
 
-Workspace for building and keeping your own reusable AI-agent workflows. Keep the core instructions vendor-neutral, then add adapter files only when a specific AI tool needs them.
+Workspace for building and maintaining reusable AI-agent workflows. Skills are kept vendor-neutral where possible, with adapter metadata added only when a specific AI tool needs it.
 
-## Layout
+## Requirements
 
-Put skills under `skills/`. Group them however makes sense for you:
+- Node.js 20 or newer
+- An AI agent that supports `SKILL.md`-based skills
 
-- `skills/engineering/` - coding, review, debugging, and delivery workflows.
-- `skills/productivity/` - writing and operating workflows.
-- `skills/misc/` - uncategorized skills kept for later sorting.
-- `skills/in-progress/` - drafts that should not be installed by default.
-- `skills/deprecated/` - old skills kept for reference.
+## Repository layout
 
-Each skill is a directory with a required `SKILL.md` containing YAML frontmatter with `name` and `description`. Keep the body as plain Markdown instructions that any AI agent can follow.
+Skills live under `skills/` and are grouped by domain:
 
-Tool-specific metadata can live next to the skill when needed:
+```text
+skills/
+└── engineering/
+    ├── nextjs/
+    │   └── nextjs-safe-env/
+    └── production-project-governance-bootstrap/
+```
 
-- `agents/openai.yaml` - optional OpenAI/Codex UI metadata.
-- `.codex-plugin/plugin.json` - optional repository-level Codex plugin adapter.
-- Add other adapter metadata only when another AI tool needs it.
+Each skill is a directory containing a required `SKILL.md` file. A skill may also include references, scripts, evaluation fixtures, templates, or tool-specific metadata.
 
-## Create a Skill
+Optional adapter files include:
 
-Create a folder under `skills/` whose folder name matches the skill name:
+- `agents/openai.yaml` for OpenAI/Codex UI metadata.
+- `.codex-plugin/plugin.json` for exposing the workspace as a Codex plugin.
+
+## Create a skill
+
+Create a directory under `skills/`. The directory name must match the skill's `name` field:
 
 ```text
 skills/my-skill/
-  SKILL.md
+└── SKILL.md
 ```
 
-Minimal `SKILL.md`:
+Start with YAML frontmatter containing a specific name and description:
 
 ```markdown
 ---
@@ -42,28 +48,48 @@ description: Describe what this skill does and the exact situations where an AI 
 Write the workflow, rules, references, and verification steps an AI agent should follow when this skill is used.
 ```
 
-## Setup
+Keep the description specific enough to trigger only for relevant requests. Keep the body actionable: explain the workflow, constraints, supporting references, and how to verify the result.
 
-Validate the repository:
+## Validate the workspace
+
+Run the test suite and skill validator before installing or sharing skills:
 
 ```bash
 npm test
+npm run validate
 ```
 
-Or run the validator directly:
+The validator can also be run directly:
 
 ```bash
 node scripts/validate-skills.mjs
 ```
 
-Install shippable skills into Codex, if you use Codex:
+Validation checks the skill frontmatter, naming conventions, directory/name matching, and Codex plugin configuration.
+
+## Install skills into Codex
+
+Create or refresh symlinks for shippable skills in your local Codex skills directory:
 
 ```bash
 ./scripts/link-skills.sh
 ```
 
-By default, `scripts/link-skills.sh` symlinks every skill outside `in-progress`, `deprecated`, and `personal` into `${CODEX_HOME:-$HOME/.codex}/skills`. Override the destination with `CODEX_SKILLS_DIR`:
+By default, the script installs to `${CODEX_HOME:-$HOME/.codex}/skills`. It skips skills inside `node_modules`, `deprecated`, `in-progress`, and `personal` directories. To choose another destination:
 
 ```bash
 CODEX_SKILLS_DIR="$HOME/.codex/skills" ./scripts/link-skills.sh
 ```
+
+List the skill files currently in the workspace with:
+
+```bash
+./scripts/list-skills.sh
+```
+
+## Development workflow
+
+1. Add or update a skill under `skills/`.
+2. Run `npm test` and `npm run validate`.
+3. Review the generated diff and confirm that no secrets or machine-specific values were added.
+4. Run `scripts/link-skills.sh` when the skill is ready for local Codex use.
