@@ -1,4 +1,0 @@
-interface:
-  display_name: "Grill TDD Clean"
-  short_description: "Clarify, document, test, and clean changes"
-  default_prompt: "Use $grill-tdd-clean to clarify requirements, capture useful docs, implement with TDD, and clean up the result."

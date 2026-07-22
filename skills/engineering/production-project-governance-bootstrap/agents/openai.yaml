@@ -1,0 +1,7 @@
+interface:
+  display_name: "Production Project Governance Bootstrap"
+  short_description: "Design and validate production AI engineering governance"
+  default_prompt: "Use $production-project-governance-bootstrap to audit this repository and design the smallest sufficient production governance system; default to audit unless I explicitly request plan, setup, refactor, update, or validate."
+
+policy:
+  allow_implicit_invocation: false

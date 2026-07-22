@@ -1,0 +1,7 @@
+interface:
+  display_name: "Next.js Safe Env"
+  short_description: "Keep Next.js client and server env access safe"
+  default_prompt: "Use $nextjs-safe-env to set up or audit type-safe environment variables in this Next.js project."
+
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,11 @@
+{
+  "name": "governance-eval-monorepo",
+  "private": true,
+  "packageManager": "npm@10.0.0",
+  "workspaces": ["apps/*", "services/*", "packages/*"],
+  "scripts": {
+    "build": "echo build",
+    "test": "echo test",
+    "lint": "echo lint"
+  }
+}

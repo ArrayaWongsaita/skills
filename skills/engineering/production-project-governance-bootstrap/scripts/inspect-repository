@@ -1,0 +1,197 @@
+#!/usr/bin/env node
+
+import { execFileSync } from "node:child_process";
+import { readFile, readdir, stat } from "node:fs/promises";
+import path from "node:path";
+import process from "node:process";
+
+const IGNORE = new Set([
+  ".git", ".hg", ".svn", "node_modules", "vendor", "coverage", "dist", "build",
+  "target", ".next", ".cache", ".turbo", ".idea", ".vscode", "__pycache__",
+]);
+
+function usage() {
+  console.log("Usage: inspect-repository [--root PATH] [--json] [--max-files N]");
+  console.log("Read-only repository metadata inspection. Requires Node.js 20 or newer.");
+}
+
+function parseArgs(argv) {
+  const options = { root: process.cwd(), json: false, maxFiles: 20000 };
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === "--root") options.root = argv[++index];
+    else if (arg === "--json") options.json = true;
+    else if (arg === "--max-files") options.maxFiles = Number(argv[++index]);
+    else if (arg === "--help" || arg === "-h") return { help: true };
+    else throw new Error(`unknown argument: ${arg}`);
+  }
+  if (!options.root) throw new Error("--root requires a path");
+  if (!Number.isInteger(options.maxFiles) || options.maxFiles < 1) {
+    throw new Error("--max-files must be a positive integer");
+  }
+  return options;
+}
+
+async function walk(root, maxFiles) {
+  const files = [];
+  const directories = [root];
+  let truncated = false;
+  while (directories.length > 0) {
+    const directory = directories.pop();
+    let entries;
+    try {
+      entries = await readdir(directory, { withFileTypes: true });
+    } catch (error) {
+      files.push({ path: directory, error: error.message });
+      continue;
+    }
+    for (const entry of entries) {
+      if (IGNORE.has(entry.name)) continue;
+      const fullPath = path.join(directory, entry.name);
+      if (entry.isSymbolicLink()) continue;
+      if (entry.isDirectory()) directories.push(fullPath);
+      else if (entry.isFile()) files.push({ path: fullPath });
+      if (files.length >= maxFiles) {
+        truncated = true;
+        return { files, truncated };
+      }
+    }
+  }
+  return { files, truncated };
+}
+
+function relative(root, file) {
+  return path.relative(root, file).split(path.sep).join("/") || ".";
+}
+
+function matchesAny(value, patterns) {
+  return patterns.some((pattern) => pattern.test(value));
+}
+
+async function packageMetadata(root, packageFiles) {
+  const packages = [];
+  for (const file of packageFiles) {
+    try {
+      const parsed = JSON.parse(await readFile(file, "utf8"));
+      packages.push({
+        path: relative(root, file),
+        name: typeof parsed.name === "string" ? parsed.name : null,
+        packageManager: typeof parsed.packageManager === "string" ? parsed.packageManager : null,
+        workspaces: Array.isArray(parsed.workspaces)
+          ? parsed.workspaces
+          : Array.isArray(parsed.workspaces?.packages) ? parsed.workspaces.packages : null,
+        scripts: parsed.scripts && typeof parsed.scripts === "object" ? Object.keys(parsed.scripts).sort() : [],
+      });
+    } catch (error) {
+      packages.push({ path: relative(root, file), error: `cannot parse package.json: ${error.message}` });
+    }
+  }
+  return packages;
+}
+
+function gitStatus(root) {
+  try {
+    const topLevel = execFileSync("git", ["-C", root, "rev-parse", "--show-toplevel"], {
+      encoding: "utf8", stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    const statusText = execFileSync("git", ["-C", root, "status", "--short", "--", "."], {
+      encoding: "utf8", stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    return { root: topLevel, dirty: statusText.length > 0, entries: statusText ? statusText.split("\n") : [] };
+  } catch {
+    return { root: null, dirty: null, entries: [], note: "Git metadata unavailable" };
+  }
+}
+
+function printHuman(report) {
+  console.log(`Repository: ${report.root}`);
+  console.log(`Files inspected: ${report.fileCount}${report.truncated ? " (limit reached)" : ""}`);
+  console.log(`Version control: ${report.git.root ? (report.git.dirty ? "dirty" : "clean") : "unavailable"}`);
+  const sections = [
+    ["Instruction sources", report.instructions],
+    ["Skill definitions", report.skills],
+    ["Repository manifests", report.manifests],
+    ["CI and deployment candidates", report.ciAndDeployment],
+    ["Governance and ownership candidates", report.governance],
+  ];
+  for (const [title, values] of sections) {
+    console.log(`\n${title} (${values.length})`);
+    for (const value of values) console.log(`- ${value}`);
+  }
+  console.log("\nPackage command inventory");
+  if (report.packages.length === 0) console.log("- none found");
+  for (const pkg of report.packages) {
+    if (pkg.error) console.log(`- ${pkg.path}: ${pkg.error}`);
+    else console.log(`- ${pkg.path}: ${pkg.scripts.length ? pkg.scripts.join(", ") : "no scripts"}`);
+  }
+  if (report.readErrors.length > 0) {
+    console.log("\nUnreadable paths");
+    for (const item of report.readErrors) console.log(`- ${item.path}: ${item.error}`);
+  }
+}
+
+async function main() {
+  let options;
+  try {
+    options = parseArgs(process.argv.slice(2));
+  } catch (error) {
+    console.error(`error: ${error.message}`);
+    usage();
+    process.exit(2);
+  }
+  if (options.help) {
+    usage();
+    return;
+  }
+
+  const root = path.resolve(options.root);
+  try {
+    if (!(await stat(root)).isDirectory()) throw new Error("root is not a directory");
+  } catch (error) {
+    console.error(`error: cannot inspect ${root}: ${error.message}`);
+    process.exit(2);
+  }
+
+  const walked = await walk(root, options.maxFiles);
+  const readable = walked.files.filter((item) => !item.error).map((item) => item.path);
+  const rel = readable.map((file) => relative(root, file));
+  const instructions = rel.filter((file) => /(^|\/)(AGENTS|AGENTS\.override)\.md$/.test(file)).sort();
+  const skills = rel.filter((file) => /(^|\/)SKILL\.md$/.test(file)).sort();
+  const manifests = rel.filter((file) => matchesAny(file, [
+    /(^|\/)package\.json$/, /(^|\/)pyproject\.toml$/, /(^|\/)Cargo\.toml$/,
+    /(^|\/)go\.mod$/, /(^|\/)Makefile$/, /(^|\/)Taskfile\.ya?ml$/,
+    /(^|\/)pnpm-workspace\.yaml$/, /(^|\/)workspace\.json$/,
+  ])).sort();
+  const ciAndDeployment = rel.filter((file) => matchesAny(file, [
+    /^\.github\/workflows\//, /^\.gitlab-ci\.yml$/, /(^|\/)Dockerfile[^/]*$/,
+    /(^|\/)docker-compose[^/]*\.ya?ml$/, /(^|\/)helm\//, /(^|\/)terraform\//,
+    /(^|\/)k8s\//, /(^|\/)deploy[^/]*\//,
+  ])).sort();
+  const governance = rel.filter((file) => matchesAny(file.toLowerCase(), [
+    /(^|\/)(docs\/)?(adr|decisions|architecture|runbooks?|incidents?|engineering-memory)(\/|\.)/,
+    /(^|\/)codeowners$/, /(^|\/)security\.md$/, /(^|\/)ownership\.md$/,
+    /(^|\/)plans\.md$/, /(^|\/)skills\.md$/,
+  ])).sort();
+  const packageFiles = readable.filter((file) => path.basename(file) === "package.json");
+  const report = {
+    root,
+    readOnly: true,
+    fileCount: readable.length,
+    truncated: walked.truncated,
+    git: gitStatus(root),
+    instructions,
+    skills,
+    manifests,
+    ciAndDeployment,
+    governance,
+    packages: await packageMetadata(root, packageFiles),
+    readErrors: walked.files.filter((item) => item.error).map((item) => ({ path: relative(root, item.path), error: item.error })),
+  };
+  if (options.json) console.log(JSON.stringify(report, null, 2));
+  else printHuman(report);
+}
+
+main().catch((error) => {
+  console.error(`error: ${error.stack || error.message}`);
+  process.exit(2);
+});
