@@ -1,5 +1,0 @@
-{
-  "name": "security-sensitive-fixture",
-  "private": true,
-  "scripts": { "test": "node --test" }
-}

@@ -1,21 +1,27 @@
 #!/usr/bin/env node
-import assert from "node:assert/strict";
-import { readdir, readFile } from "node:fs/promises";
+import { access, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
+import { constants } from "node:fs";
+import { discoverSkills, indexPath, renderIndex, repoRoot } from "./generate-skill-index.mjs";
 
-const repoRoot = process.cwd();
-const skillRoot = path.join(repoRoot, "skills");
-const excludedSegments = new Set(["node_modules"]);
+const skillNamePattern = /^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$/;
+const categoryPattern = /^[a-z0-9][a-z0-9-]*$/;
+
+async function exists(file) {
+  try {
+    await access(file, constants.R_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 async function walk(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
   const files = [];
 
   for (const entry of entries) {
-    if (excludedSegments.has(entry.name)) {
-      continue;
-    }
-
+    if (entry.name.startsWith(".") || entry.name === "node_modules") continue;
     const fullPath = path.join(directory, entry.name);
     if (entry.isDirectory()) {
       files.push(...await walk(fullPath));
@@ -27,57 +33,90 @@ async function walk(directory) {
   return files;
 }
 
-function parseFrontmatter(markdown, file) {
-  const match = markdown.match(/^---\n([\s\S]*?)\n---\n/);
-  assert.ok(match, `${file} must start with YAML frontmatter`);
+function hasGuideSection(guide, heading) {
+  return new RegExp(`^## ${heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "m").test(guide);
+}
 
-  const fields = new Map();
-  for (const line of match[1].split("\n")) {
-    const field = line.match(/^([a-z_]+):\s*(.+)$/);
-    assert.ok(field, `${file} has invalid frontmatter line: ${line}`);
-    fields.set(field[1], field[2].trim());
+async function validate() {
+  const errors = [];
+  const skillRoot = path.join(repoRoot, "skills");
+  const skills = await discoverSkills();
+  const names = new Map();
+
+  for (const skill of skills) {
+    if (!categoryPattern.test(skill.category)) {
+      errors.push(`${skill.skillPath}: category must use lowercase letters, numbers, and hyphens`);
+    }
+
+    if (!skillNamePattern.test(skill.name)) {
+      errors.push(`${skill.skillPath}: skill name must use lowercase letters, numbers, and hyphens`);
+    }
+
+    if (!skill.description) {
+      errors.push(`${skill.skillPath}/SKILL.md: description is required`);
+    } else if (skill.description.length < 80) {
+      errors.push(`${skill.skillPath}/SKILL.md: description should be at least 80 characters`);
+    }
+
+    if (!skill.metadataName) {
+      errors.push(`${skill.skillPath}/SKILL.md: name is required`);
+    } else if (skill.metadataName !== path.posix.basename(skill.skillPath)) {
+      errors.push(`${skill.skillPath}/SKILL.md: frontmatter name must match its directory`);
+    }
+
+    if (names.has(skill.name)) {
+      errors.push(`${skill.skillPath}: duplicate skill name; also found at ${names.get(skill.name)}`);
+    } else {
+      names.set(skill.name, skill.skillPath);
+    }
+
+    const guideFile = path.join(repoRoot, skill.guidePath);
+    if (!await exists(guideFile)) {
+      errors.push(`${skill.guidePath}: guide is missing`);
+      continue;
+    }
+
+    const guide = await readFile(guideFile, "utf8");
+    if (!hasGuideSection(guide, "ภาษาไทย / Thai")) {
+      errors.push(`${skill.guidePath}: Thai guide section is missing`);
+    }
+    if (!hasGuideSection(guide, "English / ภาษาอังกฤษ")) {
+      errors.push(`${skill.guidePath}: English guide section is missing`);
+    }
+    if (!guide.includes(`npx skills add ArrayaWongsaita/skills`) || !guide.includes(`--skill ${skill.name}`)) {
+      errors.push(`${skill.guidePath}: install command for ${skill.name} is missing`);
+    }
   }
 
-  return fields;
-}
-
-function validateSkillName(name, file) {
-  assert.match(name, /^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$/, `${file} has invalid skill name`);
-}
-
-async function validateSkill(file) {
-  const markdown = await readFile(file, "utf8");
-  const metadata = parseFrontmatter(markdown, file);
-  const name = metadata.get("name");
-  const description = metadata.get("description");
-  const folderName = path.basename(path.dirname(file));
-
-  assert.ok(name, `${file} must define name`);
-  assert.ok(description, `${file} must define description`);
-  validateSkillName(name, file);
-  assert.equal(name, folderName, `${file} name must match its folder`);
-  assert.ok(description.length >= 80, `${file} description should explain when to use the skill`);
-}
-
-async function main() {
-  const files = await walk(skillRoot);
-  const skillFiles = files.filter((file) => path.basename(file) === "SKILL.md").sort();
-
+  const skillFiles = (await walk(skillRoot)).filter((file) => path.basename(file) === "SKILL.md");
   for (const file of skillFiles) {
-    await validateSkill(file);
+    const relative = path.relative(skillRoot, file).split(path.sep);
+    if (relative.length !== 3) {
+      errors.push(`${path.relative(repoRoot, file)}: SKILL.md must be at skills/<category>/<skill>/SKILL.md`);
+    }
   }
 
-  const plugin = JSON.parse(await readFile(path.join(repoRoot, ".codex-plugin/plugin.json"), "utf8"));
-  assert.equal(plugin.skills, "./skills/", ".codex-plugin/plugin.json must expose ./skills/");
-
-  if (skillFiles.length === 0) {
-    console.log("validated 0 skills; add skills under skills/ when ready");
+  if (!await exists(indexPath)) {
+    errors.push("docs/skills/README.md: generated index is missing");
   } else {
-    console.log(`validated ${skillFiles.length} skill(s)`);
+    const actualIndex = await readFile(indexPath, "utf8");
+    const expectedIndex = renderIndex(skills);
+    if (actualIndex !== expectedIndex) {
+      errors.push("docs/skills/README.md: run npm run docs:index to refresh the generated index");
+    }
   }
+
+  if (errors.length > 0) {
+    throw new Error(errors.join("\n"));
+  }
+
+  return skills;
 }
 
-main().catch((error) => {
+try {
+  const skills = await validate();
+  console.log(`validated ${skills.length} skill(s), guides, and generated index`);
+} catch (error) {
   console.error(error.message);
-  process.exit(1);
-});
+  process.exitCode = 1;
+}

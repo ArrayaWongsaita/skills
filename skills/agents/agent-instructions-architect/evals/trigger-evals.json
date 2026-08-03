@@ -1,0 +1,66 @@
+[
+  {
+    "query": "Audit our AGENTS.md hierarchy and reduce the Codex context loaded from packages/web.",
+    "should_trigger": true
+  },
+  {
+    "query": "ช่วยตรวจ AGENTS.override.md ว่าทับกฎ root ถูก scope หรือยัง",
+    "should_trigger": true
+  },
+  {
+    "query": "Make AGENTS.md canonical and create the smallest CLAUDE.md compatibility adapter.",
+    "should_trigger": true
+  },
+  {
+    "query": "Which .github/instructions files apply to this TypeScript path in Copilot CLI?",
+    "should_trigger": true
+  },
+  {
+    "query": "ตรวจ opencode.json instructions globs และหากฎที่โหลดซ้ำ",
+    "should_trigger": true
+  },
+  {
+    "query": "Validate broken links and precedence conflicts across our repository agent rules.",
+    "should_trigger": true
+  },
+  {
+    "query": "Measure the startup and conditional instruction context for all supported coding runtimes.",
+    "should_trigger": true
+  },
+  {
+    "query": "Migrate this large CLAUDE.md policy into a canonical cross-runtime AGENTS.md system.",
+    "should_trigger": true
+  },
+  {
+    "query": "Design a customer-support agent with refund tools and human handoffs.",
+    "should_trigger": false
+  },
+  {
+    "query": "Write a warmer Thai system prompt for our FAQ bot.",
+    "should_trigger": false
+  },
+  {
+    "query": "Review the README and contribution guide for clarity.",
+    "should_trigger": false
+  },
+  {
+    "query": "Create a new Codex skill for drafting release notes.",
+    "should_trigger": false
+  },
+  {
+    "query": "Debug why this React component rerenders too often.",
+    "should_trigger": false
+  },
+  {
+    "query": "Explain how to call the OpenAI Responses API from TypeScript.",
+    "should_trigger": false
+  },
+  {
+    "query": "Review our custom agent tool permissions and orchestration architecture.",
+    "should_trigger": false
+  },
+  {
+    "query": "Add a GitHub Actions workflow that runs tests on pull requests.",
+    "should_trigger": false
+  }
+]

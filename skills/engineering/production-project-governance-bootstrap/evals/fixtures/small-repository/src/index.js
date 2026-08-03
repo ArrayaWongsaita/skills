@@ -1,3 +1,0 @@
-export function isNonEmpty(value) {
-  return typeof value === "string" && value.length > 0;
-}

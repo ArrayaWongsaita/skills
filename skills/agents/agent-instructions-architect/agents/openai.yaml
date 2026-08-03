@@ -1,0 +1,6 @@
+interface:
+  display_name: "Agent Instructions Architect"
+  short_description: "Audit and migrate cross-runtime agent rules"
+  default_prompt: "Use $agent-instructions-architect to audit this repository's canonical AGENTS.md system across its active runtimes, measure resolved context, and propose the smallest safe migration."
+policy:
+  allow_implicit_invocation: true

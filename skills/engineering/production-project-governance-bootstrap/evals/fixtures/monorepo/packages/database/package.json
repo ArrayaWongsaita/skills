@@ -1,5 +1,0 @@
-{
-  "name": "@fixture/database",
-  "private": true,
-  "scripts": { "schema:check": "echo schema-check" }
-}

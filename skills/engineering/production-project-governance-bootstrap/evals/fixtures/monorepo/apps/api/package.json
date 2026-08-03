@@ -1,5 +1,0 @@
-{
-  "name": "@fixture/api",
-  "private": true,
-  "scripts": { "test": "echo api-test" }
-}

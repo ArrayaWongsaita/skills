@@ -1,5 +1,0 @@
-{
-  "name": "conflicting-instruction-fixture",
-  "private": true,
-  "scripts": { "test": "echo test" }
-}

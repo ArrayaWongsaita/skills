@@ -1,95 +1,173 @@
-# Personal AI Skills
+# Personal AI Skills / คลัง Skill ส่วนตัว
 
-Workspace for building and maintaining reusable AI-agent workflows. Skills are kept vendor-neutral where possible, with adapter metadata added only when a specific AI tool needs it.
+คลัง skill สำหรับ AI coding agents ของ ArrayaWongsaita โดยใช้ `SKILL.md` เป็นคำสั่งสำหรับ agent และใช้เอกสารใน `docs/skills/` เป็นคู่มือสำหรับคน
 
-## Requirements
+This repository collects reusable skills for AI coding agents. `SKILL.md` is the agent-facing source of truth; `docs/skills/` contains human-facing guides.
 
-- Node.js 20 or newer
-- An AI agent that supports `SKILL.md`-based skills
+## Requirements / ข้อกำหนด
 
-## Repository layout
+- Node.js 20 or newer / Node.js 20 ขึ้นไป
+- `npx` สำหรับเรียกใช้ `skills` CLI
+- AI agent ที่รองรับ Agent Skills และ `SKILL.md`
 
-Skills live under `skills/` and are grouped by domain:
+## Repository layout / โครงสร้าง repo
+
+แต่ละ skill มีหมวดหลักเดียว และชื่อ directory ต้องตรงกับ `name` ใน frontmatter:
+
+Each skill belongs to one primary category, and its directory name must match the `name` in its frontmatter:
 
 ```text
 skills/
-└── engineering/
-    ├── nextjs/
-    │   └── nextjs-safe-env/
-    └── production-project-governance-bootstrap/
+├── agents/
+│   └── agent-instructions-architect/
+│       └── SKILL.md
+└── nextjs/
+    └── nextjs-safe-env/
+        └── SKILL.md
+
+docs/
+└── skills/
+    ├── README.md
+    ├── agents/agent-instructions-architect.md
+    └── nextjs/nextjs-safe-env.md
 ```
 
-Each skill is a directory containing a required `SKILL.md` file. A skill may also include references, scripts, evaluation fixtures, templates, or tool-specific metadata.
+Skill อาจมี `references/`, `scripts/`, `tests/`, `evals/` และ metadata เฉพาะ agent เพิ่มเติมได้ แต่ไฟล์คู่มือสำหรับคนต้องอยู่ใน `docs/skills/<category>/<skill>.md`
 
-Optional adapter files include:
+A skill may also include `references/`, `scripts/`, `tests/`, `evals/`, and agent-specific metadata. Its human guide must live at `docs/skills/<category>/<skill>.md`.
 
-- `agents/openai.yaml` for OpenAI/Codex UI metadata.
-- `.codex-plugin/plugin.json` for exposing the workspace as a Codex plugin.
+ดูรายการทั้งหมดได้ที่ [Skill Index / ดัชนี Skill](docs/skills/README.md)
 
-## Create a skill
+## Install skills with `npx skills add` / ติดตั้ง skill
 
-Create a directory under `skills/`. The directory name must match the skill's `name` field:
+คำสั่งต่อไปนี้ใช้ source ของ repo นี้โดยตรง:
+
+The following commands install directly from this repository:
 
 ```text
-skills/my-skill/
-└── SKILL.md
+ArrayaWongsaita/skills
 ```
 
-Start with YAML frontmatter containing a specific name and description:
+ก่อนติดตั้งควรตรวจรายการและอ่านคู่มือของ skill ที่ต้องการก่อน:
+
+Before installing, list the available skills and review the relevant guide:
+
+```bash
+npx skills add ArrayaWongsaita/skills --list
+```
+
+### Install one skill / ติดตั้ง skill เดียว
+
+```bash
+npx skills add ArrayaWongsaita/skills --skill agent-instructions-architect
+```
+
+ตัวอย่างอื่น:
+
+```bash
+npx skills add ArrayaWongsaita/skills --skill nextjs-safe-env
+```
+
+### Install a category group / ติดตั้งทั้งหมวด
+
+หมวดหมู่เป็น convention ของ repo ดังนั้น CLI จะรับรายชื่อ skill ผ่าน `--skill` ทีละตัว เมื่อมีหลาย skill ให้ใช้ `--skill` ซ้ำกัน:
+
+Categories are a repository convention. The CLI receives the skill names explicitly, so repeat `--skill` for every skill in the category:
+
+```bash
+npx skills add ArrayaWongsaita/skills \
+  --skill agent-instructions-architect \
+  --skill nextjs-safe-env
+```
+
+คำสั่งของแต่ละหมวดที่สร้างจากรายการปัจจุบันอยู่ใน [Skill Index](docs/skills/README.md)
+
+### Install every skill / ติดตั้งทุก skill
+
+```bash
+npx skills add ArrayaWongsaita/skills --all
+```
+
+### Project or global scope / ติดตั้งเฉพาะ project หรือทั้งเครื่อง
+
+ค่าเริ่มต้นติดตั้งใน project ปัจจุบัน ใช้ `--global` เมื่อต้องการให้ทุก project ใช้งานได้:
+
+By default, installation targets the current project. Add `--global` to install for all projects:
+
+ถ้าต้องการใช้ skill ใน project อื่น ให้รันคำสั่งจาก project นั้น ไม่ใช่จาก repo คลังนี้ เว้นแต่ตั้งใจให้ CLI สร้าง agent directory ใน repo นี้
+
+To use a skill in another project, run the command from that project instead of this collection repository, unless you intentionally want project-scoped agent directories here.
+
+```bash
+npx skills add ArrayaWongsaita/skills \
+  --skill nextjs-safe-env \
+  --global
+```
+
+หากต้องการเลือก agent แบบไม่ interactive ให้เพิ่ม `--agent <agent-name>` และ `--yes` เช่น `--agent codex --yes` ส่วน agent ที่รองรับขึ้นอยู่กับ `skills` CLI
+
+To target a specific agent non-interactively, add `--agent <agent-name>` and `--yes`, for example `--agent codex --yes`. Supported agents are determined by the `skills` CLI.
+
+### Manage installed skills / จัดการ skill ที่ติดตั้งแล้ว
+
+```bash
+npx skills list
+npx skills update
+npx skills remove <skill-name>
+```
+
+## Create a skill / สร้าง skill ใหม่
+
+สร้าง directory ตามรูปแบบนี้ และเพิ่มคู่มือคนใน path ที่คู่กัน:
+
+Create the directory and matching human guide:
+
+```text
+skills/<category>/<skill-name>/
+└── SKILL.md
+
+docs/skills/<category>/<skill-name>.md
+```
+
+เริ่ม `SKILL.md` ด้วย frontmatter ที่มี `name` และ `description` ชัดเจน:
+
+Start `SKILL.md` with focused `name` and `description` frontmatter:
 
 ```markdown
 ---
 name: my-skill
-description: Describe what this skill does and the exact situations where an AI agent should use it. Make this specific enough that it triggers only for the right requests.
+description: Describe what this skill does and exactly when an AI agent should use it. Make this specific enough to trigger only for the right requests.
 ---
 
 # My Skill
 
-Write the workflow, rules, references, and verification steps an AI agent should follow when this skill is used.
+Write the actionable workflow, constraints, references, and verification steps.
 ```
 
-Keep the description specific enough to trigger only for relevant requests. Keep the body actionable: explain the workflow, constraints, supporting references, and how to verify the result.
+ใช้ [skill guide template](docs/templates/skill-guide.template.md) เพื่อให้คู่มือทุก skill มีรูปแบบเดียวกัน
 
-## Validate the workspace
+Use the [skill guide template](docs/templates/skill-guide.template.md) to keep guides consistent.
 
-Run the test suite and skill validator before installing or sharing skills:
+## Validate and update the index / ตรวจสอบและอัปเดต index
 
 ```bash
 npm test
+npm run docs:index
 npm run validate
 ```
 
-The validator can also be run directly:
+เรียก validator โดยตรงได้ด้วย `node scripts/validate-skills.mjs`
 
-```bash
-node scripts/validate-skills.mjs
-```
+You can also run the validator directly with `node scripts/validate-skills.mjs`.
 
-Validation checks the skill frontmatter, naming conventions, directory/name matching, and Codex plugin configuration.
+`npm run docs:index` สร้าง [Skill Index](docs/skills/README.md) แบบ deterministic จาก `SKILL.md` ส่วน `npm run validate` ตรวจ metadata, ชื่อซ้ำ, คู่มือที่ขาด และ index ที่ไม่ตรงกัน
 
-## Install skills into Codex
+`npm run docs:index` deterministically generates the [Skill Index](docs/skills/README.md) from `SKILL.md`. `npm run validate` checks metadata, duplicate names, missing guides, and stale index content.
 
-Create or refresh symlinks for shippable skills in your local Codex skills directory:
+## Development workflow / workflow การพัฒนา
 
-```bash
-./scripts/link-skills.sh
-```
-
-By default, the script installs to `${CODEX_HOME:-$HOME/.codex}/skills`. It skips skills inside `node_modules`, `deprecated`, `in-progress`, and `personal` directories. To choose another destination:
-
-```bash
-CODEX_SKILLS_DIR="$HOME/.codex/skills" ./scripts/link-skills.sh
-```
-
-List the skill files currently in the workspace with:
-
-```bash
-./scripts/list-skills.sh
-```
-
-## Development workflow
-
-1. Add or update a skill under `skills/`.
-2. Run `npm test` and `npm run validate`.
-3. Review the generated diff and confirm that no secrets or machine-specific values were added.
-4. Run `scripts/link-skills.sh` when the skill is ready for local Codex use.
+1. Add or update a skill under `skills/<category>/<skill-name>/`.
+2. Add or update its paired guide under `docs/skills/<category>/`.
+3. Run `npm run docs:index`.
+4. Run `npm test` and `npm run validate`.
+5. Review the diff for secrets, machine-specific values, stale links, and inaccurate install commands.

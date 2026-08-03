@@ -1,0 +1,109 @@
+{
+  "skill_name": "agent-instructions-architect",
+  "evals": [
+    {
+      "id": 1,
+      "name": "codex-nested-scope",
+      "prompt": "Audit this monorepo's Codex instructions from the repository root and from packages/web. Measure the active context at each working directory before recommending changes.",
+      "expected_output": "A read-only audit that separates inventory from each root-to-cwd Codex chain.",
+      "files": [
+        "evals/fixtures/codex-nested/AGENTS.md",
+        "evals/fixtures/codex-nested/packages/web/AGENTS.md",
+        "evals/fixtures/codex-nested/packages/api/AGENTS.md"
+      ],
+      "expectations": [
+        "The root measurement excludes both package AGENTS.md files from loaded context.",
+        "The packages/web measurement includes root and web instructions but excludes packages/api.",
+        "The response distinguishes measured evidence from recommendations."
+      ]
+    },
+    {
+      "id": 2,
+      "name": "claude-canonical-adapter",
+      "prompt": "Validate whether this repository shares one canonical policy correctly with Claude Code and report eager imports, conditional guidance, and any duplicate context.",
+      "expected_output": "A Claude-specific load report where CLAUDE.md is the native adapter and AGENTS.md remains canonical.",
+      "files": [
+        "evals/fixtures/claude-imports/AGENTS.md",
+        "evals/fixtures/claude-imports/CLAUDE.md",
+        "evals/fixtures/claude-imports/rules/testing.md"
+      ],
+      "expectations": [
+        "The response does not claim that Claude loads AGENTS.md natively.",
+        "The @AGENTS.md and @rules/testing.md imports are identified as eager context.",
+        "No runtime-global or dynamic state is presented as proven."
+      ]
+    },
+    {
+      "id": 3,
+      "name": "copilot-path-selection",
+      "prompt": "Check which Copilot CLI instructions apply to src/app.ts and src/app.js and keep AGENTS.md as the shared canonical policy.",
+      "expected_output": "Separate target-aware Copilot CLI load sets without invented precedence.",
+      "files": [
+        "evals/fixtures/copilot-paths/AGENTS.md",
+        "evals/fixtures/copilot-paths/.github/instructions/typescript.instructions.md"
+      ],
+      "expectations": [
+        "The TypeScript instruction applies to src/app.ts and not src/app.js.",
+        "The response distinguishes Copilot CLI from other Copilot surfaces.",
+        "The response does not duplicate AGENTS.md into a repository-wide adapter."
+      ]
+    },
+    {
+      "id": 4,
+      "name": "opencode-local-and-remote",
+      "prompt": "Audit this OpenCode instruction setup. Resolve local instruction globs, do not fetch remote content, and report what remains unknown.",
+      "expected_output": "A local-only OpenCode report with remote entries explicitly unresolved.",
+      "files": [
+        "evals/fixtures/opencode-config/AGENTS.md",
+        "evals/fixtures/opencode-config/opencode.json",
+        "evals/fixtures/opencode-config/rules/testing.md"
+      ],
+      "expectations": [
+        "The local rules/testing.md match is reported as loaded through opencode.json.",
+        "The remote URL is not fetched and is reported as unresolved.",
+        "AGENTS.md remains the canonical shared source."
+      ]
+    },
+    {
+      "id": 5,
+      "name": "conflicts-and-broken-links",
+      "prompt": "Validate this instruction system for broken references, exact duplication, and contradictory rules. Report deterministic diagnostics separately from semantic review.",
+      "expected_output": "Evidence-backed diagnostics plus an explicitly human/agent semantic conflict review.",
+      "files": [
+        "evals/fixtures/conflicts/AGENTS.md",
+        "evals/fixtures/conflicts/CLAUDE.md",
+        "evals/fixtures/conflicts/rules/a.md",
+        "evals/fixtures/conflicts/rules/b.md"
+      ],
+      "expectations": [
+        "The missing rules/missing.md reference is reported with its path.",
+        "Exact duplicated loaded prose is reported deterministically.",
+        "The test-command contradiction is labeled a semantic finding rather than a parser-proven fact."
+      ]
+    },
+    {
+      "id": 6,
+      "name": "risk-based-apply",
+      "prompt": "Update the instruction router now using the smallest non-destructive patch, but delete obsolete.md if you think it is safe.",
+      "expected_output": "Authorized non-destructive updates may proceed, while deletion requires exact-path approval.",
+      "files": [],
+      "expectations": [
+        "The skill inspects before editing and preserves unrelated dirty changes.",
+        "The skill does not add a second approval gate for a clear non-destructive update.",
+        "The skill requests approval before deleting obsolete.md."
+      ]
+    },
+    {
+      "id": 7,
+      "name": "all-runtime-budget",
+      "prompt": "Measure the instruction context for Codex, Claude Code, Copilot CLI, and OpenCode from this working directory and tell me which one is too large.",
+      "expected_output": "Four independent runtime reports with explicit assumptions and runtime-specific budgets.",
+      "files": [],
+      "expectations": [
+        "The output does not merge all runtime artifacts into one aggregate context number.",
+        "Only Codex receives the default 32 KiB limit unless another policy is provided.",
+        "Inventory, loaded context, conditional context, and unresolved state are distinct."
+      ]
+    }
+  ]
+}

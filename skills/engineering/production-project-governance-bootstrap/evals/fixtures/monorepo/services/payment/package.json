@@ -1,5 +1,0 @@
-{
-  "name": "@fixture/payment-service",
-  "private": true,
-  "scripts": { "test": "echo payment-test" }
-}
