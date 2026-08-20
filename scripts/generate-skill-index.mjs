@@ -99,7 +99,7 @@ export function renderIndex(skills) {
     lines.push("| Skill | Description / คำอธิบาย | Guide / คู่มือ |", "| --- | --- | --- |");
 
     for (const skill of categorySkills) {
-      const guide = `${skill.name}.md`;
+      const guide = `${skill.category}/${skill.name}.md`;
       lines.push(`| \`${skill.name}\` | ${tableText(skill.description)} | [คู่มือ / Guide](${guide}) |`);
     }
 

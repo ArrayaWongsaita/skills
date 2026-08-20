@@ -1,0 +1,6 @@
+interface:
+  display_name: "Technical Teaching Storytelling"
+  short_description: "Design problem-driven technical lessons"
+  default_prompt: "Use $technical-teaching-storytelling to design a Thai, problem-driven lesson about [topic] for [audience]."
+policy:
+  allow_implicit_invocation: true

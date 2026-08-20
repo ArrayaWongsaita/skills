@@ -19,17 +19,25 @@ Each skill belongs to one primary category, and its directory name must match th
 ```text
 skills/
 ├── agents/
-│   └── agent-instructions-architect/
+│   ├── agent-instructions-architect/
+│   │   └── SKILL.md
+│   └── design-task-spec/
 │       └── SKILL.md
-└── nextjs/
-    └── nextjs-safe-env/
+├── nextjs/
+│   └── nextjs-safe-env/
+│       └── SKILL.md
+└── teaching/
+    └── technical-teaching-storytelling/
         └── SKILL.md
 
 docs/
 └── skills/
     ├── README.md
-    ├── agents/agent-instructions-architect.md
-    └── nextjs/nextjs-safe-env.md
+    ├── agents/
+    │   ├── agent-instructions-architect.md
+    │   └── design-task-spec.md
+    ├── nextjs/nextjs-safe-env.md
+    └── teaching/technical-teaching-storytelling.md
 ```
 
 Skill อาจมี `references/`, `scripts/`, `tests/`, `evals/` และ metadata เฉพาะ agent เพิ่มเติมได้ แต่ไฟล์คู่มือสำหรับคนต้องอยู่ใน `docs/skills/<category>/<skill>.md`
@@ -66,6 +74,7 @@ npx skills add ArrayaWongsaita/skills --skill agent-instructions-architect
 
 ```bash
 npx skills add ArrayaWongsaita/skills --skill nextjs-safe-env
+npx skills add ArrayaWongsaita/skills --skill technical-teaching-storytelling
 ```
 
 ### Install a category group / ติดตั้งทั้งหมวด
@@ -77,7 +86,7 @@ Categories are a repository convention. The CLI receives the skill names explici
 ```bash
 npx skills add ArrayaWongsaita/skills \
   --skill agent-instructions-architect \
-  --skill nextjs-safe-env
+  --skill design-task-spec
 ```
 
 คำสั่งของแต่ละหมวดที่สร้างจากรายการปัจจุบันอยู่ใน [Skill Index](docs/skills/README.md)

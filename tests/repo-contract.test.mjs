@@ -63,5 +63,7 @@ describe("personal AI skills repository contract", () => {
     ]);
 
     assert.match(index, /--skill first-skill \\\n  --skill second-skill/);
+    assert.match(index, /\[คู่มือ \/ Guide\]\(demo\/first-skill\.md\)/);
+    assert.match(index, /\[คู่มือ \/ Guide\]\(demo\/second-skill\.md\)/);
   });
 });

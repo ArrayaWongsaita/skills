@@ -15,22 +15,37 @@ npx skills add ArrayaWongsaita/skills --all
 
 | Skill | Description / คำอธิบาย | Guide / คู่มือ |
 | --- | --- | --- |
-| `agent-instructions-architect` | Audit, design, migrate, and validate repository agent-instruction systems with AGENTS.md as the canonical source and runtime-aware adapters for Codex, Claude Code, GitHub Copilot CLI, and OpenCode. Use for AGENTS.md or AGENTS.override.md hierarchy, CLAUDE.md adapters, Copilot custom instructions, OpenCode rules, scoped instructions, context budgets, precedence or duplication conflicts, broken references, and safe instruction migrations. Do not use for generic prompt writing, custom-agent architecture, or unrelated documentation edits. | [คู่มือ / Guide](agent-instructions-architect.md) |
+| `agent-instructions-architect` | Audit, design, migrate, and validate repository agent-instruction systems with AGENTS.md as the canonical source and runtime-aware adapters for Codex, Claude Code, GitHub Copilot CLI, and OpenCode. Use for AGENTS.md or AGENTS.override.md hierarchy, CLAUDE.md adapters, Copilot custom instructions, OpenCode rules, scoped instructions, context budgets, precedence or duplication conflicts, broken references, and safe instruction migrations. Do not use for generic prompt writing, custom-agent architecture, or unrelated documentation edits. | [คู่มือ / Guide](agents/agent-instructions-architect.md) |
+| `design-task-spec` | Design decision-complete software implementation task specifications from vague ideas or existing tickets. Use when explicitly asked to investigate a repository, stress-test requirements for a feature, bug fix, refactor, migration, integration, or infrastructure change, document relevant domain decisions, and produce a source-linked task that another agent can implement without making product or architecture decisions. Do not use this skill to implement the designed task. | [คู่มือ / Guide](agents/design-task-spec.md) |
 
 ### Install this category / ติดตั้งทั้งหมวด
 
 ```bash
-npx skills add ArrayaWongsaita/skills --skill agent-instructions-architect
+npx skills add ArrayaWongsaita/skills \
+  --skill agent-instructions-architect \
+  --skill design-task-spec
 ```
 
 ## nextjs / หมวด nextjs
 
 | Skill | Description / คำอธิบาย | Guide / คู่มือ |
 | --- | --- | --- |
-| `nextjs-safe-env` | Set up, audit, refactor, or debug type-safe environment variables in Next.js applications with split Zod schemas and strict client/server boundaries. Use when creating env modules, adding or renaming variables, reviewing process.env access, fixing missing-env or server-only import errors, configuring env loading for tests and tools, or deciding between build-time and runtime configuration in App Router or Pages Router projects. | [คู่มือ / Guide](nextjs-safe-env.md) |
+| `nextjs-safe-env` | Set up, audit, refactor, or debug type-safe environment variables in Next.js applications with split Zod schemas and strict client/server boundaries. Use when creating env modules, adding or renaming variables, reviewing process.env access, fixing missing-env or server-only import errors, configuring env loading for tests and tools, or deciding between build-time and runtime configuration in App Router or Pages Router projects. | [คู่มือ / Guide](nextjs/nextjs-safe-env.md) |
 
 ### Install this category / ติดตั้งทั้งหมวด
 
 ```bash
 npx skills add ArrayaWongsaita/skills --skill nextjs-safe-env
+```
+
+## teaching / หมวด teaching
+
+| Skill | Description / คำอธิบาย | Guide / คู่มือ |
+| --- | --- | --- |
+| `technical-teaching-storytelling` | Design, revise, or review programming and software-engineering lessons using problem-driven storytelling so learners understand why a concept exists, see realistic failure modes, apply it in a minimal demo, and reason about when to use it. Use for lesson plans, tutorials, workshops, live-coding sessions, hands-on labs, and technical explanations; do not force a story onto a simple factual lookup. | [คู่มือ / Guide](teaching/technical-teaching-storytelling.md) |
+
+### Install this category / ติดตั้งทั้งหมวด
+
+```bash
+npx skills add ArrayaWongsaita/skills --skill technical-teaching-storytelling
 ```
