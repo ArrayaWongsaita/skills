@@ -1,0 +1,6 @@
+interface:
+  display_name: "Design Task Spec"
+  short_description: "Create exhaustive implementation-ready task specs"
+  default_prompt: "Use $design-task-spec to turn this software request into a decision-complete implementation task: [describe the request]."
+policy:
+  allow_implicit_invocation: false
