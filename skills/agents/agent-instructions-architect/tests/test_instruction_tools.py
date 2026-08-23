@@ -59,6 +59,12 @@ class InstructionModelTests(unittest.TestCase):
             for item in report["results"][runtime]["diagnostics"]
         }
 
+    def skill_paths(self, report: dict[str, object], runtime: str) -> list[str]:
+        return [
+            item["path"]
+            for item in report["results"][runtime]["skill_catalog"]
+        ]
+
     def test_codex_loads_only_root_to_cwd_chain(self) -> None:
         self.repo.write("AGENTS.md", "root\n")
         self.repo.write("packages/web/AGENTS.md", "web\n")
@@ -271,6 +277,10 @@ class InstructionModelTests(unittest.TestCase):
     def test_parent_repository_scan_ignores_bundled_eval_fixtures(self) -> None:
         self.repo.write("AGENTS.md", "canonical\n")
         self.repo.write(
+            ".agents/skills/example/SKILL.md",
+            "---\nname: example\ndescription: Use for example tasks.\n---\n",
+        )
+        self.repo.write(
             ".agents/skills/example/evals/fixtures/broken/AGENTS.md",
             "[missing](missing.md)\n",
         )
@@ -315,6 +325,246 @@ class InstructionModelTests(unittest.TestCase):
     def test_outside_cwd_is_invocation_error(self) -> None:
         with self.assertRaises(ValueError):
             self.report("codex", cwd="../outside")
+
+    def test_codex_discovers_root_to_cwd_skill_catalog(self) -> None:
+        self.repo.write(
+            ".agents/skills/testing/SKILL.md",
+            "---\nname: testing\ndescription: Use when testing behavior.\n---\n",
+        )
+        self.repo.write(
+            "packages/web/.agents/skills/frontend/SKILL.md",
+            "---\nname: frontend\ndescription: Use when changing web UI.\n---\n",
+        )
+        self.repo.write(
+            "packages/api/.agents/skills/backend/SKILL.md",
+            "---\nname: backend\ndescription: Use when changing API code.\n---\n",
+        )
+
+        report = self.report("codex", cwd="packages/web")
+
+        self.assertEqual(
+            self.skill_paths(report, "codex"),
+            [
+                ".agents/skills/testing/SKILL.md",
+                "packages/web/.agents/skills/frontend/SKILL.md",
+            ],
+        )
+        self.assertTrue(
+            all(
+                item["load_mode"] == "catalog-metadata"
+                for item in report["results"]["codex"]["skill_catalog"]
+            )
+        )
+
+    def test_skill_metadata_is_separate_from_instruction_bytes(self) -> None:
+        self.repo.write("AGENTS.md", "canonical\n")
+        skill = self.repo.write(
+            ".agents/skills/testing/SKILL.md",
+            "---\nname: testing\ndescription: Use when testing behavior.\n---\n# Testing\n",
+        )
+
+        report = self.report("codex")
+        result = report["results"]["codex"]
+
+        self.assertEqual(result["totals"]["inventory_bytes"], len("canonical\n"))
+        self.assertEqual(result["totals"]["loaded_bytes"], len("canonical\n"))
+        self.assertEqual(result["skill_totals"]["count"], 1)
+        self.assertGreater(result["skill_totals"]["metadata_chars"], 0)
+        self.assertGreater(skill.stat().st_size, 0)
+
+    def test_codex_warns_when_skill_catalog_metadata_exceeds_fallback(self) -> None:
+        self.repo.write(
+            ".agents/skills/large/SKILL.md",
+            (
+                "---\nname: large\ndescription: "
+                + ("x" * 8100)
+                + "\n---\n"
+            ),
+        )
+
+        report = self.report("codex")
+
+        self.assertIn("skill-catalog-warning", self.diagnostic_codes(report, "codex"))
+
+    def test_runtime_skill_locations_are_capability_accurate(self) -> None:
+        self.repo.write(
+            ".agents/skills/shared/SKILL.md",
+            "---\nname: shared\ndescription: Use for shared procedures.\n---\n",
+        )
+        self.repo.write(
+            ".claude/skills/claude-only/SKILL.md",
+            "---\nname: claude-only\ndescription: Use for Claude procedures.\n---\n",
+        )
+        self.repo.write(
+            ".github/skills/copilot-only/SKILL.md",
+            "---\nname: copilot-only\ndescription: Use for Copilot procedures.\n---\n",
+        )
+        self.repo.write(
+            ".opencode/skills/opencode-only/SKILL.md",
+            "---\nname: opencode-only\ndescription: Use for OpenCode procedures.\n---\n",
+        )
+
+        claude = self.report("claude")["results"]["claude"]["skill_catalog"]
+        copilot = self.report("copilot")["results"]["copilot"]["skill_catalog"]
+        opencode = self.report("opencode")["results"]["opencode"]["skill_catalog"]
+
+        self.assertEqual(
+            {item["name"]: item["load_mode"] for item in claude},
+            {"shared": "adapter-required", "claude-only": "catalog-metadata"},
+        )
+        self.assertEqual(
+            {item["name"] for item in copilot},
+            {"shared", "claude-only", "copilot-only"},
+        )
+        self.assertTrue(
+            all(item["load_mode"] == "catalog-metadata" for item in copilot)
+        )
+        self.assertEqual(
+            {item["name"] for item in opencode},
+            {"shared", "claude-only", "opencode-only"},
+        )
+
+    def test_claude_discovers_nested_target_skills_conditionally(self) -> None:
+        self.repo.write(
+            "packages/web/.claude/skills/ui/SKILL.md",
+            "---\nname: ui\ndescription: Use for web UI procedures.\n---\n",
+        )
+
+        report = self.report(
+            "claude",
+            targets=("packages/web/src/App.tsx",),
+        )
+        skill = report["results"]["claude"]["skill_catalog"][0]
+
+        self.assertEqual(skill["name"], "ui")
+        self.assertEqual(skill["load_mode"], "conditional-catalog")
+
+    def test_runtime_skill_symlink_adapter_is_not_double_counted(self) -> None:
+        target = self.repo.write(
+            ".agents/skills/shared/SKILL.md",
+            "---\nname: shared\ndescription: Use for shared procedures.\n---\n",
+        ).parent
+        adapter = self.repo.root / ".claude/skills/shared"
+        adapter.parent.mkdir(parents=True)
+        adapter.symlink_to(target, target_is_directory=True)
+
+        result = self.report("copilot")["results"]["copilot"]
+
+        self.assertEqual(
+            {item["path"]: item["load_mode"] for item in result["skill_catalog"]},
+            {
+                ".agents/skills/shared/SKILL.md": "catalog-metadata",
+                ".claude/skills/shared/SKILL.md": "catalog-alias",
+            },
+        )
+        self.assertEqual(result["skill_totals"]["active_count"], 1)
+
+    def test_skill_supports_folded_description_frontmatter(self) -> None:
+        self.repo.write(
+            ".agents/skills/testing/SKILL.md",
+            "---\nname: testing\ndescription: >\n  Use when creating tests\n  or changing behavior.\n---\n",
+        )
+
+        report = self.report("codex")
+        skill = report["results"]["codex"]["skill_catalog"][0]
+
+        self.assertEqual(
+            skill["description"],
+            "Use when creating tests or changing behavior.",
+        )
+        self.assertNotIn("missing-skill-description", self.diagnostic_codes(report, "codex"))
+
+    def test_skill_reports_invalid_frontmatter_and_name_mismatch(self) -> None:
+        self.repo.write(".agents/skills/malformed/SKILL.md", "# Missing metadata\n")
+        self.repo.write(
+            ".agents/skills/backend/SKILL.md",
+            "---\nname: server\ndescription: Use when changing the backend.\n---\n",
+        )
+
+        report = self.report("codex")
+        codes = self.diagnostic_codes(report, "codex")
+
+        self.assertIn("invalid-skill-frontmatter", codes)
+        self.assertIn("invalid-skill-name", codes)
+        self.assertIn("missing-skill-description", codes)
+        self.assertIn("skill-name-mismatch", codes)
+
+    def test_skill_reports_duplicate_declared_name(self) -> None:
+        self.repo.write(
+            ".agents/skills/one/SKILL.md",
+            "---\nname: shared\ndescription: Use for the first procedure.\n---\n",
+        )
+        self.repo.write(
+            ".agents/skills/two/SKILL.md",
+            "---\nname: shared\ndescription: Use for the second procedure.\n---\n",
+        )
+
+        report = self.report("codex")
+
+        self.assertIn("duplicate-skill-name", self.diagnostic_codes(report, "codex"))
+
+    def test_skill_allows_in_repository_directory_symlink(self) -> None:
+        target = self.repo.write(
+            "shared/linked/SKILL.md",
+            "---\nname: linked\ndescription: Use for linked procedures.\n---\n",
+        ).parent
+        link = self.repo.root / ".agents/skills/linked"
+        link.parent.mkdir(parents=True)
+        link.symlink_to(target, target_is_directory=True)
+
+        report = self.report("codex")
+
+        self.assertEqual(
+            self.skill_paths(report, "codex"),
+            [".agents/skills/linked/SKILL.md"],
+        )
+        self.assertTrue(report["results"]["codex"]["skill_catalog"][0]["symlink"])
+
+    def test_skill_rejects_out_of_repository_directory_symlink(self) -> None:
+        with tempfile.TemporaryDirectory() as external:
+            target = Path(external) / "outside"
+            target.mkdir()
+            (target / "SKILL.md").write_text(
+                "---\nname: outside\ndescription: Use outside.\n---\n",
+                encoding="utf-8",
+            )
+            link = self.repo.root / ".agents/skills/outside"
+            link.parent.mkdir(parents=True)
+            link.symlink_to(target, target_is_directory=True)
+
+            report = self.report("codex")
+
+        self.assertEqual(self.skill_paths(report, "codex"), [])
+        self.assertIn(
+            "outside-root-skill-symlink",
+            self.diagnostic_codes(report, "codex"),
+        )
+
+    def test_skill_reports_broken_directory_symlink(self) -> None:
+        link = self.repo.root / ".agents/skills/broken"
+        link.parent.mkdir(parents=True)
+        link.symlink_to(self.repo.root / "missing", target_is_directory=True)
+
+        report = self.report("codex")
+
+        self.assertIn("broken-skill-symlink", self.diagnostic_codes(report, "codex"))
+
+    def test_validate_checks_skill_markdown_links(self) -> None:
+        self.repo.write(
+            ".agents/skills/testing/SKILL.md",
+            (
+                "---\nname: testing\ndescription: Use when testing.\n---\n"
+                "Read [missing](references/missing.md).\n"
+            ),
+        )
+
+        report = analyze_repository(
+            self.repo.root,
+            command="validate",
+            runtime="codex",
+        )
+
+        self.assertIn("broken-reference", self.diagnostic_codes(report, "codex"))
 
 
 class WrapperContractTests(unittest.TestCase):

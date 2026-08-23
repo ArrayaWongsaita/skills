@@ -1,55 +1,65 @@
-# Repository layout and naming
+# Repository layout
 
-Use `AGENTS.md` as the canonical shared entrypoint:
+Use this as a conceptual default, not a request to create empty directories.
 
-```text
+~~~text
 AGENTS.md
+ARCHITECTURE.md
+docs/
+├── standards/
+├── decisions/
+├── references/
+└── plans/
+    ├── active/
+    └── completed/
 .agents/
-├── rules/          # stable routed or conditional guidance
-├── workflows/      # ordered task procedures
-├── references/     # background and detailed guidance
-└── templates/      # reusable instruction templates
-```
+└── skills/
+    └── <skill-name>/
+        ├── SKILL.md
+        ├── scripts/
+        └── references/
+apps-or-packages/
+└── AGENTS.md       # only where location-specific rules justify it
+~~~
 
-Add nested `AGENTS.md` at real package or directory boundaries only after
-checking how each selected runtime activates nested files. For Codex, the file
-must be on the project-root-to-working-directory chain. A root-launched Codex
-session does not automatically load every descendant `AGENTS.md`.
+## Root `AGENTS.md`
 
-Use `AGENTS.override.md` only for an intentional Codex-specific replacement in
-that directory. It may be durable, but is less portable than nested
-`AGENTS.md`.
+Aim for roughly 50–120 lines as a maintainability heuristic. Keep:
+
+1. a one-sentence mission;
+2. a before-change sequence: inspect, identify concerns, select skills, find
+   scoped instructions, and read only relevant documentation;
+3. a concise repository map;
+4. repository-wide invariants and high-risk routing;
+5. proportional final verification and real command pointers.
+
+Move framework tutorials, migration steps, testing methodology, security
+checklists, and detailed conventions elsewhere.
+
+## Scoped instructions
+
+Place a nested `AGENTS.md` at a genuine application, package, or module boundary
+only when that subtree has distinct dependency, placement, generated-file, or
+verification constraints. State only the delta from the root. Check native
+runtime activation semantics before relying on nesting.
+
+## Skills and documentation
+
+Repository-local skills live under `.agents/skills/`. Their descriptions route
+tasks; their bodies route further to standards or references only when
+relevant. Keep one direct hop from skill to supporting material.
+
+Use existing authoritative docs when present. Do not create a parallel
+`docs/standards/` file merely to restate a README, architecture document,
+schema, or tool configuration that already owns the fact.
 
 ## Runtime adapters
 
-- `CLAUDE.md`: usually a small `@AGENTS.md` loader.
-- `.github/copilot-instructions.md`: Copilot-only additions, not copied policy.
-- `.github/instructions/*.instructions.md`: `applyTo` path selection.
-- `opencode.json`: explicit local instruction paths or globs.
+Create adapters only for an active runtime whose native behavior needs one.
+Adapters contain runtime-specific loading or scoping syntax, not copied shared
+policy. Examples may include a small `CLAUDE.md` import, Copilot path selectors,
+`opencode.json` instruction paths, or a Claude-native skill placement pointing
+to the canonical catalog. Verify current native semantics first.
 
-## Naming rules
-
-- Use exact uppercase `AGENTS.md` for the canonical entrypoint.
-- Use lowercase kebab-case for supporting files.
-- Name one topic per file; avoid `misc`, `notes`, `final`, and numbered copies.
-- Name workflows with an action and object, such as `validate-release.md`.
-- Use repository-relative paths for required shared guidance.
-- Keep runtime-specific frontmatter and configuration in adapters.
-
-## Root router shape
-
-```markdown
-# Agent Instructions
-
-## Start here
-- Repository purpose and key boundaries.
-
-## Always active
-- Small set of universal constraints.
-
-## Read when relevant
-- [Testing quality](.agents/rules/testing-quality.md): read before tests.
-
-## Validation
-- Concrete commands for changed areas.
-```
+`AGENTS.override.md` is a Codex-specific replacement at one directory. Use it
+only when replacement rather than additive scoped guidance is intentional.

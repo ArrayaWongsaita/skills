@@ -7,6 +7,8 @@ This repository collects reusable skills for AI coding agents. `SKILL.md` is the
 ## Requirements / ข้อกำหนด
 
 - Node.js 20 or newer / Node.js 20 ขึ้นไป
+- Python 3.11 or newer for bundled instruction-tool tests / Python 3.11
+  ขึ้นไปสำหรับ test ของ instruction tools
 - `npx` สำหรับเรียกใช้ `skills` CLI
 - AI agent ที่รองรับ Agent Skills และ `SKILL.md`
 
@@ -161,6 +163,8 @@ Use the [skill guide template](docs/templates/skill-guide.template.md) to keep g
 
 ```bash
 npm test
+npm run test:repo
+npm run test:instruction-tools
 npm run docs:index
 npm run validate
 ```
@@ -169,9 +173,9 @@ npm run validate
 
 You can also run the validator directly with `node scripts/validate-skills.mjs`.
 
-`npm run docs:index` สร้าง [Skill Index](docs/skills/README.md) แบบ deterministic จาก `SKILL.md` ส่วน `npm run validate` ตรวจ metadata, ชื่อซ้ำ, คู่มือที่ขาด และ index ที่ไม่ตรงกัน
+`npm run docs:index` สร้าง [Skill Index](docs/skills/README.md) แบบ deterministic จาก `SKILL.md` ส่วน `npm run validate` ตรวจ metadata, ชื่อซ้ำ, links, eval contracts, fixtures, agent metadata, คู่มือที่ขาด และ index ที่ไม่ตรงกัน
 
-`npm run docs:index` deterministically generates the [Skill Index](docs/skills/README.md) from `SKILL.md`. `npm run validate` checks metadata, duplicate names, missing guides, and stale index content.
+`npm run docs:index` deterministically generates the [Skill Index](docs/skills/README.md) from `SKILL.md`. `npm run validate` checks metadata, duplicate names, links, eval contracts, fixtures, agent metadata, missing guides, and stale index content.
 
 ## Development workflow / workflow การพัฒนา
 

@@ -1,19 +1,20 @@
 # Example: small repository
 
-```text
+~~~text
 AGENTS.md
-.agents/rules/testing-quality.md
-```
+ARCHITECTURE.md
+docs/
+└── standards/
+    └── testing.md
+.agents/
+└── skills/
+    └── testing/
+        └── SKILL.md
+~~~
 
-Keep purpose, core commands, and universal constraints in `AGENTS.md`. Route
-to detailed testing guidance with an explicit condition:
-
-```markdown
-## Read when relevant
-
-- [Testing quality](.agents/rules/testing-quality.md): read before changing
-  tests or production behavior covered by tests.
-```
-
-The linked file is inventory until a runtime expands it or the agent follows
-the routing instruction. Measure it accordingly.
+The root keeps the mission, actual commands, repository map, universal
+invariants, and proportional verification. It routes behavior changes to the
+testing skill. The skill owns the repeatable HOW; `docs/standards/testing.md`
+owns only project-specific test requirements. Omit `ARCHITECTURE.md` or the
+standard when existing documentation already owns those facts or the repository
+is too simple to need them.

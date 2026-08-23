@@ -1,0 +1,9 @@
+{
+  "private": true,
+  "scripts": {
+    "build": "tsc --build",
+    "test": "vitest run",
+    "lint": "eslint .",
+    "db:validate": "prisma validate"
+  }
+}

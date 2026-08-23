@@ -1,39 +1,49 @@
-# Migration playbook
+# Setup, refactor, and migration playbook
 
-## Inspect
+## 1. Inspect
 
-1. Snapshot the instruction tree or record checksums.
-2. Scan known instruction locations before reading a large tree.
-3. Record unrelated dirty-worktree state.
-4. Identify the canonical source, active runtimes, working directory, target
-   paths, adapters, imports, duplicates, conflicts, and stale references.
-5. Separate repository evidence from assumptions and unresolved runtime state.
+- Snapshot the relevant tree and dirty-worktree state.
+- Follow `repository-inspection.md` before writing.
+- Inventory root and nested `AGENTS.md`, skills, documentation, runtime adapters,
+  CI, and generated artifacts.
+- Identify authoritative owners, duplicates, stale paths, and unresolved facts.
+- Run the scanner before manually loading a large legacy instruction tree.
 
-## Decide authorization
+## 2. Map responsibilities
 
-- Audit and design requests are read-only.
-- A direct instruction to apply, migrate, update, or rewrite authorizes a
-  scoped, non-destructive patch after inspection when exact paths are clear.
-- Request approval naming every path and action before a delete, rename,
-  broad whole-file replacement, or change outside the agreed instruction
-  paths.
-- Never infer authorization to change application source or unrelated files.
+Classify every retained item with `instruction-taxonomy.md`. Produce a target
+tree and exact file operations. Prefer update, link, and consolidate over
+parallel sources of truth.
 
-## Propose when required
+For a new setup, start with root `AGENTS.md` and add only repository-supported
+architecture docs, standards, skills, scoped files, or references. A typical
+full-stack repository may justify database-design, database-change,
+backend-development, frontend-development, testing, and security-review, but
+the category list is not a creation checklist.
 
-Show the current and target trees, exact file operations, canonical owner,
-runtime adapters, resolved context impact, validation commands, and unresolved
-state. Do not apply a proposal produced for an audit-only request.
+## 3. Decide authorization
 
-## Apply
+- Audit and design remain read-only.
+- Setup, refactor, migrate, update, rewrite, or implement authorizes scoped,
+  non-destructive edits after inspection when paths are clear.
+- Ask before deletion, rename, broad whole-file replacement, or changes outside
+  the agreed instruction-system paths.
+- Never infer permission to change application behavior.
+- Design-only database work cannot create schemas, migrations, or code.
 
-- Patch only authorized paths and preserve unrelated changes.
-- Update incoming references before an approved move or delete.
-- Keep adapters thin; do not duplicate canonical paragraphs.
-- Do not weaken a rule merely to make validation pass.
+## 4. Apply
 
-## Verify
+- Build the root map first, then authoritative documents, minimum skills, and
+  only justified nested files.
+- Preserve useful project-specific rules from the old system.
+- Update incoming links before an approved move.
+- Keep native runtime adapters thin.
+- Add deterministic enforcement when practical rather than relying on prose.
+- Do not weaken an invariant solely to make validation pass.
 
-Run unit tests when scripts changed, then scan, validate, and measure for every
-selected runtime and working directory. Compare with the snapshot, report
-failures, and prove that no out-of-scope path changed.
+## 5. Validate
+
+Review the diff, resolve every path and command, run instruction and repository
+checks, test skill routing, audit duplication, and measure runtime context
+separately for every active runtime and working directory. Compare with the
+snapshot and prove that out-of-scope files did not change.

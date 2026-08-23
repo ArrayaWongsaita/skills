@@ -53,6 +53,8 @@ AT_REFERENCE = re.compile(r"(?<![\w@])@([^\s`]+)")
 FENCED_CODE = re.compile(r"(^|\n)(```|~~~).*?\n\2", re.DOTALL)
 INLINE_CODE = re.compile(r"`[^`\n]*`")
 REMOTE_SCHEMES = {"http", "https"}
+SKILL_NAME = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+SKILL_METADATA_WARNING_CHARS = 8000
 
 
 @dataclass
@@ -73,6 +75,33 @@ class Artifact:
             "lines": self.lines,
             "load_modes": sorted(modes, key=LOAD_MODE_ORDER.get),
             "sources": sorted(self.sources),
+        }
+
+
+@dataclass
+class SkillArtifact:
+    path: str
+    directory: str
+    name: str
+    description: str
+    scope: str
+    metadata_chars: int
+    symlink: bool
+    source: str
+    load_mode: str
+    identity: str
+
+    def payload(self) -> dict[str, object]:
+        return {
+            "path": self.path,
+            "directory": self.directory,
+            "name": self.name,
+            "description": self.description,
+            "scope": self.scope,
+            "metadata_chars": self.metadata_chars,
+            "symlink": self.symlink,
+            "source": self.source,
+            "load_mode": self.load_mode,
         }
 
 
@@ -232,6 +261,38 @@ def _frontmatter_values(text: str, key: str) -> list[str] | None:
     return None
 
 
+def _skill_frontmatter(text: str) -> dict[str, str] | None:
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return None
+    try:
+        end = next(index for index, line in enumerate(lines[1:], 1) if line.strip() == "---")
+    except StopIteration:
+        return None
+
+    values: dict[str, str] = {}
+    index = 1
+    while index < end:
+        match = re.match(r"^([A-Za-z0-9_-]+)\s*:\s*(.*)$", lines[index])
+        if not match:
+            index += 1
+            continue
+        key, raw = match.groups()
+        raw = raw.strip()
+        if raw in {">", "|", ">-", "|-"}:
+            folded: list[str] = []
+            index += 1
+            while index < end and (not lines[index].strip() or lines[index][:1].isspace()):
+                folded.append(lines[index].strip())
+                index += 1
+            separator = " " if raw.startswith(">") else "\n"
+            values[key] = separator.join(part for part in folded if part).strip()
+            continue
+        values[key] = raw.strip("'\"").strip()
+        index += 1
+    return values
+
+
 def _matches(pattern: str, target: str) -> bool:
     normalized = target.lstrip("./")
     return fnmatch.fnmatch(normalized, pattern) or PurePosixPath(normalized).match(pattern)
@@ -328,6 +389,181 @@ def discover(root: Path) -> dict[str, Artifact]:
     return artifacts
 
 
+def discover_skills(
+    root: Path,
+    cwd: Path,
+    runtime: str,
+    targets: tuple[Path, ...],
+) -> tuple[list[SkillArtifact], list[dict[str, object]]]:
+    catalog: list[SkillArtifact] = []
+    diagnostics: list[dict[str, object]] = []
+    names: dict[str, tuple[str, str]] = {}
+    skill_roots: list[tuple[Path, str, str, str]] = []
+    seen_roots: set[str] = set()
+
+    def register(
+        scope_directory: Path,
+        relative_root: str,
+        source: str,
+        load_mode: str,
+    ) -> None:
+        skills_root = scope_directory / relative_root
+        key = str(skills_root)
+        if key in seen_roots:
+            return
+        seen_roots.add(key)
+        skill_roots.append(
+            (skills_root, _relative(scope_directory, root) or ".", source, load_mode)
+        )
+
+    chain = _directories(root, cwd)
+    for scope_directory in chain:
+        if runtime == "codex":
+            register(scope_directory, ".agents/skills", "agent-compatible", "catalog-metadata")
+        elif runtime == "claude":
+            register(scope_directory, ".agents/skills", "agent-compatible", "adapter-required")
+            register(scope_directory, ".claude/skills", "claude-native", "catalog-metadata")
+        elif runtime == "copilot":
+            register(scope_directory, ".github/skills", "copilot-native", "catalog-metadata")
+            register(scope_directory, ".agents/skills", "agent-compatible", "catalog-metadata")
+            register(scope_directory, ".claude/skills", "claude-compatible", "catalog-metadata")
+        elif runtime == "opencode":
+            register(scope_directory, ".opencode/skills", "opencode-native", "catalog-metadata")
+            register(scope_directory, ".agents/skills", "agent-compatible", "catalog-metadata")
+            register(scope_directory, ".claude/skills", "claude-compatible", "catalog-metadata")
+
+    if runtime == "claude":
+        chain_set = set(chain)
+        for target in targets:
+            for scope_directory in _directories(root, target):
+                if scope_directory not in chain_set:
+                    register(
+                        scope_directory,
+                        ".claude/skills",
+                        "claude-native",
+                        "conditional-catalog",
+                    )
+
+    for skills_root, scope, source, load_mode in skill_roots:
+        if not skills_root.is_dir() or not _inside(skills_root, root):
+            continue
+        for entry in sorted(skills_root.iterdir(), key=lambda path: path.name):
+            if entry.name.startswith("."):
+                continue
+            logical_doc = entry / "SKILL.md"
+            is_link = entry.is_symlink()
+            if is_link:
+                try:
+                    target = entry.resolve(strict=True)
+                except OSError:
+                    diagnostics.append(
+                        diagnostic(
+                            "broken-skill-symlink",
+                            "error",
+                            "Skill directory symlink target does not exist.",
+                            path=_relative(entry, root),
+                        )
+                    )
+                    continue
+                if not _inside(target, root):
+                    diagnostics.append(
+                        diagnostic(
+                            "outside-root-skill-symlink",
+                            "error",
+                            "Skill directory symlink leaves the repository root.",
+                            path=_relative(entry, root),
+                        )
+                    )
+                    continue
+            if not entry.is_dir():
+                continue
+            if not logical_doc.is_file():
+                diagnostics.append(
+                    diagnostic(
+                        "missing-skill-file",
+                        "error",
+                        "Skill directory does not contain SKILL.md.",
+                        path=_relative(entry, root),
+                    )
+                )
+                continue
+
+            relative_doc = _relative(logical_doc, root)
+            text = logical_doc.read_text(encoding="utf-8", errors="replace")
+            frontmatter = _skill_frontmatter(text)
+            declared_name = (frontmatter or {}).get("name", "")
+            description = (frontmatter or {}).get("description", "")
+            if frontmatter is None:
+                diagnostics.append(
+                    diagnostic(
+                        "invalid-skill-frontmatter",
+                        "error",
+                        "SKILL.md requires YAML frontmatter.",
+                        path=relative_doc,
+                    )
+                )
+            if not declared_name or not SKILL_NAME.fullmatch(declared_name):
+                diagnostics.append(
+                    diagnostic(
+                        "invalid-skill-name",
+                        "error",
+                        "Skill name must be non-empty lowercase kebab-case.",
+                        path=relative_doc,
+                    )
+                )
+            elif declared_name != entry.name:
+                diagnostics.append(
+                    diagnostic(
+                        "skill-name-mismatch",
+                        "error",
+                        f"Skill name '{declared_name}' does not match directory '{entry.name}'.",
+                        path=relative_doc,
+                    )
+                )
+            if not description:
+                diagnostics.append(
+                    diagnostic(
+                        "missing-skill-description",
+                        "error",
+                        "Skill frontmatter requires a non-empty description.",
+                        path=relative_doc,
+                    )
+                )
+
+            effective_name = declared_name or entry.name
+            identity = str(logical_doc.resolve())
+            entry_load_mode = load_mode
+            active = entry_load_mode in {"catalog-metadata", "conditional-catalog"}
+            if active and effective_name in names and names[effective_name][1] != identity:
+                diagnostics.append(
+                    diagnostic(
+                        "duplicate-skill-name",
+                        "error",
+                        f"Skill name '{effective_name}' is already declared by {names[effective_name][0]}.",
+                        path=relative_doc,
+                    )
+                )
+            elif active and effective_name in names:
+                entry_load_mode = "catalog-alias"
+            elif active:
+                names[effective_name] = (relative_doc, identity)
+            catalog.append(
+                SkillArtifact(
+                    path=relative_doc,
+                    directory=_relative(entry, root),
+                    name=effective_name,
+                    description=description,
+                    scope=scope,
+                    metadata_chars=len(effective_name) + len(description) + len(relative_doc),
+                    symlink=is_link,
+                    source=source,
+                    load_mode=entry_load_mode,
+                    identity=identity,
+                )
+            )
+    return catalog, diagnostics
+
+
 class RuntimeResolver:
     def __init__(
         self,
@@ -351,6 +587,10 @@ class RuntimeResolver:
         self.artifacts = discover(root)
         self.edges: list[dict[str, object]] = []
         self.diagnostics: list[dict[str, object]] = []
+        self.skill_catalog, skill_diagnostics = discover_skills(
+            root, cwd, runtime, targets
+        )
+        self.diagnostics.extend(skill_diagnostics)
         self.assumptions: list[str] = [
             "Only repository-local files were inspected; user and global runtime state is unresolved."
         ]
@@ -400,6 +640,22 @@ class RuntimeResolver:
         getattr(self, f"resolve_{self.runtime}")()
         if self.command == "validate":
             self.validate_markdown_links()
+        skill_metadata_chars = sum(
+            skill.metadata_chars
+            for skill in self.skill_catalog
+            if skill.load_mode in {"catalog-metadata", "conditional-catalog"}
+        )
+        if self.runtime == "codex" and skill_metadata_chars > SKILL_METADATA_WARNING_CHARS:
+            self.add_diagnostic(
+                diagnostic(
+                    "skill-catalog-warning",
+                    "warning",
+                    (
+                        f"Codex skill metadata is estimated at {skill_metadata_chars} characters; "
+                        f"fallback catalog budget is {SKILL_METADATA_WARNING_CHARS}."
+                    ),
+                )
+            )
         self.detect_exact_duplicates()
         return self.payload()
 
@@ -722,8 +978,10 @@ class RuntimeResolver:
             )
 
     def validate_markdown_links(self) -> None:
-        for artifact in list(self.artifacts.values()):
-            path = self.path(artifact.path)
+        paths = [artifact.path for artifact in self.artifacts.values()]
+        paths.extend(skill.path for skill in self.skill_catalog)
+        for relative_path in dict.fromkeys(paths):
+            path = self.path(relative_path)
             if path.suffix.lower() not in {".md", ".mdc"} or not path.is_file():
                 continue
             text = path.read_text(encoding="utf-8", errors="replace")
@@ -744,7 +1002,7 @@ class RuntimeResolver:
                             "outside-root",
                             "error",
                             "Markdown reference leaves the repository root.",
-                            path=artifact.path,
+                            path=relative_path,
                             line=line,
                             reference=raw,
                         )
@@ -755,7 +1013,7 @@ class RuntimeResolver:
                             "broken-reference",
                             "error",
                             "Markdown reference target does not exist.",
-                            path=artifact.path,
+                            path=relative_path,
                             line=line,
                             reference=raw,
                         )
@@ -792,6 +1050,10 @@ class RuntimeResolver:
 
     def payload(self) -> dict[str, object]:
         artifacts = [artifact.payload() for artifact in sorted(self.artifacts.values(), key=lambda item: item.path)]
+        skill_catalog = [
+            skill.payload()
+            for skill in sorted(self.skill_catalog, key=lambda item: item.path)
+        ]
         loaded = [
             artifact
             for artifact in self.artifacts.values()
@@ -838,6 +1100,20 @@ class RuntimeResolver:
         )
         return {
             "artifacts": artifacts,
+            "skill_catalog": skill_catalog,
+            "skill_totals": {
+                "count": len(skill_catalog),
+                "active_count": sum(
+                    skill.load_mode in {"catalog-metadata", "conditional-catalog"}
+                    for skill in self.skill_catalog
+                ),
+                "metadata_chars": sum(
+                    skill.metadata_chars
+                    for skill in self.skill_catalog
+                    if skill.load_mode in {"catalog-metadata", "conditional-catalog"}
+                ),
+                "warning_chars": SKILL_METADATA_WARNING_CHARS if self.runtime == "codex" else None,
+            },
             "load_edges": sorted(
                 self.edges,
                 key=lambda item: (str(item["to"]), str(item["mode"]), str(item["from"])),
@@ -864,7 +1140,7 @@ def analyze_repository(
     targets: Iterable[str | Path] = (),
     fallback_names: Iterable[str] = (),
     max_bytes: int | None = None,
-    root_warning_lines: int = 200,
+    root_warning_lines: int = 120,
 ) -> dict[str, object]:
     root_path = Path(root).expanduser().resolve()
     if not root_path.is_dir():
@@ -910,6 +1186,17 @@ def _text_report(payload: dict[str, object]) -> str:
         lines.append(
             f"Loaded: {totals['loaded_bytes']} bytes; inventory: {totals['inventory_bytes']} bytes"
         )
+        skill_totals = result["skill_totals"]
+        if skill_totals["count"]:
+            lines.append(
+                f"Skills: {skill_totals['count']} inventoried, "
+                f"{skill_totals['active_count']} active; catalog metadata: "
+                f"{skill_totals['metadata_chars']} estimated characters"
+            )
+            for skill in result["skill_catalog"]:
+                lines.append(
+                    f"  {skill['name']}\t{skill['path']}\t{skill['load_mode']}"
+                )
         for item in result["diagnostics"]:
             location = item.get("path") or "repository"
             if item.get("line"):
@@ -932,7 +1219,7 @@ def build_parser(command: str) -> argparse.ArgumentParser:
         help="Additional Codex fallback filename; repeatable",
     )
     parser.add_argument("--max-bytes", type=int, default=None, help="Optional runtime budget")
-    parser.add_argument("--root-warning-lines", type=int, default=200)
+    parser.add_argument("--root-warning-lines", type=int, default=120)
     parser.add_argument("--strict", action="store_true", help="Treat warnings as failures")
     parser.add_argument("--json", action="store_true", help="Emit JSON schema v2")
     return parser

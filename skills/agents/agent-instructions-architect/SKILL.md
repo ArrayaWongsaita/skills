@@ -1,89 +1,144 @@
 ---
 name: agent-instructions-architect
-description: Audit, design, migrate, and validate repository agent-instruction systems with AGENTS.md as the canonical source and runtime-aware adapters for Codex, Claude Code, GitHub Copilot CLI, and OpenCode. Use for AGENTS.md or AGENTS.override.md hierarchy, CLAUDE.md adapters, Copilot custom instructions, OpenCode rules, scoped instructions, context budgets, precedence or duplication conflicts, broken references, and safe instruction migrations. Do not use for generic prompt writing, custom-agent architecture, or unrelated documentation edits.
+description: Set up, audit, refactor, migrate, and validate lean single-agent repository instruction architectures using AGENTS.md, scoped instructions, composable Agent Skills, repository documentation, and deterministic enforcement. Use when creating or reorganizing repository guidance, reducing context or duplication, or adapting one canonical system across Codex, Claude Code, GitHub Copilot CLI, and OpenCode. Do not use for generic prompt writing, application feature work, or multi-agent orchestration.
 ---
 
 # Agent Instructions Architect
 
-Give agents the smallest useful instruction context at the correct scope. Keep
-`AGENTS.md` canonical and treat native runtime files as adapters or selectors.
+Build the smallest instruction system that gives one coding agent the right
+context, procedure, constraints, and verification for its current task.
 
 ## Operating contract
 
-- Inspect the repository before recommending content.
-- Preserve unrelated dirty-worktree changes and do not change application code.
+- Inspect the repository before designing or editing its instruction system.
+- Derive commands, architecture, boundaries, conventions, and generated paths
+  from repository evidence; do not invent them.
+- Keep one coding agent. Represent reusable expertise with composable skills,
+  not specialist agents or orchestration.
+- Preserve unrelated dirty-worktree changes and application code.
 - Separate repository evidence, sourced runtime facts, recommendations,
   assumptions, and unresolved state.
 - Never describe inventory size as loaded context.
-- Keep adapters thin and avoid copied policy prose.
 
-## Select a mode
+## Select one or more modes
 
-- **Audit**: inventory and assess the current system. Remain read-only.
-- **Design**: propose a canonical tree, scopes, and adapters. Remain read-only.
-- **Migrate**: apply a direct, explicit update request within inspected paths.
-- **Validate**: run deterministic checks and semantic review. Remain read-only
-  unless the user also requests fixes.
+- **Audit**: assess the current system without changing files.
+- **Design**: propose responsibilities, routing, and file operations; read-only.
+- **Setup**: create a minimum useful system in a repository that lacks one.
+- **Refactor**: reduce duplication, context, or misplaced guidance in place.
+- **Migrate**: move an existing system to the target model or add thin runtime
+  adapters.
+- **Validate**: run deterministic checks and semantic audits; read-only unless
+  fixes were requested.
 
-If the mode or runtime is ambiguous, audit first and state the missing decision.
+If the request is ambiguous, audit first. A task can combine modes.
 
-## Workflow
+## Required workflow
 
-1. Run `scripts/scan-instruction-tree.py` before reading a large instruction
-   tree. Declare `--runtime`, `--cwd`, and relevant `--target` paths.
-2. Read `references/instruction-taxonomy.md`. For design or migration, also
-   read `references/repository-layout.md` and
-   `references/migration-playbook.md`.
-3. Read `references/runtime-compatibility.md` before making any runtime load,
-   precedence, adapter, or budget claim.
-4. Classify each rule, identify its canonical owner, and distinguish inventory,
-   startup, import, conditional, shadowed, and unresolved artifacts.
-5. Measure each selected runtime separately with
-   `scripts/measure-context-budget.py`; never merge `--runtime all` results.
-6. Produce exact findings or a patch plan. Cite files for repository evidence
-   and primary sources for changeable runtime behavior.
-7. Apply only authorized changes, then run unit tests when scripts changed,
-   `scripts/validate-instruction-tree.py`, context measurement, and the
-   checklist in `references/quality-rubric.md`.
+1. Read `references/repository-inspection.md`, inspect the repository, and
+   record its actual stack, topology, modules, commands, tests, CI, generated
+   files, documentation, and existing agent infrastructure.
+2. For an existing instruction tree, run
+   `scripts/scan-instruction-tree.py` before reading it wholesale. Declare the
+   runtime, working directory, and target paths used for resolution.
+3. Classify content with `references/instruction-taxonomy.md` and map each fact
+   or procedure to one authoritative owner.
+4. Design the minimum tree with `references/repository-layout.md`. Create only
+   files with repository-supported content; reuse and link existing sources.
+5. When skills are needed, read `references/skill-system-design.md`. Design
+   narrow, composable procedures with precise WHAT + WHEN descriptions.
+6. Read `references/runtime-compatibility.md` only when runtime loading,
+   adapters, precedence, discovery, or budgets matter.
+7. Use `references/migration-playbook.md` for setup, refactor, or migration.
+   Apply only authorized, scoped, non-destructive changes.
+8. Validate paths, links, routing, source-of-truth ownership, duplication,
+   context efficiency, commands, and architecture consistency. Use
+   `references/routing-evaluation.md` and
+   `references/quality-rubric.md`.
 
-## Authorization gate
+## Responsibility model
 
-- Treat audit and design requests as read-only.
-- Treat a direct request to apply, migrate, update, or rewrite as authorization
-  for a scoped, non-destructive patch after inspection.
-- Request approval naming each exact path and action before deleting, renaming,
-  broadly replacing a whole file, or leaving agreed instruction paths.
+| Layer | Sole responsibility |
+| --- | --- |
+| Root `AGENTS.md` | Always-needed operation, repository map, critical routing and safety |
+| Nested `AGENTS.md` | Constraints caused by working inside that subtree |
+| `SKILL.md` | Repeatable procedure or expertise: HOW to perform a task |
+| `docs/standards/` | Project-specific conventions and invariants: WHAT is required |
+| `ARCHITECTURE.md` | System structure, boundaries, dependency direction, and ownership |
+| `docs/references/` | Detailed technical information consulted only when relevant |
+| `docs/decisions/` | Rationale for important architectural decisions |
+| Tooling / CI | Deterministic enforcement |
 
-## Root and adapter rules
+Do not duplicate a rule across layers unless a concise repetition prevents a
+material safety failure.
 
-- Keep root `AGENTS.md` stable and useful before task selection.
-- Route task-specific details with an explicit read condition.
-- Use nested `AGENTS.md` only after checking runtime activation semantics.
-- Use `AGENTS.override.md` for an intentional Codex-specific replacement, not
-  as a portable scoping mechanism.
-- Do not assume a Markdown link is automatically loaded.
-- Put mandatory enforcement in CI, hooks, permissions, or sandboxes rather
-  than prompt text alone.
+## Architecture constraints
+
+- Root `AGENTS.md` is a map, not an encyclopedia. Aim for roughly 50–120 lines
+  as a context-efficiency heuristic, never as a runtime limit.
+- When those skills exist, root routes schema/ORM/migration implementation to
+  `database-change`, design-only persistence work to `database-design` without
+  implementation, and authentication, authorization, secrets, tokens, PII, or
+  other trust-boundary work to `security-review`.
+- Nested `AGENTS.md` files contain only location-specific constraints.
+- Skills compose: never force a task into exactly one category.
+- Keep database design-only work distinct from database implementation.
+- Keep testing and security review cross-cutting.
+- Do not add `.agents/rules/`, `.agents/workflows/`, agent role files, or another
+  router layer for ordinary guidance. Existing legacy paths may be inventoried
+  during an audit.
+- Do not create empty standards, references, decisions, plans, or skills.
+- Put enforceable formatting, types, dependencies, tests, schema checks,
+  generated-file consistency, and builds in tooling or CI.
+- Use repository documentation as the source of truth; do not paraphrase
+  obvious code.
+
+## Authorization and safety
+
+- Audit and design are read-only.
+- Setup, refactor, migrate, update, or implement authorizes a scoped,
+  non-destructive patch after inspection when the requested boundary is clear.
+- Ask before deleting, renaming, broadly replacing a whole file, or changing
+  paths outside the agreed instruction system.
+- Design-only database requests must not create schemas, migrations, or
+  application changes unless implementation is requested.
+- Never weaken tests or rewrite deployed migrations to make validation pass.
+
+## Verification
+
+After changes:
+
+1. Review the complete diff and requirement coverage.
+2. Verify every documented path and command against the repository.
+3. Run the smallest relevant tests, type checks, lint, builds, schema checks,
+   and instruction validators that actually exist.
+4. Re-run runtime context measurement separately for each selected runtime;
+   never merge `--runtime all` into one context estimate.
+5. Confirm unrelated files were not modified.
+6. Report every skipped or failed check and remaining ambiguity.
 
 ## Report by mode
 
-- **Audit**: `Mode`, `Inventory`, `Findings`, `Context`, `Recommendations`.
-- **Design**: add `Proposed layout`, `File operations`, and `Open decisions`.
-- **Migrate**: add `Changed files`, `Checks run`, and `Remaining risks`.
-- **Validate**: report command, runtime/cwd/targets, diagnostics, and verdict.
+- **Audit**: repository analysis, inventory, findings, context, recommendations.
+- **Design**: target tree, responsibility mapping, file operations, decisions.
+- **Setup/Refactor/Migrate**: created and modified files, checks, residual risks.
+- **Validate**: commands and parameters, deterministic diagnostics, semantic
+  findings, and verdict.
 
-Omit empty sections. Always distinguish deterministic diagnostics from semantic
-review findings.
+For completed architecture work also report the final tree, why each major file
+owns its content, at least five repository-specific routing examples,
+duplication findings, mechanical enforcement opportunities, and unresolved
+gaps. Omit empty sections.
 
 ## Bundled resources
 
-- `references/runtime-compatibility.md`: sourced runtime load semantics.
-- `references/instruction-taxonomy.md`: scope, ownership, and enforcement.
-- `references/repository-layout.md`: canonical tree and adapter locations.
-- `references/migration-playbook.md`: authorization and migration sequence.
-- `references/quality-rubric.md`: final semantic review.
+- `references/repository-inspection.md`: evidence-first discovery checklist.
+- `references/instruction-taxonomy.md`: source-of-truth decision tree.
+- `references/repository-layout.md`: target tree and adapter placement.
+- `references/skill-system-design.md`: skill selection and composition.
+- `references/migration-playbook.md`: safe setup/refactor/migration sequence.
+- `references/routing-evaluation.md`: representative routing tests.
+- `references/runtime-compatibility.md`: sourced runtime semantics.
+- `references/quality-rubric.md`: final architecture audit.
 - `references/examples-*.md`: small, monorepo, and cross-runtime patterns.
-- `scripts/instruction_model.py`: shared repository-local resolver.
-- `scripts/scan-instruction-tree.py`: runtime-aware inventory.
-- `scripts/validate-instruction-tree.py`: deterministic diagnostics.
-- `scripts/measure-context-budget.py`: resolved context measurement.
+- `scripts/*.py`: repository-local scan, validation, and measurement tools.

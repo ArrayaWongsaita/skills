@@ -25,8 +25,18 @@ limit is 32 KiB, configurable with `project_doc_max_bytes`.
 inherently temporary. Prefer nested `AGENTS.md` when portability matters.
 Nested files outside the root-to-working-directory chain are inventory only.
 
-Source verified 2026-08-03:
+Codex also discovers repository skills from `.agents/skills` while walking from
+the repository root to the current working directory. Compact skill metadata
+(name, description, and path) is exposed before a skill is selected; the full
+`SKILL.md` body is loaded only when invoked. Keep the catalog discriminative:
+Codex caps the skill-list contribution at 2% of the context window, with an
+8,000-character fallback when the window size is unknown. Symlinked skill
+directories are supported, but repository tooling should reject broken or
+out-of-repository targets.
+
+Sources verified 2026-08-23:
 https://learn.chatgpt.com/docs/agent-configuration/agents-md
+https://learn.chatgpt.com/docs/build-skills
 
 ## Claude Code
 
@@ -37,11 +47,20 @@ Imports are eager, recursive to a maximum of four hops, and consume context.
 Nested memory and path-scoped `.claude/rules/*.md` may load later when matching
 files are accessed.
 
+Claude Code discovers project skills from `.claude/skills/<name>/SKILL.md` in
+the starting directory and its ancestors to the repository root, then discovers
+nested project skills on demand as it works below that directory. It exposes
+skill metadata before loading the full body when invoked or selected. A
+canonical `.agents/skills` catalog therefore needs a thin Claude-native
+placement strategy, such as repository-approved symlinks or installation into
+`.claude/skills`; do not copy and fork the skill body.
+
 Do not count `AGENTS.md` for Claude unless a native file imports it. Treat
 external imports and user settings as unresolved unless explicitly supplied.
 
-Source verified 2026-08-03:
+Sources verified 2026-08-23:
 https://code.claude.com/docs/en/memory
+https://code.claude.com/docs/en/slash-commands
 
 ## GitHub Copilot CLI
 
@@ -59,8 +78,14 @@ order. It expands `@` references in repository-wide instruction files, but not
 in path-specific `*.instructions.md` files. Report conflicts instead of
 inventing precedence. Keep IDE and cloud-agent claims separate from CLI claims.
 
-Source verified 2026-08-03:
+Copilot CLI discovers project skills from `.github/skills`, `.agents/skills`,
+and `.claude/skills`. It chooses skills using their descriptions and injects a
+selected `SKILL.md` into context. The canonical `.agents/skills` layout
+therefore needs no copied Copilot adapter.
+
+Sources verified 2026-08-23:
 https://docs.github.com/en/enterprise-cloud%40latest/copilot/how-tos/copilot-cli/customize-copilot/add-custom-instructions
+https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-skills
 
 ## OpenCode
 
@@ -80,8 +105,14 @@ OpenCode does not automatically expand arbitrary Markdown references inside
 `AGENTS.md`. Resolve local instruction globs, but never fetch remote URLs by
 default. Record remote entries and global/user configuration as unresolved.
 
-Source verified 2026-08-03:
-https://opencode.ai/docs/rules/
+OpenCode loads skills on demand and discovers project definitions in
+`.opencode/skills`, `.claude/skills`, and `.agents/skills` while walking from
+the working directory to the Git worktree. The canonical `.agents/skills`
+layout therefore needs no copied OpenCode adapter.
+
+Sources verified 2026-08-23:
+https://dev.opencode.ai/docs/rules/
+https://opencode.ai/docs/skills
 
 ## Static-analysis boundary
 
@@ -89,3 +120,9 @@ Repository-local analysis cannot prove user-level configuration, disabled
 instructions, active-session state, dynamic file reads, or remote content.
 Expose assumptions and unresolved items in every runtime report. Use the
 runtime's native inspection command when exact session state matters.
+
+Treat all four runtimes as supported design targets, but remain
+capability-accurate. The canonical `.agents/skills` catalog is native to Codex,
+Copilot CLI, and OpenCode. Claude Code uses `.claude/skills`, so report an
+adapter requirement when only the canonical path exists. Never duplicate skill
+bodies merely to equalize directory names.

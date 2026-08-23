@@ -104,6 +104,44 @@
         "Only Codex receives the default 32 KiB limit unless another policy is provided.",
         "Inventory, loaded context, conditional context, and unresolved state are distinct."
       ]
+    },
+    {
+      "id": 8,
+      "name": "evidence-first-fullstack-setup",
+      "prompt": "Inspect this repository, then implement the smallest useful single-agent AGENTS.md architecture with scoped instructions, composable skills, authoritative documentation, and deterministic validation. Do not create placeholder files or specialist agents.",
+      "expected_output": "A repository-specific setup whose files and commands are derived from the fixture rather than a generic full-stack template.",
+      "files": [
+        "evals/fixtures/setup-fullstack/package.json",
+        "evals/fixtures/setup-fullstack/README.md",
+        "evals/fixtures/setup-fullstack/apps/api/src/main.ts",
+        "evals/fixtures/setup-fullstack/apps/web/src/App.tsx",
+        "evals/fixtures/setup-fullstack/prisma/schema.prisma"
+      ],
+      "expectations": [
+        "The agent inspects package.json, source boundaries, schema, and existing docs before editing.",
+        "Root AGENTS.md remains a lean operating map and does not contain framework tutorials.",
+        "Backend, frontend, database, and testing procedures can compose without creating specialist agents.",
+        "Only evidence-supported standards, skills, and nested AGENTS.md files are created.",
+        "Documented commands exactly match scripts in package.json."
+      ]
+    },
+    {
+      "id": 9,
+      "name": "refactor-legacy-router-layers",
+      "prompt": "Refactor this legacy instruction system so AGENTS.md routes directly to matching skills and authoritative repository docs. Remove duplicate routing concepts from the proposed design, preserve project rules, and show the duplication and context-efficiency audits.",
+      "expected_output": "A scoped refactor plan or authorized patch that consolidates rules and workflows into the correct responsibility layers.",
+      "files": [
+        "evals/fixtures/legacy-router/AGENTS.md",
+        "evals/fixtures/legacy-router/.agents/rules/testing.md",
+        "evals/fixtures/legacy-router/.agents/workflows/testing.md"
+      ],
+      "expectations": [
+        "Legacy rules and workflows are inventoried rather than treated as the target architecture.",
+        "Project requirements move to standards and repeatable procedures move to a testing skill.",
+        "The root routes directly to the skill and authoritative documentation.",
+        "No .agents/rules or .agents/workflows layer is recommended for the target.",
+        "Destructive file removal is gated by explicit authorization."
+      ]
     }
   ]
 }

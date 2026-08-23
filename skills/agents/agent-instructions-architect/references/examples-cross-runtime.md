@@ -1,23 +1,33 @@
 # Example: cross-runtime adapters
 
-Canonical shared source:
+Canonical repository system:
 
-```text
+~~~text
 AGENTS.md
-.agents/rules/testing-quality.md
-```
+ARCHITECTURE.md
+docs/standards/testing.md
+.agents/skills/testing/SKILL.md
+~~~
 
-Small native adapters when the selected runtime needs them:
+Add only adapters required by active runtimes:
 
-```text
-CLAUDE.md                                  # @AGENTS.md
-.github/instructions/testing.instructions.md  # Copilot applyTo selector
-opencode.json                             # explicit local rule paths
-```
+~~~text
+CLAUDE.md                                  # small native import/adapter
+.claude/skills/testing                     # approved symlink/placement adapter
+.github/instructions/testing.instructions.md  # Copilot path selector
+opencode.json                             # explicit local instruction paths
+~~~
 
-Do not create `.github/copilot-instructions.md` merely to copy `AGENTS.md`;
-Copilot CLI already supports `AGENTS.md`. Keep runtime-only syntax or behavior
-in the adapter and shared policy in the canonical tree.
+Keep shared operation in `AGENTS.md`, procedure in the testing skill, and
+project-specific requirements in the testing standard. Native files contain
+only runtime-specific loading or scope syntax. Do not create
+`.github/copilot-instructions.md` merely to copy `AGENTS.md` when the selected
+Copilot surface already supports it.
 
-Validate each runtime separately. `all` means four independent reports, not a
-single merged context estimate.
+Codex, Copilot CLI, and OpenCode can use the canonical `.agents/skills` catalog
+directly. Claude Code discovers `.claude/skills`, so use a
+repository-compatible pointer or installer rather than a copied `SKILL.md`.
+
+Validate runtimes independently. `all` means separate reports, not a merged
+context estimate. Capability gaps are reported; equal product support does not
+mean pretending every runtime has identical native skill discovery.

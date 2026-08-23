@@ -1,36 +1,49 @@
 # Quality rubric
 
-## Canonical and root quality
+## Discoverability and context
 
-- `AGENTS.md` owns shared policy; adapters contain no copied policy prose.
-- Root guidance is stable, high-authority, and useful before task selection.
-- Every routed file states when it is relevant.
-- A 200-line warning is a maintainability heuristic, not a universal runtime
-  limit; byte budgets and load behavior remain runtime-specific.
+- Root `AGENTS.md` is a lean operating map, normally about 50–120 lines.
+- An agent can find architecture, standards, skills, decisions, references, and
+  validation commands without a redundant router layer.
+- Detailed information has an explicit read condition and is not preloaded.
+- Runtime inventory, startup, imported, conditional, shadowed, and unresolved
+  artifacts are reported separately.
+- Instruction bytes and skill-catalog metadata are measured separately.
 
-## Scope and context quality
+## Responsibility and source of truth
 
-- Rules live at the narrowest valid scope.
-- Inventory, startup, import, conditional, shadowed, and unresolved artifacts
-  are reported separately.
-- Measurements use a declared runtime, working directory, and target paths.
-- No unrelated nested `AGENTS.md` is counted as Codex startup context.
-- Imports, adapters, and exact duplicate paragraphs do not inflate context
-  without being visible in diagnostics.
+- Every major fact has one preferred owner.
+- Root, nested instructions, skills, standards, architecture, references,
+  decisions, plans, and tooling keep distinct responsibilities.
+- Standards state project requirements; skills state repeatable procedures.
+- Nested instructions contain only location-specific deltas.
+- No framework tutorial or task checklist has leaked into root instructions.
+- No empty file exists merely to complete a proposed tree.
 
-## Evidence quality
+## Skills and routing
 
-- Commands, paths, ownership, and runtime claims cite repository evidence or a
-  dated primary source.
-- Static analysis does not claim knowledge of user config, remote content, or
-  dynamic file access that it did not inspect.
-- Deterministic checks report syntax, links, imports, cycles, globs, shadowing,
-  and exact duplicates; semantic conflicts remain an explicit review task.
+- Every `SKILL.md` has valid `name` and precise WHAT + WHEN `description` fields.
+- Skills are focused, reusable, composable, and independent of unrelated
+  concerns.
+- Database design-only work and database changes route differently.
+- Testing and security review compose with domain skills.
+- Representative positive and negative prompts select the minimum relevant set.
+- The architecture introduces no specialist agents or orchestration.
 
-## Operational and safety quality
+## Evidence and enforcement
 
-- A new agent can identify the next file and validation command quickly.
-- Audit and design modes are read-only.
-- Direct apply intent and destructive approval are distinguished.
-- Deletes, renames, broad replacements, and dirty-worktree risks are visible.
-- Validation failures are reported rather than hidden or reclassified.
+- Commands, paths, frameworks, boundaries, and generated files are backed by
+  repository evidence.
+- Runtime facts use dated primary documentation.
+- Formatting, types, dependency direction, schemas, builds, and generated-file
+  consistency use deterministic tooling when practical.
+- Tooling failures are reported, not hidden or reclassified as success.
+
+## Final audits
+
+- Complete diff and requirement-coverage review.
+- Context-efficiency audit: each root line is nearly always needed.
+- Duplication audit across all instruction and documentation layers.
+- Path, link, command, and architecture-consistency validation.
+- Proportional tests, lint, type checks, builds, and schema validation.
+- Explicit record of skipped checks, assumptions, and unresolved gaps.
