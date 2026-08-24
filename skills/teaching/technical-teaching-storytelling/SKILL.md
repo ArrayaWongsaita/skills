@@ -1,119 +1,111 @@
 ---
 name: technical-teaching-storytelling
-description: Design, revise, or review programming and software-engineering lessons using problem-driven storytelling so learners understand why a concept exists, see realistic failure modes, apply it in a minimal demo, and reason about when to use it. Use for lesson plans, tutorials, workshops, live-coding sessions, hands-on labs, and technical explanations; do not force a story onto a simple factual lookup.
+description: Teach, design, review, and revise programming and software-engineering explanations, lessons, workshops, and labs by aligning learning objectives, evidence, prior knowledge, task complexity, and instructional strategy. Use for difficult technical mechanisms and engineering-reasoning education; do not invoke for routine coding help or simple factual lookups unless teaching is requested.
 ---
 
 # Technical Teaching Storytelling
 
-Make the concept feel like a necessary answer to a problem the learner already understands. The target learning journey is:
+Design instruction before designing the story:
 
 ```text
-See the problem
-      ↓
-Try a plausible solution
-      ↓
-Observe its limitation
-      ↓
-Understand why the concept exists
-      ↓
-See how it works
-      ↓
-Apply it
-      ↓
-Know when to use it—and when not to
+Learning Objective → Evidence of Learning → Prior Knowledge + Task Complexity
+→ Teaching Strategy → Storytelling when useful → Technical Mechanism
+→ Demo / Investigation → Practice + Feedback → Retrieval + Transfer
+→ Trade-offs / Reflection
 ```
+
+Problem-driven storytelling remains a core strength of this skill, but it is a delivery and reasoning layer rather than the strategy for every lesson. Optimize for a correct technical mental model and increasingly independent engineering decisions.
 
 Use Thai as the primary teaching language unless the user requests another language. Preserve established English technical terms such as `Race Condition`, `Transaction`, `Producer`, and `Consumer`; explain a term on first use when the audience may not know it.
 
-## Analyze before drafting
+## Route the task
 
-Determine these points internally before generating the lesson. Ask the user only when a missing answer would materially change the result and cannot be inferred safely.
+- **Explain:** Explain a concept or behavior with the shortest structure that builds the required mental model. A factual lookup may need only `Context → Mechanism → Example → Check`.
+- **Design:** Build a lesson, workshop, module, live-coding session, or lab from objective and evidence through practice, retrieval, and transfer.
+- **Review:** Evaluate before rewriting. Identify strengths, concrete technical or instructional weaknesses, why they matter, and the smallest useful correction.
+- **Revise:** Preserve a valid objective and strong existing sections. Fix identified weaknesses without forcing the material into a canonical format; explain major pedagogical restructuring.
 
-1. What should the learner be able to explain, implement, debug, or design afterward?
-2. What prior knowledge is required?
-3. Which realistic problem makes this topic necessary?
-4. What plausible first attempt would the learner try?
-5. Under what concrete condition does that attempt fail?
-6. Which exact part of the failure does the new concept solve?
-7. What limitation or trade-off remains?
-8. What is the smallest working demo?
-9. What practice moves the learner from following to independent reasoning?
-10. What durable mental model should the learner retain?
+For substantial Design work or a full lesson Review or Revision, read [references/lesson-blueprint.md](references/lesson-blueprint.md). Do not load it for a simple lookup or short explanation unless its detailed guidance is actually needed.
 
-If audience, duration, or format is not specified, choose a reasonable assumption, keep the scope compact, and state only assumptions that affect the lesson materially.
+## Analyze before teaching
 
-## Use the causal teaching sequence
+Determine these points internally. Ask the user only when a missing answer would materially change the result and cannot be inferred safely.
 
-Default to:
+1. **Learning objective:** What should the learner be able to do? Prefer `explain`, `predict`, `trace`, `implement`, `debug`, `compare`, `diagnose`, `design`, `justify`, or `evaluate` over vague goals such as “understand.”
+2. **Evidence of learning:** What observable work would prove the objective? An explanation requires a causal account in the learner's words; implementation requires working code; debugging requires diagnosis of an unfamiliar failure; design requires comparing alternatives and justifying a choice under constraints.
+3. **Relevant prior knowledge:** What does this learner already know about the domain, prerequisites, and specific mechanism? Treat labels such as beginner or senior only as proxies.
+4. **Task complexity and topic nature:** Is the target factual, conceptual, procedural, diagnostic, or an engineering decision? How many unfamiliar elements interact?
+5. **Mental model:** Which mechanism, state transition, invariant, or decision model must remain after details fade?
+6. **Alignment:** Will the activities and assessment produce the stated evidence rather than test an easier, unrelated behavior?
+
+If audience, duration, or format is absent, choose a compact reasonable assumption and state it only when it materially affects the result.
+
+## Select the teaching strategy
+
+Choose and combine strategies from objective, evidence, prior knowledge, complexity, and topic—not learner labels or a preferred narrative.
+
+- **Worked Example + Guidance Fading:** Prefer for low relevant prior knowledge, unfamiliar procedures, many interacting steps, or syntax/mechanics objectives. Use `Model → Explain → Predict small steps → Completion → Modify → Independent solution`; do not dump finished code without reasoning.
+- **Guided Prediction:** Prefer when observing execution exposes a conceptual mental model. Use `Show state → Predict → Execute → Observe → Explain`. Predict nontrivial behavior, not obvious syntax.
+- **Guided Problem Solving:** Prefer when learners control the prerequisites but still need support coordinating a multi-step solution. Use prompts, partial plans, or checkpoints to support the next decision, then fade them instead of taking over the solution.
+- **Productive Failure:** Use selectively when prerequisites are sufficient, conceptual understanding or transfer is the target, and several plausible approaches can expose useful misconceptions. Use `Problem → Plausible attempt → Observe limitation → Compare → Formal instruction → Apply`. The attempt must inform later instruction; never leave a novice to struggle unsupported.
+- **Engineering Decision Reasoning:** Prefer for architecture, distributed systems, databases, scalability, consistency, messaging, caching, concurrency, infrastructure, and security architecture. Use `Problem → Requirements → Constraints → Required Properties → Candidate Mechanisms → Trade-offs → Decision → Consequences`.
+- **Diagnose → Explain → Repair:** Prefer for debugging, production incidents, common mistakes, and misconception correction. Use `Symptom → Evidence → Hypothesis → Trace mechanism → Cause → Repair → Why it works → Prevention`.
+
+Independent practice follows sufficient modeling or guidance; it is not evidence of rigor by itself.
+
+## Use storytelling conditionally
+
+Use narrative when it materially improves motivation, causal understanding, retention, debugging intuition, or engineering reasoning. The classic pattern remains available:
 
 ```text
 Hook → Context → Problem → Naive Attempt → Failure → Question
-     → Concept → Solution → Demo → Practice → Reflect
+→ Concept → Solution → Demo → Practice → Reflect
 ```
 
-Preserve the causal chain even when shortening or combining stages. A short explanation does not need eleven visible headings; a full lesson normally does.
+Shorten, merge, reorder, or omit stages to fit the objective. Do not invent a naive attempt, dramatic failure, or historical origin story merely to complete the pattern. Suitable alternatives include:
 
-- **Hook:** Open with a short situation, question, or event that creates curiosity. Do not reveal the answer immediately, and do not begin with a definition when a problem can establish motivation.
-- **Context:** Give only the users, current architecture, requirements, and constraints needed to understand the problem.
-- **Problem:** Use a problem the concept was genuinely designed to address. Never manufacture a failure merely to justify a preferred technology.
-- **Naive Attempt:** When useful, show the simple approach a competent newcomer might reasonably try. First establish why it appears correct.
-- **Failure:** Trigger the attempt's real limitation with a concrete input, timeline, request flow, state transition, execution order, or small experiment.
-- **Question:** Ask learners what property the solution needs before naming the concept. Make the concept the answer to that question.
-- **Concept:** Explain `What`, `Why`, `How`, `When`, and `When Not`, in that order unless the audience requires a different emphasis.
-- **Solution:** Apply the concept to the original problem and make the `Problem → Concept → Solution` link explicit.
-- **Demo:** Build `Minimal → Working → Extend`. Start with the smallest system that proves the idea before adding production concerns.
-- **Practice:** Progress from guided reproduction to changed requirements and independent problem solving. Avoid copy-only exercises.
-- **Reflect:** Test the learner's mental model with transfer, comparison, failure-mode, or trade-off questions—not definition recall.
-
-For a complete lesson, workshop, or live-coding plan, read [references/lesson-blueprint.md](references/lesson-blueprint.md) before drafting. It contains the expanded stage playbook, framework patterns, default output structure, practice levels, and examples. For a brief explanation or focused review, use the guidance here and load the reference only when its detail is useful.
-
-## Select the storytelling shape
-
-Choose the lightest structure that fits the topic:
-
-- **Problem → Solution → Result:** Default for technical concepts, backend, databases, algorithms, architecture, DevOps, and security.
-- **Before → After → Bridge:** Use for refactoring or architecture improvement. Establish the current design and its problems, define the desired state, then teach the transition.
-- **Three-Act Structure:** Use for a large lesson: setup, escalating conflict, then concept-driven resolution.
-- **Progressive Failure:** Use for advanced topics where each improvement creates a new constraint. Move through `Solution V1 → Problem → Solution V2 → New Problem → Solution V3 → Trade-off` so learners see why no architecture is universally best.
-
-Do not add narrative complexity to a simple concept. Story serves the technical model; it must not obscure it.
+```text
+Context → Mechanism → Example → Check
+Failure → Evidence → Hypothesis → Mechanism → Repair
+Scenario → Requirements → Alternatives → Trade-offs → Decision
+```
 
 ## Maintain technical integrity
 
-- Every concept must answer: “What problem was it created to solve?”
-- Distinguish `Requirement`, `Problem`, `Constraint`, `Solution`, and `Trade-off` explicitly.
-- Make each failure causally valid under the stated context. Show evidence rather than merely declaring the naive approach wrong.
-- Explain why a simpler solution is insufficient before introducing a technology or pattern.
-- Compare meaningful alternatives when more than one solution fits. Tie each recommendation to workload, consistency, latency, complexity, cost, team capability, and failure assumptions as relevant.
-- Never call a technology “best” without its context. State what it improves, what it does not solve, and what cost it introduces.
-- Avoid over-engineering. If the simple solution meets the requirements and constraints, say so.
-- For advanced material, increase complexity progressively: `Simple → Problem → Improvement → New Problem → Better Model`.
-- Keep code examples small and executable in concept. Add infrastructure and production hardening only after the core mechanism is visible.
-- Use ASCII timelines, sequence diagrams, state diagrams, or request flows when concurrency, ordering, distributed behavior, or state changes would otherwise stay abstract.
+- Explain what problem, constraint, failure mode, or design pressure makes a concept useful and when an engineer should start considering it.
+- Distinguish `Problem`, `Mechanism`, `Technology`, and `Implementation`. A technology is one possible implementation of a mechanism, not the problem's automatic answer.
+- Make failures causally valid under the stated scenario. Show evidence with a concrete input, timeline, request flow, state transition, execution order, log, test, or experiment.
+- Never reverse-engineer a problem to justify a technology. Start architecture teaching from requirements, constraints, and required properties; compare candidate mechanisms and allow “keep the current design” as a valid decision.
+- Make claims conditional. Do not claim that Redis is simply faster, Kafka is better, microservices scale better, transactions solve concurrency, or queues prevent race conditions.
+- Explain the mechanism behind a solution, which assumption it relies on, what it fixes, what it leaves unchanged, and which new failure modes or costs it introduces.
+- Compare meaningful alternatives when more than one fits. Select relevant dimensions such as consistency, availability, latency, throughput, contention, complexity, observability, cost, recovery, deployment, and team capability; do not mechanically list all dimensions.
+- Avoid over-engineering. If the simple solution meets the requirements, keep it.
+- Keep the core demo small, runnable in concept, and observable. Make invisible behavior visible with state, identifiers, timestamps, ordering, rows, messages, or controlled failures.
+- Keep teaching implementations simpler than production architecture when useful, but identify intentional simplifications and never distort the mechanism. Add production hardening only after the core model is stable.
 
-## Adapt to the audience
+## Build durable learning
 
-### Beginner
+- Before revealing important behavior, ask for a prediction when it will expose the learner's current model.
+- Ask learners to self-explain causality: which assumption failed, which state changed, which invariant was violated, and why the repair prevents the failure. Do not use “Do you understand?” as evidence.
+- Fade guidance through `Follow → Modify → Solve → Design` or an equivalent progression. Each stage must introduce at least one meaningful new decision rather than cosmetic variation.
+- Use occasional retrieval without notes to reinforce the failure or pressure, mechanism, assumptions, and limits.
+- End substantial instruction with transfer that changes at least one important constraint. Reproducing the demo is not sufficient evidence of transfer.
 
-Use one concept at a time, minimal code, diagrams, and analogies only when they preserve the technical truth. Define unfamiliar terms and avoid unexplained jargon.
+## Verify volatile details conditionally
 
-### Intermediate
+Verify current behavior when correctness depends on framework or library versions, API signatures, configuration syntax, runtime defaults, compatibility, cloud behavior, product limits, deprecations, or CLI commands. Prefer authoritative official documentation, state a relevant version when important, separate the stable concept from version-specific implementation, and never invent an API or configuration to finish a demo.
 
-Emphasize realistic scenarios, debugging, implementation, failure cases, alternatives, and trade-offs.
+Do not browse merely to explain stable concepts such as a race condition, transaction, queue, stack, graph, or dependency inversion unless factual uncertainty exists.
 
-### Advanced
-
-Emphasize architecture, concurrency, performance, scalability, consistency, distributed failure modes, operational cost, and trade-offs. Prefer a precise technical model over an analogy when the analogy would distort the concept.
-
-## Verify the lesson
+## Final check
 
 Before returning the result, confirm that:
 
-1. The hook creates the question the lesson later answers.
-2. The scenario is realistic and contains no irrelevant complexity.
-3. The first attempt is plausible and its failure is demonstrated causally.
-4. The concept solves the named problem rather than merely appearing after it.
-5. The demo proves the core mechanism at the smallest useful scale.
-6. Practice requires progressively more learner decisions.
-7. Trade-offs and simpler alternatives are visible.
-8. Reflection checks whether learners can recognize a new situation where the concept does—or does not—apply.
+1. The objective is observable and the evidence, activity, and assessment align with it.
+2. The strategy fits relevant prior knowledge, task complexity, and topic nature.
+3. Storytelling is useful rather than decorative or mandatory.
+4. Failures and technical claims are valid, observable, and appropriately conditional.
+5. The mechanism is distinct from its technologies and implementations.
+6. The demo isolates the core model before production complexity.
+7. Practice fades support and requires progressively more learner decisions.
+8. Self-explanation, retrieval, transfer, and trade-offs appear when they strengthen the target mental model.

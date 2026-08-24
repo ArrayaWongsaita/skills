@@ -1,6 +1,6 @@
 interface:
   display_name: "Technical Teaching Storytelling"
-  short_description: "Design problem-driven technical lessons"
-  default_prompt: "Use $technical-teaching-storytelling to design a Thai, problem-driven lesson about [topic] for [audience]."
+  short_description: "Teach technical mechanisms and engineering reasoning"
+  default_prompt: "Use $technical-teaching-storytelling to teach [topic] to [audience] in Thai, choosing the structure from the learning objective and prior knowledge."
 policy:
   allow_implicit_invocation: true
