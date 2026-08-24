@@ -42,7 +42,7 @@ npx skills add ArrayaWongsaita/skills --skill nextjs-safe-env
 
 | Skill | Description / คำอธิบาย | Guide / คู่มือ |
 | --- | --- | --- |
-| `technical-teaching-storytelling` | Design, revise, or review programming and software-engineering lessons using problem-driven storytelling so learners understand why a concept exists, see realistic failure modes, apply it in a minimal demo, and reason about when to use it. Use for lesson plans, tutorials, workshops, live-coding sessions, hands-on labs, and technical explanations; do not force a story onto a simple factual lookup. | [คู่มือ / Guide](teaching/technical-teaching-storytelling.md) |
+| `technical-teaching-storytelling` | Teach, design, review, and revise programming and software-engineering explanations, lessons, workshops, and labs by aligning learning objectives, evidence, prior knowledge, task complexity, and instructional strategy. Use for difficult technical mechanisms and engineering-reasoning education; do not invoke for routine coding help or simple factual lookups unless teaching is requested. | [คู่มือ / Guide](teaching/technical-teaching-storytelling.md) |
 
 ### Install this category / ติดตั้งทั้งหมวด
 
