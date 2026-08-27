@@ -1,0 +1,213 @@
+{
+  "skill_name": "engineering-workflow",
+  "evals": [
+    {
+      "id": 1,
+      "name": "A small subtitle feature reduced path",
+      "prompt": "$engineering-workflow Add a local subtitle font-size preference in the existing player settings panel. The repository shows one component, no API or persistence change, and acceptance behavior is explicit.",
+      "expected_output": "Classify FEATURE with LOW risk and LOW uncertainty, use DISCOVERY to capture acceptance/spec evidence, then take the reduced IMPLEMENTATION -> CODE_REVIEW -> COMPLETE path without dedicated design or planning.",
+      "expectations": ["Persists classification and reduced-path rationale", "Does not skip the acceptance/spec artifact", "Does not add system review without a new risk signal"],
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "B wishlist normal feature path",
+      "prompt": "$engineering-workflow Add a cross-device wishlist with API persistence and empty-state behavior.",
+      "expected_output": "Route through discovery, specification, design review, vertical ticket planning, implementation, and code review; add system review only if discovered risk warrants it.",
+      "expectations": ["Does not misuse the small-feature path", "Uses stable spec/ticket/review artifacts", "Keeps transition ownership in the orchestrator"],
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "C classify external versus empirical unknown",
+      "prompt": "$engineering-workflow Our provider behavior is unclear: determine current webhook retry guarantees, and measure whether our chosen dedupe store meets the required contention latency.",
+      "expected_output": "Route the external unknown through installed research and use installed prototype only if a disposable state/interaction artifact is needed; use both results before specification.",
+      "expectations": ["Chooses research for current provider facts", "Chooses prototype only for a disposable state/interaction question", "Does not treat evidence as production implementation"],
+      "files": []
+    },
+    {
+      "id": 4,
+      "name": "D refund webhook requires high-risk system gate",
+      "prompt": "$engineering-workflow Make refund webhooks idempotent across concurrent duplicate delivery and retries.",
+      "expected_output": "Classify at least HIGH risk, specify transaction and failure contracts, use normal feature gates, and require final system review after code review.",
+      "expectations": ["Raises risk for money, concurrency, and retries", "Requires system review", "Traces partial failure and side effects"],
+      "files": []
+    },
+    {
+      "id": 5,
+      "name": "E duplicate notification starts diagnosis",
+      "prompt": "$engineering-workflow Customers sometimes receive the same notification twice after a retrying worker. Fix it.",
+      "expected_output": "Classify BUG and begin diagnosis, requiring reproduction, root-cause evidence, and a red-capable regression loop before the fix.",
+      "expectations": ["Does not start with implementation", "Separates REGRESSION_TEST and FIX modes", "Uses code review after the fix"],
+      "files": []
+    },
+    {
+      "id": 6,
+      "name": "F duplicate charge incident path",
+      "prompt": "$engineering-workflow Production is actively creating duplicate charges. Mitigate and produce the final engineering record.",
+      "expected_output": "Classify BUG with INCIDENT subtype, request human approval for reversible observable mitigation if diagnosis cannot yet produce a red loop, review the mitigation, return to diagnosis, validate the real fix, run final scrutinize, and use post-mortem only if the installed contract accepts incidents; otherwise remain BLOCKED.",
+      "expectations": ["Mitigation never completes the workflow", "Uses final system scrutinize", "Does not invent a replacement incident writer"],
+      "files": []
+    },
+    {
+      "id": 7,
+      "name": "G e-learning large project composition",
+      "prompt": "$engineering-workflow Build an e-learning platform with discovery, enrollment, progress, and instructor publishing.",
+      "expected_output": "Classify LARGE_PROJECT, wayfind the destination and unknowns, then create bounded child FEATURE workflow IDs and re-wayfind when assumptions fail.",
+      "expectations": ["Parent stores child IDs rather than child state", "Uses BOUND_FEATURES planning", "Does not complete until scoped children and destination are complete"],
+      "files": []
+    },
+    {
+      "id": 8,
+      "name": "H resume reconciles before implementation",
+      "prompt": "$engineering-workflow continue wishlist-7d12ab34. State says design passed, but the spec and Git HEAD changed since verification.",
+      "expected_output": "Validate state/revision, recompute artifact fingerprints and Git/worktree facts, rerun claimed checks, and rewind to the earliest invalidated producer stage with a recorded reason before implementation.",
+      "expectations": ["Reality overrides saved claims", "Does not duplicate artifacts", "Uses compare-and-swap to save reconciliation"],
+      "files": []
+    },
+    {
+      "id": 9,
+      "name": "I code blocker bounded loop",
+      "prompt": "$engineering-workflow continue checkout-fix. Code review reports the same missing required behavior on three review attempts.",
+      "expected_output": "Loop CODE_REVIEW -> IMPLEMENTATION[REVIEW_FIX] -> CODE_REVIEW while incrementing only the code gate, then persist BLOCKED with GATE_BUDGET_EXHAUSTED after cycle three.",
+      "expectations": ["Uses three attempts and no fourth", "Does not consume design/system budget", "Keeps blocker evidence"],
+      "files": []
+    },
+    {
+      "id": 10,
+      "name": "J design verdict transitions",
+      "prompt": "$engineering-workflow continue account-linking. Show how REWORK and REJECT from design review are handled.",
+      "expected_output": "Normalize REWORK back to specification or exploration and REJECT back to discovery, consuming the design gate without allowing planning until SHIP.",
+      "expectations": ["Maps verdicts to the declared backward states", "Increments design only", "Requires a fresh design SHIP before planning"],
+      "files": []
+    },
+    {
+      "id": 11,
+      "name": "K user-only upstream skill is not called",
+      "prompt": "$engineering-workflow Implement the approved ticket. The installed Matt implement skill has disable-model-invocation true.",
+      "expected_output": "Resolve the installed user-only implement skill, hand the user its real command when the runtime blocks model invocation, and resume the orchestrator afterward; do not imitate or clone it.",
+      "expectations": ["Records the exact implement path/identity", "Uses USER_INVOCATION_REQUIRED when policy blocks model invocation", "Keeps transition control in the orchestrator"],
+      "files": []
+    },
+    {
+      "id": 12,
+      "name": "Missing dependencies approval reload blocker",
+      "prompt": "$engineering-workflow Start a feature when grill-with-docs, tdd, code-review, and scrutinize are not installed.",
+      "expected_output": "Audit read-only, group exact verified npx skills@latest install proposals with owner/source/scope, ask once before mutation, and after approved installation persist DEPENDENCY_RELOAD_REQUIRED as BLOCKED until installation and a fresh audit succeed.",
+      "expectations": ["No side effect before approval", "Does not update existing dependencies", "Does not use a fake fallback"],
+      "files": []
+    },
+    {
+      "id": 13,
+      "name": "Claude built-in code-review collision",
+      "prompt": "/engineering-workflow Review an implemented feature in Claude Code where only bundled /code-review is visible.",
+      "expected_output": "Reject the bare built-in as the Matt dependency, require mattpocock-skills:code-review or an exact audited standalone path, and block if it cannot be resolved.",
+      "expectations": ["Does not call bare /code-review", "Records qualified identity", "Reports explicit blocker"],
+      "files": []
+    },
+    {
+      "id": 14,
+      "name": "Emergency mitigation cannot complete",
+      "prompt": "$engineering-workflow continue duplicate-charge. The circuit breaker mitigation passed code and system review, but root cause is unknown.",
+      "expected_output": "Return to DIAGNOSIS or BLOCKED and leave mitigationOutstanding true; never transition to COMPLETE.",
+      "expectations": ["Requires root-cause and fix validation", "Preserves mitigation evidence", "Does not mislabel the mitigation as the fix"],
+      "files": []
+    },
+    {
+      "id": 15,
+      "name": "Requirement drift routing",
+      "prompt": "$engineering-workflow continue wishlist. The user now adds social sharing, which is independently valuable and was absent from the approved specification.",
+      "expected_output": "Treat this as scope drift and create a new workflow unless the current destination explicitly owns it; do not silently widen the active implementation.",
+      "expectations": ["Distinguishes clarification from behavior change", "Returns to spec/review when the same scope changes", "Creates a new workflow for unrelated value"],
+      "files": []
+    },
+    {
+      "id": 16,
+      "name": "Research without subagents blocks",
+      "prompt": "$engineering-workflow Verify the provider's current retry contract, but this runtime has no subagent capability.",
+      "expected_output": "Persist BLOCKED with SUBAGENT_CAPABILITY_REQUIRED for research rather than substituting a lower-quality ad hoc search.",
+      "expectations": ["Names the missing capability", "Keeps the return stage", "Does not fabricate evidence"],
+      "files": []
+    },
+    {
+      "id": 17,
+      "name": "Two-axis code review without subagents blocks",
+      "prompt": "$engineering-workflow continue checkout. The runtime cannot spawn subagents for the required two-axis code review.",
+      "expected_output": "Persist BLOCKED with SUBAGENT_CAPABILITY_REQUIRED rather than performing a single-axis substitute or completing the workflow.",
+      "expectations": ["Preserves the reviewed diff and artifact refs", "Does not consume a fake passing gate", "Resumes at code review when capability returns"],
+      "files": []
+    },
+    {
+      "id": 18,
+      "name": "A missing scrutinize blocks before design review",
+      "prompt": "$engineering-workflow Start a normal feature. All route dependencies are installed except scrutinize.",
+      "expected_output": "Detect scrutinize as missing, identify thananon and thananon/9arm-skills, show the verified single-skill installation command and project-local scope, ask permission, and stop before DESIGN_REVIEW without a replacement.",
+      "expectations": ["Status is MISSING", "Shows owner and repository", "Does not create or invoke a substitute"],
+      "files": []
+    },
+    {
+      "id": 19,
+      "name": "B declined dependency installation remains blocked",
+      "prompt": "$engineering-workflow No. Do not install the missing scrutinize dependency.",
+      "expected_output": "Record BLOCKED_DEPENDENCY for scrutinize and provide manual verified installation guidance; perform no install and do not continue into design review.",
+      "expectations": ["No installation side effect", "No fallback worker", "State remains resumably blocked"],
+      "files": []
+    },
+    {
+      "id": 20,
+      "name": "C approved dependency resumes after verification",
+      "prompt": "$engineering-workflow Install the missing scrutinize skill using the command you just showed, then continue the paused feature.",
+      "expected_output": "Treat this as explicit approval, install only scrutinize, verify the expected thananon/9arm-skills source with a fresh audit, and resume from the paused stage without restarting discovery.",
+      "expectations": ["Approval is required before mutation", "Does not reinstall existing skills", "Resumes rather than restarting"],
+      "files": []
+    },
+    {
+      "id": 21,
+      "name": "D low-uncertainty feature does not require prototype",
+      "prompt": "$engineering-workflow Start a LOW-risk, LOW-uncertainty local feature with explicit acceptance behavior. prototype is not installed.",
+      "expected_output": "Use the reduced route and do not request prototype, research, wayfinder, or post-mortem installation merely because they are absent.",
+      "expectations": ["No optional dependency prompt", "Uses reduced route predicates", "Does not install prematurely"],
+      "files": []
+    },
+    {
+      "id": 22,
+      "name": "E empirical uncertainty activates prototype dependency",
+      "prompt": "$engineering-workflow Scrutinize found an unresolved empirical UI/state assumption that must be measured before specification. prototype is missing.",
+      "expected_output": "Transition to EXPLORATION[PROTOTYPE], identify prototype as a newly required Matt Pocock dependency, show its verified command and scope, ask permission, and resume exploration after approval.",
+      "expectations": ["Does not skip the empirical evidence", "Shows Matt Pocock provenance", "Does not create technical-experiment"],
+      "files": []
+    },
+    {
+      "id": 23,
+      "name": "F design scrutinize hard maximum is six",
+      "prompt": "$engineering-workflow Design scrutinize returns FIX_THEN_SHIP, FIX_THEN_SHIP, REWORK, FIX_THEN_SHIP, REWORK, FIX_THEN_SHIP.",
+      "expected_output": "Record six completed design scrutinize cycles, preserve the per-cycle progress history, transition to BLOCKED with unresolved findings, and never execute cycle seven.",
+      "expectations": ["Shows 6/6", "Uses an independent design counter", "Cycle 7 is forbidden"],
+      "files": []
+    },
+    {
+      "id": 24,
+      "name": "G design scrutinize stops at cycle five pass",
+      "prompt": "$engineering-workflow Design scrutinize passes on cycle five after four fix/review cycles.",
+      "expected_output": "Stop immediately at 5/6, close the design gate, and continue to ticket planning without running cycle six.",
+      "expectations": ["Reports PASS at 5/6", "Does not waste a sixth review", "Routes to to-tickets"],
+      "files": []
+    },
+    {
+      "id": 25,
+      "name": "H no-progress early stop",
+      "prompt": "$engineering-workflow Design scrutinize reports the same blocking invariant on consecutive revisions and no useful progress is possible.",
+      "expected_output": "Stop before cycle six when the no-progress evidence is strong, persist BLOCKED with SCRUTINIZE_NO_PROGRESS, and show the repeated finding and changed artifacts.",
+      "expectations": ["May stop before 6/6", "Explains no-progress evidence", "Does not loop mechanically"],
+      "files": []
+    },
+    {
+      "id": 26,
+      "name": "I final scrutinize fix returns through code review",
+      "prompt": "$engineering-workflow Final system scrutinize finds a fixable implementation issue after code review.",
+      "expected_output": "Route final scrutinize to implementation fix, tests/typecheck, code-review, and only then final scrutinize again; use the independent six-cycle system budget.",
+      "expectations": ["Does not skip repeated code review", "Keeps system and design counters separate", "Does not complete before the second system review"],
+      "files": []
+    }
+  ]
+}

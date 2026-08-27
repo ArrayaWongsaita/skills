@@ -5,9 +5,10 @@
   "description": "Workspace for personal AI-agent skills.",
   "type": "module",
   "scripts": {
-    "test": "npm run test:repo && npm run test:instruction-tools",
+    "test": "npm run test:repo && npm run test:instruction-tools && npm run test:engineering-workflow",
     "test:repo": "node --test tests/*.test.mjs",
     "test:instruction-tools": "python3 -m unittest discover -s skills/agents/agent-instructions-architect/tests -p 'test_*.py'",
+    "test:engineering-workflow": "python3 -m unittest discover -s skills/agents/engineering-workflow/tests -p 'test_*.py'",
     "docs:index": "node scripts/generate-skill-index.mjs",
     "validate": "node scripts/validate-skills.mjs"
   },

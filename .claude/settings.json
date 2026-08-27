@@ -1,0 +1,5 @@
+{
+  "skillOverrides": {
+    "engineering-workflow": "user-invocable-only"
+  }
+}
