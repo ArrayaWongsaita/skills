@@ -39,6 +39,121 @@ class DependencyAuditTests(unittest.TestCase):
         }
         self.assertTrue(forbidden_replacements.isdisjoint(dependency_audit.DEPENDENCIES))
 
+    def test_grill_with_docs_uses_matt_pocock_provenance_and_transitive_contract(self):
+        for name in ("grill-with-docs", "grilling", "domain-modeling"):
+            self.add_skill(
+                name,
+                source=dependency_audit.MATT_SOURCE,
+                disable_model=name == "grill-with-docs",
+                allow_implicit=name != "grill-with-docs",
+            )
+
+        result = self.audit(["grill-with-docs"], runtime="claude")
+
+        self.assertTrue(result["ok"])
+        contract = dependency_audit.DEPENDENCIES["grill-with-docs"]
+        self.assertEqual("Matt Pocock", contract["owner"])
+        self.assertEqual("mattpocock/skills", contract["source"])
+        self.assertEqual(
+            "requirement discovery, domain clarification, decision capture, glossary/ADR preparation",
+            contract["role"],
+        )
+        self.assertEqual(["grilling", "domain-modeling"], contract["directDependencies"])
+        self.assertEqual(
+            ["grill-with-docs", "to-spec", "scrutinize", "to-tickets", "implement", "code-review"],
+            result["dependencyGraph"]["engineering-workflow"],
+        )
+        status = result["dependencyStatus"]["grill-with-docs"]
+        self.assertEqual("VERIFIED", status["provenanceStatus"])
+        self.assertEqual("mattpocock/skills", status["detectedSource"])
+        self.assertEqual("user-invoked", status["upstreamInvocation"])
+        self.assertEqual("user_handoff", result["resolutions"]["grill-with-docs"]["invocationMode"])
+
+    def test_missing_grill_with_docs_reports_matt_install_without_auto_installing(self):
+        for name in ("grilling", "domain-modeling"):
+            self.add_skill(name, source=dependency_audit.MATT_SOURCE)
+        before = sorted(path.relative_to(self.root).as_posix() for path in self.root.rglob("*"))
+
+        result = self.audit(["grill-with-docs"])
+
+        after = sorted(path.relative_to(self.root).as_posix() for path in self.root.rglob("*"))
+        self.assertFalse(result["ok"])
+        self.assertEqual(["grill-with-docs"], result["missing"])
+        status = result["dependencyStatus"]["grill-with-docs"]
+        self.assertEqual("Matt Pocock", status["owner"])
+        self.assertEqual("mattpocock/skills", status["expectedSource"])
+        self.assertEqual("MISSING", status["status"])
+        proposal = result["installProposal"][0]
+        self.assertEqual("Matt Pocock", proposal["owner"])
+        self.assertEqual("mattpocock/skills", proposal["source"])
+        self.assertEqual(["grill-with-docs"], proposal["skills"])
+        self.assertEqual(
+            "npx skills add https://github.com/mattpocock/skills --skill grill-with-docs",
+            proposal["command"],
+        )
+        self.assertTrue(proposal["verified"])
+        self.assertTrue(proposal["requiresApproval"])
+        self.assertEqual(before, after)
+        self.assertFalse(result["sideEffectsPerformed"])
+
+    def test_installed_grill_with_docs_passes_without_reinstalling(self):
+        for name in ("grill-with-docs", "grilling", "domain-modeling"):
+            self.add_skill(
+                name,
+                source=dependency_audit.MATT_SOURCE,
+                disable_model=name == "grill-with-docs",
+                allow_implicit=name != "grill-with-docs",
+            )
+
+        result = self.audit(["grill-with-docs"], runtime="codex")
+
+        self.assertTrue(result["ok"])
+        self.assertEqual([], result["missing"])
+        self.assertEqual([], result["installProposal"])
+        self.assertEqual("INSTALLED", result["dependencyStatus"]["grill-with-docs"]["status"])
+        self.assertEqual("user_handoff", result["resolutions"]["grill-with-docs"]["invocationMode"])
+        self.assertEqual("$grill-with-docs", result["resolutions"]["grill-with-docs"]["invocationTarget"])
+
+    def test_missing_grill_transitive_dependency_blocks_discovery_and_identifies_parent(self):
+        self.add_skill(
+            "grill-with-docs",
+            source=dependency_audit.MATT_SOURCE,
+            disable_model=True,
+            allow_implicit=False,
+        )
+        self.add_skill("grilling", source=dependency_audit.MATT_SOURCE)
+
+        result = self.audit(["grill-with-docs"])
+
+        self.assertFalse(result["ok"])
+        self.assertEqual(["domain-modeling"], result["missing"])
+        self.assertIn("grill-with-docs", result["resolutions"])
+        status = result["dependencyStatus"]["domain-modeling"]
+        self.assertEqual("MISSING", status["status"])
+        self.assertEqual("Matt Pocock", status["owner"])
+        self.assertEqual("mattpocock/skills", status["expectedSource"])
+        self.assertEqual(["grill-with-docs", "wayfinder"], status["requiredBy"])
+        self.assertEqual(
+            ["domain-modeling"], result["installProposal"][0]["skills"]
+        )
+        self.assertEqual(
+            "npx skills add https://github.com/mattpocock/skills --skill domain-modeling",
+            result["installProposal"][0]["command"],
+        )
+        self.assertTrue(result["installProposal"][0]["requiresApproval"])
+
+    def test_engineering_workflow_has_no_removed_discovery_provider_reference(self):
+        skill_root = MODULE_PATH.parents[1]
+        contents = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in skill_root.rglob("*")
+            if path.is_file()
+            and "__pycache__" not in path.parts
+            and "test_dependency_audit.py" != path.name
+        )
+        self.assertNotIn("lee" + "jianrong", contents)
+        self.assertNotIn("claude" + "-skills", contents)
+
     def add_skill(
         self,
         name,
@@ -46,6 +161,7 @@ class DependencyAuditTests(unittest.TestCase):
         plugin=None,
         disable_model=False,
         allow_implicit=True,
+        source=None,
         location=None,
     ):
         if location:
@@ -60,8 +176,9 @@ class DependencyAuditTests(unittest.TestCase):
         directory.mkdir(parents=True, exist_ok=True)
         invocation = "\ndisable-model-invocation: true" if disable_model else ""
         skill = directory / "SKILL.md"
+        source_field = f"\nsource: {source}" if source else ""
         skill.write_text(
-            f"---\nname: {name}\ndescription: Test dependency {name}{invocation}\n---\n\nInstructions.\n",
+            f"---\nname: {name}\ndescription: Test dependency {name}{source_field}{invocation}\n---\n\nInstructions.\n",
             encoding="utf-8",
         )
         metadata = directory / "agents" / "openai.yaml"
@@ -231,7 +348,7 @@ class DependencyAuditTests(unittest.TestCase):
         self.assertEqual(["commit"], result["resolutions"]["implement"]["declaredSideEffects"])
 
     def test_external_workflow_predecessors_are_first_class_dependencies(self):
-        for name in ("grill-with-docs", "to-spec", "to-tickets", "wayfinder"):
+        for name in ("grill-with-docs", "to-spec", "to-tickets", "wayfinder", "grilling", "domain-modeling"):
             self.add_skill(name, disable_model=True)
         result = self.audit(
             ["grill-with-docs", "to-spec", "to-tickets", "wayfinder"],
@@ -239,7 +356,7 @@ class DependencyAuditTests(unittest.TestCase):
         )
         self.assertTrue(result["ok"])
         self.assertEqual(
-            {"grill-with-docs", "to-spec", "to-tickets", "wayfinder"},
+            {"grill-with-docs", "to-spec", "to-tickets", "wayfinder", "grilling", "domain-modeling"},
             set(result["resolutions"]),
         )
         self.assertTrue(
@@ -258,11 +375,14 @@ class DependencyAuditTests(unittest.TestCase):
         self.assertEqual(2, len(result["installProposal"]))
         self.assertTrue(all(item["requiresApproval"] for item in result["installProposal"]))
         commands = "\n".join(item["command"] for item in result["installProposal"])
-        self.assertIn("--skill=tdd", commands)
-        self.assertIn("--skill=scrutinize", commands)
+        self.assertIn("--skill tdd", commands)
+        self.assertIn("--skill scrutinize", commands)
 
     def test_missing_scrutinize_reports_owner_source_and_verified_command(self):
-        for name in ("grill-with-docs", "to-spec", "to-tickets", "implement", "code-review"):
+        for name in (
+            "grill-with-docs", "to-spec", "to-tickets", "implement", "code-review",
+            "grilling", "domain-modeling",
+        ):
             self.add_skill(name)
         result = self.audit(
             ["grill-with-docs", "to-spec", "scrutinize", "to-tickets", "implement", "code-review"]
@@ -273,7 +393,7 @@ class DependencyAuditTests(unittest.TestCase):
         self.assertEqual("thananon", proposal["owner"])
         self.assertEqual("thananon/9arm-skills", proposal["source"])
         self.assertEqual(["scrutinize"], proposal["skills"])
-        self.assertIn("--skill=scrutinize", proposal["command"])
+        self.assertIn("--skill scrutinize", proposal["command"])
         self.assertEqual("project-local (default; run from the target repository)", proposal["installScope"])
         self.assertTrue(proposal["verified"])
         self.assertTrue(proposal["requiresApproval"])
@@ -324,7 +444,7 @@ class DependencyAuditTests(unittest.TestCase):
         self.assertFalse(result["ok"])
         self.assertIn("prototype", result["missing"])
         self.assertEqual("mattpocock/skills", result["installProposal"][0]["source"])
-        self.assertIn("--skill=prototype", result["installProposal"][0]["command"])
+        self.assertIn("--skill prototype", result["installProposal"][0]["command"])
 
     def test_repository_setup_is_reported_separately_from_skill_installation(self):
         self.add_skill("to-spec")

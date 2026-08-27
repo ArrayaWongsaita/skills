@@ -93,7 +93,7 @@
       "id": 12,
       "name": "Missing dependencies approval reload blocker",
       "prompt": "$engineering-workflow Start a feature when grill-with-docs, tdd, code-review, and scrutinize are not installed.",
-      "expected_output": "Audit read-only, group exact verified npx skills@latest install proposals with owner/source/scope, ask once before mutation, and after approved installation persist DEPENDENCY_RELOAD_REQUIRED as BLOCKED until installation and a fresh audit succeed.",
+      "expected_output": "Audit read-only, group exact verified npx skills install proposals with owner/source/scope, ask once before mutation, and after approved installation persist DEPENDENCY_RELOAD_REQUIRED as BLOCKED until installation and a fresh audit succeed.",
       "expectations": ["No side effect before approval", "Does not update existing dependencies", "Does not use a fake fallback"],
       "files": []
     },
@@ -207,6 +207,22 @@
       "prompt": "$engineering-workflow Final system scrutinize finds a fixable implementation issue after code review.",
       "expected_output": "Route final scrutinize to implementation fix, tests/typecheck, code-review, and only then final scrutinize again; use the independent six-cycle system budget.",
       "expectations": ["Does not skip repeated code review", "Keeps system and design counters separate", "Does not complete before the second system review"],
+      "files": []
+    },
+    {
+      "id": 27,
+      "name": "J Matt discovery provenance and support closure",
+      "prompt": "$engineering-workflow Start a normal feature with the installed grill-with-docs skill and its support skills available.",
+      "expected_output": "Resolve grill-with-docs to Matt Pocock's mattpocock/skills source, verify its user-invoked metadata, audit grilling and domain-modeling as transitive support, and keep them out of the workflow stage list.",
+      "expectations": ["Owner is Matt Pocock", "Repository is mattpocock/skills", "Discovery uses one external owner and two transitive support checks"],
+      "files": []
+    },
+    {
+      "id": 28,
+      "name": "K missing Discovery transitive support",
+      "prompt": "$engineering-workflow Start a normal feature. grill-with-docs is installed from Matt Pocock's repository, but domain-modeling is missing.",
+      "expected_output": "Keep the workflow before Discovery, report domain-modeling as a missing transitive dependency required by grill-with-docs, show Matt Pocock's verified project-local install command, ask permission, and do not create a replacement skill.",
+      "expectations": ["Does not report Discovery ready", "Shows Required by: grill-with-docs", "Does not auto-install"],
       "files": []
     }
   ]

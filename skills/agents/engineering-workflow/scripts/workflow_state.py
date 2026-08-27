@@ -718,12 +718,14 @@ DEPENDENCY_RESOLUTION_FIELDS = {
     "enabled", "model_invocable", "allow_implicit_invocation", "policy_sources",
     "provenance_status", "provenance_source", "provenance_evidence", "owner",
     "expectedSource", "role", "category", "requirement", "invocationMode",
-    "invocationTarget", "declaredSideEffects",
+    "invocationTarget", "declaredSideEffects", "upstreamInvocation",
+    "requiredBy", "directDependencies",
 }
 DEPENDENCY_STATUS_FIELDS = {
     "name", "owner", "expectedSource", "role", "category", "requirement", "status",
     "path", "resolvedIdentity", "provenanceStatus", "detectedSource", "provenanceEvidence",
     "issues", "installation", "installScope", "verifiedCommand", "verificationSources",
+    "upstreamInvocation", "requiredBy", "directDependencies",
 }
 REPOSITORY_SETUP_FIELDS = {"status", "requiredFiles", "missingFiles", "setupSkill", "checkedRoot"}
 

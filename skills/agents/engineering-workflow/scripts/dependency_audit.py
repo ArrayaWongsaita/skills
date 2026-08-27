@@ -26,7 +26,6 @@ except ModuleNotFoundError:  # pragma: no cover - Python 3.10 compatibility
 
 MATT_SOURCE = "mattpocock/skills"
 NINEARM_SOURCE = "thananon/9arm-skills"
-GRILL_SOURCE = "leejianrong/claude-skills"
 UNKNOWN_SOURCE = "UNKNOWN / requires verification"
 BASELINE_COMMITS = {
     "mattpocock-skills": "6654f6b60cd9d5be8b54c6fafe44346dabeb3b76",
@@ -37,14 +36,56 @@ DEPENDENCIES = {
     # upstream repositories; this registry only records ownership, routing,
     # and verified installation metadata.
     "grill-with-docs": {
-        "owner": "leejianrong",
-        "source": GRILL_SOURCE,
-        "provider": "standalone",
-        "role": "requirement discovery and domain clarification",
+        "owner": "Matt Pocock",
+        "source": MATT_SOURCE,
+        "provider": "mattpocock-skills",
+        "role": "requirement discovery, domain clarification, decision capture, glossary/ADR preparation",
         "category": "core",
         "requirement": "normal feature discovery",
         "hard": True,
         "sideEffects": ["write-docs"],
+        "upstreamSkillPath": "skills/engineering/grill-with-docs/SKILL.md",
+        "upstreamInvocation": "user-invoked",
+        "directDependencies": ["grilling", "domain-modeling"],
+        "expectedInputs": [
+            "request or plan",
+            "relevant repository context",
+            "existing glossary and ADRs",
+        ],
+        "expectedOutputs": [
+            "shared decisions and open questions",
+            "CONTEXT.md glossary updates",
+            "ADR references when a decision is hard to reverse",
+        ],
+        "repositorySetup": "not declared by grill-with-docs; downstream Matt workflow skills require the one-time setup bootstrap",
+        "installerResolvesDependencies": False,
+    },
+    "grilling": {
+        "owner": "Matt Pocock",
+        "source": MATT_SOURCE,
+        "provider": "mattpocock-skills",
+        "role": "relentless requirement and design interview",
+        "category": "transitive",
+        "requirement": "required by grill-with-docs during DISCOVERY",
+        "hard": True,
+        "upstreamSkillPath": "skills/productivity/grilling/SKILL.md",
+        "upstreamInvocation": "model-invoked",
+        "expectedInputs": ["plan, design, or unresolved decision"],
+        "expectedOutputs": ["settled design-tree decisions and remaining frontier"],
+    },
+    "domain-modeling": {
+        "owner": "Matt Pocock",
+        "source": MATT_SOURCE,
+        "provider": "mattpocock-skills",
+        "role": "domain terminology, glossary, and ADR discipline",
+        "category": "transitive",
+        "requirement": "required by grill-with-docs during DISCOVERY",
+        "hard": True,
+        "sideEffects": ["write-docs"],
+        "upstreamSkillPath": "skills/engineering/domain-modeling/SKILL.md",
+        "upstreamInvocation": "model-invoked",
+        "expectedInputs": ["repository domain language, code, CONTEXT.md, and ADRs"],
+        "expectedOutputs": ["sharpened terms, CONTEXT.md updates, and warranted ADRs"],
     },
     "to-spec": {
         "owner": "Matt Pocock",
@@ -113,6 +154,7 @@ DEPENDENCIES = {
         "category": "transitive",
         "requirement": "when the implementation contract or bug route requires it",
         "hard": False,
+        "upstreamInvocation": "model-invoked",
     },
     "codebase-design": {
         "owner": "Matt Pocock",
@@ -122,6 +164,7 @@ DEPENDENCIES = {
         "category": "conditional",
         "requirement": "when a seam or interface decision is unclear",
         "hard": False,
+        "upstreamInvocation": "model-invoked",
     },
     "prototype": {
         "owner": "Matt Pocock",
@@ -160,6 +203,9 @@ DEPENDENCIES = {
         "requirement": "LARGE_PROJECT workflows",
         "hard": False,
         "sideEffects": ["publish-wayfinding"],
+        "upstreamSkillPath": "skills/engineering/wayfinder/SKILL.md",
+        "upstreamInvocation": "user-invoked",
+        "directDependencies": ["grilling", "domain-modeling"],
     },
     "post-mortem": {
         "owner": "thananon",
@@ -177,19 +223,45 @@ CORE_FEATURE_DEPENDENCIES = (
 )
 PROVENANCE_STATUSES = {"VERIFIED", "UNVERIFIED", "MISMATCH"}
 INSTALLATION_VERIFICATION = {
-    "installer": "npx skills@latest",
-    "commandTemplate": "npx skills@latest add {source} --skill={skill}",
+    "installer": "npx skills",
+    "commandTemplate": "npx skills add https://github.com/{source} --skill {skill}",
     "scope": "project-local (default; run from the target repository)",
+    "transitiveDependenciesAutoInstalled": False,
     "sources": [
         "https://github.com/vercel-labs/skills#readme",
+        "https://github.com/vercel-labs/skills/blob/main/src/add.ts",
+        "https://github.com/mattpocock/skills/blob/main/skills/engineering/grill-with-docs/SKILL.md",
+        "https://github.com/mattpocock/skills/blob/main/skills/productivity/grilling/SKILL.md",
+        "https://github.com/mattpocock/skills/blob/main/skills/engineering/domain-modeling/SKILL.md",
         "https://github.com/mattpocock/skills#readme",
         "https://github.com/thananon/9arm-skills#readme",
-        "https://github.com/leejianrong/claude-skills#readme",
     ],
 }
+
+for _parent_name, _parent_contract in DEPENDENCIES.items():
+    for _child_name in _parent_contract.get("directDependencies", []):
+        if _child_name not in DEPENDENCIES:
+            raise ValueError(f"unknown transitive dependency: {_parent_name} -> {_child_name}")
+        DEPENDENCIES[_child_name].setdefault("requiredBy", []).append(_parent_name)
+
+DEPENDENCY_GRAPH = {
+    "engineering-workflow": list(CORE_FEATURE_DEPENDENCIES),
+    **{
+        _name: list(_contract.get("directDependencies", []))
+        for _name, _contract in DEPENDENCIES.items()
+    },
+}
+
+
+def _installation_command(source: str, skills: Iterable[str]) -> str:
+    source_url = source if "://" in source else f"https://github.com/{source}"
+    arguments = " ".join(f"--skill {skill}" for skill in skills)
+    return f"npx skills add {source_url} {arguments}".strip()
+
+
 for _dependency_name, _dependency_contract in DEPENDENCIES.items():
     _dependency_contract["installation"] = (
-        f"npx skills@latest add {_dependency_contract['source']} --skill={_dependency_name}"
+        _installation_command(_dependency_contract["source"], [_dependency_name])
         if _dependency_contract.get("source") != UNKNOWN_SOURCE
         else None
     )
@@ -552,7 +624,14 @@ def _resolve_one(
     matches = [candidate for candidate in candidates if candidate.name == name]
     if not matches:
         code = "BUILTIN_CODE_REVIEW_COLLISION" if runtime == "claude" and name == "code-review" else "MISSING_DEPENDENCY"
-        issues.append({"code": code, "dependency": name, "message": "no compatible installed skill file found"})
+        issue: dict[str, Any] = {
+            "code": code,
+            "dependency": name,
+            "message": "no compatible installed skill file found",
+        }
+        if contract and contract.get("requiredBy"):
+            issue["requiredBy"] = list(contract["requiredBy"])
+        issues.append(issue)
         return None, issues
     enabled = [candidate for candidate in matches if candidate.enabled]
     if not enabled:
@@ -648,7 +727,6 @@ def installation_proposal(missing: Iterable[str]) -> list[dict[str, Any]]:
             grouped.setdefault(contract["source"], []).append(name)
     proposals = []
     for source, names in sorted(grouped.items()):
-        arguments = " ".join(f"--skill={name}" for name in names)
         owners = sorted({DEPENDENCIES[name]["owner"] for name in names})
         proposals.append(
             {
@@ -656,7 +734,7 @@ def installation_proposal(missing: Iterable[str]) -> list[dict[str, Any]]:
                 "source": source,
                 "skills": names,
                 "method": INSTALLATION_VERIFICATION["installer"],
-                "command": f"npx skills@latest add {source} {arguments}",
+                "command": _installation_command(source, names),
                 "installScope": INSTALLATION_VERIFICATION["scope"],
                 "verified": True,
                 "verificationSources": list(INSTALLATION_VERIFICATION["sources"]),
@@ -664,6 +742,24 @@ def installation_proposal(missing: Iterable[str]) -> list[dict[str, Any]]:
             }
         )
     return proposals
+
+
+def expand_dependency_names(
+    required: Iterable[str], requirement_statuses: dict[str, str] | None = None
+) -> tuple[list[str], dict[str, str]]:
+    """Include verified hard transitive dependencies without creating stages."""
+    names = list(dict.fromkeys(required))
+    requirements = dict(requirement_statuses or {})
+    queue = list(names)
+    while queue:
+        parent = queue.pop(0)
+        contract = DEPENDENCIES.get(parent, {})
+        for child in contract.get("directDependencies", []):
+            if child not in names:
+                names.append(child)
+                queue.append(child)
+            requirements.setdefault(child, "TRANSITIVE")
+    return names, requirements
 
 
 def route_dependency_plan(
@@ -686,6 +782,10 @@ def route_dependency_plan(
         seen.add(name)
         plan.append({"name": name, "requirement": requirement})
 
+    def add_direct_dependencies(name: str) -> None:
+        for dependency in DEPENDENCIES[name].get("directDependencies", []):
+            add(dependency, "TRANSITIVE")
+
     system_sensitive = risk in {"HIGH", "CRITICAL"} or bool(
         {"concurrency", "distributed-retry", "external-side-effect", "migration", "public-contract", "system-review-required"}
         .intersection(characteristics)
@@ -696,13 +796,14 @@ def route_dependency_plan(
             add("code-review", "REQUIRED_LATER")
         else:
             add("grill-with-docs", "REQUIRED_NOW")
+            add_direct_dependencies("grill-with-docs")
             add("to-spec", "REQUIRED_LATER")
             add("scrutinize", "REQUIRED_LATER")
             add("to-tickets", "REQUIRED_LATER")
             add("implement", "REQUIRED_LATER")
             add("code-review", "REQUIRED_LATER")
         if not reduced:
-            add("setup-matt-pocock-skills", "TRANSITIVE")
+            add("setup-matt-pocock-skills", "REPOSITORY_BOOTSTRAP")
     elif workflow_type == "BUG":
         add("diagnosing-bugs", "REQUIRED_NOW")
         add("implement", "REQUIRED_LATER")
@@ -711,11 +812,12 @@ def route_dependency_plan(
             add("scrutinize", "REQUIRED_LATER")
         if incident:
             add("post-mortem", "CONDITIONAL")
-        add("setup-matt-pocock-skills", "TRANSITIVE")
+        add("setup-matt-pocock-skills", "REPOSITORY_BOOTSTRAP")
     elif workflow_type == "LARGE_PROJECT":
         add("wayfinder", "REQUIRED_NOW")
+        add_direct_dependencies("wayfinder")
         add("to-tickets", "REQUIRED_LATER")
-        add("setup-matt-pocock-skills", "TRANSITIVE")
+        add("setup-matt-pocock-skills", "REPOSITORY_BOOTSTRAP")
         add("research", "CONDITIONAL")
         add("prototype", "CONDITIONAL")
     else:
@@ -794,8 +896,12 @@ def _resolution(
             "role": contract.get("role", "external dependency"),
             "category": contract.get("category", "unknown"),
             "requirement": contract.get("requirement", "not documented"),
+            "requiredBy": list(contract.get("requiredBy", [])),
+            "directDependencies": list(contract.get("directDependencies", [])),
         }
     )
+    if contract.get("upstreamInvocation"):
+        resolution["upstreamInvocation"] = contract["upstreamInvocation"]
     if runtime == "claude":
         if selected.model_invocable:
             resolution["invocationMode"] = "skill_tool"
@@ -845,11 +951,15 @@ def _dependency_status(
         "role": contract.get("role", "external dependency"),
         "category": contract.get("category", "unknown"),
         "requirement": requirement,
+        "requiredBy": list(contract.get("requiredBy", [])),
+        "directDependencies": list(contract.get("directDependencies", [])),
         "status": _status_for(name, selected, current_issues),
         "installation": contract.get("installation"),
         "installScope": contract.get("installScope"),
         "verifiedCommand": contract.get("verifiedCommand", False),
     }
+    if contract.get("upstreamInvocation"):
+        result["upstreamInvocation"] = contract["upstreamInvocation"]
     if contract.get("verificationSources"):
         result["verificationSources"] = list(contract["verificationSources"])
     if selected:
@@ -909,8 +1019,7 @@ def audit_dependencies(
     roots = list(roots)
     selected_settings_roots = list(settings_roots) if settings_roots is not None else roots
     candidates = discover_candidates(roots, runtime, selected_settings_roots)
-    names = list(dict.fromkeys(required))
-    requirements = requirement_statuses or {}
+    names, requirements = expand_dependency_names(required, requirement_statuses)
     resolutions: dict[str, Any] = {}
     dependency_status: dict[str, Any] = {}
     issues: list[dict[str, Any]] = []
@@ -961,6 +1070,8 @@ def audit_dependencies(
         "ok": not issues,
         "baselineCommits": BASELINE_COMMITS,
         "registry": DEPENDENCIES,
+        "dependencyGraph": DEPENDENCY_GRAPH,
+        "installationVerification": INSTALLATION_VERIFICATION,
         "resolutions": resolutions,
         "dependencyStatus": dependency_status,
         "repositorySetup": setup,
@@ -1044,7 +1155,9 @@ def main(argv: list[str] | None = None) -> int:
             }
             required = [
                 item["name"] for item in route_plan
-                if item["requirement"] in {"REQUIRED_NOW", "REQUIRED_LATER", "TRANSITIVE"}
+                if item["requirement"] in {
+                    "REQUIRED_NOW", "REQUIRED_LATER", "TRANSITIVE", "REPOSITORY_BOOTSTRAP"
+                }
             ]
         else:
             required = list(CORE_FEATURE_DEPENDENCIES)

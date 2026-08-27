@@ -76,7 +76,10 @@ limitation and hand the user the dependency's real command.
 3. Determine route dependencies. Classify each as `REQUIRED_NOW`,
    `REQUIRED_LATER`, `CONDITIONAL`, `TRANSITIVE`, or `OPTIONAL`; then run
    `scripts/dependency_audit.py` against only the dependencies reachable by the
-   current route. Read [dependency rules](references/dependencies.md).
+   current route. The audit expands verified hard transitive children. For a
+   normal Feature Discovery, that means `grill-with-docs` plus its required
+   `grilling` and `domain-modeling` support skills; support skills are never
+   separate workflow stages. Read [dependency rules](references/dependencies.md).
 4. When a required dependency is missing, disabled, ambiguous, incompatible, or
    provenance-mismatched, stop before its stage. Show owner, repository, role,
    evidence, scope, and the verified install command. Ask explicit permission;
@@ -105,13 +108,20 @@ Missing Skill
 
 Skill: <name>
 Purpose: <role>
-Author / Source: <owner> / <repository>
+Owner: <owner>
+Repository: <repository>
 Needed At: <stage>
-Why Needed: <route reason>
 Installation: <verified exact command, or manual instructions>
 Install Scope: <project-local|user/global|unknown>
 Permission Required: Yes
 ```
+
+For a missing transitive dependency, show the installed parent, the missing
+child, `Required by`, owner, repository, and the same verified command and
+permission request. For example, if `grill-with-docs` is installed but
+`domain-modeling` is missing, do not report Discovery as ready. Ask permission
+for the missing child because the current Skills CLI does not install skill
+dependencies automatically.
 
 If provenance is absent, write `Source: UNKNOWN / requires verification`.
 Never present an invented command or attribute an installed skill to an owner

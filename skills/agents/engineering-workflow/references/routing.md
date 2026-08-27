@@ -20,7 +20,9 @@ knowledge.
 
 Route uncertainty by kind:
 
-- product/domain intent: `DISCOVERY` through `grill-with-docs`;
+- product/domain intent: `DISCOVERY` through Matt Pocock's `grill-with-docs`;
+  its required `grilling` and `domain-modeling` helpers are transitive support,
+  not independent route stages;
 - current external fact/API behavior: `EXPLORATION[RESEARCH]` through `research`;
 - UI/client-state or empirical interaction question: `EXPLORATION[PROTOTYPE]`
   through `prototype`;

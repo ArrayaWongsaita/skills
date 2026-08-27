@@ -27,7 +27,10 @@ installed external skill; it is not implemented in this skill.
 
 - **ENTRY CONDITIONS:** Product/domain intent or acceptance behavior is unsettled.
 - **INPUT:** Request, relevant context, glossary/ADRs, and artifact references.
-- **DISCIPLINE/SKILL:** Installed `grill-with-docs`; on Claude its user-only policy requires a user handoff.
+- **DISCIPLINE/SKILL:** Installed Matt Pocock `grill-with-docs`; its upstream
+  user-only contract calls transitive `grilling` and `domain-modeling`. Use the
+  audited runtime load target or record a real user handoff when direct
+  invocation is unavailable.
 - **OUTPUT:** Shared decisions, acceptance behavior, glossary/ADR references, and open questions.
 - **EXIT CONDITIONS:** The decision frontier is settled or each unknown has a typed exploration route.
 - **FAILURE TRANSITION:** Stay in discovery, go to `EXPLORATION`, or block for missing human input/dependency.

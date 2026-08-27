@@ -7,7 +7,7 @@
 
 Engineering work crosses discovery, specification, planning, implementation,
 diagnosis, and review. The repository already depends on specialist skills from
-leejianrong, Matt Pocock, and 9arm. Some upstream workflows are user-only in
+Matt Pocock and 9arm. Some upstream workflows are user-only in
 Claude Code or have source-defined side effects (for example, `implement`
 commits), while Claude's bundled `/code-review` collides with the external name.
 

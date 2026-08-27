@@ -3,9 +3,14 @@
 ## Normal feature
 
 1. Classify as `FEATURE`; audit the dependencies required for the selected
-   route.
-2. Run the installed `grill-with-docs` skill. On Claude, save state as
-   `BLOCKED/USER_INVOCATION_REQUIRED` and hand the user `/grill-with-docs`.
+   route, including the verified hard transitive closure for Discovery.
+2. Run or hand off the installed `grill-with-docs` skill. Its upstream
+   contract is user-invoked (`disable-model-invocation: true`) and calls
+   `grilling` and `domain-modeling` itself. Those support skills are audited as
+   `TRANSITIVE`, never routed as independent stages. Use the runtime's audited
+   load target when direct loading is supported; otherwise persist
+   `BLOCKED/USER_INVOCATION_REQUIRED` and hand the user the real `$skill-name`
+   or `/skill-name` command, then resume after the handoff completes.
 3. Route typed unknowns to installed `research` or `prototype`; return to
    `SPECIFICATION` only after the evidence artifact exists.
 4. Run installed `to-spec`, then register its published spec reference.

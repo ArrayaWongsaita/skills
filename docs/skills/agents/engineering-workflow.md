@@ -38,6 +38,10 @@ npx skills add ArrayaWongsaita/skills --skill engineering-workflow
 blocking gate โดยให้ design/system มี counter แยกกันสูงสุดอย่างละหกครั้ง
 (code-review ยังคงมี budget แยกสามครั้ง) พร้อมหยุดก่อนกำหนดเมื่อไม่มี progress
 
+Feature discovery ใช้ `grill-with-docs` ของ Matt Pocock จาก
+`mattpocock/skills`; `grilling` และ `domain-modeling` เป็น transitive support
+ที่ skill นั้นเรียกเอง ไม่ใช่ workflow stages แยกกัน
+
 ถ้า Claude ต้องใช้ upstream skill ที่เป็น user-only ระบบจะแสดงคำสั่งจริงให้
 ผู้ใช้เรียก แล้วให้ resume orchestrator ต่อ ไม่มีการสร้าง skill ทดแทน
 
@@ -86,6 +90,10 @@ Use the real external commands and identities resolved by the audit:
 `post-mortem`, and `codebase-design`. `scrutinize` is a blocking design/system
 gate with a six-cycle maximum per gate; a missing or incompatible dependency is
 a visible `BLOCKED_DEPENDENCY` result, never a cloned worker.
+
+Normal feature Discovery resolves `grill-with-docs` to Matt Pocock's
+`mattpocock/skills` source and audits its required transitive `grilling` and
+`domain-modeling` support skills without routing to either one independently.
 
 ### Runtime limitation
 
