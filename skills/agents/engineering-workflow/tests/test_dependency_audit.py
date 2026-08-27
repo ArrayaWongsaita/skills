@@ -59,6 +59,7 @@ class DependencyAuditTests(unittest.TestCase):
             contract["role"],
         )
         self.assertEqual(["grilling", "domain-modeling"], contract["directDependencies"])
+        self.assertIn("before the first engineering flow", contract["repositorySetup"])
         self.assertEqual(
             ["grill-with-docs", "to-spec", "scrutinize", "to-tickets", "implement", "code-review"],
             result["dependencyGraph"]["engineering-workflow"],
@@ -68,6 +69,21 @@ class DependencyAuditTests(unittest.TestCase):
         self.assertEqual("mattpocock/skills", status["detectedSource"])
         self.assertEqual("user-invoked", status["upstreamInvocation"])
         self.assertEqual("user_handoff", result["resolutions"]["grill-with-docs"]["invocationMode"])
+
+    def test_provider_policy_keeps_only_declared_9arm_exceptions(self):
+        non_matt = {
+            name: contract["source"]
+            for name, contract in dependency_audit.DEPENDENCIES.items()
+            if contract["source"] != dependency_audit.MATT_SOURCE
+        }
+
+        self.assertEqual(
+            {
+                "scrutinize": dependency_audit.NINEARM_SOURCE,
+                "post-mortem": dependency_audit.NINEARM_SOURCE,
+            },
+            non_matt,
+        )
 
     def test_missing_grill_with_docs_reports_matt_install_without_auto_installing(self):
         for name in ("grilling", "domain-modeling"):

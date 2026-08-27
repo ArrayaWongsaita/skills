@@ -12,6 +12,14 @@ only when installed metadata or a lock record identifies the expected
 repository. Otherwise report `UNVERIFIED` and `Source: UNKNOWN / requires
 verification`; never guess from a skill name.
 
+## Provider policy
+
+When the required engineering skill exists in `mattpocock/skills`, use Matt
+Pocock's implementation as the canonical provider for this workflow. The only
+intentional non-Matt dependencies are `scrutinize` and `post-mortem`, both from
+`thananon/9arm-skills`. Do not add an alternative provider without explicit
+user approval.
+
 ## Verified Discovery contract
 
 The current Matt Pocock source is
@@ -25,9 +33,10 @@ The Discovery input is the request or plan plus relevant repository context,
 the existing glossary, and ADRs. Its output is shared decisions, clarified
 terminology, open questions, `CONTEXT.md` glossary updates, and warranted ADR
 references. The upstream skill does not declare a repository bootstrap of its
-own. The downstream Matt engineering skills do require the one-time
-`setup-matt-pocock-skills` bootstrap before they read or write tracker/workflow
-configuration.
+own. At the repository level, `mattpocock/skills` requires the user-invoked
+`setup-matt-pocock-skills` bootstrap once per repository before the first
+engineering flow; it configures the issue tracker, triage labels, and domain
+document layout.
 
 The current Skills CLI installs only explicitly selected skills; it does not
 resolve the `grill-with-docs` calls to `grilling` or `domain-modeling`
@@ -134,13 +143,26 @@ For a missing Discovery skill, report:
 ```text
 Missing Skill
 
-Skill: grill-with-docs
-Purpose: Requirement discovery and domain/decision clarification.
-Owner: Matt Pocock
-Repository: mattpocock/skills
-Needed At: DISCOVERY
-Installation: npx skills add https://github.com/mattpocock/skills --skill grill-with-docs
-Permission Required: Yes
+Skill:
+grill-with-docs
+
+Purpose:
+Requirement discovery and domain/decision clarification.
+
+Owner:
+Matt Pocock
+
+Repository:
+mattpocock/skills
+
+Needed At:
+DISCOVERY
+
+Installation:
+npx skills add https://github.com/mattpocock/skills --skill grill-with-docs
+
+Permission Required:
+Yes
 ```
 
 Then ask: `The required "grill-with-docs" skill from Matt Pocock's mattpocock/skills repository is not installed. May I install it?`

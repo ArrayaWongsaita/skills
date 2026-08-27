@@ -57,7 +57,7 @@ DEPENDENCIES = {
             "CONTEXT.md glossary updates",
             "ADR references when a decision is hard to reverse",
         ],
-        "repositorySetup": "not declared by grill-with-docs; downstream Matt workflow skills require the one-time setup bootstrap",
+        "repositorySetup": "not declared by grill-with-docs itself; mattpocock/skills requires setup-matt-pocock-skills once per repository before the first engineering flow",
         "installerResolvesDependencies": False,
     },
     "grilling": {
