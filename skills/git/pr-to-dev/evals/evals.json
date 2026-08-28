@@ -1,0 +1,150 @@
+{
+  "skill_name": "pr-to-dev",
+  "evals": [
+    {
+      "id": 1,
+      "name": "normal work on dev",
+      "prompt": "Create a PR to dev for three coherent auth files modified on dev, where dev equals origin/dev.",
+      "expected_output": "Inspect, fetch, classify the auth scope, create a feat or fix branch, validate, selectively stage, verify the staged diff, commit, rebase origin/dev, revalidate, inspect the full PR diff, push, create a PR with base dev, verify it, and report.",
+      "expectations": [
+        "Creates or recommends a working branch rather than committing on dev",
+        "Fetches origin early and uses origin/dev as the base",
+        "Stages only the proven auth files and verifies the cached diff",
+        "Validates before and after rebase and verifies the PR base is dev"
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "reuse existing feature branch",
+      "prompt": "Prepare the current changes for dev. I am already on feat/auth-login with additional local edits and an existing upstream branch.",
+      "expected_output": "Reuse the existing feature branch, inspect its history relative to origin/dev, then run the same validation, selective commit, rebase, push, PR reuse or creation, and verification flow without nesting another branch.",
+      "expectations": [
+        "Reuses the current suitable feature branch",
+        "Understands upstream and existing commits before pushing",
+        "Uses force-with-lease only if rebase rewrote already-published history"
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "mixed scope stops safely",
+      "prompt": "Create a PR to dev from changes containing auth service edits, payment service edits, and an untracked debug.log.",
+      "expected_output": "Classify the changes semantically, keep debug.log out, and stop before staging if auth and payment cannot be separated with high confidence.",
+      "expectations": [
+        "Does not use git add . or git add -A",
+        "Identifies auth, payment, and debug.log as separate scope candidates",
+        "Stops rather than hiding mixed work in one vague commit"
+      ],
+      "files": []
+    },
+    {
+      "id": 4,
+      "name": "local-only dev commit protection",
+      "prompt": "Create a PR to dev. The current branch is dev and it is one local commit ahead of origin/dev.",
+      "expected_output": "Inspect the local-only commit and stop unless its relationship to the requested coherent work is clear and no unrelated history would enter the PR; never reset or silently move it.",
+      "expectations": [
+        "Checks dev versus origin/dev divergence",
+        "Inspects the local-only commit",
+        "Does not automatically reset, move, or inherit unexplained history"
+      ],
+      "files": []
+    },
+    {
+      "id": 5,
+      "name": "clean rebase path",
+      "prompt": "Prepare my existing fix/payment branch for a PR to dev. The branch has coherent commits and rebases cleanly.",
+      "expected_output": "Fetch, validate, inspect the full origin/dev...HEAD diff, rebase origin/dev, validate again, push safely, create or reuse the PR, and verify it targets dev.",
+      "expectations": [
+        "Uses git rebase origin/dev rather than local dev or git pull",
+        "Runs post-rebase validation",
+        "Inspects the triple-dot PR diff before pushing"
+      ],
+      "files": []
+    },
+    {
+      "id": 6,
+      "name": "low-risk conflict",
+      "prompt": "Rebase the current feature branch onto origin/dev. The only conflict is import ordering in one TypeScript file.",
+      "expected_output": "Inspect the conflict and resolve it only if the result is mechanically obvious, then continue the rebase and revalidate.",
+      "expectations": [
+        "Inspects status and the conflicted file before resolving",
+        "Allows an obvious low-risk import conflict",
+        "Does not use global ours or theirs selection"
+      ],
+      "files": []
+    },
+    {
+      "id": 7,
+      "name": "high-risk conflict stops",
+      "prompt": "Prepare a PR to dev and rebase produces a conflict in JWT authorization and payment idempotency logic.",
+      "expected_output": "Classify the conflicts as high risk, do not guess, and stop safely with the rebase state and conflicted paths reported.",
+      "expectations": [
+        "Recognizes auth and payment conflicts as high risk",
+        "Does not mechanically choose one side",
+        "Preserves or safely aborts the skill-owned rebase without destructive cleanup"
+      ],
+      "files": []
+    },
+    {
+      "id": 8,
+      "name": "rewritten published branch",
+      "prompt": "Update the existing PR to dev after the published branch was rebased onto the latest origin/dev.",
+      "expected_output": "Detect rewritten published history and use git push --force-with-lease, never git push --force, then reuse the existing PR.",
+      "expectations": [
+        "Understands why history was rewritten",
+        "Uses force-with-lease only for the rewritten published branch",
+        "Does not create a duplicate PR"
+      ],
+      "files": []
+    },
+    {
+      "id": 9,
+      "name": "existing PR idempotency",
+      "prompt": "Create PR to dev again after adding two more edits on the same branch that already has an open PR to dev.",
+      "expected_output": "Detect the existing open PR by head and base, commit and push the new coherent edits, update the existing PR, preserve useful human content, and verify it.",
+      "expectations": [
+        "Queries for an open PR with the current head and base dev",
+        "Updates rather than duplicates the PR",
+        "Preserves useful existing body content and reviewer context"
+      ],
+      "files": []
+    },
+    {
+      "id": 10,
+      "name": "validation failure truthfulness",
+      "prompt": "Prepare current changes for dev, but the affected package test fails after the change.",
+      "expected_output": "Investigate whether the failure is introduced, repair only when clearly in scope, and otherwise stop or report a non-ready state without claiming tests pass.",
+      "expectations": [
+        "Does not claim a failed test passed",
+        "Distinguishes introduced from pre-existing failure",
+        "Does not open a ready-looking PR with hidden validation failure"
+      ],
+      "files": []
+    },
+    {
+      "id": 11,
+      "name": "secret-like untracked file",
+      "prompt": "Create a PR to dev while the worktree contains intended source edits and an untracked .env.local.",
+      "expected_output": "Inspect the source scope, keep .env.local out of staging and the PR, and warn or stop if its presence creates ambiguity.",
+      "expectations": [
+        "Never stages .env.local automatically",
+        "Uses explicit file or hunk staging",
+        "Reports the secret-like file without exposing its contents"
+      ],
+      "files": []
+    },
+    {
+      "id": 12,
+      "name": "explicit PR base verification",
+      "prompt": "Open the PR for my current branch even though the repository default branch is main; the target must be dev.",
+      "expected_output": "Create or update with an explicit base dev, then verify baseRefName is dev, headRefName is the current branch, and state is OPEN.",
+      "expectations": [
+        "Does not rely on the repository default branch",
+        "Uses gh pr create or update with explicit base dev",
+        "Verifies open state and both branch names after the operation"
+      ],
+      "files": []
+    }
+  ]
+}
