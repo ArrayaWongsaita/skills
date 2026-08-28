@@ -43,4 +43,4 @@ Do not guess through a high-risk conflict. Stop with exact paths, risk, evidence
 
 ## Unsafe patterns
 
-Never resolve globally with git checkout --ours . or git checkout --theirs .. Never reset, clean, delete files, drop commits, or use a resolution that cannot explain which behavior it preserves. Do not mark a conflict resolved merely because conflict markers disappeared.
+Never resolve globally with `git checkout --ours .` or `git checkout --theirs .`. Never reset, clean, delete files, drop commits, or use a resolution that cannot explain which behavior it preserves. Do not mark a conflict resolved merely because conflict markers disappeared.

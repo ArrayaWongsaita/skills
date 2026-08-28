@@ -1,174 +1,180 @@
-# Workflow phase contract
+# Exceptional workflow, evidence, and recovery
 
-Read this file before running the workflow. Every phase has one purpose and one evidence gate. A phase may be a recorded no-op, but the agent must not advance without its exit evidence.
+`SKILL.md` is the authoritative normal workflow. Read this reference only to resume a partial invocation, prove an important state boundary, handle a freshness retry, diagnose an ambiguous transition, or report a blocked/recovery state. Do not use it as a second copy of the happy path.
 
-## 01 PREFLIGHT
+## Resume rule
 
-- Purpose: establish repository, tool, and Git safety before mutation.
-- Entry: the user requested a PR to dev and the current directory is not yet trusted.
-- Actions: resolve the root; read repository instructions; run rev-parse, status, branch, remote, operation-marker, and tool checks listed in SKILL.md. Check detached HEAD and unfinished merge, rebase, cherry-pick, or bisect state, including REBASE_HEAD and the rebase metadata paths.
-- Exit evidence: repository root, branch, remotes, tooling, and operation state are known; no unrelated operation is active.
-- Failure behavior: stop and report the exact state. Leave index, worktree, refs, and any existing operation untouched.
-- Safety constraints: inspection is read-only; do not use reset, clean, stash, checkout, or recovery commands.
+Reconstruct state from repository and remote evidence; do not infer completion from an earlier message or intended command. Record current branch/HEAD, index/worktree, operation markers, origin/dev, live remote feature SHA, validation tree, and PR metadata. An active Git operation may be resumed only when prior evidence unambiguously ties it to this skill and its intended branch/base. Otherwise stop without changing it.
 
-## 02 FETCH_REMOTE
+Resume from the earliest state whose exit evidence is missing or stale. In particular:
 
-- Purpose: replace stale remote assumptions with current origin state.
-- Entry: preflight passed and origin exists.
-- Actions: run git fetch origin --prune, then verify refs/remotes/origin/dev and record its SHA.
-- Exit evidence: origin/dev exists and its SHA is the base for every later comparison.
-- Failure behavior: stop if fetch fails or dev is absent; report that no authoritative base is available.
-- Safety constraints: never substitute local dev; pruning remote-tracking refs is allowed, but do not delete branches or tags.
+- any unexpected tracked/index change returns to scope and completion feasibility;
+- any rebase or conflict resolution invalidates integration validation and PR-diff evidence;
+- any origin/dev movement invalidates the recorded integration base;
+- any remote feature-head movement invalidates the push expectation and is a stop, not a lease refresh;
+- create/update output never substitutes for independent PR verification.
 
-## 03 ANALYZE_REPOSITORY_STATE
+## Deterministic preflight operation evidence
 
-- Purpose: understand branch topology and history before branch or commit decisions.
-- Entry: origin/dev is verified.
-- Actions: record current branch, HEAD, upstream, status --branch, branch -vv, origin/dev..HEAD, HEAD..origin/dev, triple-dot counts, recent log, and local-only commits. If gh is authenticated and a branch is known, inspect its PR list as an inventory hint. Check protected branch divergence explicitly.
-- Exit evidence: ahead/behind, local-only and remote-only commits, upstream, merge/WIP history, and branch relationship are classified.
-- Failure behavior: stop on unexplained protected-branch commits, detached HEAD, or history that could leak another task.
-- Safety constraints: history inspection is read-only; never move or rewrite commits to make topology look cleaner.
+Path printing is not state detection. Check marker existence or ref resolution and interpret each exit status separately:
 
-## 04 ANALYZE_WORKTREE
+| Operation | Active evidence |
+| --- | --- |
+| rebase | `rebase-merge` or `rebase-apply` from `git rev-parse --git-path` exists as a directory |
+| merge | `git rev-parse -q --verify MERGE_HEAD` succeeds |
+| cherry-pick | `git rev-parse -q --verify CHERRY_PICK_HEAD` succeeds |
+| revert | `git rev-parse -q --verify REVERT_HEAD` succeeds |
+| bisect | `BISECT_START` from `git rev-parse --git-path` exists as a file |
 
-- Purpose: inventory user-owned local changes before selecting the commit set.
-- Entry: repository topology is understood.
-- Actions: inspect status, unstaged diff/stat, cached diff/stat, untracked paths, deletions, renames, and file types. Inspect safe portions of candidate untracked files without printing secrets.
-- Exit evidence: every staged, unstaged, untracked, deleted, renamed, generated, and suspicious file is accounted for.
-- Failure behavior: stop if a likely secret or unknown artifact cannot be classified safely.
-- Safety constraints: do not stage, unstage, clean, stash, or discard during inventory.
+`BISECT_HEAD` alone is insufficient because ordinary bisect state can exist without that ref. Git-path resolution remains worktree-safe; marker existence is the deciding evidence.
 
-## 05 CLASSIFY_CHANGE_SCOPE
+## Critical state evidence
 
-- Purpose: decide whether the candidate change is one coherent task and derive semantic intent.
-- Entry: complete worktree inventory and user request are available.
-- Actions: group by behavior, domain, dependency, tests, and intent; distinguish current work from unrelated edits. Infer type, scope, summary, affected workspaces, database/security impact, and validation.
-- Exit evidence: one coherent scope is selected, or ambiguous scopes are reported; intended file/hunk set and commit/PR intent are explicit.
-- Failure behavior: stop before staging when unrelated work cannot be separated confidently.
-- Safety constraints: directory proximity is not proof of relatedness; never use a vague commit to hide mixed work.
+### COMPLETION_FEASIBILITY_GATE
 
-## 06 PREPARE_BRANCH
+Entry evidence:
 
-- Purpose: place work on a safe, reviewable working branch.
-- Entry: scope is coherent and history is safe to reuse or branch.
-- Actions: reuse a suitable feature branch; for a protected branch, create a descriptive candidate after explicit local and remote collision checks. Carry the worktree as-is without stashing.
-- Exit evidence: current branch is not dev, main, or master; name is meaningful, available, and recorded.
-- Failure behavior: stop on unsafe protected-branch history, ambiguous remote ownership, or an unresolved collision.
-- Safety constraints: never commit or push normal work on protected branches; never attach to an unknown remote branch.
+- every tracked, staged, unstaged, and relevant untracked path is classified;
+- selected scope and unrelated scope are explicit.
 
-## 07 PRE_COMMIT_VALIDATION
+Exit evidence:
 
-- Purpose: find regressions before committing and establish truthful PR evidence.
-- Entry: safe working branch and intended scope are known.
-- Actions: discover existing commands; select focused and required broader checks; run relevant lint, format/check, typecheck, tests, builds, and repository checks. For monorepos include affected packages and cross-package checks. Scope auto-fixes and reinspect afterward.
-- Exit evidence: each relevant check is passed, not applicable, skipped with reason, or failed with cause classified.
-- Failure behavior: fix in-scope failures when safe; otherwise stop for regressions or major unknown failures. Report pre-existing failures if continuation is allowed.
-- Safety constraints: do not invent absent commands, disable tests, claim unrun checks, or expand into unrelated cleanup.
+- committing the selected scope will leave no unrelated tracked/index changes that block rebase;
+- any remaining untracked artifact is proven unstageable and non-interfering;
+- no stash, discard, reset, or hidden-work plan is required.
 
-## 08 SELECTIVE_STAGE
+If this cannot be proven, stop before branch/index/commit mutation and report all work preserved.
 
-- Purpose: construct the exact index that will become the commit.
-- Entry: validation evidence exists and intended paths/hunks are known.
-- Actions: use explicit path staging or reviewed patch mode. Keep unrelated, secret, temporary, and unknown generated files out. Reinspect status after staging.
-- Exit evidence: staged paths/hunks match the selected scope and remaining work is intentionally preserved.
-- Failure behavior: correct only with explicit index operations that preserve worktree contents; stop if the index remains ambiguous.
-- Safety constraints: git add . and git add -A are never substitutes for scope proof.
+### CAPTURE_REMOTE_BRANCH_EXPECTATION
 
-## 09 VERIFY_STAGED_DIFF
+Entry evidence:
 
-- Purpose: make the staged diff an auditable commit boundary.
-- Entry: selective staging completed.
-- Actions: inspect cached diff and cached stat; check content, tests, secrets, debug leftovers, generated files, lockfiles, migrations, and unrelated changes.
-- Exit evidence: staged diff alone represents the intended task and no unsafe file is included.
-- Failure behavior: return to selective staging or stop; do not commit an unverified index.
-- Safety constraints: never use a status line or commit message as a substitute for cached-diff review.
+- current working branch and local HEAD are known;
+- completion feasibility passed.
 
-## 10 COMMIT
+Exit evidence:
 
-- Purpose: create the smallest truthful Conventional Commit.
-- Entry: staged diff is verified and non-empty, or existing coherent commits make this invocation a no-op.
-- Actions: generate the message from staged semantics; commit; verify status, latest log, and show stat. If no new staged work exists but intended commits already exist, record the no-op.
-- Exit evidence: commit SHA/message and clean-or-explained post-hook status are known.
-- Failure behavior: inspect hook failures or modifications; reclassify changed files. Do not retry blindly or create an empty commit.
-- Safety constraints: commit only the verified index; no direct protected-branch commit and no silent hook changes.
+- the live `refs/heads/<branch>` was queried with `git ls-remote --heads`;
+- `EXPECTED_REMOTE_SHA` is the exact returned SHA or explicit absence;
+- both ancestry directions were inspected when the remote exists;
+- remote-ahead or diverged history has stopped instead of entering rewrite flow.
 
-## 11 REBASE_ON_ORIGIN_DEV
+Do not replace this evidence with a possibly stale remote-tracking ref.
 
-- Purpose: integrate the latest authoritative dev base before publishing.
-- Entry: working branch has coherent commits and no unresolved worktree ambiguity.
-- Actions: require no unresolved or unexplained worktree/index changes; fetch origin --prune again; run git rebase origin/dev; record pre/post HEAD and whether published history changed.
-- Exit evidence: branch is based on current origin/dev, or conflict state is explicitly handed to phase 12.
-- Failure behavior: enter the conflict gate; if unsafe, leave or abort only the skill-owned rebase and stop.
-- Safety constraints: rebase origin/dev, never local dev; no reset, clean, or blind side selection.
+### REBASE_ON_ORIGIN_DEV / CONFLICT_SAFETY_GATE
 
-## 12 CONFLICT_SAFETY_GATE
+Entry evidence:
 
-- Purpose: prevent semantic guesses from becoming integration bugs.
-- Entry: rebase reported conflicts or an in-progress rebase is clearly owned by this workflow.
-- Actions: inspect status, every unmerged path, both sides, surrounding contracts, tests, and risk class. Resolve only obvious low-risk conflicts; add each verified resolution and continue one step at a time.
-- Exit evidence: rebase completes with no unmerged paths, or a safe stop includes exact conflict files and state.
-- Failure behavior: abort the skill-owned rebase when appropriate, or leave it paused with instructions; never lose work.
-- Safety constraints: high-risk auth, payment, migration, security, business-rule, transaction, locking, concurrency, and deletion conflicts require a stop when intent is not proven.
+- clean, explained index/worktree;
+- live remote feature head still matches its recorded expectation;
+- current origin/dev is fetched.
 
-## 13 POST_REBASE_VALIDATION
+Exit evidence:
 
-- Purpose: prove that the rebased tree still works with current dev.
-- Entry: rebase completed without unresolved conflicts.
-- Actions: rerun relevant pre-commit checks, including checks affected by changed base contracts; inspect hook-generated changes and status.
-- Exit evidence: final validation commands and outcomes are recorded against rebased HEAD.
-- Failure behavior: repair only in-scope regressions or stop with truthful failures; return to scope/staging if new changes appear.
-- Safety constraints: a clean rebase is not a passing test suite.
+- rebase completed and no unmerged paths or rebase markers remain;
+- pre/post HEAD and rewrite status are recorded;
+- `REBASED_BASE_SHA` equals the origin/dev used and is an ancestor of HEAD;
+- every conflict resolution has a recorded semantic risk decision.
 
-## 14 VERIFY_PR_DIFF
+If conflict ownership or semantics are unclear, use the safe stop/abort rules in `conflict-resolution.md`; never guess.
 
-- Purpose: review exact commits and content reviewers will see.
-- Entry: rebased branch and post-rebase evidence exist.
-- Actions: inspect log origin/dev..HEAD, stat origin/dev...HEAD, and full diff origin/dev...HEAD. Check scope, accidental history, secrets, generated output, lockfiles, migrations, security, breaking changes, and reviewer context.
-- Exit evidence: PR title, body, summary, risk notes, and validation claims come from the full diff.
-- Failure behavior: remove or correct unsafe staged content before push, or stop for unrelated history or uncertain impact.
-- Safety constraints: do not derive the PR from the latest commit alone; origin/dev remains the comparison base.
+### POST_REBASE_VALIDATION
 
-## 15 PUSH
+Exit evidence:
 
-- Purpose: publish only the reviewed working branch.
-- Entry: final PR diff is approved by local evidence and branch is not protected.
-- Actions: use normal upstream push for a never-published branch; use force-with-lease only when an existing remote branch was rewritten by rebase. Inspect rejection instead of escalating force.
-- Exit evidence: remote head reflects reviewed local head and push mode/reason are recorded.
-- Failure behavior: stop on rejection, lease failure, authentication failure, or unexpected remote movement.
-- Safety constraints: never force, never push protected branches, and never publish before phase 14.
+- every applicable lint, typecheck, test, build, and repository-specific command is recorded with its real outcome;
+- the evidence applies to current HEAD and `REBASED_BASE_SHA`;
+- status after validation is clean or fully explained.
 
-## 16 FIND_EXISTING_PR
+An integration-changing rebase or conflict edit expires all earlier integration evidence.
 
-- Purpose: make reruns idempotent and avoid duplicate PRs.
-- Entry: remote branch is published and gh is authenticated.
-- Actions: query open PRs with current head and explicit base dev; inspect candidate metadata/body. Also check same-head PRs with another base.
-- Exit evidence: select update an existing dev PR, create a missing PR, or stop for ambiguity.
-- Failure behavior: report missing API access or ambiguity without creating anything.
-- Safety constraints: identify by head and base, not a remembered number; do not overwrite human discussion.
+### VERIFY_PR_DIFF
 
-## CREATE_OR_UPDATE_PR
+Exit evidence:
 
-- Purpose: create the requested PR or refresh an existing one with accurate context.
-- Entry: phase 16 selected create or update.
-- Actions: compose a reviewed body from the full diff, validation, repository template, and risk findings. Create with explicit base dev, or update only generated/stale sections while preserving human content.
-- Exit evidence: gh returns a PR number and URL; title and body are known.
-- Failure behavior: stop and report; do not retry by creating a second PR.
-- Safety constraints: do not change base away from dev, merge, close, delete, or erase reviewer context.
+- commit list `origin/dev..HEAD`, stat, and full `origin/dev...HEAD` diff were reviewed;
+- scope, history, secrets, generated files, migrations, security/business risk, and reviewer context are classified;
+- title/body claims and validation notes come from this complete range.
 
-## 17 VERIFY_PR
+### VERIFY_BASE_FRESHNESS
 
-- Purpose: confirm the external result matches the requested invariant.
-- Entry: create/update returned or an existing PR was selected.
-- Actions: run gh pr view with number, URL, title, baseRefName, headRefName, and state; optionally report immediately available CI separately.
-- Exit evidence: state OPEN, baseRefName dev, headRefName current branch, and number/URL/title all match.
-- Failure behavior: do not report success; state which invariant failed and preserve branch/PR.
-- Safety constraints: never infer state from the create command alone.
+Exit evidence:
 
-## 18 REPORT
+- origin/dev was fetched immediately before push;
+- current origin/dev SHA was compared exactly with `REBASED_BASE_SHA`;
+- equality permits push; inequality enters a bounded retry or safe stop.
 
-- Purpose: hand off concise, auditable facts and warnings.
-- Entry: phase 17 passed or a safe stop occurred.
-- Actions: report branch, commit(s), origin/dev base, validation outcomes, rebase, PR metadata, URL, warnings, and incomplete states.
-- Exit evidence: user can see what changed, what was verified, and what remains.
-- Failure behavior: use the blocked report format; never call partial completion success.
-- Safety constraints: omit raw secret-bearing output and unverified CI claims.
+Freshness retry loop:
+
+1. Start with retry count 0 after the initial rebase.
+2. On movement, if count is below 2, increment it and return to rebase on the new origin/dev.
+3. Pass conflict safety, capture the new base SHA, rerun every applicable integration check, and review the full PR diff again.
+4. Fetch and compare again.
+5. If origin/dev moves after 2 retries, stop. Do not push, loop, or claim latest integration.
+
+### PUSH_WITH_SAFE_LEASE
+
+Entry evidence:
+
+- base freshness passed;
+- current branch is not protected;
+- live remote feature SHA still equals `EXPECTED_REMOTE_SHA`, or remains absent;
+- whether the rebase rewrote published history is known.
+
+Exit evidence:
+
+- remote branch updated successfully;
+- a normal push was used for a new/non-rewritten history;
+- rewritten published history used an explicit lease for exactly `EXPECTED_REMOTE_SHA`;
+- the resulting remote head is known.
+
+A changed remote head or lease failure is a stop. Fetch and inspect for diagnosis, but do not overwrite it, retry with force, or replace the expectation.
+
+### FIND_EXISTING_PR / VERIFY_PR
+
+Selection evidence:
+
+- OPEN PRs were queried by exact head and base dev;
+- same-head PRs with another base and CLOSED/MERGED history were inspected when relevant;
+- an OPEN dev PR is reused; a historical PR is never edited/reopened silently;
+- new PR creation is allowed only for non-empty new work on safe history with no OPEN duplicate.
+
+Final exit evidence:
+
+- number and URL are available;
+- state is OPEN;
+- baseRefName is dev;
+- headRefName is the expected working branch;
+- verified title is available.
+
+## Other mutation exit evidence
+
+| State | Required evidence before advancing |
+| --- | --- |
+| PREPARE_BRANCH | current branch is the intended non-protected branch; local/remote collision checks and any created name are recorded |
+| SELECTIVE_STAGE | index contains only reviewed paths/hunks; unrelated and secret-like content remains excluded and preserved |
+| VERIFY_STAGED_DIFF | cached diff and stat alone match the selected coherent task |
+| COMMIT | SHA/message, latest commit stat, and clean-or-explained hook/worktree state are recorded |
+| CREATE_OR_UPDATE_PR | returned number/URL are known; explicit dev base was used; human-authored content was preserved before independent verification |
+
+## Edge transitions
+
+### Remote feature branch diverged before rebase
+
+If neither the remote SHA nor local HEAD is an ancestor of the other, stop before rebase. Preserve both histories and report the two tips. Reconciliation requires an explicit, evidence-backed decision outside the automatic rewrite path.
+
+### Remote feature branch changed after inspection
+
+If live remote SHA changes after expectation capture, stop at the next comparison or explicit-lease failure. Keep local rebased work intact. Do not treat the new SHA as permission to overwrite or silently incorporate another actor's commits.
+
+### CLOSED or MERGED previous PR
+
+Treat it as history, not the active target. Determine whether `origin/dev...HEAD` is genuinely new and whether branch ancestry supports a new PR. Create a new PR only after those checks and an OPEN-PR query; otherwise stop and report why the old branch/PR cannot safely be reused.
+
+### Validation or hooks create changes
+
+Return to worktree analysis and completion feasibility. Do not absorb the files into the existing commit automatically. Any new commit or integration change requires the downstream evidence to be rebuilt.
+
+## Blocked report evidence
+
+Report current branch/HEAD, active Git operation, origin/dev and recorded base SHAs, expected/live remote feature SHAs, retry count, staged/unstaged/untracked work preserved, last completed state, exact blocker, validation already run, PR state if any, and the safest next action. Never label a blocked or stale-base state as ready.

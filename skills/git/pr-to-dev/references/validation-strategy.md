@@ -1,6 +1,6 @@
 # Validation strategy
 
-Validation is evidence attached to a tree, not a ritual command list. Discover the repository's own checks, select them from affected scope, and record exact outcomes before and after rebase.
+Validation is evidence attached to a tree, not a ritual command list. Discover the repository's own checks, select them from affected scope, and record exact outcomes before and after rebase. Every integration-changing rebase—including a freshness retry—and every conflict-resolution edit expires prior integration evidence; rerun all applicable lint, typecheck, test, build, and repository-specific checks before push.
 
 ## Discover commands
 

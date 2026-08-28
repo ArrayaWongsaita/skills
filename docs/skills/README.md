@@ -32,7 +32,7 @@ npx skills add ArrayaWongsaita/skills \
 
 | Skill | Description / คำอธิบาย | Guide / คู่มือ |
 | --- | --- | --- |
-| `pr-to-dev` | Safely prepare the current coherent local work and create or update an open GitHub Pull Request targeting the dev branch. Use this skill whenever the user asks to create a PR to dev, prepare work for dev, ship current changes, commit and open a PR, or prepare the current changes for review. It performs repository inspection, early remote refresh, protected-branch handling, semantic scope analysis, selective staging, Conventional Commits, validation before and after rebasing onto origin/dev, conflict safety gates, full PR-diff review, safe pushing, idempotent PR reuse, and final PR verification. Do not use it for merging, releasing, deploying, deleting branches, rollback, reset, or production work. | [คู่มือ / Guide](git/pr-to-dev.md) |
+| `pr-to-dev` | Prepare coherent current local work and create or update a Pull Request targeting dev. Use for repository inspection, protected-branch handling, selective staging, validation, safe conflict-aware rebasing on origin/dev, exact-lease pushing, PR reuse, and verification; not for merging, releases, deployment, or production work. | [คู่มือ / Guide](git/pr-to-dev.md) |
 
 ### Install this category / ติดตั้งทั้งหมวด
 

@@ -24,13 +24,14 @@
 ### วิธีทำงานหลัก
 
     preflight → fetch origin → analyze state/worktree/scope
-    → protect dev → prepare branch → validate
+    → prove clean completion → protect dev → prepare branch → validate
     → selectively stage → verify cached diff → commit
-    → rebase origin/dev → conflict gate → validate again
-    → inspect full PR diff → push → create/update PR
+    → capture remote feature SHA → rebase origin/dev → conflict gate
+    → validate again → inspect full PR diff → verify dev freshness
+    → exact-lease push when rewritten → create/update PR
     → verify PR → report
 
-หลักความปลอดภัยคือไม่ commit บน dev/main/master, ใช้ origin/dev เป็นฐาน, ไม่ใช้ git add . หรือ git add -A, ไม่ใช้ git push --force, ไม่เดาผ่าน conflict ที่มีความเสี่ยงสูง และไม่ทำลายงานของผู้ใช้
+หลักความปลอดภัยคือไม่ commit บน dev/main/master, ใช้ origin/dev เป็นฐาน, หยุดก่อน commit ถ้างาน tracked ที่ไม่เกี่ยวข้องจะขวาง rebase, ตรวจว่า dev ยังเป็น SHA ที่ validate แล้วก่อน push, ใช้ exact-SHA lease เมื่อ rewrite, ไม่ใช้ git add . หรือ git add -A, ไม่ใช้ git push --force, ไม่เดาผ่าน conflict ที่มีความเสี่ยงสูง และไม่ทำลายงานของผู้ใช้
 
 ### ตัวอย่าง prompt
 
@@ -43,11 +44,11 @@
 ### ไฟล์ที่เกี่ยวข้อง
 
 - [SKILL.md](../../../skills/git/pr-to-dev/SKILL.md) — workflow และ hard invariants
-- [references/workflow.md](../../../skills/git/pr-to-dev/references/workflow.md) — phase contract ครบทุก state
+- [references/workflow.md](../../../skills/git/pr-to-dev/references/workflow.md) — exceptional state evidence, resume และ recovery
 - [references/conflict-resolution.md](../../../skills/git/pr-to-dev/references/conflict-resolution.md) — conflict taxonomy และ safe gate
 - [references/validation-strategy.md](../../../skills/git/pr-to-dev/references/validation-strategy.md) — validation, monorepo, lockfile, generated files
 - [references/pr-template.md](../../../skills/git/pr-to-dev/references/pr-template.md) — PR template และ truthfulness rules
-- [evals/evals.json](../../../skills/git/pr-to-dev/evals/evals.json) — scenario checks A–L
+- [evals/evals.json](../../../skills/git/pr-to-dev/evals/evals.json) — 19 scenario checks
 
 ## English / ภาษาอังกฤษ
 
@@ -69,13 +70,14 @@ Do not use it to merge a PR, deploy, release, roll back production, reset or cle
 ### Main workflow
 
     preflight → fetch origin → analyze repository/worktree/scope
-    → protect dev → prepare branch → validate
+    → prove clean completion → protect dev → prepare branch → validate
     → selective stage → verify cached diff → commit
-    → rebase origin/dev → conflict gate → validate again
-    → inspect full PR diff → push → create/update PR
+    → capture remote feature SHA → rebase origin/dev → conflict gate
+    → validate again → inspect full PR diff → verify dev freshness
+    → exact-lease push when rewritten → create/update PR
     → verify PR → report
 
-Hard boundaries include no normal commits on dev/main/master, origin/dev as the source of truth, no blind staging, no git push --force, no guessing through high-risk conflicts, no destructive cleanup, no duplicate PRs, and no merge.
+Hard boundaries include no normal commits on dev/main/master, origin/dev as the source of truth, early stop when unrelated tracked work would block rebase, no stale-base push, an exact expected remote SHA for rewritten pushes, no blind staging, no git push --force, no high-risk conflict guesses, no destructive cleanup, no duplicate PRs, and no merge.
 
 ### Example prompt
 
@@ -88,11 +90,11 @@ Hard boundaries include no normal commits on dev/main/master, origin/dev as the 
 ### Related files
 
 - [SKILL.md](../../../skills/git/pr-to-dev/SKILL.md) — workflow and hard invariants
-- [references/workflow.md](../../../skills/git/pr-to-dev/references/workflow.md) — contract for every state
+- [references/workflow.md](../../../skills/git/pr-to-dev/references/workflow.md) — exceptional-state evidence, resume, and recovery
 - [references/safety-rules.md](../../../skills/git/pr-to-dev/references/safety-rules.md) — automatic, caution, and forbidden actions
 - [references/branch-naming.md](../../../skills/git/pr-to-dev/references/branch-naming.md) — branch naming and protected branches
 - [references/commit-convention.md](../../../skills/git/pr-to-dev/references/commit-convention.md) — semantic commit messages
 - [references/conflict-resolution.md](../../../skills/git/pr-to-dev/references/conflict-resolution.md) — conflict risk and safe resolution
 - [references/validation-strategy.md](../../../skills/git/pr-to-dev/references/validation-strategy.md) — validation and repository variants
 - [references/pr-template.md](../../../skills/git/pr-to-dev/references/pr-template.md) — PR body and template handling
-- [evals/evals.json](../../../skills/git/pr-to-dev/evals/evals.json) — scenario checks A–L
+- [evals/evals.json](../../../skills/git/pr-to-dev/evals/evals.json) — 19 scenario checks

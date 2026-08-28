@@ -5,12 +5,12 @@
       "id": 1,
       "name": "normal work on dev",
       "prompt": "Create a PR to dev for three coherent auth files modified on dev, where dev equals origin/dev.",
-      "expected_output": "Inspect, fetch, classify the auth scope, create a feat or fix branch, validate, selectively stage, verify the staged diff, commit, rebase origin/dev, revalidate, inspect the full PR diff, push, create a PR with base dev, verify it, and report.",
+      "expected_output": "Inspect, fetch, classify the auth scope, pass completion feasibility, create a feat or fix branch, validate, selectively stage, verify the staged diff, commit, record remote branch absence, rebase origin/dev, revalidate, inspect the full PR diff, verify base freshness, push, create a PR with base dev, verify it, and report.",
       "expectations": [
         "Creates or recommends a working branch rather than committing on dev",
         "Fetches origin early and uses origin/dev as the base",
         "Stages only the proven auth files and verifies the cached diff",
-        "Validates before and after rebase and verifies the PR base is dev"
+        "Validates before and after rebase, passes final base freshness, and verifies the PR base is dev"
       ],
       "files": []
     },
@@ -18,7 +18,7 @@
       "id": 2,
       "name": "reuse existing feature branch",
       "prompt": "Prepare the current changes for dev. I am already on feat/auth-login with additional local edits and an existing upstream branch.",
-      "expected_output": "Reuse the existing feature branch, inspect its history relative to origin/dev, then run the same validation, selective commit, rebase, push, PR reuse or creation, and verification flow without nesting another branch.",
+      "expected_output": "Reuse the existing feature branch, inspect its history relative to origin/dev and its live remote SHA, then run completion feasibility, validation, selective commit, rebase, revalidation, full-diff and freshness gates, safe push, PR reuse or creation, and verification without nesting another branch.",
       "expectations": [
         "Reuses the current suitable feature branch",
         "Understands upstream and existing commits before pushing",
@@ -54,11 +54,11 @@
       "id": 5,
       "name": "clean rebase path",
       "prompt": "Prepare my existing fix/payment branch for a PR to dev. The branch has coherent commits and rebases cleanly.",
-      "expected_output": "Fetch, validate, inspect the full origin/dev...HEAD diff, rebase origin/dev, validate again, push safely, create or reuse the PR, and verify it targets dev.",
+      "expected_output": "Fetch, validate, rebase origin/dev, record the rebased base SHA, validate again, inspect the full origin/dev...HEAD diff, verify origin/dev is still that SHA, push safely, create or reuse the PR, and verify it targets dev.",
       "expectations": [
         "Uses git rebase origin/dev rather than local dev or git pull",
         "Runs post-rebase validation",
-        "Inspects the triple-dot PR diff before pushing"
+        "Inspects the triple-dot PR diff and passes the final base-freshness gate before pushing"
       ],
       "files": []
     },
@@ -90,10 +90,10 @@
       "id": 8,
       "name": "rewritten published branch",
       "prompt": "Update the existing PR to dev after the published branch was rebased onto the latest origin/dev.",
-      "expected_output": "Detect rewritten published history and use git push --force-with-lease, never git push --force, then reuse the existing PR.",
+      "expected_output": "Query and record the exact live remote branch SHA before rewriting, detect rewritten published history, and use force-with-lease bound to that SHA, never git push --force, then reuse the existing PR.",
       "expectations": [
         "Understands why history was rewritten",
-        "Uses force-with-lease only for the rewritten published branch",
+        "Uses force-with-lease bound to the exact previously observed remote SHA",
         "Does not create a duplicate PR"
       ],
       "files": []
@@ -143,6 +143,90 @@
         "Does not rely on the repository default branch",
         "Uses gh pr create or update with explicit base dev",
         "Verifies open state and both branch names after the operation"
+      ],
+      "files": []
+    },
+    {
+      "id": 13,
+      "name": "origin dev moves after rebase",
+      "prompt": "Prepare the PR after the feature was rebased and validated on origin/dev SHA A, but origin/dev advances to SHA B before push.",
+      "expected_output": "Refresh origin/dev before push, detect that A is stale, do not push, rebase onto B within the retry budget, rerun all applicable validation, reinspect origin/dev...HEAD, record B, and pass freshness again before pushing.",
+      "expectations": [
+        "Records the exact base SHA used by the successful rebase",
+        "Detects origin/dev movement at the final freshness gate and does not push stale work",
+        "Repeats conflict handling, validation, and full PR-diff review after the retry rebase"
+      ],
+      "files": []
+    },
+    {
+      "id": 14,
+      "name": "remote feature branch race",
+      "prompt": "The agent records origin/feat/auth at SHA A before rebasing. Another actor pushes SHA B before the rewritten branch is published.",
+      "expected_output": "Use an explicit force-with-lease expectation for A. When the live remote comparison or lease observes B, stop, preserve the local rebased branch, inspect the remote change read-only, and report the race without force-pushing.",
+      "expectations": [
+        "Obtains A from live remote inspection rather than only a tracking ref",
+        "Does not replace A with B merely to make the lease pass",
+        "Never uses --force or overwrites remote SHA B"
+      ],
+      "files": []
+    },
+    {
+      "id": 15,
+      "name": "existing branch diverged from remote",
+      "prompt": "Prepare feat/auth for dev. origin/feat/auth is A-B-X while local feat/auth is A-B-Y.",
+      "expected_output": "Detect that neither tip is an ancestor of the other, inspect the relationship, and stop before blind rebase or force-push so both X and Y remain preserved pending safe reconciliation.",
+      "expectations": [
+        "Checks both ancestry directions against the live remote SHA",
+        "Does not blindly rebase local Y and overwrite remote X",
+        "Reports both diverged tips and preserves local and remote work"
+      ],
+      "files": []
+    },
+    {
+      "id": 16,
+      "name": "unrelated dirty tracked work blocks completion",
+      "prompt": "Create an auth PR to dev with tracked modifications in src/auth/service.ts and unrelated src/payment/service.ts, leaving payment unfinished.",
+      "expected_output": "Classify the two scopes, determine that committing auth would leave tracked payment work blocking the required clean rebase, and stop before branch/index/commit mutation without stashing or discarding either change.",
+      "expectations": [
+        "Runs the completion-feasibility gate before staging or commit",
+        "Stops before committing the selected auth task",
+        "Preserves both tracked edits and does not stash automatically"
+      ],
+      "files": []
+    },
+    {
+      "id": 17,
+      "name": "closed or merged previous PR",
+      "prompt": "Update the PR to dev for this branch, but its only previous same-head PR is CLOSED or MERGED and there is no OPEN PR.",
+      "expected_output": "Treat the prior PR as history, never silently edit or reopen it, inspect whether origin/dev...HEAD is genuinely new work on safe branch history, and create a new PR only when that evidence and a fresh OPEN-PR query support it; otherwise stop.",
+      "expectations": [
+        "Does not treat CLOSED or MERGED as the active PR",
+        "Queries for an OPEN same-head PR before any create",
+        "Creates a new PR only for verified non-empty new work on safe history"
+      ],
+      "files": []
+    },
+    {
+      "id": 18,
+      "name": "freshness retry budget exhausted",
+      "prompt": "The branch validates on dev A; dev moves to B and then C during two automatic freshness retry cycles, and moves once more before the next push gate.",
+      "expected_output": "After at most two automatic freshness rebase retries, stop without pushing, report that dev is moving too frequently, preserve the local branch, and do not claim latest integration or loop forever.",
+      "expectations": [
+        "Enforces a maximum of two automatic freshness rebase retries",
+        "Revalidates and reviews the full PR diff after each retry that occurs",
+        "Stops safely without push or false freshness claims when the budget is exhausted"
+      ],
+      "files": []
+    },
+    {
+      "id": 19,
+      "name": "unrelated git operation active",
+      "prompt": "Create a PR to dev while an unrelated revert or normal git bisect session is already active in the worktree.",
+      "expected_output": "Detect the actual REVERT_HEAD or BISECT_START marker, stop before starting pr-to-dev, leave the operation and user work untouched, and allow resume only with unambiguous evidence that an operation belongs to this workflow.",
+      "expectations": [
+        "Checks marker existence rather than treating git-path output as active state",
+        "Detects normal bisect through BISECT_START rather than relying only on BISECT_HEAD",
+        "Does not guess operation ownership or begin mutations on top of it"
       ],
       "files": []
     }
