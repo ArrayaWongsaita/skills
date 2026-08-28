@@ -26,7 +26,7 @@ of truth แตกออกเป็นหลายชุดและซ่อ�
    The orchestrator references their exact contract and never copies their
    instructions into a replacement skill.
 4. Audit the actual installed `SKILL.md`, agent metadata, runtime settings, and
-   plugin manifests before each route. Record exact path/namespace, policy,
+   plugin manifests when each dependent stage becomes immediate. Record exact path/namespace, policy,
    enabled state, content hash, provenance, and required capabilities. The
    registry is expected configuration, not proof of ownership; an unverified
    or mismatched source is reported rather than guessed or replaced.

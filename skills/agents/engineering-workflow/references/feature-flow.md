@@ -2,8 +2,9 @@
 
 ## Normal feature
 
-1. Classify as `FEATURE`; audit the dependencies required for the selected
-   route, including the verified hard transitive closure for Discovery.
+1. Classify as `FEATURE`; audit only the immediate Discovery dependency and
+   its declared hard transitive support. Audit later dependencies when their
+   stages become immediate.
 2. Run or hand off the installed `grill-with-docs` skill. Its upstream
    contract is user-invoked (`disable-model-invocation: true`) and calls
    `grilling` and `domain-modeling` itself. Those support skills are audited as

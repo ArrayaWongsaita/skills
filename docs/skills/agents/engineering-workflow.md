@@ -34,7 +34,7 @@ npx skills add ArrayaWongsaita/skills --skill engineering-workflow
 เรียก `$engineering-workflow <request>` ใน Codex หรือ
 `/engineering-workflow <request>` ใน Claude Code ใช้ `continue [id]`,
 `status [id]` และ `list` ได้ ระบบจะ audit dependency จากไฟล์จริง, ขออนุมัติก่อน
-ติดตั้ง, บันทึก state ที่ `.agents/workflows/`, และบังคับ `scrutinize` เป็น
+ติดตั้ง, ตรวจเฉพาะ dependency ของ stage ถัดไป, บันทึก state ที่ `.agents/workflows/`, และบังคับ `scrutinize` เป็น
 blocking gate โดยให้ design/system มี counter แยกกันสูงสุดอย่างละหกครั้ง
 (code-review ยังคงมี budget แยกสามครั้ง) พร้อมหยุดก่อนกำหนดเมื่อไม่มี progress
 
@@ -78,8 +78,8 @@ npx skills add ArrayaWongsaita/skills --skill engineering-workflow
 
 Invoke `$engineering-workflow <request>` in Codex or
 `/engineering-workflow <request>` in Claude Code. Commands include
-`continue [id]`, `status [id]`, and `list`. It audits actual installed
-dependencies, shows owner/source/provenance and verified installation guidance,
+`continue [id]`, `status [id]`, and `list`. Startup loads only repository/state
+reality and audits the immediate stage dependency. It shows owner/source/provenance and verified installation guidance,
 persists compare-and-swap state, and lets repository reality override stale
 claims on resume. Installation is permission-gated and optional dependencies
 are checked only when the selected route needs them.

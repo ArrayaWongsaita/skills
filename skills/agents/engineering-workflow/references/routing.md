@@ -44,10 +44,10 @@ PLANNING(to-tickets) -> IMPLEMENTATION(implement) ->
 CODE_REVIEW(code-review) -> SYSTEM_REVIEW(scrutinize, high risk only) -> COMPLETE
 ```
 
-Check only the dependencies reachable by the current route. `grill-with-docs`
-is required now for a normal feature; `to-spec`, `scrutinize`, `to-tickets`,
-`implement`, and `code-review` are required later at their stages. Conditional
-skills are checked only when evidence routes to them.
+At startup check only `grill-with-docs` and its declared hard transitive
+support for a normal feature. Check `to-spec`, `scrutinize`, `to-tickets`,
+`implement`, and `code-review` lazily when their stages become immediate.
+Conditional skills are checked only when evidence selects their mode.
 
 Design `SHIP` advances to `PLANNING`; `FIX_THEN_SHIP` identifies and fixes the
 verified finding in the spec/design, then reviews again; `REWORK` returns to
@@ -78,16 +78,15 @@ or cross-system failure-mode change.
 CLASSIFYING -> DIAGNOSIS(diagnosing-bugs) ->
 IMPLEMENTATION[REGRESSION_TEST/FIX](implement or diagnosis handoff) ->
 CODE_REVIEW(code-review) -> SYSTEM_REVIEW(scrutinize, when required) ->
-POST_MORTEM(post-mortem only when its installed contract accepts this case) -> COMPLETE
+POST_MORTEM(post-mortem only when its current installed contract accepts this case) -> COMPLETE
 ```
 
 Diagnosis must establish a red-capable feedback loop, confirmed root cause,
 and regression evidence. An active incident may use a human-approved,
 minimal/reversible/observable `EMERGENCY_MITIGATION`, then returns to diagnosis;
-mitigation never completes the workflow. The installed 9arm post-mortem
-contract at the audited baseline explicitly rejects customer-visible
-incidents, so such an incident is `BLOCKED` until a compatible external
-incident-record skill is installed or the user supplies a compatible provider.
+mitigation never completes the workflow. Check the installed 9arm post-mortem
+contract only when this stage becomes immediate. If it rejects the actual
+case, remain `BLOCKED`; do not invent a replacement incident writer.
 
 For high/critical or system-sensitive bugs, the final system scrutinize gate has
 its own six-cycle counter. After a fix found by system scrutinize, run tests or

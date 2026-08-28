@@ -500,6 +500,11 @@ class WorkflowStateTests(unittest.TestCase):
                 [f"system-finding-{cycle}"],
                 reason_for_retry=f"system cycle {cycle}",
             )
+            if cycle < workflow_state.MAX_SCRUTINIZE_CYCLES:
+                # Isolate the system budget here. The end-to-end loop through
+                # validation and code review is covered by the transition tests.
+                state["gateBlockers"]["code"] = []
+                state["verificationCommands"] = [["python3", "-c", "pass"]]
         self.assertEqual(6, state["systemScrutinizeCycles"])
         self.assertEqual("BLOCKED", state["stage"])
         self.assertEqual("GATE_BUDGET_EXHAUSTED", state["blocker"]["code"])
@@ -564,6 +569,9 @@ class WorkflowStateTests(unittest.TestCase):
         )
         state = workflow_state.transition(
             state, "IMPLEMENTATION", "apply system-review fix", "REVIEW_FIX"
+        )
+        state, _ = workflow_state.run_verification(
+            state, self.root, [["python3", "-c", "pass"]]
         )
         state = workflow_state.transition(state, "CODE_REVIEW", "review changed implementation")
         state = workflow_state.record_gate(state, "code", [])
@@ -658,7 +666,19 @@ class WorkflowStateTests(unittest.TestCase):
         state = self.state()
         state["stage"] = "DESIGN_REVIEW"
         state = workflow_state.request_installation_permission(
-            state, ["scrutinize"], "DESIGN_REVIEW", "design gate cannot run", []
+            state,
+            ["scrutinize"],
+            "DESIGN_REVIEW",
+            "design gate cannot run",
+            [{
+                "owner": "thananon",
+                "source": "thananon/9arm-skills",
+                "skills": ["scrutinize"],
+                "command": "verified-installer add thananon/9arm-skills scrutinize",
+                "installScope": "project-local",
+                "verified": True,
+                "requiresApproval": True,
+            }],
         )
         state = workflow_state.record_installation_decision(state, False, "not trusted")
         self.assertEqual("BLOCKED", state["status"])
@@ -709,11 +729,13 @@ class WorkflowStateTests(unittest.TestCase):
         )
         machine_path = Path(__file__).parents[1] / "references" / "state-machine.json"
         machine = json.loads(machine_path.read_text(encoding="utf-8"))
+        self.assertEqual(machine, workflow_state.STATE_MACHINE)
         self.assertEqual(
             workflow_state.TRANSITIONS,
             {stage: set(targets) for stage, targets in machine["transitions"].items()},
         )
-        self.assertEqual(6, machine["scrutinizePolicy"]["maxCyclesPerGate"])
+        self.assertEqual(6, machine["gateBudgets"]["design"])
+        self.assertEqual(6, machine["gateBudgets"]["system"])
         self.assertTrue(machine["scrutinizePolicy"]["noProgressEarlyStop"])
         self.assertFalse(machine["scrutinizePolicy"]["automaticCycleSeven"])
 

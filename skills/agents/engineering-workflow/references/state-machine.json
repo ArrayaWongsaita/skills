@@ -64,7 +64,6 @@
   },
   "scrutinizePolicy": {
     "gates": ["design", "system"],
-    "maxCyclesPerGate": 6,
     "verdicts": ["SHIP", "FIX_THEN_SHIP", "REWORK", "REJECT"],
     "noProgressEarlyStop": true,
     "automaticCycleSeven": false

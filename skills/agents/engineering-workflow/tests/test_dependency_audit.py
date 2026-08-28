@@ -55,11 +55,13 @@ class DependencyAuditTests(unittest.TestCase):
         self.assertEqual("Matt Pocock", contract["owner"])
         self.assertEqual("mattpocock/skills", contract["source"])
         self.assertEqual(
-            "requirement discovery, domain clarification, decision capture, glossary/ADR preparation",
+            "requirement discovery, domain clarification, and decision capture",
             contract["role"],
         )
         self.assertEqual(["grilling", "domain-modeling"], contract["directDependencies"])
-        self.assertIn("before the first engineering flow", contract["repositorySetup"])
+        self.assertEqual(
+            "https://github.com/mattpocock/skills", contract["installSource"]
+        )
         self.assertEqual(
             ["grill-with-docs", "to-spec", "scrutinize", "to-tickets", "implement", "code-review"],
             result["dependencyGraph"]["engineering-workflow"],
@@ -85,6 +87,15 @@ class DependencyAuditTests(unittest.TestCase):
             non_matt,
         )
 
+    def test_machine_registry_is_the_canonical_dependency_source(self):
+        payload = json.loads(dependency_audit.REGISTRY_PATH.read_text(encoding="utf-8"))
+        names = {item["skill"] for item in payload["dependencies"]}
+
+        self.assertEqual(names, set(dependency_audit.DEPENDENCIES))
+        self.assertEqual(1, payload["version"])
+        self.assertNotIn("commandTemplate", json.dumps(payload))
+        self.assertNotIn("npx skills add", json.dumps(payload))
+
     def test_missing_grill_with_docs_reports_matt_install_without_auto_installing(self):
         for name in ("grilling", "domain-modeling"):
             self.add_skill(name, source=dependency_audit.MATT_SOURCE)
@@ -103,11 +114,10 @@ class DependencyAuditTests(unittest.TestCase):
         self.assertEqual("Matt Pocock", proposal["owner"])
         self.assertEqual("mattpocock/skills", proposal["source"])
         self.assertEqual(["grill-with-docs"], proposal["skills"])
-        self.assertEqual(
-            "npx skills add https://github.com/mattpocock/skills --skill grill-with-docs",
-            proposal["command"],
-        )
-        self.assertTrue(proposal["verified"])
+        self.assertEqual("https://github.com/mattpocock/skills", proposal["installSource"])
+        self.assertIsNone(proposal["command"])
+        self.assertFalse(proposal["verified"])
+        self.assertEqual("required-on-demand", proposal["commandVerification"])
         self.assertTrue(proposal["requiresApproval"])
         self.assertEqual(before, after)
         self.assertFalse(result["sideEffectsPerformed"])
@@ -152,10 +162,8 @@ class DependencyAuditTests(unittest.TestCase):
         self.assertEqual(
             ["domain-modeling"], result["installProposal"][0]["skills"]
         )
-        self.assertEqual(
-            "npx skills add https://github.com/mattpocock/skills --skill domain-modeling",
-            result["installProposal"][0]["command"],
-        )
+        self.assertIsNone(result["installProposal"][0]["command"])
+        self.assertFalse(result["installProposal"][0]["verified"])
         self.assertTrue(result["installProposal"][0]["requiresApproval"])
 
     def test_engineering_workflow_has_no_removed_discovery_provider_reference(self):
@@ -390,11 +398,12 @@ class DependencyAuditTests(unittest.TestCase):
         self.assertFalse(result["sideEffectsPerformed"])
         self.assertEqual(2, len(result["installProposal"]))
         self.assertTrue(all(item["requiresApproval"] for item in result["installProposal"]))
-        commands = "\n".join(item["command"] for item in result["installProposal"])
-        self.assertIn("--skill tdd", commands)
-        self.assertIn("--skill scrutinize", commands)
+        proposed = {skill for item in result["installProposal"] for skill in item["skills"]}
+        self.assertEqual({"tdd", "scrutinize"}, proposed)
+        self.assertTrue(all(item["command"] is None for item in result["installProposal"]))
+        self.assertTrue(all(not item["verified"] for item in result["installProposal"]))
 
-    def test_missing_scrutinize_reports_owner_source_and_verified_command(self):
+    def test_missing_scrutinize_reports_owner_source_without_inventing_command(self):
         for name in (
             "grill-with-docs", "to-spec", "to-tickets", "implement", "code-review",
             "grilling", "domain-modeling",
@@ -409,9 +418,10 @@ class DependencyAuditTests(unittest.TestCase):
         self.assertEqual("thananon", proposal["owner"])
         self.assertEqual("thananon/9arm-skills", proposal["source"])
         self.assertEqual(["scrutinize"], proposal["skills"])
-        self.assertIn("--skill scrutinize", proposal["command"])
-        self.assertEqual("project-local (default; run from the target repository)", proposal["installScope"])
-        self.assertTrue(proposal["verified"])
+        self.assertIsNone(proposal["command"])
+        self.assertEqual("unknown until installer verification", proposal["installScope"])
+        self.assertFalse(proposal["verified"])
+        self.assertEqual("required-on-demand", proposal["commandVerification"])
         self.assertTrue(proposal["requiresApproval"])
 
     def test_installed_skill_without_source_metadata_is_not_assigned_guessed_provenance(self):
@@ -455,12 +465,34 @@ class DependencyAuditTests(unittest.TestCase):
         self.assertNotIn("research", requirements)
         self.assertNotIn("scrutinize", requirements)
 
+    def test_route_plan_is_progressive_and_stage_scoped(self):
+        discovery = dependency_audit.route_dependency_plan("FEATURE")
+        self.assertEqual(
+            ["grill-with-docs", "grilling", "domain-modeling"],
+            [item["name"] for item in discovery],
+        )
+        specification = dependency_audit.route_dependency_plan(
+            "FEATURE", stage="SPECIFICATION"
+        )
+        self.assertEqual(["to-spec"], [item["name"] for item in specification])
+        self.assertNotIn(
+            "tdd", {item["name"] for item in specification}
+        )
+        inactive_exploration = dependency_audit.route_dependency_plan(
+            "FEATURE", stage="EXPLORATION"
+        )
+        self.assertEqual([], inactive_exploration)
+        prototype = dependency_audit.route_dependency_plan(
+            "FEATURE", stage="EXPLORATION", stage_mode="PROTOTYPE"
+        )
+        self.assertEqual(["prototype"], [item["name"] for item in prototype])
+
     def test_conditional_prototype_can_be_a_later_required_dependency(self):
         result = self.audit(["prototype"])
         self.assertFalse(result["ok"])
         self.assertIn("prototype", result["missing"])
         self.assertEqual("mattpocock/skills", result["installProposal"][0]["source"])
-        self.assertIn("--skill prototype", result["installProposal"][0]["command"])
+        self.assertIsNone(result["installProposal"][0]["command"])
 
     def test_repository_setup_is_reported_separately_from_skill_installation(self):
         self.add_skill("to-spec")
@@ -478,11 +510,18 @@ class DependencyAuditTests(unittest.TestCase):
         self.assertEqual("REPOSITORY_SETUP_REQUIRED", result["issues"][0]["code"])
         self.assertEqual([], result["installProposal"])
 
-    def test_post_mortem_contract_can_block_incident_without_fallback(self):
+    def test_post_mortem_runtime_contract_is_not_hard_coded_in_registry(self):
         self.add_skill("post-mortem", plugin="9arm-skills")
         result = self.audit(["post-mortem"], runtime="claude", incident=True)
-        self.assertFalse(result["ok"])
-        self.assertEqual("CONTRACT_INCOMPATIBLE", result["issues"][0]["code"])
+        self.assertTrue(result["ok"])
+        self.assertNotIn(
+            "supportsIncident",
+            dependency_audit.DEPENDENCIES["post-mortem"],
+        )
+        self.assertEqual(
+            "thananon/9arm-skills",
+            result["resolutions"]["post-mortem"]["expectedSource"],
+        )
 
     def test_codex_loads_exact_path_even_when_claude_frontmatter_is_user_only(self):
         skill = self.add_skill("implement", disable_model=True)

@@ -23,45 +23,37 @@ from pathlib import Path
 from typing import Any, Iterable
 
 
+MACHINE_PATH = Path(__file__).resolve().parents[1] / "references" / "state-machine.json"
+
+
+def _load_state_machine(path: Path = MACHINE_PATH) -> dict[str, Any]:
+    try:
+        machine = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        raise RuntimeError(f"invalid workflow state machine {path}: {error}") from error
+    required = {
+        "version", "stages", "stageModes", "stageModeStages", "transitions",
+        "typeEntry", "gateBudgets", "scrutinizePolicy",
+    }
+    if machine.get("version") != 2 or not required.issubset(machine):
+        raise RuntimeError(f"unsupported workflow state machine schema in {path}")
+    stages = machine["stages"]
+    if set(machine["transitions"]) != set(stages):
+        raise RuntimeError("state-machine transitions must cover every stage exactly once")
+    for source, targets in machine["transitions"].items():
+        unknown = set(targets) - set(stages)
+        if unknown:
+            raise RuntimeError(f"unknown transition target from {source}: {sorted(unknown)}")
+    return machine
+
+
+STATE_MACHINE = _load_state_machine()
 WORKFLOW_VERSION = 2
 LEGACY_WORKFLOW_VERSION = 1
 MAX_HISTORY = 50
-MAX_SCRUTINIZE_CYCLES = 6
-STAGES = (
-    "IDLE",
-    "CLASSIFYING",
-    "DISCOVERY",
-    "EXPLORATION",
-    "WAYFINDING",
-    "SPECIFICATION",
-    "DESIGN_REVIEW",
-    "PLANNING",
-    "DIAGNOSIS",
-    "IMPLEMENTATION",
-    "CODE_REVIEW",
-    "SYSTEM_REVIEW",
-    "POST_MORTEM",
-    "COMPLETE",
-    "BLOCKED",
-)
-STAGE_MODES = {
-    "REGRESSION_TEST",
-    "FIX",
-    "REVIEW_FIX",
-    "EMERGENCY_MITIGATION",
-    "BOUND_FEATURES",
-    "RESEARCH",
-    "PROTOTYPE",
-}
-MODE_STAGES = {
-    "REGRESSION_TEST": "IMPLEMENTATION",
-    "FIX": "IMPLEMENTATION",
-    "REVIEW_FIX": "IMPLEMENTATION",
-    "EMERGENCY_MITIGATION": "IMPLEMENTATION",
-    "BOUND_FEATURES": "PLANNING",
-    "RESEARCH": "EXPLORATION",
-    "PROTOTYPE": "EXPLORATION",
-}
+STAGES = tuple(STATE_MACHINE["stages"])
+STAGE_MODES = set(STATE_MACHINE["stageModes"])
+MODE_STAGES = dict(STATE_MACHINE["stageModeStages"])
 SYSTEM_REVIEW_CHARACTERISTICS = {
     "concurrency",
     "distributed-retry",
@@ -71,29 +63,22 @@ SYSTEM_REVIEW_CHARACTERISTICS = {
     "system-review-required",
 }
 TRANSITIONS = {
-    "IDLE": {"CLASSIFYING", "BLOCKED"},
-    "CLASSIFYING": {"DISCOVERY", "DIAGNOSIS", "WAYFINDING", "BLOCKED"},
-    "DISCOVERY": {"EXPLORATION", "WAYFINDING", "SPECIFICATION", "IMPLEMENTATION", "BLOCKED"},
-    "EXPLORATION": {"EXPLORATION", "DISCOVERY", "SPECIFICATION", "PLANNING", "BLOCKED"},
-    "WAYFINDING": {"WAYFINDING", "DISCOVERY", "EXPLORATION", "PLANNING", "COMPLETE", "BLOCKED"},
-    "SPECIFICATION": {"DISCOVERY", "EXPLORATION", "DESIGN_REVIEW", "IMPLEMENTATION", "BLOCKED"},
-    "DESIGN_REVIEW": {"DISCOVERY", "EXPLORATION", "SPECIFICATION", "PLANNING", "DESIGN_REVIEW", "BLOCKED"},
-    "PLANNING": {"WAYFINDING", "SPECIFICATION", "IMPLEMENTATION", "COMPLETE", "BLOCKED"},
-    "DIAGNOSIS": {"IMPLEMENTATION", "BLOCKED"},
-    "IMPLEMENTATION": {"SPECIFICATION", "DIAGNOSIS", "IMPLEMENTATION", "CODE_REVIEW", "BLOCKED"},
-    "CODE_REVIEW": {"IMPLEMENTATION", "SYSTEM_REVIEW", "POST_MORTEM", "COMPLETE", "BLOCKED"},
-    "SYSTEM_REVIEW": {"IMPLEMENTATION", "DIAGNOSIS", "POST_MORTEM", "COMPLETE", "SYSTEM_REVIEW", "BLOCKED"},
-    "POST_MORTEM": {"DIAGNOSIS", "COMPLETE", "BLOCKED"},
-    "COMPLETE": set(),
-    "BLOCKED": set(),
+    stage: set(targets)
+    for stage, targets in STATE_MACHINE["transitions"].items()
 }
-TYPE_ENTRY = {"FEATURE": "DISCOVERY", "BUG": "DIAGNOSIS", "LARGE_PROJECT": "WAYFINDING"}
-GATES = ("design", "code", "system")
+TYPE_ENTRY = dict(STATE_MACHINE["typeEntry"])
+DEFAULT_GATE_BUDGETS = dict(STATE_MACHINE["gateBudgets"])
+GATES = tuple(DEFAULT_GATE_BUDGETS)
 REVIEW_KINDS = {"design-review", "code-review", "system-review"}
-SCRUTINIZE_GATES = {"design", "system"}
-SCRUTINIZE_VERDICTS = {"SHIP", "FIX_THEN_SHIP", "REWORK", "REJECT"}
+SCRUTINIZE_GATES = set(STATE_MACHINE["scrutinizePolicy"]["gates"])
+SCRUTINIZE_VERDICTS = set(STATE_MACHINE["scrutinizePolicy"]["verdicts"])
+_scrutinize_budgets = {DEFAULT_GATE_BUDGETS[gate] for gate in SCRUTINIZE_GATES}
+if len(_scrutinize_budgets) != 1:
+    raise RuntimeError("design and system scrutinize budgets must match")
+MAX_SCRUTINIZE_CYCLES = _scrutinize_budgets.pop()
+if STATE_MACHINE["scrutinizePolicy"].get("automaticCycleSeven") is not False:
+    raise RuntimeError("automatic scrutinize cycle 7 must remain disabled")
 SCRUTINIZE_GATE_STAGES = {"design": "DESIGN_REVIEW", "system": "SYSTEM_REVIEW"}
-DEFAULT_GATE_BUDGETS = {"design": MAX_SCRUTINIZE_CYCLES, "code": 3, "system": MAX_SCRUTINIZE_CYCLES}
 SCRUTINIZE_HISTORY_FIELDS = {
     "cycleNumber",
     "verdict",
@@ -720,12 +705,14 @@ DEPENDENCY_RESOLUTION_FIELDS = {
     "expectedSource", "role", "category", "requirement", "invocationMode",
     "invocationTarget", "declaredSideEffects", "upstreamInvocation",
     "requiredBy", "directDependencies",
+    "installSource",
 }
 DEPENDENCY_STATUS_FIELDS = {
     "name", "owner", "expectedSource", "role", "category", "requirement", "status",
     "path", "resolvedIdentity", "provenanceStatus", "detectedSource", "provenanceEvidence",
     "issues", "installation", "installScope", "verifiedCommand", "verificationSources",
     "upstreamInvocation", "requiredBy", "directDependencies",
+    "installSource", "commandVerification",
 }
 REPOSITORY_SETUP_FIELDS = {"status", "requiredFiles", "missingFiles", "setupSkill", "checkedRoot"}
 
@@ -742,8 +729,8 @@ def _compact_dependency_record(record: Any, allowed: set[str]) -> dict[str, Any]
 
 def record_dependency_audit(state: dict[str, Any], audit: dict[str, Any]) -> dict[str, Any]:
     validate_state(state)
-    if audit.get("version") not in {1, 2} or not isinstance(audit.get("resolutions"), dict):
-        raise InvalidState("dependency audit must be a version 1 or 2 result")
+    if audit.get("version") not in {1, 2, 3} or not isinstance(audit.get("resolutions"), dict):
+        raise InvalidState("dependency audit must be a supported version 1, 2, or 3 result")
     updated = copy.deepcopy(state)
     updated["dependencies"] = {
         name: _compact_dependency_record(record, DEPENDENCY_RESOLUTION_FIELDS)
@@ -832,12 +819,53 @@ def request_installation_permission(
         if not isinstance(proposal, dict):
             raise InvalidState("installation proposal must be an object")
         allowed = {
-            "owner", "source", "skills", "method", "command", "installScope",
-            "verified", "verificationSources", "requiresApproval",
+            "owner", "source", "installSource", "skills", "method", "command",
+            "installScope", "verified", "commandVerification",
+            "verificationSources", "requiresApproval",
         }
-        compact_proposals.append(
-            {key: copy.deepcopy(value) for key, value in proposal.items() if key in allowed}
+        compact = {
+            key: copy.deepcopy(value)
+            for key, value in proposal.items()
+            if key in allowed
+        }
+        if (
+            compact.get("verified") is not True
+            or compact.get("requiresApproval") is not True
+            or not isinstance(compact.get("command"), str)
+            or not compact["command"].strip()
+            or not isinstance(compact.get("installScope"), str)
+            or not compact["installScope"].strip()
+            or compact["installScope"].startswith("unknown")
+        ):
+            raise InvalidState(
+                "installation permission requires a verified exact command, explicit scope, and approval marker"
+            )
+        compact_proposals.append(compact)
+    if not compact_proposals:
+        raise InvalidState(
+            "installation permission requires at least one verified proposal"
         )
+    requested_names = {item["name"] for item in items}
+    proposed_names: set[str] = set()
+    commands_by_skill: dict[str, str] = {}
+    for proposal in compact_proposals:
+        skills = proposal.get("skills")
+        if not isinstance(skills, list) or not all(
+            isinstance(name, str) and name for name in skills
+        ):
+            raise InvalidState("installation proposal skills must be a string array")
+        for name in skills:
+            proposed_names.add(name)
+            commands_by_skill[name] = proposal["command"]
+    if proposed_names != requested_names:
+        raise InvalidState(
+            "verified installation proposals must cover exactly the requested dependencies"
+        )
+    for item in items:
+        if item.get("installCommand") not in {None, commands_by_skill[item["name"]]}:
+            raise InvalidState(
+                f"dependency item command disagrees with verified proposal for {item['name']}"
+            )
     updated = block_state(
         state,
         "BLOCKED_DEPENDENCY",
@@ -1067,6 +1095,21 @@ def transition(
         raise InvalidTransition("POST_MORTEM is only available to BUG workflows")
     if target == "POST_MORTEM" and state["incidentSubtype"] != "INCIDENT":
         raise InvalidTransition("POST_MORTEM is only available to incident workflows")
+    if target == "POST_MORTEM":
+        artifact_kinds = {reference["kind"] for reference in state["artifactRefs"]}
+        if not {"diagnosis", "regression"}.issubset(artifact_kinds):
+            raise InvalidTransition(
+                "POST_MORTEM requires validated root-cause and regression evidence"
+            )
+    if (
+        source == "IMPLEMENTATION"
+        and state["stageMode"] == "REVIEW_FIX"
+        and target == "CODE_REVIEW"
+        and not state["verificationCommands"]
+    ):
+        raise InvalidTransition(
+            "a review fix requires fresh tests/typecheck before CODE_REVIEW"
+        )
     if target == "COMPLETE":
         _validate_completion(state, root)
 
@@ -1075,6 +1118,9 @@ def transition(
         updated["completedStages"].append(source)
     updated["stage"] = target
     updated["stageMode"] = stage_mode
+    if target == "IMPLEMENTATION" and stage_mode == "REVIEW_FIX":
+        updated["verificationCommands"] = []
+        updated["lastVerifiedGitRef"] = None
     if target == "IMPLEMENTATION" and stage_mode == "EMERGENCY_MITIGATION":
         updated["mitigationOutstanding"] = True
     updated["status"] = "COMPLETE" if target == "COMPLETE" else "IN_PROGRESS"
@@ -1223,6 +1269,18 @@ def record_scrutinize(
 
     previous_history = state["scrutinizeHistory"][gate]
     previous = previous_history[-1] if previous_history else None
+    if (
+        gate == "system"
+        and previous
+        and previous["verdict"] != "SHIP"
+        and (
+            state["gateBlockers"]["code"]
+            or not state["verificationCommands"]
+        )
+    ):
+        raise InvalidTransition(
+            "system scrutinize retry requires implementation fix, fresh validation, and code review"
+        )
     previous_blockers = set(previous["blockingFindings"]) if previous else set()
     current_blockers = set(blockers)
     new = sorted(current_blockers - previous_blockers | set(supplied_new))
@@ -1251,6 +1309,12 @@ def record_scrutinize(
             "reviewRef": review_ref.strip() if isinstance(review_ref, str) else None,
         }
     )
+    if gate == "system" and normalized_verdict != "SHIP":
+        updated["gateBlockers"]["code"] = [
+            "SYSTEM_REVIEW_FIX_REQUIRES_CODE_REVIEW"
+        ]
+        updated["verificationCommands"] = []
+        updated["lastVerifiedGitRef"] = None
 
     repeated_without_progress = bool(
         previous

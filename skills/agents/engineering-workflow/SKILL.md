@@ -67,38 +67,67 @@ limitation and hand the user the dependency's real command.
 
 ## Preflight
 
-1. Locate the repository root and read applicable repository instructions,
-   conventions, task/tracker configuration, domain glossary, ADRs, tests, and
-   working-tree state.
-2. Read [routing](references/routing.md) for a new request or
-   [state contracts](references/states.md) for resume/recovery. Read the
-   matching flow reference only when its branch is selected.
-3. Determine route dependencies. Classify each as `REQUIRED_NOW`,
-   `REQUIRED_LATER`, `CONDITIONAL`, `TRANSITIVE`, or `OPTIONAL`; then run
-   `scripts/dependency_audit.py` against only the dependencies reachable by the
-   current route. The audit expands verified hard transitive children. For a
-   normal Feature Discovery, that means `grill-with-docs` plus its required
-   `grilling` and `domain-modeling` support skills; support skills are never
-   separate workflow stages. Read [dependency rules](references/dependencies.md).
-4. When a required dependency is missing, disabled, ambiguous, incompatible, or
-   provenance-mismatched, stop before its stage. Show owner, repository, role,
-   evidence, scope, and the verified install command. Ask explicit permission;
-   never install during detection. Group compatible missing installs into one
-   request. If declined, persist `BLOCKED_DEPENDENCY`. If approved, the
-   runtime may perform only the approved install, then must re-audit before
-   resuming; do not silently continue or restart discovery.
-   Treat only an explicit approval such as “yes”, “install it”, or “go ahead”
-   as permission; an unrelated continuation message is not approval.
-5. Distinguish installed skill files from repository bootstrap. If a Matt
-   Pocock skill requires `setup-matt-pocock-skills` and repository configuration
-   is absent, report `Repository setup: MISSING` and ask before running setup.
-   Do not run setup repeatedly.
-6. Initialize or select state with `scripts/workflow_state.py`. Reuse a matching
-   incomplete workflow. If more than one active workflow exists and no ID is
-   supplied, ask the user to choose once.
+Use progressive preflight. At startup establish only current reality:
+
+1. Locate the repository root and read applicable repository/agent
+   instructions plus basic project identity.
+2. Use `workflow_state.py list`/`status` to discover resumable state. For a
+   resume, reconcile that state with Git/worktree and its referenced artifacts;
+   do not restart discovery when `IMPLEMENTATION` remains valid.
+3. Inspect Git/working-tree state when available. Preserve existing changes.
+4. Classify a new request using the user request and repository facts. Read
+   [routing](references/routing.md) only as much as classification needs, then
+   read only the selected flow reference.
+5. Audit the dependency required for the immediate next stage, plus its
+   declared hard transitive children. Do not audit every later or conditional
+   dependency at startup. Read [dependency rules](references/dependencies.md)
+   when dependency resolution or installation is active.
+
+Do not eagerly load every ADR, the full domain glossary, tracker/test
+configuration, all specifications, previous reviews, unrelated tickets,
+post-mortems, or every repository guideline. Load an artifact when the current
+stage or immediate gate requires it.
+
+When a required dependency is missing, disabled, ambiguous, incompatible, or
+provenance-mismatched, stop before its stage. Show owner, repository, role,
+evidence, scope, and an exact command verified against the active installer.
+Detection never installs. The dependency registry stores repository/source,
+not permanent CLI syntax: verify installer syntax and scope only after a
+missing dependency makes installation relevant, then ask explicit permission.
+If declined, persist `BLOCKED_DEPENDENCY`. If approved, perform only the
+approved install and re-audit before resuming the paused stage. An unrelated
+continuation message is not approval.
+
+Distinguish installed files from repository bootstrap. Check
+`setup-matt-pocock-skills` only when the current downstream Matt skill's
+contract requires configuration that is absent. Ask before setup and do not
+run it once per workflow.
+
+## Stage-scoped context
+
+Load only the context necessary for the current stage and immediate gate:
+
+| Stage | Smallest sufficient context |
+|---|---|
+| `DISCOVERY` | request, project instructions, and only relevant domain docs |
+| `SPECIFICATION` | discovery output, relevant vocabulary/ADRs, and architecture at the affected seam |
+| `IMPLEMENTATION` | current ticket, parent spec, relevant ADRs, code, tests, and local conventions |
+| `CODE_REVIEW` | approved ticket/spec, fixed-point diff, relevant standards, and test evidence |
+| `SYSTEM_REVIEW` | implemented path, surrounding contracts/failure paths, and design/spec context |
+
+Do not load unrelated tickets, historical reviews, post-mortems, all test
+files, or all external skill definitions. Inspect an external `SKILL.md` on
+first validation, provenance/content change, uncertain invocation, or a real
+compatibility check; reuse an unchanged resolution during the session.
+
+Cache the resolved script path/interface version, dependency registry version,
+runtime capabilities, and audited dependency identity for the current session.
+Do not probe them repeatedly without evidence of change. On a new-session
+resume, validate only facts that may have changed.
 
 For `dependencies`/`skills`, report the registry, owner, repository, role,
-category, installation method, and `INSTALLED`/`MISSING`/`NOT_CHECKED` status.
+category, install source, verified installation method when known, and
+`INSTALLED`/`MISSING`/`NOT_CHECKED` status.
 Inventory is read-only and never triggers installation.
 
 Use this compact presentation before asking for installation:
@@ -120,12 +149,101 @@ For a missing transitive dependency, show the installed parent, the missing
 child, `Required by`, owner, repository, and the same verified command and
 permission request. For example, if `grill-with-docs` is installed but
 `domain-modeling` is missing, do not report Discovery as ready. Ask permission
-for the missing child because the current Skills CLI does not install skill
-dependencies automatically.
+for the missing child unless the active installer was verified to resolve that
+exact transitive dependency safely.
 
 If provenance is absent, write `Source: UNKNOWN / requires verification`.
 Never present an invented command or attribute an installed skill to an owner
 without evidence.
+
+## Script interfaces
+
+Interfaces are defined here. Do not execute `--help` during normal workflow
+operation when this contract is present and the command behaves accordingly.
+Use `--help` only for a missing/disagreeing contract, an argument-mismatch
+failure, an unexpected script/schema version, or debugging this skill itself.
+
+`dependency_audit.py` is `READ_ONLY` and never installs or updates anything:
+
+```text
+python3 <skill>/scripts/dependency_audit.py
+  --runtime <codex|claude>
+  [--search-root <path>]...
+  (--require <skill>... |
+   --workflow-type <FEATURE|BUG|LARGE_PROJECT> [--stage <stage>] [--stage-mode <RESEARCH|PROTOTYPE>] |
+   --inventory)
+  [--risk <LOW|MEDIUM|HIGH|CRITICAL>]
+  [--uncertainty <LOW|MEDIUM|HIGH|CRITICAL>]
+  [--characteristic <name>]... [--reduced] [--incident]
+  [--has-subagents] [--orchestrator-skill <SKILL.md>]
+  [--repository-root <path>] [--require-repository-setup]
+```
+
+Use `--workflow-type` plus the immediate `--stage`; omitting `--stage` audits
+only that type's entry stage. Use repeated `--require` only for an explicitly
+selected dependency (including a dependency activated later). `--inventory`
+is for the explicit `dependencies`/`skills` command, never startup. Output is
+one JSON audit object. Exit `0` means the requested stage dependencies resolve;
+exit `2` means audit/compatibility/usage issues are present. A missing install
+proposal contains canonical source intent but no trusted command until the
+active installer is verified on demand. Expected issue codes include
+`MISSING_DEPENDENCY`, `DISABLED_DEPENDENCY`, `AMBIGUOUS_DEPENDENCY`,
+`PROVENANCE_MISMATCH`, `SUBAGENT_CAPABILITY_REQUIRED`,
+`REPOSITORY_SETUP_REQUIRED`, and `INVOCATION_POLICY_INCOMPATIBLE`.
+
+`workflow_state.py` uses the global prefix
+`python3 <skill>/scripts/workflow_state.py [--root <repository>] <subcommand>`.
+Its JSON output is a compact state object/list. Exit `0` is success; exit `2`
+is a JSON `WorkflowStateError` such as invalid state, transition, or revision
+conflict.
+
+`READ_ONLY` subcommands:
+
+```text
+list [--include-complete]
+status [<workflow-id>]
+```
+
+`MUTATING` state subcommands:
+
+```text
+init <request> [--type <FEATURE|BUG|LARGE_PROJECT>] [--parent <id>]
+reconstruct <id> <request> [--type <FEATURE|BUG|LARGE_PROJECT>]
+transition <id> <target> [--mode <stage-mode>] --reason <text>
+classify <id> <type> <risk> <uncertainty> --scope <text> [--characteristic <name>]... [--incident]
+block <id> <code> <message> [--owner <owner>]
+unblock <id> --reason <text>
+register-artifact <id> <kind> <relative-path> <producer-stage>
+set-work-item <id> <reference>
+set-mitigation <id> <outstanding|resolved> --reason <text>
+record-dependencies <id> <audit-json-path>
+add-child <id> <child-id>
+verify <id> [--command-json '<JSON argv array>']...
+gate <id> <design|code|system> [--blocker <finding>]...
+scrutinize <id> <design|system> <verdict> [finding/progress options]
+request-installation <id> <dependencies-json> <verified-proposals-json> --needed-at <stage> --reason <text>
+installation-decision <id> <approved|declined> --reason <text>
+reconcile [<id>] [--run-checks]
+```
+
+`scrutinize` progress options are repeated `--blocking-finding`,
+`--new-finding`, `--resolved-finding`, `--repeated-finding`, and
+`--changed-artifact`, plus optional `--reason-for-retry`, `--review-ref`, and
+`--no-progress`. `request-installation` rejects proposals without a verified
+exact command, explicit scope, and `requiresApproval=true`. `verify` executes
+the stored/provided argv commands. `reconcile` may persist a rewind; neither is
+read-only.
+
+Read local files with the runtime's file APIs when possible instead of using
+shell commands for simple Markdown/JSON lookup. These `READ_ONLY`/`MUTATING`
+labels guide behavior only; they do not bypass or predict runtime security
+prompts. Installation/setup is `EXTERNAL_MUTATION` and always requires explicit
+permission.
+
+If a helper fails, do not retry blindly. Report its purpose, failure class and
+exit evidence, whether current state is trustworthy, and whether safe
+read-only inspection can continue. Never proceed using stale state after an
+unexplained state/audit failure.
 
 ## Classify and route
 
@@ -144,11 +262,13 @@ than copying child state.
 
 ## Execute a stage
 
-Before each stage, read that stage's contract in
-[states](references/states.md) and the relevant artifact convention in
-[artifacts](references/artifacts.md).
+Before each stage, inspect only that stage's heading in
+[states](references/states.md) and the relevant artifact entry in
+[artifacts](references/artifacts.md); do not load either reference wholesale
+when a targeted lookup suffices.
 
-1. Confirm entry conditions and referenced artifact fingerprints.
+1. Confirm entry conditions and referenced artifact fingerprints. Audit the
+   immediate stage dependency if its cached resolution is absent or stale.
 2. Invoke the named audited specialist. For Claude plugin skills use the
    resolved namespace such as `mattpocock-skills:code-review` or
    `9arm-skills:scrutinize`; for Claude user-only skills stop with a
@@ -226,5 +346,8 @@ large project is complete.
 
 Read [feature-flow](references/feature-flow.md), [bug-flow](references/bug-flow.md),
 or [large-project-flow](references/large-project-flow.md) only when that route
-is selected. The machine-readable graph and schema live in
-`references/state-machine.json` and `references/workflow-state.schema.json`.
+is selected. `references/state-machine.json` is the canonical executable
+transition source consumed by `workflow_state.py`; Markdown explains semantics
+without maintaining another transition table. `data/dependencies.json` is the
+canonical dependency registry consumed by `dependency_audit.py`.
+`references/workflow-state.schema.json` validates persisted state shape.

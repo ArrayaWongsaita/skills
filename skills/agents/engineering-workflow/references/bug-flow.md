@@ -16,7 +16,8 @@
    impact. The final system gate is blocking, has an independent six-review
    maximum, and stops earlier on no progress. A fix from final scrutinize must
    pass tests/typecheck and `code-review` before system review runs again.
-6. Enter `POST_MORTEM` only when `incidentSubtype=INCIDENT`, all four external
-   post-mortem inputs are validated, and the installed contract accepts the
-   case. The audited 9arm post-mortem explicitly rejects customer-visible
-   incidents, so that path blocks rather than inventing a replacement writer.
+6. Enter `POST_MORTEM` only when `incidentSubtype=INCIDENT`, all required
+   post-mortem inputs are validated, and the currently installed 9arm contract
+   accepts the case. Compatibility is checked at that stage rather than stored
+   as a permanent registry fact; an incompatible contract blocks without a
+   replacement writer.

@@ -8,8 +8,10 @@ durable state, transitions, gate budgets, bounded loops, resume, and the final
 explicit user request
         |
 engineering-workflow
-        |-- dependency_audit.py --> route-aware dependency/provenance/status
+        |-- dependencies.json ----> canonical expected dependency metadata
+        |-- dependency_audit.py --> immediate-stage dependency/provenance/status
         |                              + permission-gated install proposal
+        |-- state-machine.json ----> canonical executable transition graph
         |-- workflow_state.py ----> .agents/workflows/<id>.json
         `-- external engineering skill --> repository artifacts/evidence
 ```

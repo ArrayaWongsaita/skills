@@ -146,6 +146,10 @@ installed external skill; it is not implemented in this skill.
 - **FAILURE TRANSITION:** Remain blocked; no fake fallback. An approved install still requires a fresh audit; a declined install stays `BLOCKED_DEPENDENCY`.
 - **NEXT STATE:** Recorded return stage after reconciliation.
 
+`BLOCKED_DEPENDENCY` is the persisted blocker code/status reason inside the
+backward-compatible `BLOCKED` stage; it is not a renamed stage. Existing v1/v2
+workflow files therefore resume without a stage-name migration.
+
 ## COMPLETE
 
 - **ENTRY CONDITIONS:** Required gates pass, artifacts and verification match current reality, no blocker remains, mitigation is resolved, and all bounded children are complete.
