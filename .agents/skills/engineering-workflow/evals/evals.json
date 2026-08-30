@@ -224,6 +224,22 @@
       "expected_output": "Keep the workflow before Discovery, report domain-modeling as a missing transitive dependency required by grill-with-docs, verify and show the active installer's exact command and scope for Matt Pocock's source, ask permission, and do not create a replacement skill.",
       "expectations": ["Does not report Discovery ready", "Shows Required by: grill-with-docs", "Does not auto-install"],
       "files": []
+    },
+    {
+      "id": 29,
+      "name": "L universal subagent ticket loop execution under has_subagents",
+      "prompt": "$engineering-workflow Planning completed and published 3 ordered tickets. The runtime supports subagents (has_subagents: true). Execute the implementation stage.",
+      "expected_output": "Dispatch an isolated transient subagent (self) for Ticket 1 using the 5-section prompt scaffold, verify tests, update state, and proceed sequentially to Ticket 2 without prompting the user for /clear.",
+      "expectations": ["Dispatches transient self subagents sequentially per ticket", "Uses 5-section prompt scaffold", "Does not request manual /clear reset when subagents are supported"],
+      "files": []
+    },
+    {
+      "id": 30,
+      "name": "M progressive phase boundary fallback under single session",
+      "prompt": "$engineering-workflow Planning completed and published 3 ordered tickets. The runtime is a single-session CLI without subagents (has_subagents: false). Execute implementation.",
+      "expected_output": "Provide explicit context boundary instructions (/clear) and the exact resumption command (/implement <ticket-1>) to reset the Smart Zone before writing code.",
+      "expectations": ["Provides /clear instructions", "Provides /implement resumption command", "Preserves Smart Zone reasoning"],
+      "files": []
     }
   ]
 }

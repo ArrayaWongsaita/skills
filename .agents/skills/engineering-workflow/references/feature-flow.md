@@ -24,8 +24,10 @@
    six cycles, with no automatic cycle 7 and an earlier no-progress stop.
 6. On `SHIP`, run installed `to-tickets`; do not decompose tickets in this
    skill.
-7. Run installed `implement`, exposing its source-defined commit side effect
-   before a user-only handoff or explicit Codex load.
+7. Run `IMPLEMENTATION` via the Sequential Ticket Execution Loop:
+   - When subagents are supported (`has_subagents: true`), dispatch an isolated transient subagent (`self`) per ticket to maintain Smart Zone focus and verify progress iteratively.
+   - For single-session environments (`has_subagents: false`), provide explicit context boundary instructions (`/clear`) and resume with `/implement <ticket>`.
+   - Expose commit side effects and obtain permission before destructive operations.
 8. Run installed two-axis `code-review` from a fixed point. Route blockers to
    `IMPLEMENTATION[REVIEW_FIX]` and stop after the third code cycle.
 9. Run final `scrutinize` only when risk or change characteristics require the

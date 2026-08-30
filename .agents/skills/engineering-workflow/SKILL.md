@@ -17,8 +17,9 @@ and post-mortems.
 
 This skill is explicit-only:
 
+- Universal / Slash command: `/engineering-workflow <request>`
 - Codex: `$engineering-workflow <request>`
-- Claude Code: `/engineering-workflow <request>`
+- Script / CLI: `python3 scripts/workflow_state.py init "<request>"`
 - Commands: `<request>`, `continue [workflow-id]`, `status [workflow-id]`, `list`, and `dependencies`/`skills`
 
 Codex policy is declared in `agents/openai.yaml`. Claude Code installations require
@@ -59,7 +60,8 @@ with clear resumption guidance.
    mitigations during active incidents; require root-cause confirmation and regression
    verification before marking a workflow `COMPLETE`.
 9. **Smart Zone & Phase Boundaries**: Maintain peak reasoning in the Smart Zone by scoping
-   context per stage and establishing explicit Phase Boundaries (`/clear`) before implementation.
+   context per stage. Execute multi-ticket implementation via transient subagents (`self`) when
+   supported; establish explicit Phase Boundaries (`/clear`) before implementation in single-session runtimes.
 10. **Reality Reconciliation**: On resume, verify state claims against Git status, working
     tree, and artifact fingerprints, rewinding to the earliest invalidated producer stage
     when reality drifts.

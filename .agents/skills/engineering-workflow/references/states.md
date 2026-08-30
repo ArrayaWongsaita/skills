@@ -99,11 +99,16 @@ installed external skill; it is not implemented in this skill.
 ## IMPLEMENTATION
 
 - **ENTRY CONDITIONS:** Approved spec/ticket or confirmed bug cause; mitigation approval is explicit when relevant.
-- **INPUT:** Current work item, artifact refs, exact seam, and verification commands.
-- **DISCIPLINE/SKILL:** Installed user-only `implement`, which owns its own implementation method and may invoke installed `tdd`/`code-review` according to its source contract. Its current contract commits; disclose that side effect and obtain approval before any model-loaded invocation.
-- **OUTPUT:** Code, tests, and implementation evidence.
-- **EXIT CONDITIONS:** Behavior is implemented and focused validation passes.
-- **FAILURE TRANSITION:** Remain in implementation; return to specification/diagnosis for disproved assumptions; block when safe progress is impossible.
+- **INPUT:** Ordered ticket references from `PLANNING` (or confirmed bug cause), artifact refs, exact seam, and verification commands.
+- **DISCIPLINE/SKILL:** Installed `implement` / `tdd`. When multi-ticket breakdown exists, executes the Sequential Ticket Execution Loop:
+  - **Subagent-Capable Runtimes (`has_subagents: true`)**: Orchestrator sets `set-work-item <id> <ticket-ref>` and dispatches an isolated transient subagent (`self`) per ticket to preserve reasoning in the Smart Zone.
+    - **Prompt Scaffold**: Format the task with (1) Target Work Item, (2) Context & Seam, (3) Verification Command, (4) Constraints (focus exclusively on the active ticket; preserve existing untouched files), and (5) Return Format (summary of changed files and test output).
+    - **Ticket Retry Budget**: Enforce `MAX_TICKET_ATTEMPTS = 3`. If verification fails on attempt 3, transition to `BLOCKED` with code `TICKET_VERIFICATION_FAILED` and record the failure output in state.
+  - **Single-Session CLI Runtimes (`has_subagents: false`)**: Orchestrator provides explicit phase boundary instructions (`/clear`) and resumption command (`/implement <ticket>`) before executing the work item.
+  - Disclose side effects (e.g. commits) and obtain user approval before executing mutating operations.
+- **OUTPUT:** Code, tests, and implementation evidence for each ticket.
+- **EXIT CONDITIONS:** Behavior is implemented and focused validation passes for all active tickets.
+- **FAILURE TRANSITION:** Remain in implementation; transition to `BLOCKED` (`TICKET_VERIFICATION_FAILED`) on attempt 3 failure; return to specification/diagnosis for disproved assumptions; block when safe progress is impossible.
 - **NEXT STATE:** `CODE_REVIEW`; `REGRESSION_TEST` must precede `FIX`; emergency mitigation returns to diagnosis or block.
 
 ## CODE_REVIEW

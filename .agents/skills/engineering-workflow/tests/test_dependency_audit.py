@@ -530,6 +530,22 @@ class DependencyAuditTests(unittest.TestCase):
         self.assertEqual("codex_load_path", result["resolutions"]["implement"]["invocationMode"])
         self.assertEqual(str(skill), result["resolutions"]["implement"]["invocationTarget"])
 
+    def test_universal_runtime_and_capability_resolution(self):
+        self.add_skill("research")
+        result_no_subagents = self.audit(["research"], runtime="universal", has_subagents=False)
+        self.assertFalse(result_no_subagents["ok"])
+        self.assertEqual("SUBAGENT_CAPABILITY_REQUIRED", result_no_subagents["issues"][0]["code"])
+
+        result_with_subagents = self.audit(["research"], runtime="universal", has_subagents=True)
+        self.assertTrue(result_with_subagents["ok"])
+        self.assertEqual("tool_or_skill", result_with_subagents["resolutions"]["research"]["invocationMode"])
+
+    def test_build_parser_supports_universal_default_and_capability_flags(self):
+        parser = dependency_audit.build_parser()
+        args = parser.parse_args(["--require", "to-spec", "--capability", "has_subagents"])
+        self.assertEqual("universal", args.runtime)
+        self.assertIn("has_subagents", args.capability)
+
 
 if __name__ == "__main__":
     unittest.main()

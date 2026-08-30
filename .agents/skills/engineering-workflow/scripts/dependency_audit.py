@@ -697,6 +697,14 @@ def audit_orchestrator_policy(
         metadata = skill_file.parent / "agents" / "openai.yaml"
         if metadata.is_file():
             sources.append(str(metadata))
+    elif runtime in ("universal", "generic"):
+        metadata = skill_file.parent / "agents" / "openai.yaml"
+        if metadata.is_file():
+            sources.append(str(metadata))
+        explicit_only = (
+            frontmatter.get("disable-model-invocation") is True
+            or not parse_openai_policy(skill_file)
+        )
     else:
         settings_files = _settings_files(_configuration_roots(settings_roots))
         overrides, _, override_sources = _claude_controls(settings_files)
@@ -750,6 +758,13 @@ def _resolution(
             resolution["invocationMode"] = "user_handoff"
             target = selected.resolved_identity if selected.source_kind == "plugin" else selected.name
             resolution["invocationTarget"] = f"/{target}"
+    elif runtime in ("universal", "generic"):
+        if selected.model_invocable:
+            resolution["invocationMode"] = "tool_or_skill"
+            resolution["invocationTarget"] = selected.name
+        else:
+            resolution["invocationMode"] = "user_handoff"
+            resolution["invocationTarget"] = selected.name
     elif not selected.allow_implicit_invocation:
         resolution["invocationMode"] = "user_handoff"
         resolution["invocationTarget"] = f"${selected.name}"
@@ -951,7 +966,13 @@ def dependency_inventory(
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--runtime", required=True, choices=("codex", "claude"))
+    parser.add_argument(
+        "--runtime",
+        choices=("codex", "claude", "universal", "generic"),
+        default="universal",
+        help="runtime harness or environment (default: universal)",
+    )
+    parser.add_argument("--capability", action="append", default=[], help="declared capability flags (e.g. has_subagents, has_bash)")
     parser.add_argument("--search-root", action="append", type=Path, default=[])
     parser.add_argument("--require", action="append", default=[])
     parser.add_argument("--workflow-type", choices=("FEATURE", "BUG", "LARGE_PROJECT"))
@@ -983,11 +1004,12 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     roots = args.search_root or default_search_roots()
     settings_roots = [args.repository_root.resolve(), Path.home(), *roots]
+    has_subagents = bool(args.has_subagents or "has_subagents" in args.capability or "subagents" in args.capability)
     if args.inventory:
         result = dependency_inventory(
             args.runtime,
             roots,
-            args.has_subagents,
+            has_subagents,
             settings_roots=settings_roots,
             repository_root=args.repository_root,
         )
@@ -1018,7 +1040,7 @@ def main(argv: list[str] | None = None) -> int:
             required,
             args.runtime,
             roots,
-            args.has_subagents,
+            has_subagents,
             args.orchestrator_skill,
             settings_roots=settings_roots,
             incident=args.incident,

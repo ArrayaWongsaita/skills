@@ -22,24 +22,14 @@ request, bounded artifact references, and repository context, then normalizes
 the returned result into state. It maintains external dependencies as distinct
 packages. A missing dependency pauses the route until installed.
 
-## Runtime adapters
+## Runtime adapters and capability model
 
-Codex's documented skill surface supports explicit `$skill-name` activation,
-implicit selection, repository/user skill paths, and
-`allow_implicit_invocation: false`. The Codex adapter audits and loads the
-exact resolved `SKILL.md` path when the dependency is model-loadable; when its
-installed policy is explicit-only, it records a user handoff with the real
-`$skill-name` command. It relies strictly on audited filesystem paths and explicit handoffs.
+The orchestrator operates universally across AI agent harnesses (Antigravity, Cursor, Roo Code, Aider, Claude Code, Codex) by probing dynamic environment capabilities:
 
-Claude Code supports the `Skill` tool and qualified plugin names. A dependency
-with `disable-model-invocation: true` requires user invocation. The adapter
-persists `USER_INVOCATION_REQUIRED`, provides the user with the real `/skill-name`
-command, and resumes after user invocation. Model-invocable plugin skills use
-their qualified namespace; standalone skills use their exact audited name/path.
-
-The orchestrator itself is explicit-only in Codex metadata. Claude installs
-must use the documented `disable-model-invocation: true` frontmatter or the
-equivalent `skillOverrides.<name> = "user-invocable-only"` setting.
+- **Subagent-capable runtimes (`has_subagents: true`)**: In `IMPLEMENTATION`, the orchestrator iterates through ordered tickets, dispatching an isolated transient subagent (`self`) per ticket. This isolates context windows and preserves peak Smart Zone reasoning.
+- **Single-session CLI runtimes (`has_subagents: false`)**: The orchestrator outputs explicit phase boundary instructions (`/clear`) and resumption commands (`/implement <ticket>`).
+- **Codex adapter**: Audits and loads the exact resolved `SKILL.md` path when model-loadable; records `$skill-name` user handoff when explicit-only.
+- **Claude Code adapter**: Dispatches model-invocable plugin skills via `Skill` tool; records `USER_INVOCATION_REQUIRED` with `/skill-name` for user-only skills.
 
 ## Persistence boundary
 
