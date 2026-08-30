@@ -3,5 +3,4 @@ node_modules/
 *.log
 __pycache__/
 *.py[cod]
-.agents
 skills-lock.json
