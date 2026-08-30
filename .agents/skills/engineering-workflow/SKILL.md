@@ -1,10 +1,10 @@
 ---
 name: engineering-workflow
-description: Explicitly route a feature, bug, incident, or large engineering effort through installed specialist skills, durable state, evidence gates, bounded review loops, and resumable transitions. Route composite multi-stage workflows; use specialist skills directly for isolated single-discipline requests or status queries.
+description: Explicitly route a feature, bug, incident, or large engineering effort through pure-prompt cognitive orchestration, markdown state artifacts, evidence gates, bounded review loops, and resumable transitions.
 disable-model-invocation: true
 ---
 
-# Engineering Workflow
+# Engineering Workflow (Pure-Prompt Edition)
 
 Control plane for multi-stage engineering requests. Classify requests, discover
 route dependencies, sequence stages, enforce quality gates, persist durable state,
@@ -15,12 +15,12 @@ and post-mortems.
 
 ## Invocation
 
-This skill is explicit-only:
+This skill operates via explicit invocation:
 
 - Universal / Slash command: `/engineering-workflow <request>`
-- Codex: `$engineering-workflow <request>`
-- Script / CLI: `python3 scripts/workflow_state.py init "<request>"`
-- Commands: `<request>`, `continue [workflow-id]`, `status [workflow-id]`, `list`, and `dependencies`/`skills`
+- Codex command: `$engineering-workflow <request>`
+- Natural language triggers: `"run engineering workflow for <request>"`, `"orchestrate <request>"`
+- Workflow commands: `<request>`, `continue [workflow-id]`, `status [workflow-id]`, `list`, and `dependencies`/`skills`
 
 Codex policy is declared in `agents/openai.yaml`. Claude Code installations require
 `disable-model-invocation: true` or `skillOverrides.<name> = "user-invocable-only"`.
@@ -41,24 +41,23 @@ with clear resumption guidance.
 
 ## Core Disciplines
 
-1. **Control Plane Ownership**: The orchestrator alone directs classification, transitions,
+1. **Mandatory State Anchor**: Output the standardized State Header block as the primary
+   text of every response to pin cognitive attention to the active stage.
+2. **Control Plane Ownership**: The orchestrator alone directs classification, transitions,
    bounded loops, durable state, Reality reconciliation, and completion.
-2. **Compact State & Atomic CAS**: Persist lightweight metadata, gate counters, and
-   fingerprinted artifact references via Atomic CAS (`workflow_state.py`), storing full
-   specifications, tickets, and review bodies in repository files.
-3. **Audited Specialist Resolution**: Resolve every specialist from audited filesystem
+3. **Compact State & Atomic CAS**: Persist lightweight metadata, gate counters, and
+   fingerprinted artifact references via Atomic CAS revision tracking in `.scratch/<feature-slug>/status.md`,
+   storing full specifications, tickets, and review bodies in repository files.
+4. **Audited Specialist Resolution**: Resolve every specialist from audited filesystem
    installations and qualified plugin namespaces, preserving external skill contracts.
-4. **Explicit Mutation Approvals**: Require explicit user permission before executing network
-   operations or dependency installations, installing only verified missing dependencies.
-5. **Separate Gate Budgets**: Enforce independent Gate budgets: `MAX_SCRUTINIZE_CYCLES = 6`
+5. **Explicit Mutation Approvals**: Require explicit human authorization before transitioning
+   from read-only discovery to source file implementation.
+6. **Separate Gate Budgets**: Enforce independent Gate budgets: `MAX_SCRUTINIZE_CYCLES = 6`
    separately for design review and system review; 3 cycles for code review.
-6. **Blocking Quality Gates**: Advance past design or system review only upon a normalized
-   `SHIP` verdict within the allotted Gate budget.
-7. **Invariant-Targeted Fixes**: Target fixes directly at the verified finding or broken
+7. **Blocking Quality Gates**: Advance past design or system review only upon a normalized
+   `SHIP` or `PASS` verdict within the allotted Gate budget.
+8. **Invariant-Targeted Fixes**: Target fixes directly at the verified finding or broken
    invariant, recording concise progress in cycle history.
-8. **Stabilization vs. Resolution**: Apply minimal, reversible, observable emergency
-   mitigations during active incidents; require root-cause confirmation and regression
-   verification before marking a workflow `COMPLETE`.
 9. **Smart Zone & Phase Boundaries**: Maintain peak reasoning in the Smart Zone by scoping
    context per stage. Execute multi-ticket implementation via transient subagents (`self`) when
    supported; establish explicit Phase Boundaries (`/clear`) before implementation in single-session runtimes.
@@ -66,12 +65,23 @@ with clear resumption guidance.
     tree, and artifact fingerprints, rewinding to the earliest invalidated producer stage
     when reality drifts.
 
+## Mandatory State Anchor Header
+
+Every orchestrator turn begins with this compact state block:
+
+```markdown
+### 📋 Workflow: [<STAGE_NAME>]
+- **Feature**: <feature-slug> | **Type**: [FEATURE | BUG | LARGE_PROJECT]
+- **Current Objective**: <one-line objective for the active turn>
+- **Active Gate**: [AWAITING_APPROVAL | SHIP | READY_TO_CODE]
+```
+
 ## Preflight and Progressive Discovery
 
 Operate progressively, establishing current reality at startup:
 
 1. Locate the repository root and inspect repository/agent instructions plus project identity.
-2. Query `workflow_state.py list`/`status` to discover active workflows. On resume (`continue`),
+2. Inspect `.scratch/<feature-slug>/status.md` to discover active workflows. On resume (`continue`),
    apply Reality reconciliation against Git refs, working-tree changes, and artifact hashes,
    keeping valid downstream stages intact.
 3. Inspect Git and working-tree state, preserving existing local changes.
@@ -79,8 +89,8 @@ Operate progressively, establishing current reality at startup:
    and the matching flow reference ([feature-flow](references/feature-flow.md), [bug-flow](references/bug-flow.md),
    or [large-project-flow](references/large-project-flow.md)).
 5. Audit the dependency required for the immediate next stage, plus its declared hard transitive
-   children, using `scripts/dependency_audit.py`. Read [dependency rules](references/dependencies.md).
-   For normal Feature Discovery, audit `grill-with-docs` and its support skills (`grilling` and `domain-modeling`).
+   children, consulting [dependency rules](references/dependencies.md). For normal Feature Discovery,
+   audit `grill-with-docs` and its support skills (`grilling` and `domain-modeling`).
 6. When a required dependency is missing, disabled, ambiguous, incompatible, or provenance-mismatched,
    pause before that stage. Report owner, repository, role, evidence, scope, and verified install
    command. Request explicit permission; perform read-only detection during audits. If declined,
@@ -105,8 +115,8 @@ Preserve the agent's Smart Zone by scoping context strictly to the immediate sta
 | `CODE_REVIEW` | approved ticket/spec, fixed-point diff, test evidence, repository standards |
 | `SYSTEM_REVIEW` | executed runtime path, concurrency/retry boundaries, failure contracts |
 
-Load artifacts on demand as required by the active stage. Retain cached dependency and script
-resolutions during the active session, re-auditing only upon file modifications or new-session resumption.
+Load artifacts on demand as required by the active stage. Retain cached dependency resolutions
+during the active session, re-auditing only upon file modifications or new-session resumption.
 
 ## Classify and Route
 
@@ -128,11 +138,12 @@ Consult the stage contract in [states](references/states.md) and artifact conven
 
 1. Verify entry conditions and artifact fingerprints. Audit the immediate stage dependency if not cached.
 2. Invoke the audited specialist or provide the real command for user-only skills (`USER_INVOCATION_REQUIRED`).
-   Disclose declared side effects (e.g. `implement` commits) and obtain explicit user approval before execution.
+   Disclose declared side effects (such as `implement` commits) and obtain explicit user approval before execution.
 3. Normalize the specialist outcome into a compact stage record and register stable artifact references.
 4. Evaluate exit conditions. The orchestrator alone determines stage transitions and failure routings.
    When a backward transition requires a conditional dependency, pause and verify permissions before proceeding.
-5. Persist state transitions via Atomic CAS (`workflow_state.py`), ensuring updates apply to the active revision.
+5. Persist state transitions via Atomic CAS revision updates to `.scratch/<feature-slug>/status.md`,
+   ensuring updates apply to the active revision.
 
 Use `stageMode` for `REGRESSION_TEST`, `FIX`, `REVIEW_FIX`, `EMERGENCY_MITIGATION`, `BOUND_FEATURES`,
 `RESEARCH`, and `PROTOTYPE`.
@@ -169,9 +180,9 @@ or documented standard violations with concrete consequences.
   invalidated producer stage when discrepancies are detected. Re-audit dependencies after approved installations.
 - **Status (`status`)**: Report ID, workflow type, stage, mode, status, gate counts, active item, and blockers compactly.
 - **List (`list`)**: Display active workflows, hiding `COMPLETE` unless `--include-complete` is requested.
-- **Completion (`COMPLETE`)**: Retain state at `.agents/workflows/<id>.json`. Mark `COMPLETE` only when
+- **Completion (`COMPLETE`)**: Retain state at `.scratch/<feature-slug>/status.md`. Mark `COMPLETE` only when
   all required gates pass, validation matches current reality, blockers are cleared, mitigations are resolved,
   and all child workflows are complete.
 
-For detailed architecture and script interfaces, see [architecture](references/architecture.md).
-Canonical transitions and state schemas live in `references/state-machine.json` and `references/workflow-state.schema.json`.
+For detailed architecture and reference documents, see [architecture](references/architecture.md).
+Canonical state representations live in [states](references/states.md) and [artifacts](references/artifacts.md).
