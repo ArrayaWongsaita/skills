@@ -1,0 +1,6 @@
+interface:
+  display_name: "Grill to Tickets"
+  short_description: "Interview an idea through to published tickets, no implementation"
+  default_prompt: "Use $grill-to-tickets to carry this idea from discovery interview through spec, bounded design review, and vertical ticket breakdown, then stop: [idea]."
+policy:
+  allow_implicit_invocation: false
