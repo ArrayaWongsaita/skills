@@ -53,7 +53,7 @@ describe("grill-to-tickets composite skill contract", () => {
     assert.equal(canonical, mirror);
   });
 
-  it("inline-executes the five child skills and never invokes implement", async () => {
+  it("inline-executes the five child skills and hands the tickets to a later /implement run", async () => {
     for (const file of skillFiles) {
       const content = await readFile(file, "utf8");
       assert.match(content, /inline/i, "must instruct inline execution");
@@ -62,9 +62,22 @@ describe("grill-to-tickets composite skill contract", () => {
       }
       assert.match(
         content,
-        /never invoke[^\n]*implement/i,
-        "must state it never invokes implement",
+        /\/implement\b/,
+        "must hand the tickets to a later /implement run",
       );
+      assert.match(
+        content,
+        /hands? off|handoff/i,
+        "must frame the stop as a handoff rather than implementation",
+      );
+    }
+  });
+
+  it("steers positively — no 'Never' or 'Do not' in the instruction body", async () => {
+    for (const file of skillFiles) {
+      const body = (await readFile(file, "utf8")).replace(/^---\n[\s\S]*?\n---\n/, "");
+      assert.doesNotMatch(body, /\bNever\b/i, "prompt the positive instead of 'Never'");
+      assert.doesNotMatch(body, /\bDo not\b/i, "prompt the positive instead of 'Do not'");
     }
   });
 

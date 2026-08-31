@@ -7,8 +7,9 @@ disable-model-invocation: true
 # Grill To Tickets
 
 Carry a single idea from a relentless interview through to published, ticket-ready
-work, then stop. This skill inline-executes `grilling`, `domain-modeling`, `to-spec`,
-`scrutinize`, and `to-tickets` in sequence. It never implements.
+work, then stop at the handoff. This skill inline-executes `grilling`,
+`domain-modeling`, `to-spec`, `scrutinize`, and `to-tickets` in sequence; a
+separate `/implement` run picks the tickets up afterward.
 
 ```
 Stage 0: Grill        grilling + domain-modeling  → CONTEXT.md, adr/
@@ -39,15 +40,14 @@ human invocation before starting.
 
 Every stage skill runs **inline**: read its instructions at
 `.agents/skills/<skill>/SKILL.md` and follow its workflow steps directly, in this
-one continuous context window. Two of the children (`to-spec`, `to-tickets`) are
-`disable-model-invocation: true` and cannot be tool-invoked at all; the rest run
-inline anyway so the whole interview-to-tickets pass keeps a single unbroken
-reasoning thread. Never invoke the `implement` skill, and never spawn a
-subagent to run a stage — the point of stopping at tickets is to hand a fresh
-context window to `/implement` later.
+one continuous context window. `to-spec` and `to-tickets` are
+`disable-model-invocation: true`, so inline is their only path; the rest run
+inline too, keeping the whole interview-to-tickets pass on one unbroken reasoning
+thread. Keep every stage on the main thread — stopping at tickets exists precisely
+to hand a fresh context window to a later `/implement` run.
 
-This skill owns its own copy of the Design Review Gate rules. It does not read
-from, delegate to, or modify `grill-with-docs`.
+This skill owns its own copy of the Design Review Gate rules and runs fully
+standalone.
 
 ## Feature-Scoped Storage
 
@@ -79,7 +79,7 @@ Run `grilling` and `domain-modeling` together as one discovery pass.
    terms, sharpen fuzzy language, and stress-test relationships with concrete
    scenarios. Write terms into `.scratch/<feature-slug>/CONTEXT.md` the moment
    they resolve; record hard-to-reverse choices as
-   `.scratch/<feature-slug>/adr/NNNN-<slug>.md`. Write inline, not in a batch.
+   `.scratch/<feature-slug>/adr/NNNN-<slug>.md`. Write inline, as they resolve.
 4. **Pause.** When the decision frontier is empty, summarize the agreed glossary
    and decisions and pause for explicit user confirmation before Stage 1.
 
@@ -89,45 +89,39 @@ Run `to-spec` inline. Synthesize the settled conversation, glossary, and ADRs
 directly into `.scratch/<feature-slug>/spec.md` using the standard sections
 (Problem Statement, Solution, User Stories, Implementation Decisions, Testing
 Decisions, Out of Scope, Further Notes). Sketch the test seams and confirm them
-with the user. Do not re-interview — Stage 0 already settled the decisions.
+with the user. Stage 0 already settled the decisions — synthesize them and keep
+the interview closed.
 
 ## Stage 2 — Design Review Gate
 
-Run `scrutinize` inline against `spec.md`. This is a bounded review loop, not an
-advisory comment. Full routing table, cycle budget, stall detection, and gate
-report format live in [design-review-gate.md](references/design-review-gate.md).
-
-Normalize `scrutinize`'s closing verdict into exactly one of its own four tokens
-— `SHIP`, `FIX_THEN_SHIP`, `REWORK`, `REJECT` — with no paraphrasing. Keep one
-stable report at `.scratch/<feature-slug>/design-review.md`, updating its cycle
-section each pass rather than writing a new file per retry.
+Run `scrutinize` inline against `spec.md`, then normalize its closing verdict to
+exactly one of its own four tokens — `SHIP`, `FIX_THEN_SHIP`, `REWORK`, `REJECT`
+— with no paraphrasing. Keep one stable report at
+`.scratch/<feature-slug>/design-review.md`, updating its cycle section each pass.
 
 Route the verdict:
 
 - **`SHIP`** → close the gate, advance to Stage 3.
 - **`FIX_THEN_SHIP`** → apply the minimal verified fix directly to `spec.md`,
-  consume one cycle, re-review. Stay in Stage 2.
-- **`REWORK`, spec-level** — the finding is about how the spec is written (an
-  unclear seam, a missing user story), resolvable by rewriting → re-run `to-spec`
-  with the finding as added context, consume one cycle, re-review. Stay in
-  Stage 2.
-- **`REWORK`, decision-level** — the finding traces to a decision nobody made,
-  which `to-spec` cannot synthesize → return to Stage 0 and re-grill that one
-  decision. The cycle counter carries over; a backward transition to Stage 0
-  never resets it.
-- **`REJECT`** → stop immediately and report to the user. Never auto-loop back
-  into grilling on a `REJECT`.
+  consume one cycle, re-review, stay in Stage 2.
+- **`REWORK`, spec-level** (the finding is about how the spec is written) →
+  re-run `to-spec` with the finding as added context, consume one cycle,
+  re-review, stay in Stage 2.
+- **`REWORK`, decision-level** (the finding traces to a decision nobody made) →
+  return to Stage 0 to re-grill that one decision; the running cycle count
+  carries over the transition unchanged.
+- **`REJECT`** → stop and report to the user; a fresh attempt is a human
+  decision.
 
 State which `REWORK` kind you diagnosed, and why, in the gate report so the
-spec-level and decision-level paths are visibly distinguished.
+spec-level and decision-level paths stay visibly distinguished.
 
-**Stall.** If the same blocking finding survives two consecutive cycles with no
-new or resolved findings, stop early, report the stall, and do not keep spending
-the budget.
-
-**Budget exhaustion.** The gate budget is six cycles. If cycle 6 completes
-without `SHIP`, stop, report budget exhaustion, and require explicit
-human authorization before starting a fresh budget.
+The gate is bounded to six cycles. A stall — the same blocking finding surviving
+two consecutive cycles with no new or resolved findings — stops the loop early;
+so does cycle 6 closing without `SHIP`, and a fresh budget then needs explicit
+human authorization. Full routing table, stall detection, cycle accounting, and
+gate report format live in
+[design-review-gate.md](references/design-review-gate.md).
 
 ## Stage 3 — Tickets
 
@@ -142,8 +136,8 @@ order. Quiz the user on granularity and blocking edges until they approve.
 Print a handoff message and stop:
 
 ```text
-Tickets published to .scratch/<feature-slug>/issues/. Planning is done — this skill
-does not implement.
+Tickets published to .scratch/<feature-slug>/issues/. Planning is done; this skill
+hands off here.
 
 To keep peak reasoning for implementation, reset context:
 /clear
@@ -152,13 +146,14 @@ Then start the first ticket in a fresh session:
 /implement .scratch/<feature-slug>/issues/01-<first-ticket-slug>.md
 ```
 
-Never invoke `implement` yourself.
+The later `/implement` run owns implementation; this skill's job ends at the
+handoff.
 
 ## Constraints
 
-- Do not modify `.agents/skills/grill-with-docs/SKILL.md`, any other
-  `mattpocock/skills`-sourced file, or `skills-lock.json`. This skill is
-  standalone by design; see `.scratch/grill-to-tickets/adr/0001-standalone-no-upstream-modification.md`.
+- Keep `grill-with-docs`, every other `mattpocock/skills`-sourced file, and
+  `skills-lock.json` exactly as they are — this skill is standalone by design
+  (see `docs/decisions/0003-grill-to-tickets-standalone-composite.md`).
 - Execute commits, pushes, pull requests, or tracker mutations only when the user
   explicitly asks. Publishing tickets as local files under `.scratch/` is the
   default terminal output.

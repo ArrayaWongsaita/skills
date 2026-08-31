@@ -50,7 +50,9 @@ npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 
 ### ไฟล์ที่เกี่ยวข้อง
 
-- `references/design-review-gate.md` — routing table, cycle budget, stall detection, gate report format
+- `references/design-review-gate.md` — source เดียวของ routing table เต็ม, cycle accounting, stall detection, gate report format (SKILL.md Stage 2 เก็บแค่สรุปสั้น ๆ ต่อ verdict แล้วชี้มาที่นี่)
+- `evals/evals.json` — 7 เคสพฤติกรรม หนึ่งเคสต่อ routing branch ของ Design Review Gate ในรูปแบบ benchmark ของ `skill-creator` รันแบบ on-demand ไม่ได้อยู่ใน CI
+- `evals/trigger-evals.json` — กันไม่ให้ description ของ skill อ่านเหมือนเป็น model-invocable (skill นี้เป็น `disable-model-invocation`)
 
 ## English / ภาษาอังกฤษ
 
@@ -104,5 +106,10 @@ handoff and stops.
 
 ### Related files
 
-- `references/design-review-gate.md` — routing table, cycle budget, stall
-  detection, and the per-cycle gate report format
+- `references/design-review-gate.md` — the single source for the full routing
+  table, cycle accounting, stall detection, and the per-cycle gate report format;
+  SKILL.md Stage 2 keeps only a brief per-verdict summary and points here
+- `evals/evals.json` — seven behavioral cases, one per Design Review Gate routing
+  branch, in `skill-creator`'s benchmark format; run on demand, not in CI
+- `evals/trigger-evals.json` — guards that the skill's description does not read
+  as model-invocable (the skill is `disable-model-invocation`)

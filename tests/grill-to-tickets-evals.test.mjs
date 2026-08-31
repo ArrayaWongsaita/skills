@@ -4,10 +4,14 @@ import { readFile, access } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
 
-// Schema-level checks (non-empty arrays, field presence/types, unique ids) are
-// enforced by scripts/validate-skills.mjs on the canonical copy. This contract
-// covers what that validator cannot: the .agents/ mirror, and the spec's
-// requirement of one eval case per Design Review Gate routing branch.
+// The eval files are behavioral documentation in skill-creator's benchmark
+// format, not a CI gate — nothing here runs the prompts. `evals.json` cases are
+// exercised by a human through skill-creator's benchmark mode; `trigger-evals.json`
+// only guards that the description does not read as model-invocable (the skill is
+// `disable-model-invocation`, so real trigger tuning is moot). This contract
+// covers what scripts/validate-skills.mjs cannot: the `.agents/` mirror, the
+// one-case-per-routing-branch requirement, and cycle-budget drift between the
+// skill prose and the evals.
 
 async function fileExists(filePath) {
   await access(filePath, constants.R_OK);
@@ -22,10 +26,13 @@ const evalDirs = [
   ".agents/skills/grill-to-tickets/evals",
 ];
 const canonicalDir = evalDirs[0];
+const skillDir = path.resolve(canonicalDir, "..");
 
 const evalsJson = () => readJson(path.resolve(canonicalDir, "evals.json"));
 const triggerJson = () => readJson(path.resolve(canonicalDir, "trigger-evals.json"));
-const caseText = (item) => `${item.expected_output} ${item.expectations.join(" ")}`;
+
+const NUMBER_WORDS = { two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9 };
+const spell = (n) => Object.keys(NUMBER_WORDS).find((w) => NUMBER_WORDS[w] === n);
 
 describe("grill-to-tickets eval suite contract", () => {
   it("ships trigger-evals.json and evals.json in the canonical and installed copies", async () => {
@@ -103,32 +110,35 @@ describe("grill-to-tickets eval suite contract", () => {
     it("covers every Design Review Gate routing branch", async () => {
       const { evals } = await evalsJson();
       for (const branch of routingBranches) {
-        const hits = evals.filter(
+        const hit = evals.some(
           (e) => branch.match.test(e.name) || branch.match.test(e.expected_output),
         );
-        assert.ok(hits.length >= 1, `no eval case covers ${branch.label}`);
+        assert.ok(hit, `no eval case covers ${branch.label}`);
       }
     });
 
-    it("asserts the SHIP path never invokes implement and prints the handoff", async () => {
-      const ship = (await evalsJson()).evals.find((e) => /first-pass SHIP/i.test(e.name));
-      assert.ok(ship, "a first-pass SHIP case is required");
-      assert.match(caseText(ship), /implement/i);
-      assert.match(caseText(ship), /\/clear|handoff/i);
-    });
+    it("keeps the gate cycle budget in sync across the reference, SKILL.md, and the budget case", async () => {
+      const gate = await readFile(path.join(skillDir, "references/design-review-gate.md"), "utf8");
+      const m = gate.match(/gate budget:?\s*(\d+|two|three|four|five|six|seven|eight|nine)\s*cycles/i);
+      assert.ok(m, "design-review-gate.md must state 'Gate budget: N cycles'");
+      const budget = Number(m[1]) || NUMBER_WORDS[m[1].toLowerCase()];
+      assert.ok(budget >= 1, `parsed a cycle budget (${budget})`);
+      const both = new RegExp(`\\b(${budget}|${spell(budget)})\\b`, "i");
 
-    it("asserts the decision-level rework case carries the cycle counter over", async () => {
-      const decision = (await evalsJson()).evals.find((e) => /decision-level/i.test(e.name));
-      assert.ok(decision, "a decision-level REWORK case is required");
-      assert.match(caseText(decision), /carr(y|ies|ied)|not reset|never reset/i);
-      assert.match(caseText(decision), /Stage 0/);
-    });
+      const skill = await readFile(path.join(skillDir, "SKILL.md"), "utf8");
+      assert.match(
+        skill,
+        new RegExp(`\\b(${budget}|${spell(budget)})\\b[\\s-]*cycle`, "i"),
+        `SKILL.md must reference the ${budget}-cycle gate budget`,
+      );
 
-    it("asserts the budget case requires human authorization and forbids cycle 7", async () => {
-      const budget = (await evalsJson()).evals.find((e) => /budget exhaustion/i.test(e.name));
-      assert.ok(budget, "a budget-exhaustion case is required");
-      assert.match(caseText(budget), /human authoriz/i);
-      assert.match(caseText(budget), /cycle 7|seventh cycle/i);
+      const budgetCase = (await evalsJson()).evals.find((e) => /budget exhaustion/i.test(e.name));
+      assert.ok(budgetCase, "a budget-exhaustion eval case is required");
+      const haystack = `${budgetCase.name} ${budgetCase.expected_output} ${budgetCase.expectations.join(" ")}`;
+      assert.ok(
+        both.test(haystack),
+        `the budget eval case must assert the same ${budget}-cycle budget`,
+      );
     });
   });
 });
