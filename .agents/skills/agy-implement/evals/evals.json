@@ -207,6 +207,32 @@
         "Writes no resolution of the contended type on the main thread"
       ],
       "files": []
+    },
+    {
+      "id": 17,
+      "name": "a blocked ticket halts only its branch; independent in-flight work still integrates",
+      "prompt": "/agy-implement .scratch/partial-demo/ with an approved Plan. Wave 1 runs {03, 04} in parallel: 03 is BLOCKED after three verification failures; 04 passes. Ticket 05 is blocked by 03; ticket 06 is blocked only by 04.",
+      "expected_output": "04's in-flight worker finishes and is verified and integrated. 05 is not started (it depends on the blocked 03). The run integrates 04, then stops at the next frontier and reports: 03 BLOCKED (TICKET_VERIFICATION_FAILED), 05 not started because it depends on 03, and 06 available as an independent partial path. The halt report ends with /agy-implement continue partial-demo.",
+      "expectations": [
+        "Lets 04's already-running worker finish and integrates 04",
+        "Does not start 05 because it is transitively blocked by 03",
+        "Reports the blocked ticket, its reason, the downstream tickets not started, and the independent path still open",
+        "Ends the report with the /agy-implement continue command"
+      ],
+      "files": []
+    },
+    {
+      "id": 18,
+      "name": "resume after a crash rewinds the integration branch to the last still-good commit",
+      "prompt": "/agy-implement continue crash-demo. status.md records tickets 01, 02, 03 integrated. Reality reconciliation re-runs each ticket's acceptance checks: 01 and 02 still verify, but 03's tests now fail because the user hand-edited a file 03 touched.",
+      "expected_output": "01 and 02 hold. 03 no longer verifies, so the run rewinds: it resets the integration branch to 02's commit (the last still-good one), discards the worktrees for 03 and anything downstream, lists the discarded commit(s) at the top of the report so the blast radius is visible, re-presents the Plan reconciled against reality, and re-dispatches from 03.",
+      "expectations": [
+        "Re-runs each integrated ticket's acceptance checks before trusting status.md",
+        "Resets the integration branch to the last commit whose ticket still verifies (02)",
+        "Discards the invalidated worktrees and lists the discarded commits at the top of the report",
+        "Re-presents the Plan and re-dispatches from ticket 03"
+      ],
+      "files": []
     }
   ]
 }

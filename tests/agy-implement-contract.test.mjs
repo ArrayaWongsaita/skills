@@ -355,4 +355,68 @@ describe("agy-implement skill contract", () => {
       }
     });
   });
+
+  describe("ticket 05 — failure, partial delivery, state and resume", () => {
+    async function stateDocs(dir) {
+      return (await Promise.all([
+        readFile(path.resolve(dir, "SKILL.md"), "utf8"),
+        readFile(path.resolve(dir, "references/status-and-resume.md"), "utf8"),
+      ])).join("\n");
+    }
+
+    it("ships references/status-and-resume.md byte-identical and linked from SKILL.md", async () => {
+      const [canonical, mirror] = await Promise.all(
+        skillDirs.map((dir) => readFile(path.resolve(dir, "references/status-and-resume.md"), "utf8")),
+      );
+      assert.equal(canonical, mirror);
+      for (const file of skillFiles) {
+        assert.match(await readFile(file, "utf8"), /references\/status-and-resume\.md/);
+      }
+    });
+
+    it("a BLOCKED ticket halts only its dependency branch and the report names the fallout", async () => {
+      for (const dir of skillDirs) {
+        const d = await stateDocs(dir);
+        assert.match(d, /halts? only (its|the) (dependency )?branch|only .* dependency branch/i);
+        assert.match(d, /in-flight|already (in flight|running)|currently running/i);
+        assert.match(d, /next frontier/i);
+        assert.match(d, /downstream tickets? .*(not started|not begun)|not started/i);
+        assert.match(d, /`?\/agy-implement continue`?/);
+      }
+    });
+
+    it("status.md persists the per-ticket fields, the integration ref, and cumulative per-provider usage", async () => {
+      for (const dir of skillDirs) {
+        const d = await stateDocs(dir);
+        assert.match(d, /status\.md/);
+        for (const field of ["status", "conversation_id", "model", "attempts", "failover_attempts", "worker_branch", "commit", "usage"]) {
+          assert.match(d, new RegExp(field.replace(/_/g, "[_ ]")), `status.md records ${field}`);
+        }
+        assert.match(d, /integration branch (ref|reference)/i);
+        assert.match(d, /per-provider/i);
+        assert.match(d, /as each ticket transitions|updated as/i);
+      }
+    });
+
+    it("continue performs Reality reconciliation and rewinds to the last still-good commit", async () => {
+      for (const dir of skillDirs) {
+        const d = await stateDocs(dir);
+        assert.match(d, /Reality reconciliation/i);
+        assert.match(d, /git refs?|git status/i);
+        assert.match(d, /acceptance check/i);
+        assert.match(d, /last still-good commit|last commit .* still verif/i);
+        assert.match(d, /rewind|reset the integration branch/i);
+        assert.match(d, /discard.*worktree/i);
+        assert.match(d, /list.*discarded commits|discarded commits .*(report|top)/i);
+      }
+    });
+
+    it("status and list are read-only", async () => {
+      for (const dir of skillDirs) {
+        const d = await stateDocs(dir);
+        assert.match(d, /`?\/agy-implement status`?[\s\S]{0,300}read-only/i);
+        assert.match(d, /`?\/agy-implement list`?[\s\S]{0,300}(read-only|without mutating)/i);
+      }
+    });
+  });
 });

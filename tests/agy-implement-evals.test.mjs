@@ -129,5 +129,13 @@ describe("agy-implement eval suite contract", () => {
       assert.ok(hay(/no list|agy's default/i), "no list -> agy default");
       assert.ok(hay(/design-encoding merge conflict|encodes which module/i), "design-encoding conflict surfaces");
     });
+
+    it("covers the failure, partial delivery, and resume branches (ticket 05)", async () => {
+      const { evals } = await evalsJson();
+      const hay = (re) => evals.some((e) => re.test(e.name) || re.test(e.expected_output));
+      assert.ok(hay(/halts only its branch|blocked ticket halts/i), "blocked ticket halts only its branch");
+      assert.ok(hay(/rewinds the integration branch|last still-good commit/i), "resume rewinds to last still-good commit");
+      assert.ok(hay(/discarded commit/i), "resume lists the discarded commits");
+    });
   });
 });

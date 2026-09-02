@@ -51,16 +51,18 @@ starting a run or a sub-command.
 
 ## Sub-commands
 
-- `/agy-implement continue [slug]` — resume an interrupted run. Re-checks reality
-  against git and the tickets' acceptance state, rewinds the integration branch
-  to the last still-good commit when a committed ticket no longer verifies, then
-  re-presents the Plan and re-dispatches from the frontier.
-- `/agy-implement status [slug]` — report the wave table, each ticket's status,
-  and any blockers, read-only.
-- `/agy-implement list` — list runs discovered under `.scratch/*/status.md`,
-  read-only.
+See [references/status-and-resume.md](references/status-and-resume.md).
 
-Each sub-command's full behavior is specified alongside the stage it belongs to.
+- `/agy-implement continue [slug]` — resume an interrupted run. Reconcile
+  `status.md` against reality (git refs, worktrees, each committed ticket's
+  acceptance checks); when a committed ticket no longer verifies, rewind the
+  integration branch to the last still-good commit, discard the invalidated
+  worktrees, list the discarded commits at the top of the report, then
+  re-present the Plan and re-dispatch from the frontier.
+- `/agy-implement status [slug]` — report the wave table, each ticket's status,
+  blockers, and cumulative per-provider usage, read-only.
+- `/agy-implement list` — one line per run discovered under `.scratch/*/status.md`,
+  read-only.
 
 ## Feature-scoped storage
 
@@ -175,6 +177,20 @@ commit in ascending ticket-number order, ticking that ticket file's checkboxes
 and setting its `Status:`; resolve a mechanical merge conflict on the main
 thread and surface a design-encoding one; then run the full typecheck and test
 suite on the integrated result before advancing.
+
+## State, failure, and resume
+
+Follow [references/status-and-resume.md](references/status-and-resume.md). Run
+state lives in `.scratch/<feature-slug>/status.md` — the wave table, each
+ticket's `{status, conversation_id, model, attempts, failover_attempts,
+worker_branch, commit, usage}`, the integration branch ref, and cumulative
+per-provider usage — updated as each ticket transitions.
+
+A `BLOCKED` ticket halts only its own dependency branch: the in-flight workers
+finish, passing work is integrated, and the run stops at the next frontier with a
+report naming the blocked tickets, their reasons, the downstream tickets not
+started, and the `/agy-implement continue` command. `continue` reconciles against
+reality and rewinds before resuming.
 
 ## Stop — Handoff
 
