@@ -108,12 +108,68 @@ Follow [references/planning.md](references/planning.md). In short:
 
 ## Stage 1 — Execute (per wave, frontier order)
 
-For each wave, dispatch one `agy` worker per ticket, run the orchestrator's
-verification gate on every result, and run the per-wave integration gate. The
-orchestrator dispatches every ticket and owns verification, skill routing, and
-merge-conflict resolution; it writes code itself only to resolve a purely
-mechanical merge conflict. A ticket that no worker can finish within its retry
-budget becomes `BLOCKED` and waits for a human.
+Once the Plan is approved, run the preflight in
+[references/worktree-integration.md](references/worktree-integration.md), then
+work each wave in frontier order. The orchestrator dispatches every ticket to a
+worker and owns verification, skill routing, and merge-conflict resolution; it
+writes implementation code itself only to resolve a purely mechanical merge
+conflict. A ticket that no worker can finish within its retry budget becomes
+`BLOCKED` and waits for a human.
+
+### Dispatch one worker per ticket
+
+Follow [references/agy-contract.md](references/agy-contract.md) and
+[references/prompt-scaffold.md](references/prompt-scaffold.md). Cut the ticket's
+worktree and worker branch from integration `HEAD`, write the self-contained
+worker prompt to `.scratch/<slug>/prompts/<NN>.md`, and dispatch:
+
+```bash
+agy -p "$(cat .scratch/<slug>/prompts/<NN>.md)" --add-dir "<worktree>" \
+  --output-format json --print-timeout 45m --disable-slash-commands \
+  <permission mode> [--model <id>] > .scratch/<slug>/logs/<NN>.json 2>&1
+```
+
+The worker builds the ticket test-first and commits on its own worker branch.
+Model is taken at dispatch time by round-robin over the run's model list (or
+`agy`'s default with no list) and recorded in `status.md`. The worker prior art
+is captured verbatim in
+[references/qwen-agent-skill.md](references/qwen-agent-skill.md).
+
+### Verification gate (orchestrator, per ticket, in the ticket's worktree)
+
+The orchestrator — not the worker — runs every check:
+
+1. **Envelope.** `status` is a success value and the `response` carries the red
+   output, the green output, and the test → criterion table. A non-success
+   `status`, a missing envelope, or a truncated return is a worker failure.
+2. **Reproduce the red state.** Split the worker's changed files into tests and
+   implementation. On a scratch checkout at the pre-ticket integration `HEAD`,
+   apply **only the test files**, run them, and confirm they fail for a missing
+   behaviour — not a compile or import error. A test that passes without the
+   implementation, or only fails to compile, is a verification failure. The
+   worker's pasted red output is corroborating evidence, not the check.
+3. **Coverage.** Every acceptance criterion maps to at least one new test, and no
+   test is vacuous or tautological (`expect(true).toBe(true)`, an assertion that
+   recomputes the expected value the way the code does).
+4. **Green.** Re-run the ticket's new and changed tests; they pass. The
+   typecheck passes.
+
+Any failure resumes the same worker through `agy --conversation <id> -p "<the
+specific failure>"`, up to `MAX_TICKET_ATTEMPTS = 3`. The third failure yields
+`BLOCKED (TICKET_VERIFICATION_FAILED)`, records the failure output in
+`status.md`, and keeps the worktree for inspection. A provider or infrastructure
+failure (rate-limit, timeout, crash) instead triggers **`Failover`** to the next
+model — separate budget `MAX_FAILOVER_ATTEMPTS = 3`, not counted against the
+verification attempts.
+
+### Integration gate (orchestrator, per wave)
+
+Follow [references/worktree-integration.md](references/worktree-integration.md):
+squash-merge each verified worker branch into the integration branch as one
+commit in ascending ticket-number order, ticking that ticket file's checkboxes
+and setting its `Status:`; resolve a mechanical merge conflict on the main
+thread and surface a design-encoding one; then run the full typecheck and test
+suite on the integrated result before advancing.
 
 ## Stop — Handoff
 

@@ -108,5 +108,17 @@ describe("agy-implement eval suite contract", () => {
       assert.ok(hay(/cycl|TICKET_SET_CYCLIC/i), "cyclic-graph rejection");
       assert.ok(hay(/no source mutation|before Plan approval|before approval/i), "no mutation before approval");
     });
+
+    it("covers the single-ticket execution branches (ticket 03)", async () => {
+      const { evals } = await evalsJson();
+      const hay = (re) => evals.some((e) => re.test(e.name) || re.test(e.expected_output));
+      assert.ok(hay(/never (hand-code|implement)|orchestrator.*(BLOCKED|does not write)/i), "orchestrator never implements");
+      assert.ok(hay(/three times then BLOCKED|MAX_TICKET_ATTEMPTS|TICKET_VERIFICATION_FAILED/i), "verification failure x3 -> BLOCKED");
+      assert.ok(hay(/vacuous/i), "vacuous-test rejection");
+      assert.ok(hay(/fabricated|not real|red reproduction/i), "fabricated / not-actually-red rejection");
+      assert.ok(hay(/no test|uncovered criterion|criterion with no test/i), "missing test -> criterion coverage");
+      assert.ok(hay(/failover does not consume|Failover.*budget/i), "failover does not consume verification budget");
+      assert.ok(hay(/new dependency|package install|lockfile/i), "worker package install -> replanned");
+    });
   });
 });

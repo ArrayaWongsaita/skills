@@ -190,4 +190,111 @@ describe("agy-implement skill contract", () => {
       }
     });
   });
+
+  describe("ticket 03 — single-ticket execution", () => {
+    const refs = [
+      "references/agy-contract.md",
+      "references/prompt-scaffold.md",
+      "references/worktree-integration.md",
+      "references/qwen-agent-skill.md",
+    ];
+
+    it("ships the execution references byte-identical across the skill copies", async () => {
+      for (const ref of refs) {
+        const [canonical, mirror] = await Promise.all(
+          skillDirs.map((dir) => readFile(path.resolve(dir, ref), "utf8")),
+        );
+        assert.equal(canonical, mirror, `${ref} copies must match`);
+      }
+    });
+
+    it("SKILL.md links every execution reference and has a Verification gate section", async () => {
+      for (const file of skillFiles) {
+        const content = await readFile(file, "utf8");
+        for (const ref of refs) {
+          assert.match(content, new RegExp(ref.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+        }
+        assert.match(content, /##\s*Stage 1/i);
+        assert.match(content, /Verification gate/i);
+      }
+    });
+
+    it("agy-contract.md documents the invocation flags and the result envelope", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/agy-contract.md"), "utf8");
+        for (const flag of ["-p", "--add-dir", "--output-format json", "--print-timeout", "--disable-slash-commands"]) {
+          assert.match(c, new RegExp(flag.replace(/[-/]/g, "\\$&")));
+        }
+        assert.match(c, /--sandbox|accept-edits|--dangerously-skip-permissions/);
+        assert.match(c, /conversation_id/);
+        assert.match(c, /usage/);
+        assert.match(c, /provisional/i, "failure/timeout status tokens marked provisional");
+        assert.match(c, /probe 1|validation probe/i);
+      }
+    });
+
+    it("prompt-scaffold.md carries the full red-green-refactor protocol and the worker constraints", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/prompt-scaffold.md"), "utf8");
+        assert.match(c, /working directory/i);
+        assert.match(c, /What to build/);
+        assert.match(c, /acceptance criteria/i);
+        assert.match(c, /test seam/i);
+        assert.match(c, /red.*green.*refactor|failing test first/is);
+        assert.match(c, /package install/i);
+        assert.match(c, /push[\s\S]{0,40}pull request|open a PR|without push/i);
+        assert.match(c, /missing decision|stop and report/i);
+        assert.match(c, /test.*criterion|criterion.*table/i);
+      }
+    });
+
+    it("worktree-integration.md specifies the serial worktree lifecycle and the squash-merge", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/worktree-integration.md"), "utf8");
+        assert.match(c, /worktree/i);
+        assert.match(c, /worker branch/i);
+        assert.match(c, /integration (branch|HEAD)/i);
+        assert.match(c, /symlink/i);
+        assert.match(c, /package install/i);
+        assert.match(c, /squash/i);
+        assert.match(c, /ticket-number order|ascending ticket/i);
+        assert.match(c, /checkbox|acceptance check/i);
+      }
+    });
+
+    it("the verification gate reproduces red itself and defines the failure kinds", async () => {
+      for (const body of await bothSkillBodies()) {
+        const gate = body.match(/###\s*Verification gate[\s\S]*?(?=\n###?\s)/i);
+        assert.ok(gate, "Verification gate section present");
+        const g = gate[0];
+        assert.match(g, /reproduce.*red|red state/i);
+        assert.match(g, /only the (ticket's )?test files|test files applied/i);
+        assert.match(g, /vacuous|tautolog/i);
+        assert.match(g, /criteri/i);
+        assert.match(g, /typecheck/i);
+      }
+    });
+
+    it("defines the ticket retry budget, BLOCKED status, and a separate failover budget", async () => {
+      for (const dir of skillDirs) {
+        const both = (await Promise.all([
+          readFile(path.resolve(dir, "SKILL.md"), "utf8"),
+          readFile(path.resolve(dir, "references/agy-contract.md"), "utf8"),
+        ])).join("\n");
+        assert.match(both, /MAX_TICKET_ATTEMPTS\s*=\s*3|three attempts|up to 3/i);
+        assert.match(both, /--conversation/);
+        assert.match(both, /BLOCKED \(TICKET_VERIFICATION_FAILED\)/);
+        assert.match(both, /worktree.*kept|kept.*inspection/i);
+        assert.match(both, /MAX_FAILOVER_ATTEMPTS\s*=\s*3|separate (failover )?budget/i);
+        assert.match(both, /Failover/);
+      }
+    });
+
+    it("keeps the orchestrator out of ticket implementation", async () => {
+      for (const body of await bothSkillBodies()) {
+        assert.match(body, /orchestrator[\s\S]{0,240}(mechanical|conflict)/i);
+        assert.match(body, /dispatches every ticket/i);
+      }
+    });
+  });
 });

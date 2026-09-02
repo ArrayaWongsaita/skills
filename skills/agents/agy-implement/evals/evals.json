@@ -77,6 +77,97 @@
         "Waits for explicit user approval before Stage 1"
       ],
       "files": []
+    },
+    {
+      "id": 7,
+      "name": "the orchestrator never hand-codes a hard ticket, it goes BLOCKED",
+      "prompt": "/agy-implement .scratch/hard-ticket-demo/ with an approved Plan. Ticket 03's worker fails verification three times: the third return still leaves one acceptance criterion with no test. The orchestrator could write the missing behaviour and test itself in a few minutes.",
+      "expected_output": "After the third verification failure the ticket becomes BLOCKED (TICKET_VERIFICATION_FAILED). The orchestrator records the failure output and keeps the worktree. It does not write the implementation or the missing test itself — an un-buildable ticket is a visible planning signal, not a hidden fallback (adr/0002).",
+      "expectations": [
+        "Marks ticket 03 BLOCKED (TICKET_VERIFICATION_FAILED) after the third failed attempt",
+        "Writes no implementation code or test for ticket 03 on the main thread",
+        "Records the failure output in status.md and keeps the ticket's worktree",
+        "Halts ticket 03's dependency branch rather than rescuing it"
+      ],
+      "files": []
+    },
+    {
+      "id": 8,
+      "name": "verification failure retries the same worker three times then BLOCKED",
+      "prompt": "/agy-implement .scratch/retry-demo/ with an approved Plan. Ticket 02's worker returns; the orchestrator's verification finds the new test still fails green. Attempts 2 and 3, resumed with the specific failure, also fail verification.",
+      "expected_output": "Each failure resumes the same worker through agy --conversation <id> -p with the specific failure detail. After attempt 3 the ticket is BLOCKED (TICKET_VERIFICATION_FAILED) with the output in status.md and the worktree kept. Exactly three ticket attempts are consumed.",
+      "expectations": [
+        "Resumes the same worker by conversation id with the specific failure each time",
+        "Consumes exactly MAX_TICKET_ATTEMPTS = 3 before blocking",
+        "Ends at BLOCKED (TICKET_VERIFICATION_FAILED) with the failure output recorded and the worktree kept",
+        "Does not start a downstream ticket that depends on 02"
+      ],
+      "files": []
+    },
+    {
+      "id": 9,
+      "name": "vacuous-test return fails verification",
+      "prompt": "/agy-implement .scratch/vacuous-demo/ with an approved Plan. Ticket 01's worker returns green with the only new test being `expect(true).toBe(true)`.",
+      "expected_output": "The verification gate's coverage check rejects the return: the test is vacuous and maps to no real acceptance criterion. It counts as a verification failure and the worker is resumed with that specific reason.",
+      "expectations": [
+        "Flags the `expect(true).toBe(true)` test as vacuous or tautological",
+        "Treats it as a verification failure, not a pass",
+        "Resumes the same worker asking for a test that measures the acceptance criteria",
+        "Does not integrate ticket 01"
+      ],
+      "files": []
+    },
+    {
+      "id": 10,
+      "name": "fabricated red output fails the orchestrator's own red reproduction",
+      "prompt": "/agy-implement .scratch/fabricated-demo/ with an approved Plan. Ticket 01's worker pastes convincing red output, but when the orchestrator applies only the worker's test files to a scratch checkout at the pre-ticket HEAD and runs them, they pass.",
+      "expected_output": "The orchestrator reproduces red itself and the test passes without the implementation — the red step was not real. This is a verification failure regardless of the pasted output; the worker is resumed to write a test that actually fails first.",
+      "expectations": [
+        "Runs its own red reproduction with only the test files applied",
+        "Detects the test passing without the implementation and calls it a verification failure",
+        "Does not trust the worker's pasted red output as the check",
+        "Resumes the worker for a genuinely failing-first test"
+      ],
+      "files": []
+    },
+    {
+      "id": 11,
+      "name": "a criterion with no test fails verification",
+      "prompt": "/agy-implement .scratch/coverage-demo/ with an approved Plan. Ticket 02 has three acceptance criteria; the worker's return maps new tests to two of them and leaves the third uncovered.",
+      "expected_output": "The coverage check finds an acceptance criterion with no new test. That is a verification failure; the worker is resumed to add a test for the uncovered criterion.",
+      "expectations": [
+        "Maps every acceptance criterion to at least one new test and finds the gap",
+        "Treats the uncovered criterion as a verification failure",
+        "Resumes the same worker naming the specific uncovered criterion",
+        "Does not integrate ticket 02 while a criterion is uncovered"
+      ],
+      "files": []
+    },
+    {
+      "id": 12,
+      "name": "provider failover does not consume the verification budget",
+      "prompt": "/agy-implement .scratch/failover-demo/ with an approved Plan and a two-model list. Ticket 01's first worker times out; the second, on the next model, rate-limits; the third, back on the first model, returns a result that then fails verification once before passing.",
+      "expected_output": "The timeout and the rate-limit are Failover events under MAX_FAILOVER_ATTEMPTS = 3, advancing to the next model each time. Only the one verification failure counts against MAX_TICKET_ATTEMPTS = 3. The ticket still has two verification attempts left when it passes.",
+      "expectations": [
+        "Classifies the timeout and the rate-limit as Failover, not verification failures",
+        "Advances to the next model in the list on each Failover",
+        "Counts only the one real verification failure against MAX_TICKET_ATTEMPTS",
+        "Completes ticket 01 rather than blocking it on infrastructure flakiness"
+      ],
+      "files": []
+    },
+    {
+      "id": 13,
+      "name": "a worker that needs a new dependency stops and is replanned",
+      "prompt": "/agy-implement .scratch/dependency-demo/ with an approved Plan. Ticket 02's worker reports that the ticket needs a date library that is not installed, and stops without running a package install.",
+      "expected_output": "The worker stopped rather than mutating the shared lockfile. The orchestrator returns ticket 02 to Stage 0 planning as a new-dependency decision; the lockfile is untouched. Adding the dependency is a deliberate planning step, not a worker action.",
+      "expectations": [
+        "Recognizes the missing-dependency report as a planning decision, not a verification failure",
+        "Returns ticket 02 to Stage 0 rather than letting a worker install the package",
+        "Leaves package.json and the lockfile unchanged",
+        "Does not mark ticket 02 done or integrate it"
+      ],
+      "files": []
     }
   ]
 }
