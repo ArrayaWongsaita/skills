@@ -16,6 +16,7 @@ npx skills add ArrayaWongsaita/skills --all
 | Skill | Description / คำอธิบาย | Guide / คู่มือ |
 | --- | --- | --- |
 | `agent-instructions-architect` | Set up, audit, refactor, migrate, and validate lean single-agent repository instruction architectures using AGENTS.md, scoped instructions, composable Agent Skills, repository documentation, and deterministic enforcement. Use when creating or reorganizing repository guidance, reducing context or duplication, or adapting one canonical system across Codex, Claude Code, GitHub Copilot CLI, and OpenCode. Do not use for generic prompt writing, application feature work, or multi-agent orchestration. | [คู่มือ / Guide](agents/agent-instructions-architect.md) |
+| `agy-implement` | Turn a directory of grill-to-tickets tickets into working code by planning execution waves, dispatching one headless agy worker per ticket across several LLM providers, forcing test-first implementation, verifying every result, integrating one commit per ticket onto a branch, and stopping before review. | [คู่มือ / Guide](agents/agy-implement.md) |
 | `design-task-spec` | Design decision-complete software implementation task specifications from vague ideas or existing tickets. Use when explicitly asked to investigate a repository, stress-test requirements for a feature, bug fix, refactor, migration, integration, or infrastructure change, document relevant domain decisions, and produce a source-linked task that another agent can implement without making product or architecture decisions. Do not use this skill to implement the designed task. | [คู่มือ / Guide](agents/design-task-spec.md) |
 | `engineering-workflow` | Explicitly route a feature, bug, incident, or large engineering effort through pure-prompt cognitive orchestration, markdown state artifacts, evidence gates, bounded review loops, and resumable transitions. | [คู่มือ / Guide](agents/engineering-workflow.md) |
 | `grill-to-tickets` | Standalone composite skill that carries one idea from a relentless discovery interview through domain modeling, specification, a bounded design-review gate, and vertical ticket breakdown, then stops at published tickets without implementing. | [คู่มือ / Guide](agents/grill-to-tickets.md) |
@@ -25,6 +26,7 @@ npx skills add ArrayaWongsaita/skills --all
 ```bash
 npx skills add ArrayaWongsaita/skills \
   --skill agent-instructions-architect \
+  --skill agy-implement \
   --skill design-task-spec \
   --skill engineering-workflow \
   --skill grill-to-tickets

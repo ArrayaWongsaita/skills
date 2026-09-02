@@ -1,0 +1,6 @@
+interface:
+  display_name: "Agy Implement"
+  short_description: "Dispatch a grill-to-tickets ticket set to agy workers, verify, integrate, stop before review"
+  default_prompt: "Use $agy-implement to plan this ticket directory into waves, dispatch one agy worker per ticket test-first, verify every result, integrate one commit per ticket, and stop before review: [dir|slug]."
+policy:
+  allow_implicit_invocation: false

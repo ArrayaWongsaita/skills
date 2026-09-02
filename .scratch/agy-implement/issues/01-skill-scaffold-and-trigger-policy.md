@@ -8,24 +8,24 @@ discoverable skill whose trigger behavior is pinned by an eval suite. This is th
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `skills/agents/agy-implement/SKILL.md` has frontmatter `name: agy-implement`, a
+- [x] `skills/agents/agy-implement/SKILL.md` has frontmatter `name: agy-implement`, a
       one-line description naming the full span (read a ticket directory → plan waves →
       dispatch `agy` workers → verify → integrate → stop before review), and
       `disable-model-invocation: true`
-- [ ] `skills/agents/agy-implement/agents/openai.yaml` sets `allow_implicit_invocation:
+- [x] `skills/agents/agy-implement/agents/openai.yaml` sets `allow_implicit_invocation:
       false` with a display name and default prompt, mirroring the shape of
       `grill-to-tickets/agents/openai.yaml`
-- [ ] The skill is mirrored to `.agents/skills/agy-implement/` in the layout the repo
+- [x] The skill is mirrored to `.agents/skills/agy-implement/` in the layout the repo
       uses for its other agent skills
-- [ ] A human guide exists at `docs/skills/agents/agy-implement.md` following the repo's
+- [x] A human guide exists at `docs/skills/agents/agy-implement.md` following the repo's
       skill-guide template (stub sections acceptable; completed in ticket 06)
-- [ ] SKILL.md documents the invocation surface — `/agy-implement <dir|slug>`,
+- [x] SKILL.md documents the invocation surface — `/agy-implement <dir|slug>`,
       `$agy-implement <dir|slug>`, and the `continue` / `status` / `list` sub-commands
       (each sub-command's behavior is specified in later tickets)
-- [ ] `evals/trigger-evals.json` asserts `/agy-implement` and `$agy-implement` trigger
+- [x] `evals/trigger-evals.json` asserts `/agy-implement` and `$agy-implement` trigger
       (`should_trigger: true`) and that a generic "implement this", a bare mention of
       tickets, and a mention of a sibling skill do not (`should_trigger: false`)
-- [ ] `npm run docs:index`, `npm run validate`, and `npm test` all pass with the new
+- [x] `npm run docs:index`, `npm run validate`, and `npm test` all pass with the new
       skill present
