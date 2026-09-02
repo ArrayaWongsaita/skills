@@ -138,7 +138,7 @@ describe("agy-implement eval suite contract", () => {
       assert.ok(hay(/discarded commit/i), "resume lists the discarded commits");
     });
 
-    it("contains all 20 spec Testing-Decisions branches (ticket 06)", async () => {
+    it("contains all 20 spec Testing-Decisions branches plus ticket rejections (ticket 06)", async () => {
       const { evals } = await evalsJson();
       assert.ok(evals.length >= 20, `expected >= 20 eval cases, got ${evals.length}`);
       const hay = (re) => evals.some((e) => re.test(e.name) || re.test(e.expected_output));
@@ -147,7 +147,7 @@ describe("agy-implement eval suite contract", () => {
         "one parallel wave": /parallel wave/i,
         "overlap hint": /overlap hint|likely-overlapping/i,
         "cross-cutting file": /cross-cutting|router/i,
-        "model at dispatch not planning": /dispatch order|at dispatch/i,
+        "model at dispatch not planning": /at dispatch, not planning|no model column/i,
         "no source mutation before approval": /no source mutation|before Plan approval/i,
         "orchestrator never implements": /never (hand-code|implement)/i,
         "design-encoding merge conflict": /design-encoding merge conflict|encodes/i,
@@ -159,10 +159,13 @@ describe("agy-implement eval suite contract", () => {
         "blocked ticket halts only its branch": /halts only its branch/i,
         "resume after crash rewind": /rewinds the integration branch|last still-good commit/i,
         "dirty tree at preflight": /dirty target tree|dirty-demo|uncommitted changes/i,
-        "no list -> agy default; list -> round-robin": /round-robin over dispatch order|no list/i,
+        "no list -> agy default; list -> round-robin": /round-robin over dispatch order|no model list/i,
         "wide-refactor serial steps": /wide-refactor|expand-contract/i,
         "worker package install -> replanned": /new dependency|package install/i,
         "completion handoff": /completion handoff|hand over the review commands|review commands and never pushes/i,
+        "cyclic ticket set rejected": /cycl|TICKET_SET_CYCLIC/i,
+        "missing blocker rejected": /non-existent blocker|TICKET_SET_MISSING_BLOCKER/i,
+        "untestable ticket -> replan": /untestable|no isolated test can exercise/i,
       };
       for (const [label, re] of Object.entries(branches)) {
         assert.ok(hay(re), `no eval case covers: ${label}`);

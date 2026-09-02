@@ -1,8 +1,18 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { readFile, access } from "node:fs/promises";
+import { readFile, access, readdir } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
+
+// The reference set SKILL.md links, the guide's Related files list, and the
+// references/ directory must agree. One source of truth for the three checks.
+const SKILL_REFERENCES = [
+  "agy-contract.md",
+  "planning.md",
+  "prompt-scaffold.md",
+  "status-and-resume.md",
+  "worktree-integration.md",
+];
 
 async function fileExists(filePath) {
   await access(filePath, constants.R_OK);
@@ -36,6 +46,15 @@ async function bothSkillBodies() {
   return Promise.all(
     skillFiles.map(async (file) => (await readFile(file, "utf8")).replace(/^---\n[\s\S]*?\n---\n/, "")),
   );
+}
+
+// Concatenate SKILL.md plus named references for one skill copy. Several rules
+// are spread across the workflow file and its references on purpose; the check
+// is that the rule is stated somewhere in that set, once.
+async function joinDocs(dir, ...refs) {
+  const files = ["SKILL.md", ...refs.map((r) => `references/${r}`)];
+  const bodies = await Promise.all(files.map((f) => readFile(path.resolve(dir, f), "utf8")));
+  return bodies.join("\n");
 }
 
 describe("agy-implement skill contract", () => {
@@ -196,7 +215,6 @@ describe("agy-implement skill contract", () => {
       "references/agy-contract.md",
       "references/prompt-scaffold.md",
       "references/worktree-integration.md",
-      "references/qwen-agent-skill.md",
     ];
 
     it("ships the execution references byte-identical across the skill copies", async () => {
@@ -277,10 +295,7 @@ describe("agy-implement skill contract", () => {
 
     it("defines the ticket retry budget, BLOCKED status, and a separate failover budget", async () => {
       for (const dir of skillDirs) {
-        const both = (await Promise.all([
-          readFile(path.resolve(dir, "SKILL.md"), "utf8"),
-          readFile(path.resolve(dir, "references/agy-contract.md"), "utf8"),
-        ])).join("\n");
+        const both = await joinDocs(dir, "agy-contract.md");
         assert.match(both, /MAX_TICKET_ATTEMPTS\s*=\s*3|three attempts|up to 3/i);
         assert.match(both, /--conversation/);
         assert.match(both, /BLOCKED \(TICKET_VERIFICATION_FAILED\)/);
@@ -299,13 +314,13 @@ describe("agy-implement skill contract", () => {
   });
 
   describe("ticket 04 — parallel waves and integration gate", () => {
-    it("worktree-integration.md gains a real parallel-wave section", async () => {
+    it("worktree-integration.md specifies real parallel-wave dispatch", async () => {
       for (const dir of skillDirs) {
         const c = await readFile(path.resolve(dir, "references/worktree-integration.md"), "utf8");
-        const parallel = c.match(/##\s*Parallel-wave[\s\S]*$/i);
-        assert.ok(parallel, "Parallel-wave section present");
+        const parallel = c.match(/##\s*Serial vs parallel[\s\S]*?(?=\n## )/i);
+        assert.ok(parallel, "serial-vs-parallel dispatch section present");
         const p = parallel[0];
-        assert.doesNotMatch(p, /Added in ticket 04\.\s*$/i, "placeholder replaced with real content");
+        assert.doesNotMatch(c, /Added in ticket 04/i, "placeholder replaced with real content");
         assert.match(p, /concurrency cap/i);
         assert.match(p, /\b4\b/, "default concurrency cap of 4");
         assert.match(p, /queue/i);
@@ -316,11 +331,7 @@ describe("agy-implement skill contract", () => {
 
     it("assigns models by dispatch order, not ticket number, and records them in status.md", async () => {
       for (const dir of skillDirs) {
-        const both = (await Promise.all([
-          readFile(path.resolve(dir, "SKILL.md"), "utf8"),
-          readFile(path.resolve(dir, "references/agy-contract.md"), "utf8"),
-          readFile(path.resolve(dir, "references/worktree-integration.md"), "utf8"),
-        ])).join("\n");
+        const both = await joinDocs(dir, "agy-contract.md", "worktree-integration.md");
         assert.match(both, /dispatch order/i);
         assert.match(both, /not ticket number|not when the ticket is numbered/i);
         assert.match(both, /no (model )?list.*default|default.*no (model )?list/i);
@@ -330,10 +341,7 @@ describe("agy-implement skill contract", () => {
 
     it("the integration gate distinguishes a mechanical conflict from a design-encoding one", async () => {
       for (const dir of skillDirs) {
-        const both = (await Promise.all([
-          readFile(path.resolve(dir, "SKILL.md"), "utf8"),
-          readFile(path.resolve(dir, "references/worktree-integration.md"), "utf8"),
-        ])).join("\n");
+        const both = await joinDocs(dir, "worktree-integration.md");
         assert.match(both, /mechanical conflict/i);
         assert.match(both, /design (decision|collision)|encodes a design/i);
         assert.match(both, /stop|halt|surface/i);
@@ -344,11 +352,7 @@ describe("agy-implement skill contract", () => {
 
     it("flags a stalled worker in status", async () => {
       for (const dir of skillDirs) {
-        const both = (await Promise.all([
-          readFile(path.resolve(dir, "SKILL.md"), "utf8"),
-          readFile(path.resolve(dir, "references/worktree-integration.md"), "utf8"),
-          readFile(path.resolve(dir, "references/agy-contract.md"), "utf8"),
-        ])).join("\n");
+        const both = await joinDocs(dir, "worktree-integration.md", "agy-contract.md");
         assert.match(both, /stall/i);
         assert.match(both, /no output|no progress|silent/i);
         assert.match(both, /status\b/i);
@@ -357,12 +361,7 @@ describe("agy-implement skill contract", () => {
   });
 
   describe("ticket 05 — failure, partial delivery, state and resume", () => {
-    async function stateDocs(dir) {
-      return (await Promise.all([
-        readFile(path.resolve(dir, "SKILL.md"), "utf8"),
-        readFile(path.resolve(dir, "references/status-and-resume.md"), "utf8"),
-      ])).join("\n");
-    }
+    const stateDocs = (dir) => joinDocs(dir, "status-and-resume.md");
 
     it("ships references/status-and-resume.md byte-identical and linked from SKILL.md", async () => {
       const [canonical, mirror] = await Promise.all(
@@ -421,13 +420,7 @@ describe("agy-implement skill contract", () => {
   });
 
   describe("ticket 06 — preflight, handoff, docs, ADR", () => {
-    async function allDocs(dir) {
-      return (await Promise.all([
-        readFile(path.resolve(dir, "SKILL.md"), "utf8"),
-        readFile(path.resolve(dir, "references/worktree-integration.md"), "utf8"),
-        readFile(path.resolve(dir, "references/status-and-resume.md"), "utf8"),
-      ])).join("\n");
-    }
+    const allDocs = (dir) => joinDocs(dir, "worktree-integration.md", "status-and-resume.md");
 
     it("preflight halts a dirty tree without stashing and sets up the integration branch", async () => {
       for (const dir of skillDirs) {
@@ -468,27 +461,26 @@ describe("agy-implement skill contract", () => {
     });
 
     it("SKILL.md points at the standalone ADR and every reference file", async () => {
-      const refs = [
-        "references/planning.md",
-        "references/agy-contract.md",
-        "references/prompt-scaffold.md",
-        "references/worktree-integration.md",
-        "references/qwen-agent-skill.md",
-        "references/status-and-resume.md",
-      ];
       for (const file of skillFiles) {
         const c = await readFile(file, "utf8");
         assert.match(c, /docs\/decisions\/0004-agy-implement-standalone\.md/);
-        for (const ref of refs) {
-          assert.match(c, new RegExp(ref.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+        for (const ref of SKILL_REFERENCES) {
+          assert.match(c, new RegExp(`references/${ref}`.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
         }
       }
     });
 
     it("the guide's Related files list matches the shipped reference set", async () => {
       const guide = await readFile(path.resolve("docs/skills/agents/agy-implement.md"), "utf8");
-      for (const ref of ["planning.md", "agy-contract.md", "prompt-scaffold.md", "worktree-integration.md", "status-and-resume.md", "qwen-agent-skill.md"]) {
+      for (const ref of SKILL_REFERENCES) {
         assert.match(guide, new RegExp(ref.replace(/\./g, "\\.")), `guide lists ${ref}`);
+      }
+    });
+
+    it("ships exactly the reference set SKILL.md and the guide name, nothing extra", async () => {
+      for (const dir of skillDirs) {
+        const entries = (await readdir(path.resolve(dir, "references"))).sort();
+        assert.deepEqual(entries, [...SKILL_REFERENCES].sort());
       }
     });
   });

@@ -40,9 +40,10 @@ Explicit invocation only:
 - Codex command: `$agy-implement <dir|slug>`
 
 `<dir|slug>` is a `.scratch/<feature-slug>/` directory, a bare `<feature-slug>`,
-or omitted. An explicit directory or slug wins. With no argument, the most
-recently modified `.scratch/*/issues/` directory is selected and named back to
-the user for confirmation before planning.
+or omitted. An explicit argument wins.
+With no argument, the most recently modified `.scratch/*/issues/` directory is
+used and named back to the user for confirmation. Full resolution rules are in
+[references/planning.md](references/planning.md) §1.
 
 Codex policy is declared in `agents/openai.yaml`
 (`allow_implicit_invocation: false`). Claude Code installations rely on
@@ -51,17 +52,14 @@ starting a run or a sub-command.
 
 ## Sub-commands
 
-See [references/status-and-resume.md](references/status-and-resume.md).
+Detailed in [references/status-and-resume.md](references/status-and-resume.md).
 
-- `/agy-implement continue [slug]` — resume an interrupted run. Reconcile
-  `status.md` against reality (git refs, worktrees, each committed ticket's
-  acceptance checks); when a committed ticket no longer verifies, rewind the
-  integration branch to the last still-good commit, discard the invalidated
-  worktrees, list the discarded commits at the top of the report, then
-  re-present the Plan and re-dispatch from the frontier.
-- `/agy-implement status [slug]` — report the wave table, each ticket's status,
-  blockers, and cumulative per-provider usage, read-only.
-- `/agy-implement list` — one line per run discovered under `.scratch/*/status.md`,
+- `/agy-implement continue [slug]` — resume an interrupted run: reconcile against
+  reality, rewind the integration branch if a committed ticket no longer
+  verifies, then re-present the Plan and re-dispatch from the frontier.
+- `/agy-implement status [slug]` — the wave table, per-ticket status, blockers,
+  and cumulative per-provider usage, read-only.
+- `/agy-implement list` — one line per run under `.scratch/*/status.md`,
   read-only.
 
 ## Feature-scoped storage
@@ -73,20 +71,18 @@ Every run artifact lives under the ticket directory's feature slug.
 ├── issues/            # input: tracer-bullet tickets (NN-<slug>.md), already published
 ├── spec.md            # input: the parent specification
 ├── status.md          # run state: wave table, per-ticket status, cumulative usage
-├── prompts/<NN>.md     # one self-contained worker prompt per ticket
-├── logs/<NN>.json      # one agy result envelope per worker run
-└── worktrees/<NN>/     # one git worktree + worker branch per ticket (gitignored)
+├── prompts/<NN>.md    # one self-contained worker prompt per ticket
+├── logs/<NN>.json     # one agy result envelope per worker run
+└── worktrees/<NN>/    # one git worktree + worker branch per ticket (gitignored)
 ```
 
 ## Stage 0 — Plan (read-only)
 
 Follow [references/planning.md](references/planning.md). In short:
 
-1. **Resolve the target** — an explicit dir or slug wins; with no argument, use
-   the most recently modified `.scratch/*/issues/` directory and name it back to
-   the user for confirmation before parsing.
-2. **Parse** every ticket in the `to-tickets` local format, and read the parent
-   `spec.md`, the feature `CONTEXT.md` / `adr/`, and the repo's own ADRs.
+1. **Resolve the target** and load every ticket, the parent `spec.md`, the
+   feature `CONTEXT.md` / `adr/`, and the repo's own ADRs.
+2. **Parse** every ticket in the `to-tickets` local format.
 3. **Build and validate the dependency DAG** — acyclic, every blocker resolvable,
    numbering consistent with a topological order. A cycle, a missing blocker, or
    inconsistent numbering **halts the run before any other work**, naming the
@@ -102,7 +98,8 @@ Follow [references/planning.md](references/planning.md). In short:
    the correctness guarantee.
 6. **Select a test seam per ticket** from the parent spec's Testing Decisions
    where they constrain it, otherwise the narrowest public boundary that
-   exercises the ticket's acceptance criteria.
+   exercises the ticket's acceptance criteria. A ticket no isolated test can
+   exercise returns to planning rather than shipping without a test.
 7. **Emit the Plan** — a wave table plus, per ticket: wave, estimated touch-set,
    serial/parallel proposal and reason, overlap flags, test seam, and retry
    budgets. The Plan has **no model column**. Pause for explicit approval, and
@@ -110,43 +107,26 @@ Follow [references/planning.md](references/planning.md). In short:
 
 ## Stage 1 — Execute (per wave, frontier order)
 
-Once the Plan is approved, work each wave in frontier order. The orchestrator
-dispatches every ticket to a worker and owns verification, skill routing, and
-merge-conflict resolution; it writes implementation code itself only to resolve a
-purely mechanical merge conflict. A ticket that no worker can finish within its
-retry budget becomes `BLOCKED` and waits for a human.
-
-### Preflight (once, before wave 0)
-
-Per [references/worktree-integration.md](references/worktree-integration.md): a
-target repository with uncommitted changes stops the run and asks — the run
-stashes nothing. Then create or switch to the integration branch
-`agy-implement/<feature-slug>` cut from `HEAD`, and add
-`.scratch/<feature-slug>/worktrees/` to `.gitignore`.
+Once the Plan is approved, run the preflight in
+[references/worktree-integration.md](references/worktree-integration.md), then
+work each wave in frontier order. The orchestrator dispatches every ticket to a
+worker; a ticket no worker can finish within its retry budget becomes `BLOCKED`
+and waits for a human.
 
 ### Dispatch one worker per ticket
 
-Follow [references/agy-contract.md](references/agy-contract.md) and
-[references/prompt-scaffold.md](references/prompt-scaffold.md). Cut the ticket's
-worktree and worker branch from integration `HEAD`, write the self-contained
-worker prompt to `.scratch/<slug>/prompts/<NN>.md`, and dispatch:
-
-```bash
-agy -p "$(cat .scratch/<slug>/prompts/<NN>.md)" --add-dir "<worktree>" \
-  --output-format json --print-timeout 45m --disable-slash-commands \
-  <permission mode> [--model <id>] > .scratch/<slug>/logs/<NN>.json 2>&1
-```
+Follow [references/agy-contract.md](references/agy-contract.md) for the exact
+`agy` invocation and [references/prompt-scaffold.md](references/prompt-scaffold.md)
+for the worker prompt. Cut the ticket's worktree and worker branch from
+integration `HEAD`, write the self-contained prompt to
+`.scratch/<slug>/prompts/<NN>.md`, and dispatch `agy` against that worktree.
 
 The worker builds the ticket test-first and commits on its own worker branch.
-Model is taken at dispatch time by round-robin over the run's model list — by
-**dispatch order, not ticket number** — or `agy`'s default with no list, and
-recorded in `status.md`. The worker prior art is captured verbatim in
-[references/qwen-agent-skill.md](references/qwen-agent-skill.md).
-
-A wave the user approved for parallel execution dispatches one background worker
-per ticket, capped at the concurrency cap (default 4) with the rest queued; the
-harness re-invokes the orchestrator as each finishes. A worker silent for a
-configurable interval is flagged **possibly stalled** in `status`.
+Model is assigned at dispatch time by round-robin over dispatch order (see
+`agy-contract.md`) and recorded in `status.md`. A wave approved for parallel
+execution dispatches one background worker per ticket, capped at the concurrency
+cap (default 4) with the rest queued; the harness re-invokes the orchestrator as
+each finishes.
 
 ### Verification gate (orchestrator, per ticket, in the ticket's worktree)
 
@@ -179,10 +159,10 @@ verification attempts.
 
 Follow [references/worktree-integration.md](references/worktree-integration.md):
 squash-merge each verified worker branch into the integration branch as one
-commit in ascending ticket-number order, ticking that ticket file's checkboxes
-and setting its `Status:`; resolve a mechanical merge conflict on the main
-thread and surface a design-encoding one; then run the full typecheck and test
-suite on the integrated result before advancing.
+commit in ascending ticket-number order (ticking that ticket's checkboxes and
+setting its `Status:`), resolve a mechanical conflict and surface a
+design-encoding one, then run the full typecheck and test suite on the
+integrated result before advancing.
 
 ## State, failure, and resume
 
@@ -195,14 +175,14 @@ per-provider usage — updated as each ticket transitions.
 A `BLOCKED` ticket halts only its own dependency branch: the in-flight workers
 finish, passing work is integrated, and the run stops at the next frontier with a
 report naming the blocked tickets, their reasons, the downstream tickets not
-started, and the `/agy-implement continue` command. `continue` reconciles against
-reality and rewinds before resuming.
+started, and the `/agy-implement continue` command.
 
 ## Stop — Handoff
 
 When every ticket is integrated and the last wave's suite is green, print a
-handoff and stop. Name the integration branch, confirm one commit per ticket,
-give the per-provider token usage, and hand over the review commands:
+handoff and stop — the integration branch name, one-commit-per-ticket
+confirmation, cumulative per-provider token usage, and the review commands to run
+next in a fresh context:
 
 ```text
 All <N> tickets integrated onto the integration branch
@@ -212,22 +192,23 @@ Per-provider token usage:
   <provider>   in <…>  out <…>  total <…>
   ...
 
-Review is a separate pass. In a fresh context:
-/code-review agy-implement/<feature-slug>
+Review is a separate pass. In a fresh context, from this branch:
+/code-review since <merge-base with main>
 /scrutinize
 ```
 
-This skill hands off here. Running `/code-review` or `/scrutinize`, `git push`,
-pull requests, and tracker updates stay the user's explicit decision — this run
-does none of them.
+This run stops here — it runs no review, no `git push`, and opens no pull
+request.
 
 ## Constraints
 
+- The orchestrator dispatches every ticket to a worker. It writes implementation
+  code itself only to resolve a purely mechanical merge conflict; a
+  design-encoding conflict is surfaced, not resolved.
+- Workers commit only on their own worker branch; the orchestrator commits only
+  on the integration branch. `git push`, pull requests, running `/code-review` or
+  `/scrutinize`, and tracker updates happen only when the user explicitly asks —
+  this run does none of them.
 - Keep `grill-to-tickets`, `engineering-workflow`, every `mattpocock/skills`-sourced
   file, and `skills-lock.json` exactly as they are — this skill is standalone by
   design (see `docs/decisions/0004-agy-implement-standalone.md`).
-- Workers commit only on their own worker branch; the orchestrator commits only on
-  the integration branch. Publishing — `git push`, pull requests, tracker
-  mutations — happens only when the user explicitly asks.
-- The orchestrator dispatches every ticket to a worker and writes implementation
-  code itself only to resolve a mechanical merge conflict.

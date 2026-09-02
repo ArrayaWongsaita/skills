@@ -64,10 +64,10 @@ Before trusting `status.md`, reconcile it against reality:
    re-run the tests green, typecheck).
 3. **Rewind on drift.** When a committed ticket no longer verifies — the user
    hand-edited the tree, or a later change broke it:
-   - reset the integration branch to the **last commit whose ticket still
-     verifies**
+   - reset the integration branch to the last still-good commit (the last commit
+     whose ticket still verifies)
    - discard the worktrees for the invalidated tickets
-   - list every **discarded commit** at the top of the report, so the blast
+   - list the **discarded commits** at the top of the report, so the blast
      radius is visible
    - re-dispatch from that point
 

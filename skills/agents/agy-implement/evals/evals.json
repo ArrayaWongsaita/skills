@@ -184,14 +184,14 @@
     },
     {
       "id": 15,
-      "name": "model assignment is round-robin over dispatch order, and absent with no list",
-      "prompt": "/agy-implement .scratch/roundrobin-demo/ — run A passes the model list [claude-sonnet-4-6, gemini-3.1-pro-medium]; run B passes no list. Both have a wave 0 of {01, 02, 03}.",
-      "expected_output": "Run A: the Plan shows no model column; as workers start, slot 1 gets claude-sonnet-4-6, slot 2 gets gemini-3.1-pro-medium, slot 3 gets claude-sonnet-4-6 — round-robin over dispatch order, recorded in status.md as each worker starts. Run B: every worker uses agy's default model and no --model flag is passed.",
+      "name": "model is assigned at dispatch, not planning — the Plan has no model column",
+      "prompt": "/agy-implement .scratch/nomodelcol-demo/ with a model list [claude-sonnet-4-6, gemini-3.1-pro-medium]. Present the Plan, then dispatch wave 0 = {01, 02}.",
+      "expected_output": "The Plan's per-ticket rows carry wave, touch-set, disposition, overlap flags, seam, and retry budgets — and no model column. Model is chosen only when a worker slot starts; the assignment appears in status.md as each worker is dispatched, not in the Plan.",
       "expectations": [
-        "Keeps the model column out of the Plan in both runs",
-        "Assigns list[dispatch_slot mod len] by dispatch order, not by ticket number, in run A",
-        "Passes no --model flag and uses agy's default for every worker in run B",
-        "Records each worker's assigned model in status.md as the worker starts"
+        "Emits a Plan with no model column",
+        "Does not name a model for any ticket during Stage 0",
+        "Records each worker's model in status.md at dispatch time, as the worker starts",
+        "The assigned model never influences the wave table or the serial/parallel disposition"
       ],
       "files": []
     },
@@ -251,11 +251,11 @@
       "id": 20,
       "name": "a wide-refactor expand-contract sequence runs as ordered serial steps",
       "prompt": "/agy-implement .scratch/widerefactor-demo/ — to-tickets sequenced this as: 01 expand (add the new column beside the old), 02-04 migrate call sites in batches (each blocked by 01), 05 contract (drop the old column, blocked by 02, 03, 04). Present the Plan and run it.",
-      "expected_output": "The Plan runs the sequence as ordered serial steps on the integration branch: 01, then 02/03/04, then 05, with green promised only at the final integrate-and-verify step. It gets no special parallel optimization — the batches are just ordinary serial tickets whose blockers enforce the order.",
+      "expected_output": "The Plan runs the sequence as ordered serial steps on the integration branch: wave 0 = {01 expand}, wave 1 = {02, 03, 04 migrate}, wave 2 = {05 contract}, from the Blocked by edges. The integration gate runs the full typecheck and test suite at every wave boundary, so the batch stays green step to step. It gets no wide-refactor-specific handling beyond honoring the order.",
       "expectations": [
-        "Sequences 01 -> {02,03,04} -> 05 from the Blocked by edges",
+        "Sequences 01 -> {02,03,04} -> 05 into successive waves from the Blocked by edges",
         "Runs the migrate batches as ordered serial steps, not a parallelized wave with special handling",
-        "Promises a green full suite only after the final contract step integrates",
+        "Runs the full suite after each wave, so green holds step to step rather than only at the end",
         "Applies no wide-refactor-specific optimization beyond honoring the order"
       ],
       "files": []
@@ -270,6 +270,45 @@
         "Reports cumulative per-provider token usage",
         "Hands over the /code-review and /scrutinize commands to run in a fresh context",
         "Runs no review, no git push, and opens no pull request"
+      ],
+      "files": []
+    },
+    {
+      "id": 22,
+      "name": "no model list uses agy's default; a list is round-robin over dispatch order",
+      "prompt": "/agy-implement .scratch/roundrobin-demo/ — run A passes the model list [claude-sonnet-4-6, gemini-3.1-pro-medium]; run B passes no list. Both dispatch a parallel wave 0 of {01, 02, 03}.",
+      "expected_output": "Run A: as slots start, slot 1 takes claude-sonnet-4-6, slot 2 takes gemini-3.1-pro-medium, slot 3 wraps to claude-sonnet-4-6 — list[dispatch_slot mod len] over dispatch order, not ticket number, so two simultaneous slots never hit the same provider. Run B: no --model flag is passed and every worker uses agy's own default model.",
+      "expectations": [
+        "Assigns list[dispatch_slot mod len] by dispatch order in run A",
+        "Never assigns by ticket number, so concurrent slots take distinct providers when the list has >= 2 entries",
+        "Passes no --model flag and uses agy's default for every worker in run B",
+        "Records each worker's assigned model in status.md as the worker starts"
+      ],
+      "files": []
+    },
+    {
+      "id": 23,
+      "name": "a ticket set naming a non-existent blocker is rejected up front",
+      "prompt": "/agy-implement .scratch/missingblocker-demo/ — ticket set: 01 (Blocked by: None), 02 (Blocked by: 01), 03 (Blocked by: 07). There is no ticket 07.",
+      "expected_output": "Ticket 03's Blocked by names 07, which matches no ticket number or title. The run halts with BLOCKED (TICKET_SET_MISSING_BLOCKER), naming ticket 03 and the dangling reference 07, before computing waves or touching any file.",
+      "expectations": [
+        "Detects that ticket 03's blocker 07 resolves to no ticket",
+        "Halts with BLOCKED (TICKET_SET_MISSING_BLOCKER) naming ticket 03 and the dangling reference",
+        "Halts before computing waves, estimating touch-sets, or writing anything",
+        "Does not dispatch a worker"
+      ],
+      "files": []
+    },
+    {
+      "id": 24,
+      "name": "a ticket no isolated test can exercise returns to planning, not implemented untested",
+      "prompt": "/agy-implement .scratch/untestable-demo/ — during Stage 0, ticket 02's acceptance criteria ('the marketing copy reads well on the pricing page') cannot be exercised by any isolated test at any seam.",
+      "expected_output": "Ticket 02 is a decomposition problem, not an exemption. The orchestrator surfaces it as untestable and returns it to Stage 0 planning for the user to re-cut or re-scope, rather than dispatching it without a test or letting a worker skip the red step (adr/0004).",
+      "expectations": [
+        "Identifies ticket 02 as having no test seam that measures its criteria",
+        "Returns ticket 02 to Stage 0 planning rather than dispatching it",
+        "Does not implement ticket 02 without a test or grant it a TDD exemption",
+        "Names the decomposition problem for the user to resolve"
       ],
       "files": []
     }

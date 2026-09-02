@@ -95,8 +95,10 @@ in parallel anyway — the integration gate, not this heuristic, is what guarant
 correctness.
 
 A ticket that `to-tickets` sequenced as a **wide-refactor expand–contract batch**
-runs as ordered serial steps on the integration branch, with green promised only
-at the final integrate-and-verify ticket. It gets no special parallel treatment.
+runs as ordered serial steps on the integration branch — `to-tickets` stratifies
+expand | migrate batches | contract into successive waves, and the integration
+gate runs the full suite at each wave boundary, so the batch stays green step to
+step. It gets no wide-refactor-specific handling beyond honoring the order.
 
 ## 6. Select a test seam per ticket
 

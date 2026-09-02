@@ -84,7 +84,8 @@ Two independent budgets:
   (rate-limit, timeout, crash). `Failover` re-runs the ticket on the next model
   in the run's list, or the same default model again when there is no list.
   Failover attempts are **not** counted against `MAX_TICKET_ATTEMPTS` — a
-  provider outage is not the ticket's fault.
+  provider outage is not the ticket's fault. Exhausting this budget yields
+  `BLOCKED (TICKET_PROVIDER_FAILED)`.
 
 ## Model assignment at dispatch time
 
