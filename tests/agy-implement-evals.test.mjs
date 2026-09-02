@@ -120,5 +120,14 @@ describe("agy-implement eval suite contract", () => {
       assert.ok(hay(/failover does not consume|Failover.*budget/i), "failover does not consume verification budget");
       assert.ok(hay(/new dependency|package install|lockfile/i), "worker package install -> replanned");
     });
+
+    it("covers the parallel-wave and integration branches (ticket 04)", async () => {
+      const { evals } = await evalsJson();
+      const hay = (re) => evals.some((e) => re.test(e.name) || re.test(e.expected_output));
+      assert.ok(hay(/parallel wave dispatches|concurrent workers/i), "parallel wave dispatched together");
+      assert.ok(hay(/round-robin over dispatch order|dispatch order/i), "model round-robin by dispatch order");
+      assert.ok(hay(/no list|agy's default/i), "no list -> agy default");
+      assert.ok(hay(/design-encoding merge conflict|encodes which module/i), "design-encoding conflict surfaces");
+    });
   });
 });

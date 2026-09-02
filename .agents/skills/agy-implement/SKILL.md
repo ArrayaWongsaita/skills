@@ -130,10 +130,15 @@ agy -p "$(cat .scratch/<slug>/prompts/<NN>.md)" --add-dir "<worktree>" \
 ```
 
 The worker builds the ticket test-first and commits on its own worker branch.
-Model is taken at dispatch time by round-robin over the run's model list (or
-`agy`'s default with no list) and recorded in `status.md`. The worker prior art
-is captured verbatim in
+Model is taken at dispatch time by round-robin over the run's model list — by
+**dispatch order, not ticket number** — or `agy`'s default with no list, and
+recorded in `status.md`. The worker prior art is captured verbatim in
 [references/qwen-agent-skill.md](references/qwen-agent-skill.md).
+
+A wave the user approved for parallel execution dispatches one background worker
+per ticket, capped at the concurrency cap (default 4) with the rest queued; the
+harness re-invokes the orchestrator as each finishes. A worker silent for a
+configurable interval is flagged **possibly stalled** in `status`.
 
 ### Verification gate (orchestrator, per ticket, in the ticket's worktree)
 

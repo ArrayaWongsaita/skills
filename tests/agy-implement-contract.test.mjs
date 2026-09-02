@@ -297,4 +297,62 @@ describe("agy-implement skill contract", () => {
       }
     });
   });
+
+  describe("ticket 04 — parallel waves and integration gate", () => {
+    it("worktree-integration.md gains a real parallel-wave section", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/worktree-integration.md"), "utf8");
+        const parallel = c.match(/##\s*Parallel-wave[\s\S]*$/i);
+        assert.ok(parallel, "Parallel-wave section present");
+        const p = parallel[0];
+        assert.doesNotMatch(p, /Added in ticket 04\.\s*$/i, "placeholder replaced with real content");
+        assert.match(p, /concurrency cap/i);
+        assert.match(p, /\b4\b/, "default concurrency cap of 4");
+        assert.match(p, /queue/i);
+        assert.match(p, /background/i);
+        assert.match(p, /re-?invoke|re-?enter|as each .*finish/i);
+      }
+    });
+
+    it("assigns models by dispatch order, not ticket number, and records them in status.md", async () => {
+      for (const dir of skillDirs) {
+        const both = (await Promise.all([
+          readFile(path.resolve(dir, "SKILL.md"), "utf8"),
+          readFile(path.resolve(dir, "references/agy-contract.md"), "utf8"),
+          readFile(path.resolve(dir, "references/worktree-integration.md"), "utf8"),
+        ])).join("\n");
+        assert.match(both, /dispatch order/i);
+        assert.match(both, /not ticket number|not when the ticket is numbered/i);
+        assert.match(both, /no (model )?list.*default|default.*no (model )?list/i);
+        assert.match(both, /status\.md/);
+      }
+    });
+
+    it("the integration gate distinguishes a mechanical conflict from a design-encoding one", async () => {
+      for (const dir of skillDirs) {
+        const both = (await Promise.all([
+          readFile(path.resolve(dir, "SKILL.md"), "utf8"),
+          readFile(path.resolve(dir, "references/worktree-integration.md"), "utf8"),
+        ])).join("\n");
+        assert.match(both, /mechanical conflict/i);
+        assert.match(both, /design (decision|collision)|encodes a design/i);
+        assert.match(both, /stop|halt|surface/i);
+        assert.match(both, /return.*Stage 0|Stage 0/i);
+        assert.match(both, /full (typecheck|suite|test suite)/i);
+      }
+    });
+
+    it("flags a stalled worker in status", async () => {
+      for (const dir of skillDirs) {
+        const both = (await Promise.all([
+          readFile(path.resolve(dir, "SKILL.md"), "utf8"),
+          readFile(path.resolve(dir, "references/worktree-integration.md"), "utf8"),
+          readFile(path.resolve(dir, "references/agy-contract.md"), "utf8"),
+        ])).join("\n");
+        assert.match(both, /stall/i);
+        assert.match(both, /no output|no progress|silent/i);
+        assert.match(both, /status\b/i);
+      }
+    });
+  });
 });

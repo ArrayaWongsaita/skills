@@ -66,4 +66,44 @@ typecheck. Any failure resumes the same worker with the specific detail
 
 ## Parallel-wave execution
 
-(Added in ticket 04.)
+When a wave has more than one ticket the user approved for parallel execution:
+
+1. **Create one worktree per ticket** in the wave, each on its own worker branch
+   cut from the current integration `HEAD`, each with dependencies symlinked from
+   the primary checkout.
+2. **Dispatch in the background.** Start each worker with the harness
+   `run_in_background` so its `agy` process runs detached and writes
+   `logs/<NN>.json`. Dispatch is capped by the **concurrency cap** (default 4,
+   editable in the Plan); tickets past the cap wait in a **queue** and start as
+   slots free up.
+3. **Assign the model at dispatch.** Each worker slot, in the order it actually
+   starts, takes the next model from the run's list by round-robin over
+   **dispatch order** — not ticket number, so two slots starting together land on
+   different providers as long as the list has at least two entries. With no
+   list, every worker uses `agy`'s default. Record each assignment in
+   `status.md`.
+4. **Re-enter on completion.** The harness re-invokes the orchestrator as each
+   background worker finishes. On each re-entry: parse that ticket's
+   `logs/<NN>.json`, run the verification gate in that ticket's worktree, and
+   start the next queued ticket. A worker that writes no output for a
+   configurable interval (default 10 minutes) is flagged **possibly stalled** in
+   `status`.
+5. **Integrate when the wave is complete.** Once every ticket in the wave has
+   passed verification, run the integration gate below.
+
+## Integration gate for a completed wave
+
+1. **Squash-merge** each verified worker branch into the integration branch as
+   one commit, in ascending ticket-number order (the serial rule above). A
+   branch cut before earlier same-wave merges replays cleanly with
+   `git merge --squash`; any conflict falls to step 2.
+2. **Conflict routing.** A **mechanical conflict** (import ordering, adjacent
+   edits, a moved block) the orchestrator resolves itself on the main thread. A
+   conflict that **encodes a design decision** — which module owns a shared
+   contract, which schema shape wins — halts the run and surfaces the decision;
+   the affected tickets return to Stage 0 planning rather than the orchestrator
+   choosing silently.
+3. **Full suite.** Run the full typecheck and test suite on the integrated
+   result. Green → `git worktree remove` every worktree in the wave and advance
+   to the next wave. Red → identify the culprit ticket and route it to a
+   verification retry (verification budget) or `BLOCKED`.

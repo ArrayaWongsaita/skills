@@ -168,6 +168,45 @@
         "Does not mark ticket 02 done or integrate it"
       ],
       "files": []
+    },
+    {
+      "id": 14,
+      "name": "an approved parallel wave dispatches concurrent workers into worktrees",
+      "prompt": "/agy-implement .scratch/wave-demo/ with an approved Plan. Wave 0 is {01, 02, 03, 04, 05}, all independent, all approved for parallel, with the default concurrency cap of 4.",
+      "expected_output": "The orchestrator creates one worktree and worker branch per ticket off integration HEAD, dispatches 01-04 as background agy workers, and queues 05. As each of 01-04 finishes it is verified in its worktree and 05 starts. When all five pass, the integration gate squash-merges them 01..05 and runs the full suite.",
+      "expectations": [
+        "Creates one worktree + worker branch per ticket cut from integration HEAD",
+        "Runs at most 4 workers at once and queues the fifth until a slot frees",
+        "Verifies each ticket in its own worktree as its background worker finishes",
+        "Squash-merges the wave 01..05 in ticket-number order and runs the full suite before advancing"
+      ],
+      "files": []
+    },
+    {
+      "id": 15,
+      "name": "model assignment is round-robin over dispatch order, and absent with no list",
+      "prompt": "/agy-implement .scratch/roundrobin-demo/ — run A passes the model list [claude-sonnet-4-6, gemini-3.1-pro-medium]; run B passes no list. Both have a wave 0 of {01, 02, 03}.",
+      "expected_output": "Run A: the Plan shows no model column; as workers start, slot 1 gets claude-sonnet-4-6, slot 2 gets gemini-3.1-pro-medium, slot 3 gets claude-sonnet-4-6 — round-robin over dispatch order, recorded in status.md as each worker starts. Run B: every worker uses agy's default model and no --model flag is passed.",
+      "expectations": [
+        "Keeps the model column out of the Plan in both runs",
+        "Assigns list[dispatch_slot mod len] by dispatch order, not by ticket number, in run A",
+        "Passes no --model flag and uses agy's default for every worker in run B",
+        "Records each worker's assigned model in status.md as the worker starts"
+      ],
+      "files": []
+    },
+    {
+      "id": 16,
+      "name": "a design-encoding merge conflict halts the run and surfaces the decision",
+      "prompt": "/agy-implement .scratch/conflict-demo/ with an approved Plan. Wave 1 integration: tickets 03 and 04 both defined the shared PaymentIntent type, in different modules with different field sets. git merge --squash of 04 conflicts on that type.",
+      "expected_output": "The conflict is not mechanical — it encodes which module owns the PaymentIntent contract and which field set wins. The orchestrator stops, surfaces the decision to the user, and returns tickets 03 and 04 to Stage 0 planning rather than picking a resolution itself.",
+      "expectations": [
+        "Classifies the conflict as design-encoding, not mechanical",
+        "Halts the run and surfaces the module-ownership / contract-shape decision to the user",
+        "Returns the affected tickets (03, 04) to Stage 0 rather than resolving silently",
+        "Writes no resolution of the contended type on the main thread"
+      ],
+      "files": []
     }
   ]
 }
