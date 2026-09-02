@@ -78,10 +78,33 @@ Every run artifact lives under the ticket directory's feature slug.
 
 ## Stage 0 — Plan (read-only)
 
-Parse the ticket set into a dependency DAG, compute execution waves, estimate
-each ticket's touch-set, select a test seam per ticket, and emit the **Plan**.
-Pause for explicit approval; mutate no file outside `.scratch/<feature-slug>/`
-before the user approves.
+Follow [references/planning.md](references/planning.md). In short:
+
+1. **Resolve the target** — an explicit dir or slug wins; with no argument, use
+   the most recently modified `.scratch/*/issues/` directory and name it back to
+   the user for confirmation before parsing.
+2. **Parse** every ticket in the `to-tickets` local format, and read the parent
+   `spec.md`, the feature `CONTEXT.md` / `adr/`, and the repo's own ADRs.
+3. **Build and validate the dependency DAG** — acyclic, every blocker resolvable,
+   numbering consistent with a topological order. A cycle, a missing blocker, or
+   inconsistent numbering **halts the run before any other work**, naming the
+   specific broken ticket.
+4. **Compute waves** — wave 0 is every ticket with no blockers; wave K is every
+   ticket whose blockers all landed in earlier waves. Within a wave, tickets with
+   no `Blocked by` edge between them are independent tickets.
+5. **Estimate each ticket's touch-set** as an advisory hint. Flag an independent
+   same-wave pair `likely-overlapping — consider serializing` when their
+   estimated touch-sets intersect or either touches a cross-cutting file (router,
+   DI container, root schema, migrations directory, `package.json`, lockfiles, CI
+   config, shared config). The user decides at approval; the integration gate is
+   the correctness guarantee.
+6. **Select a test seam per ticket** from the parent spec's Testing Decisions
+   where they constrain it, otherwise the narrowest public boundary that
+   exercises the ticket's acceptance criteria.
+7. **Emit the Plan** — a wave table plus, per ticket: wave, estimated touch-set,
+   serial/parallel proposal and reason, overlap flags, test seam, and retry
+   budgets. The Plan has **no model column**. Pause for explicit approval, and
+   mutate no file outside `.scratch/<feature-slug>/` until the user approves.
 
 ## Stage 1 — Execute (per wave, frontier order)
 

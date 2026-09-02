@@ -1,0 +1,82 @@
+{
+  "skill_name": "agy-implement",
+  "evals": [
+    {
+      "id": 1,
+      "name": "pure linear chain plans one ticket per wave, all serial",
+      "prompt": "/agy-implement .scratch/linear-demo/ — the ticket set is 01 (Blocked by: None), 02 (Blocked by: 01), 03 (Blocked by: 02), 04 (Blocked by: 03). The parent spec.md names a single eval-harness test seam for the whole feature. Present the Plan.",
+      "expected_output": "Wave 0 = {01}, wave 1 = {02}, wave 2 = {03}, wave 3 = {04}. Every ticket is serial (each has exactly one blocker in the previous wave). The Plan shows per ticket its wave, estimated touch-set, serial disposition with the reason (blocked by the prior ticket), no overlap flag, the eval-harness test seam, and the retry budgets. No model column. Stops for explicit approval without writing to any source file.",
+      "expectations": [
+        "Assigns waves 0..3 with exactly one ticket each, derived from the Blocked by edges",
+        "Marks every ticket serial because each depends on the previous ticket",
+        "Shows wave, touch-set, disposition+reason, overlap flags, test seam, and retry budgets per ticket, with no model column",
+        "Pauses for explicit approval and creates or modifies no file outside .scratch/linear-demo/"
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "one parallel wave for edge-free tickets with disjoint touch-sets",
+      "prompt": "/agy-implement .scratch/parallel-demo/ — ticket set: 01 (Blocked by: None), 02 (Blocked by: None), 03 (Blocked by: 01, 02). 01 is estimated to touch src/schema/ and 02 to touch src/auth/config.ts; the touch-sets are disjoint and neither is a cross-cutting file. Present the Plan.",
+      "expected_output": "Wave 0 = {01, 02} dispatched together as independent tickets with no overlap flag; wave 1 = {03}. The Plan proposes 01 and 02 in parallel because they have no Blocked by edge and disjoint estimated touch-sets. Stops for approval; no source mutated.",
+      "expectations": [
+        "Places 01 and 02 in wave 0 and 03 in wave 1",
+        "Proposes 01 and 02 to run in parallel with no likely-overlapping flag",
+        "Gives the parallel proposal a reason (no dependency edge, disjoint touch-sets)",
+        "Pauses for approval before any source file changes"
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "overlap hint flags a same-wave pair but still parallelizes on approval",
+      "prompt": "/agy-implement .scratch/overlap-demo/ — ticket set: 01 (Blocked by: None), 02 (Blocked by: None). Both are estimated to modify src/reports/list.ts. The user replies to the Plan with: run 01 and 02 in parallel anyway.",
+      "expected_output": "The Plan flags {01, 02} as 'likely-overlapping — consider serializing' because their estimated touch-sets intersect on src/reports/list.ts, with the default suggestion to serialize. When the user chooses parallel anyway, the run dispatches them concurrently and relies on the per-wave integration gate to catch any real collision.",
+      "expectations": [
+        "Raises the likely-overlapping — consider serializing flag on the 01/02 pair with the touch-set intersection as the reason",
+        "States serialize as the default suggestion but leaves the choice to the user at approval",
+        "Honors the user's 'parallel anyway' decision and dispatches 01 and 02 concurrently",
+        "Notes the integration gate, not the touch-set heuristic, is the correctness guarantee"
+      ],
+      "files": []
+    },
+    {
+      "id": 4,
+      "name": "cross-cutting file raises an overlap flag in the Plan",
+      "prompt": "/agy-implement .scratch/router-demo/ — ticket set: 01 (Blocked by: None) estimated to touch src/app/router.ts, 02 (Blocked by: None) estimated to touch src/profile/page.tsx. Present the Plan.",
+      "expected_output": "Even though the estimated touch-sets do not intersect, the Plan flags the 01/02 pair 'likely-overlapping — consider serializing' because 01 touches the router, a cross-cutting file. The user decides whether to serialize.",
+      "expectations": [
+        "Flags the pair because ticket 01 touches a cross-cutting file (the router)",
+        "Does not treat the cross-cutting flag as an automatic gate — the user decides at approval",
+        "Shows the flag and its reason in the Plan's per-ticket rows"
+      ],
+      "files": []
+    },
+    {
+      "id": 5,
+      "name": "malformed ticket set with a dependency cycle is rejected up front",
+      "prompt": "/agy-implement .scratch/cyclic-demo/ — ticket set: 01 (Blocked by: 03), 02 (Blocked by: 01), 03 (Blocked by: 02). Present the Plan.",
+      "expected_output": "The dependency graph has a cycle 01 -> 03 -> 02 -> 01. The run halts with BLOCKED (TICKET_SET_CYCLIC), naming the tickets in the cycle, before computing waves, estimating touch-sets, or writing anything.",
+      "expectations": [
+        "Detects the cycle and halts with a BLOCKED (TICKET_SET_CYCLIC) status",
+        "Names the specific tickets forming the cycle",
+        "Halts before any other planning work and before touching any file",
+        "Does not produce a wave table or dispatch a worker"
+      ],
+      "files": []
+    },
+    {
+      "id": 6,
+      "name": "no source mutation before Plan approval",
+      "prompt": "/agy-implement .scratch/readonly-demo/ — a valid three-ticket set. Produce the Plan, then stop. The user does not reply.",
+      "expected_output": "Stage 0 parses the tickets, builds the DAG, computes waves, estimates touch-sets, selects seams, and prints the Plan. It creates no worktree, no worker branch, no integration branch, and modifies no file outside .scratch/readonly-demo/. It waits for explicit approval.",
+      "expectations": [
+        "Completes planning and prints the Plan",
+        "Creates no git branch, worktree, or commit during Stage 0",
+        "Modifies no file outside .scratch/readonly-demo/",
+        "Waits for explicit user approval before Stage 1"
+      ],
+      "files": []
+    }
+  ]
+}

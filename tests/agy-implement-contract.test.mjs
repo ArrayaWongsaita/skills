@@ -113,4 +113,81 @@ describe("agy-implement skill contract", () => {
       assert.match(guide, /npx skills add ArrayaWongsaita\/skills --skill agy-implement/);
     });
   });
+
+  describe("ticket 02 — Stage 0 Plan (read-only)", () => {
+    it("keeps every reference file byte-identical across the skill copies", async () => {
+      const refs = ["references/planning.md"];
+      for (const ref of refs) {
+        const [canonical, mirror] = await Promise.all(
+          skillDirs.map((dir) => readFile(path.resolve(dir, ref), "utf8")),
+        );
+        assert.equal(canonical, mirror, `${ref} copies must match`);
+      }
+    });
+
+    it("SKILL.md drives references/planning.md from a Stage 0 section", async () => {
+      for (const file of skillFiles) {
+        const content = await readFile(file, "utf8");
+        assert.match(content, /##\s*Stage 0[^\n]*Plan/i);
+        assert.match(content, /references\/planning\.md/);
+      }
+    });
+
+    it("Stage 0 pauses for explicit approval and mutates nothing outside .scratch", async () => {
+      for (const body of await bothSkillBodies()) {
+        const stage0 = body.match(/##\s*Stage 0[\s\S]*?(?=\n## )/i);
+        assert.ok(stage0, "Stage 0 section present");
+        assert.match(stage0[0], /approv/i);
+        assert.match(stage0[0], /\.scratch\/<feature-slug>\//);
+        assert.match(stage0[0], /read-only|no source|without (writing|touching)/i);
+      }
+    });
+
+    it("planning.md specifies parsing, DAG validation, waves, touch-sets, and seam selection", async () => {
+      for (const dir of skillDirs) {
+        const planning = await readFile(path.resolve(dir, "references/planning.md"), "utf8");
+        assert.match(planning, /Blocked by/i, "names the ticket blocker field");
+        assert.match(planning, /acyclic|cycle/i);
+        assert.match(planning, /topological|numbering/i);
+        assert.match(planning, /wave/i);
+        assert.match(planning, /touch-set/i);
+        assert.match(planning, /likely-overlapping — consider serializing/);
+        assert.match(planning, /cross-cutting/i);
+        assert.match(planning, /router|lockfile|migrations|package\.json/i);
+        assert.match(planning, /test seam/i);
+        assert.match(planning, /Testing Decisions/);
+      }
+    });
+
+    it("the Plan lists wave, touch-set, disposition+reason, overlap flags, seam, retry budget — and no model column", async () => {
+      for (const dir of skillDirs) {
+        const planning = await readFile(path.resolve(dir, "references/planning.md"), "utf8");
+        const skill = await readFile(path.resolve(dir, "SKILL.md"), "utf8");
+        const both = `${planning}\n${skill}`;
+        assert.match(both, /wave/i);
+        assert.match(both, /touch-set/i);
+        assert.match(both, /serial|parallel/i);
+        assert.match(both, /overlap/i);
+        assert.match(both, /seam/i);
+        assert.match(both, /retry budget|retry budgets/i);
+        assert.match(planning, /no model column|model is not|without a model/i);
+      }
+    });
+
+    it("rejects a malformed ticket set naming the specific broken ticket, before other work", async () => {
+      for (const dir of skillDirs) {
+        const planning = await readFile(path.resolve(dir, "references/planning.md"), "utf8");
+        assert.match(planning, /cycle[\s\S]{0,200}(name|report|identif)/i);
+        assert.match(planning, /missing blocker|unresolvable|blocker.*(exist|resolve)/i);
+        assert.match(planning, /halt|stop/i);
+      }
+    });
+
+    it("resolves the target from an explicit dir, a slug, or the most recent issues dir", async () => {
+      for (const body of await bothSkillBodies()) {
+        assert.match(body, /most recent(ly modified)?\s+`?\.scratch\/\*\/issues\/`?/i);
+        assert.match(body, /nam(e|ed) (it )?back|confirm/i);
+      }
+    });
+  });
 });
