@@ -1,0 +1,316 @@
+{
+  "skill_name": "agy-implement",
+  "evals": [
+    {
+      "id": 1,
+      "name": "pure linear chain plans one ticket per wave, all serial",
+      "prompt": "/agy-implement .scratch/linear-demo/ — the ticket set is 01 (Blocked by: None), 02 (Blocked by: 01), 03 (Blocked by: 02), 04 (Blocked by: 03). The parent spec.md names a single eval-harness test seam for the whole feature. Present the Plan.",
+      "expected_output": "Wave 0 = {01}, wave 1 = {02}, wave 2 = {03}, wave 3 = {04}. Every ticket is serial (each has exactly one blocker in the previous wave). The Plan shows per ticket its wave, estimated touch-set, serial disposition with the reason (blocked by the prior ticket), no overlap flag, the eval-harness test seam, and the retry budgets. No model column. Stops for explicit approval without writing to any source file.",
+      "expectations": [
+        "Assigns waves 0..3 with exactly one ticket each, derived from the Blocked by edges",
+        "Marks every ticket serial because each depends on the previous ticket",
+        "Shows wave, touch-set, disposition+reason, overlap flags, test seam, and retry budgets per ticket, with no model column",
+        "Pauses for explicit approval and creates or modifies no file outside .scratch/linear-demo/"
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "one parallel wave for edge-free tickets with disjoint touch-sets",
+      "prompt": "/agy-implement .scratch/parallel-demo/ — ticket set: 01 (Blocked by: None), 02 (Blocked by: None), 03 (Blocked by: 01, 02). 01 is estimated to touch src/schema/ and 02 to touch src/auth/config.ts; the touch-sets are disjoint and neither is a cross-cutting file. Present the Plan.",
+      "expected_output": "Wave 0 = {01, 02} dispatched together as independent tickets with no overlap flag; wave 1 = {03}. The Plan proposes 01 and 02 in parallel because they have no Blocked by edge and disjoint estimated touch-sets. Stops for approval; no source mutated.",
+      "expectations": [
+        "Places 01 and 02 in wave 0 and 03 in wave 1",
+        "Proposes 01 and 02 to run in parallel with no likely-overlapping flag",
+        "Gives the parallel proposal a reason (no dependency edge, disjoint touch-sets)",
+        "Pauses for approval before any source file changes"
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "overlap hint flags a same-wave pair but still parallelizes on approval",
+      "prompt": "/agy-implement .scratch/overlap-demo/ — ticket set: 01 (Blocked by: None), 02 (Blocked by: None). Both are estimated to modify src/reports/list.ts. The user replies to the Plan with: run 01 and 02 in parallel anyway.",
+      "expected_output": "The Plan flags {01, 02} as 'likely-overlapping — consider serializing' because their estimated touch-sets intersect on src/reports/list.ts, with the default suggestion to serialize. When the user chooses parallel anyway, the run dispatches them concurrently and relies on the per-wave integration gate to catch any real collision.",
+      "expectations": [
+        "Raises the likely-overlapping — consider serializing flag on the 01/02 pair with the touch-set intersection as the reason",
+        "States serialize as the default suggestion but leaves the choice to the user at approval",
+        "Honors the user's 'parallel anyway' decision and dispatches 01 and 02 concurrently",
+        "Notes the integration gate, not the touch-set heuristic, is the correctness guarantee"
+      ],
+      "files": []
+    },
+    {
+      "id": 4,
+      "name": "cross-cutting file raises an overlap flag in the Plan",
+      "prompt": "/agy-implement .scratch/router-demo/ — ticket set: 01 (Blocked by: None) estimated to touch src/app/router.ts, 02 (Blocked by: None) estimated to touch src/profile/page.tsx. Present the Plan.",
+      "expected_output": "Even though the estimated touch-sets do not intersect, the Plan flags the 01/02 pair 'likely-overlapping — consider serializing' because 01 touches the router, a cross-cutting file. The user decides whether to serialize.",
+      "expectations": [
+        "Flags the pair because ticket 01 touches a cross-cutting file (the router)",
+        "Does not treat the cross-cutting flag as an automatic gate — the user decides at approval",
+        "Shows the flag and its reason in the Plan's per-ticket rows"
+      ],
+      "files": []
+    },
+    {
+      "id": 5,
+      "name": "malformed ticket set with a dependency cycle is rejected up front",
+      "prompt": "/agy-implement .scratch/cyclic-demo/ — ticket set: 01 (Blocked by: 03), 02 (Blocked by: 01), 03 (Blocked by: 02). Present the Plan.",
+      "expected_output": "The dependency graph has a cycle 01 -> 03 -> 02 -> 01. The run halts with BLOCKED (TICKET_SET_CYCLIC), naming the tickets in the cycle, before computing waves, estimating touch-sets, or writing anything.",
+      "expectations": [
+        "Detects the cycle and halts with a BLOCKED (TICKET_SET_CYCLIC) status",
+        "Names the specific tickets forming the cycle",
+        "Halts before any other planning work and before touching any file",
+        "Does not produce a wave table or dispatch a worker"
+      ],
+      "files": []
+    },
+    {
+      "id": 6,
+      "name": "no source mutation before Plan approval",
+      "prompt": "/agy-implement .scratch/readonly-demo/ — a valid three-ticket set. Produce the Plan, then stop. The user does not reply.",
+      "expected_output": "Stage 0 parses the tickets, builds the DAG, computes waves, estimates touch-sets, selects seams, and prints the Plan. It creates no worktree, no worker branch, no integration branch, and modifies no file outside .scratch/readonly-demo/. It waits for explicit approval.",
+      "expectations": [
+        "Completes planning and prints the Plan",
+        "Creates no git branch, worktree, or commit during Stage 0",
+        "Modifies no file outside .scratch/readonly-demo/",
+        "Waits for explicit user approval before Stage 1"
+      ],
+      "files": []
+    },
+    {
+      "id": 7,
+      "name": "the orchestrator never hand-codes a hard ticket, it goes BLOCKED",
+      "prompt": "/agy-implement .scratch/hard-ticket-demo/ with an approved Plan. Ticket 03's worker fails verification three times: the third return still leaves one acceptance criterion with no test. The orchestrator could write the missing behaviour and test itself in a few minutes.",
+      "expected_output": "After the third verification failure the ticket becomes BLOCKED (TICKET_VERIFICATION_FAILED). The orchestrator records the failure output and keeps the worktree. It does not write the implementation or the missing test itself — an un-buildable ticket is a visible planning signal, not a hidden fallback (adr/0002).",
+      "expectations": [
+        "Marks ticket 03 BLOCKED (TICKET_VERIFICATION_FAILED) after the third failed attempt",
+        "Writes no implementation code or test for ticket 03 on the main thread",
+        "Records the failure output in status.md and keeps the ticket's worktree",
+        "Halts ticket 03's dependency branch rather than rescuing it"
+      ],
+      "files": []
+    },
+    {
+      "id": 8,
+      "name": "verification failure retries the same worker three times then BLOCKED",
+      "prompt": "/agy-implement .scratch/retry-demo/ with an approved Plan. Ticket 02's worker returns; the orchestrator's verification finds the new test still fails green. Attempts 2 and 3, resumed with the specific failure, also fail verification.",
+      "expected_output": "Each failure resumes the same worker through agy --conversation <id> -p with the specific failure detail. After attempt 3 the ticket is BLOCKED (TICKET_VERIFICATION_FAILED) with the output in status.md and the worktree kept. Exactly three ticket attempts are consumed.",
+      "expectations": [
+        "Resumes the same worker by conversation id with the specific failure each time",
+        "Consumes exactly MAX_TICKET_ATTEMPTS = 3 before blocking",
+        "Ends at BLOCKED (TICKET_VERIFICATION_FAILED) with the failure output recorded and the worktree kept",
+        "Does not start a downstream ticket that depends on 02"
+      ],
+      "files": []
+    },
+    {
+      "id": 9,
+      "name": "vacuous-test return fails verification",
+      "prompt": "/agy-implement .scratch/vacuous-demo/ with an approved Plan. Ticket 01's worker returns green with the only new test being `expect(true).toBe(true)`.",
+      "expected_output": "The verification gate's coverage check rejects the return: the test is vacuous and maps to no real acceptance criterion. It counts as a verification failure and the worker is resumed with that specific reason.",
+      "expectations": [
+        "Flags the `expect(true).toBe(true)` test as vacuous or tautological",
+        "Treats it as a verification failure, not a pass",
+        "Resumes the same worker asking for a test that measures the acceptance criteria",
+        "Does not integrate ticket 01"
+      ],
+      "files": []
+    },
+    {
+      "id": 10,
+      "name": "fabricated red output fails the orchestrator's own red reproduction",
+      "prompt": "/agy-implement .scratch/fabricated-demo/ with an approved Plan. Ticket 01's worker pastes convincing red output, but when the orchestrator applies only the worker's test files to a scratch checkout at the pre-ticket HEAD and runs them, they pass.",
+      "expected_output": "The orchestrator reproduces red itself and the test passes without the implementation — the red step was not real. This is a verification failure regardless of the pasted output; the worker is resumed to write a test that actually fails first.",
+      "expectations": [
+        "Runs its own red reproduction with only the test files applied",
+        "Detects the test passing without the implementation and calls it a verification failure",
+        "Does not trust the worker's pasted red output as the check",
+        "Resumes the worker for a genuinely failing-first test"
+      ],
+      "files": []
+    },
+    {
+      "id": 11,
+      "name": "a criterion with no test fails verification",
+      "prompt": "/agy-implement .scratch/coverage-demo/ with an approved Plan. Ticket 02 has three acceptance criteria; the worker's return maps new tests to two of them and leaves the third uncovered.",
+      "expected_output": "The coverage check finds an acceptance criterion with no new test. That is a verification failure; the worker is resumed to add a test for the uncovered criterion.",
+      "expectations": [
+        "Maps every acceptance criterion to at least one new test and finds the gap",
+        "Treats the uncovered criterion as a verification failure",
+        "Resumes the same worker naming the specific uncovered criterion",
+        "Does not integrate ticket 02 while a criterion is uncovered"
+      ],
+      "files": []
+    },
+    {
+      "id": 12,
+      "name": "provider failover does not consume the verification budget",
+      "prompt": "/agy-implement .scratch/failover-demo/ with an approved Plan and a two-model list. Ticket 01's first worker times out; the second, on the next model, rate-limits; the third, back on the first model, returns a result that then fails verification once before passing.",
+      "expected_output": "The timeout and the rate-limit are Failover events under MAX_FAILOVER_ATTEMPTS = 3, advancing to the next model each time. Only the one verification failure counts against MAX_TICKET_ATTEMPTS = 3. The ticket still has two verification attempts left when it passes.",
+      "expectations": [
+        "Classifies the timeout and the rate-limit as Failover, not verification failures",
+        "Advances to the next model in the list on each Failover",
+        "Counts only the one real verification failure against MAX_TICKET_ATTEMPTS",
+        "Completes ticket 01 rather than blocking it on infrastructure flakiness"
+      ],
+      "files": []
+    },
+    {
+      "id": 13,
+      "name": "a worker that needs a new dependency stops and is replanned",
+      "prompt": "/agy-implement .scratch/dependency-demo/ with an approved Plan. Ticket 02's worker reports that the ticket needs a date library that is not installed, and stops without running a package install.",
+      "expected_output": "The worker stopped rather than mutating the shared lockfile. The orchestrator returns ticket 02 to Stage 0 planning as a new-dependency decision; the lockfile is untouched. Adding the dependency is a deliberate planning step, not a worker action.",
+      "expectations": [
+        "Recognizes the missing-dependency report as a planning decision, not a verification failure",
+        "Returns ticket 02 to Stage 0 rather than letting a worker install the package",
+        "Leaves package.json and the lockfile unchanged",
+        "Does not mark ticket 02 done or integrate it"
+      ],
+      "files": []
+    },
+    {
+      "id": 14,
+      "name": "an approved parallel wave dispatches concurrent workers into worktrees",
+      "prompt": "/agy-implement .scratch/wave-demo/ with an approved Plan. Wave 0 is {01, 02, 03, 04, 05}, all independent, all approved for parallel, with the default concurrency cap of 4.",
+      "expected_output": "The orchestrator creates one worktree and worker branch per ticket off integration HEAD, dispatches 01-04 as background agy workers, and queues 05. As each of 01-04 finishes it is verified in its worktree and 05 starts. When all five pass, the integration gate squash-merges them 01..05 and runs the full suite.",
+      "expectations": [
+        "Creates one worktree + worker branch per ticket cut from integration HEAD",
+        "Runs at most 4 workers at once and queues the fifth until a slot frees",
+        "Verifies each ticket in its own worktree as its background worker finishes",
+        "Squash-merges the wave 01..05 in ticket-number order and runs the full suite before advancing"
+      ],
+      "files": []
+    },
+    {
+      "id": 15,
+      "name": "model is assigned at dispatch, not planning — the Plan has no model column",
+      "prompt": "/agy-implement .scratch/nomodelcol-demo/ with a model list [claude-sonnet-4-6, gemini-3.1-pro-medium]. Present the Plan, then dispatch wave 0 = {01, 02}.",
+      "expected_output": "The Plan's per-ticket rows carry wave, touch-set, disposition, overlap flags, seam, and retry budgets — and no model column. Model is chosen only when a worker slot starts; the assignment appears in status.md as each worker is dispatched, not in the Plan.",
+      "expectations": [
+        "Emits a Plan with no model column",
+        "Does not name a model for any ticket during Stage 0",
+        "Records each worker's model in status.md at dispatch time, as the worker starts",
+        "The assigned model never influences the wave table or the serial/parallel disposition"
+      ],
+      "files": []
+    },
+    {
+      "id": 16,
+      "name": "a design-encoding merge conflict halts the run and surfaces the decision",
+      "prompt": "/agy-implement .scratch/conflict-demo/ with an approved Plan. Wave 1 integration: tickets 03 and 04 both defined the shared PaymentIntent type, in different modules with different field sets. git merge --squash of 04 conflicts on that type.",
+      "expected_output": "The conflict is not mechanical — it encodes which module owns the PaymentIntent contract and which field set wins. The orchestrator stops, surfaces the decision to the user, and returns tickets 03 and 04 to Stage 0 planning rather than picking a resolution itself.",
+      "expectations": [
+        "Classifies the conflict as design-encoding, not mechanical",
+        "Halts the run and surfaces the module-ownership / contract-shape decision to the user",
+        "Returns the affected tickets (03, 04) to Stage 0 rather than resolving silently",
+        "Writes no resolution of the contended type on the main thread"
+      ],
+      "files": []
+    },
+    {
+      "id": 17,
+      "name": "a blocked ticket halts only its branch; independent in-flight work still integrates",
+      "prompt": "/agy-implement .scratch/partial-demo/ with an approved Plan. Wave 1 runs {03, 04} in parallel: 03 is BLOCKED after three verification failures; 04 passes. Ticket 05 is blocked by 03; ticket 06 is blocked only by 04.",
+      "expected_output": "04's in-flight worker finishes and is verified and integrated. 05 is not started (it depends on the blocked 03). The run integrates 04, then stops at the next frontier and reports: 03 BLOCKED (TICKET_VERIFICATION_FAILED), 05 not started because it depends on 03, and 06 available as an independent partial path. The halt report ends with /agy-implement continue partial-demo.",
+      "expectations": [
+        "Lets 04's already-running worker finish and integrates 04",
+        "Does not start 05 because it is transitively blocked by 03",
+        "Reports the blocked ticket, its reason, the downstream tickets not started, and the independent path still open",
+        "Ends the report with the /agy-implement continue command"
+      ],
+      "files": []
+    },
+    {
+      "id": 18,
+      "name": "resume after a crash rewinds the integration branch to the last still-good commit",
+      "prompt": "/agy-implement continue crash-demo. status.md records tickets 01, 02, 03 integrated. Reality reconciliation re-runs each ticket's acceptance checks: 01 and 02 still verify, but 03's tests now fail because the user hand-edited a file 03 touched.",
+      "expected_output": "01 and 02 hold. 03 no longer verifies, so the run rewinds: it resets the integration branch to 02's commit (the last still-good one), discards the worktrees for 03 and anything downstream, lists the discarded commit(s) at the top of the report so the blast radius is visible, re-presents the Plan reconciled against reality, and re-dispatches from 03.",
+      "expectations": [
+        "Re-runs each integrated ticket's acceptance checks before trusting status.md",
+        "Resets the integration branch to the last commit whose ticket still verifies (02)",
+        "Discards the invalidated worktrees and lists the discarded commits at the top of the report",
+        "Re-presents the Plan and re-dispatches from ticket 03"
+      ],
+      "files": []
+    },
+    {
+      "id": 19,
+      "name": "a dirty target tree at preflight stops the run and asks, with no stash",
+      "prompt": "/agy-implement .scratch/dirty-demo/ with an approved Plan. Preflight finds the target repository has uncommitted changes on a source file.",
+      "expected_output": "Preflight halts before creating the integration branch or any worktree. It reports the uncommitted changes and asks the user to deal with them. It does not run git stash and does not mix its work with the user's existing changes.",
+      "expectations": [
+        "Halts at preflight because the working tree is dirty",
+        "Asks the user rather than proceeding",
+        "Runs no git stash and creates no integration branch or worktree",
+        "Leaves the user's uncommitted changes exactly as they were"
+      ],
+      "files": []
+    },
+    {
+      "id": 20,
+      "name": "a wide-refactor expand-contract sequence runs as ordered serial steps",
+      "prompt": "/agy-implement .scratch/widerefactor-demo/ — to-tickets sequenced this as: 01 expand (add the new column beside the old), 02-04 migrate call sites in batches (each blocked by 01), 05 contract (drop the old column, blocked by 02, 03, 04). Present the Plan and run it.",
+      "expected_output": "The Plan runs the sequence as ordered serial steps on the integration branch: wave 0 = {01 expand}, wave 1 = {02, 03, 04 migrate}, wave 2 = {05 contract}, from the Blocked by edges. The integration gate runs the full typecheck and test suite at every wave boundary, so the batch stays green step to step. It gets no wide-refactor-specific handling beyond honoring the order.",
+      "expectations": [
+        "Sequences 01 -> {02,03,04} -> 05 into successive waves from the Blocked by edges",
+        "Runs the migrate batches as ordered serial steps, not a parallelized wave with special handling",
+        "Runs the full suite after each wave, so green holds step to step rather than only at the end",
+        "Applies no wide-refactor-specific optimization beyond honoring the order"
+      ],
+      "files": []
+    },
+    {
+      "id": 21,
+      "name": "the completion handoff names the branch and the review commands and never pushes",
+      "prompt": "/agy-implement .scratch/handoff-demo/ — a four-ticket set, all waves green, integration complete.",
+      "expected_output": "The skill prints: the integration branch agy-implement/handoff-demo, a one-commit-per-ticket confirmation, the cumulative per-provider token usage, and the exact commands to run next in a fresh context — /code-review for the integration branch and /scrutinize. It does not run either command, does not git push, and does not open a pull request.",
+      "expectations": [
+        "Names the integration branch and confirms one commit per ticket in dependency order",
+        "Reports cumulative per-provider token usage",
+        "Hands over the /code-review and /scrutinize commands to run in a fresh context",
+        "Runs no review, no git push, and opens no pull request"
+      ],
+      "files": []
+    },
+    {
+      "id": 22,
+      "name": "no model list uses agy's default; a list is round-robin over dispatch order",
+      "prompt": "/agy-implement .scratch/roundrobin-demo/ — run A passes the model list [claude-sonnet-4-6, gemini-3.1-pro-medium]; run B passes no list. Both dispatch a parallel wave 0 of {01, 02, 03}.",
+      "expected_output": "Run A: as slots start, slot 1 takes claude-sonnet-4-6, slot 2 takes gemini-3.1-pro-medium, slot 3 wraps to claude-sonnet-4-6 — list[dispatch_slot mod len] over dispatch order, not ticket number, so two simultaneous slots never hit the same provider. Run B: no --model flag is passed and every worker uses agy's own default model.",
+      "expectations": [
+        "Assigns list[dispatch_slot mod len] by dispatch order in run A",
+        "Never assigns by ticket number, so concurrent slots take distinct providers when the list has >= 2 entries",
+        "Passes no --model flag and uses agy's default for every worker in run B",
+        "Records each worker's assigned model in status.md as the worker starts"
+      ],
+      "files": []
+    },
+    {
+      "id": 23,
+      "name": "a ticket set naming a non-existent blocker is rejected up front",
+      "prompt": "/agy-implement .scratch/missingblocker-demo/ — ticket set: 01 (Blocked by: None), 02 (Blocked by: 01), 03 (Blocked by: 07). There is no ticket 07.",
+      "expected_output": "Ticket 03's Blocked by names 07, which matches no ticket number or title. The run halts with BLOCKED (TICKET_SET_MISSING_BLOCKER), naming ticket 03 and the dangling reference 07, before computing waves or touching any file.",
+      "expectations": [
+        "Detects that ticket 03's blocker 07 resolves to no ticket",
+        "Halts with BLOCKED (TICKET_SET_MISSING_BLOCKER) naming ticket 03 and the dangling reference",
+        "Halts before computing waves, estimating touch-sets, or writing anything",
+        "Does not dispatch a worker"
+      ],
+      "files": []
+    },
+    {
+      "id": 24,
+      "name": "a ticket no isolated test can exercise returns to planning, not implemented untested",
+      "prompt": "/agy-implement .scratch/untestable-demo/ — during Stage 0, ticket 02's acceptance criteria ('the marketing copy reads well on the pricing page') cannot be exercised by any isolated test at any seam.",
+      "expected_output": "Ticket 02 is a decomposition problem, not an exemption. The orchestrator surfaces it as untestable and returns it to Stage 0 planning for the user to re-cut or re-scope, rather than dispatching it without a test or letting a worker skip the red step (adr/0004).",
+      "expectations": [
+        "Identifies ticket 02 as having no test seam that measures its criteria",
+        "Returns ticket 02 to Stage 0 planning rather than dispatching it",
+        "Does not implement ticket 02 without a test or grant it a TDD exemption",
+        "Names the decomposition problem for the user to resolve"
+      ],
+      "files": []
+    }
+  ]
+}
