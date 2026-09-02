@@ -1,0 +1,46 @@
+[
+  {
+    "query": "Delegate this large repo survey to agy agent so we don't burn Claude context.",
+    "should_trigger": true
+  },
+  {
+    "query": "Use agy with a Gemini Flash model to parse these massive 50MB log files and summarize error spikes.",
+    "should_trigger": true
+  },
+  {
+    "query": "Run agy with a Gemini Pro model to deeply analyze and fix this race condition in our payment worker.",
+    "should_trigger": true
+  },
+  {
+    "query": "Send this mechanical boilerplate generation task to an agy subagent.",
+    "should_trigger": true
+  },
+  {
+    "query": "Ask antigravity to run the test suite and report pass/fail status.",
+    "should_trigger": true
+  },
+  {
+    "query": "Use agy to get an independent second opinion on this auth security module.",
+    "should_trigger": true
+  },
+  {
+    "query": "Can you fix the syntax error on line 45 of this file right now?",
+    "should_trigger": false
+  },
+  {
+    "query": "I am unsure whether we should use PostgreSQL or MongoDB for our new service. What do you recommend?",
+    "should_trigger": false
+  },
+  {
+    "query": "This 40k-line build log is too big to read here — find the error spikes for me.",
+    "should_trigger": false
+  },
+  {
+    "query": "Turn these tracer-bullet tickets into working code via wave execution.",
+    "should_trigger": false
+  },
+  {
+    "query": "Explain how React Server Components work in simple terms.",
+    "should_trigger": false
+  }
+]

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Agy Agent"
+  short_description: "Delegate tasks to an Antigravity CLI subagent with 1M+ context"
+  default_prompt: "Use $agy-agent to delegate this task to an agy subagent: [task description]."
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,70 @@
+{
+  "skill_name": "agy-agent",
+  "evals": [
+    {
+      "id": 1,
+      "name": "codebase-survey-large-context",
+      "prompt": "We need to survey our entire mono-repo across all 20 packages to understand cross-boundary imports and schema dependencies. Delegate this task to agy with a model suited for massive context.",
+      "expected_output": "The agent scaffolds a prompt file, selects a Flash high-context tier (e.g. gemini-3.8-flash-high) for 1M+ context capacity, dispatches agy non-interactively with stdout and stderr redirected to separate files, and verifies the resulting architectural survey.",
+      "expectations": [
+        "Selects or recommends a Flash high-context tier (e.g. gemini-3.8-flash-high) for massive context exploration",
+        "Uses file-based prompt substitution via agy -p \"$(cat <file>)\"",
+        "Specifies --output-format json and --dangerously-skip-permissions, redirecting stdout and stderr to separate files",
+        "Includes absolute file paths and clear acceptance criteria"
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "deep-reasoning-bug-investigation",
+      "prompt": "There is a tricky intermittent race condition in the database transaction manager when multiple workers acquire locks simultaneously. Offload this deep diagnosis to an agy subagent with high reasoning power.",
+      "expected_output": "The agent selects the Pro high-reasoning tier (e.g. gemini-3.1-pro-high) without redundantly pairing it with --effort high, scaffolds a self-contained prompt pointing to transaction manager files and logs, and dispatches via agy.",
+      "expectations": [
+        "Selects the Pro / high reasoning tier (e.g. gemini-3.1-pro-high) for complex concurrency analysis",
+        "Does not pair a -high model slug with a redundant --effort high",
+        "Provides target source paths and relevant error logs in the prompt file",
+        "Checks the process exit code and inspects the JSON envelope status"
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "mechanical-boilerplate-generation",
+      "prompt": "Please generate TypeScript interfaces and Zod validation schemas for 15 data models in /Users/user/project/src/schemas. Use agy to get this done quickly without wasting heavy reasoning tokens.",
+      "expected_output": "The agent selects a fast Flash tier (e.g. gemini-3.8-flash-medium or gemini-3.8-flash-low), writes the task prompt to a file, and executes agy in headless mode.",
+      "expectations": [
+        "Selects a fast Flash tier (e.g. gemini-3.8-flash-medium, or -low for trivial passes) for low-latency mechanical execution",
+        "Defines strict boundaries to only add schemas without altering existing logic",
+        "Dispatches using the file-based I/O protocol",
+        "Verifies type compilation via npx tsc --noEmit upon completion"
+      ],
+      "files": []
+    },
+    {
+      "id": 4,
+      "name": "cross-provider-second-opinion",
+      "prompt": "I wrote a security-sensitive JWT rotation module in src/auth. I want an independent second opinion from a different frontier model via agy before merging.",
+      "expected_output": "The agent routes to a model family different from the host (e.g. gemini-3.1-pro-high when the host is Claude Code) via agy to provide a diverse cross-provider review, keeping the prompt read-only.",
+      "expectations": [
+        "Selects a model from a family different from the host for cross-family perspective",
+        "Specifies that source files must remain read-only",
+        "Requests a structured security audit report with severity ratings",
+        "Parses the JSON response and returns the critique to the host session"
+      ],
+      "files": []
+    },
+    {
+      "id": 5,
+      "name": "multi-turn-conversation-resume",
+      "prompt": "The agy subagent fixed the bug, but running the tests locally showed one missing edge-case assertion in tests/token.test.ts. Instruct the subagent to update the test using its existing session.",
+      "expected_output": "The agent writes the specific feedback to a followup prompt file and invokes agy --conversation <id> to resume the session.",
+      "expectations": [
+        "Reuses the previous conversation_id without starting from scratch",
+        "Writes targeted failure feedback into a followup prompt file",
+        "Executes agy --conversation <id> -p \"$(cat <file>)\"",
+        "Runs local verification to confirm the edge-case is resolved"
+      ],
+      "files": []
+    }
+  ]
+}
