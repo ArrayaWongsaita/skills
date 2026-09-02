@@ -233,6 +233,45 @@
         "Re-presents the Plan and re-dispatches from ticket 03"
       ],
       "files": []
+    },
+    {
+      "id": 19,
+      "name": "a dirty target tree at preflight stops the run and asks, with no stash",
+      "prompt": "/agy-implement .scratch/dirty-demo/ with an approved Plan. Preflight finds the target repository has uncommitted changes on a source file.",
+      "expected_output": "Preflight halts before creating the integration branch or any worktree. It reports the uncommitted changes and asks the user to deal with them. It does not run git stash and does not mix its work with the user's existing changes.",
+      "expectations": [
+        "Halts at preflight because the working tree is dirty",
+        "Asks the user rather than proceeding",
+        "Runs no git stash and creates no integration branch or worktree",
+        "Leaves the user's uncommitted changes exactly as they were"
+      ],
+      "files": []
+    },
+    {
+      "id": 20,
+      "name": "a wide-refactor expand-contract sequence runs as ordered serial steps",
+      "prompt": "/agy-implement .scratch/widerefactor-demo/ — to-tickets sequenced this as: 01 expand (add the new column beside the old), 02-04 migrate call sites in batches (each blocked by 01), 05 contract (drop the old column, blocked by 02, 03, 04). Present the Plan and run it.",
+      "expected_output": "The Plan runs the sequence as ordered serial steps on the integration branch: 01, then 02/03/04, then 05, with green promised only at the final integrate-and-verify step. It gets no special parallel optimization — the batches are just ordinary serial tickets whose blockers enforce the order.",
+      "expectations": [
+        "Sequences 01 -> {02,03,04} -> 05 from the Blocked by edges",
+        "Runs the migrate batches as ordered serial steps, not a parallelized wave with special handling",
+        "Promises a green full suite only after the final contract step integrates",
+        "Applies no wide-refactor-specific optimization beyond honoring the order"
+      ],
+      "files": []
+    },
+    {
+      "id": 21,
+      "name": "the completion handoff names the branch and the review commands and never pushes",
+      "prompt": "/agy-implement .scratch/handoff-demo/ — a four-ticket set, all waves green, integration complete.",
+      "expected_output": "The skill prints: the integration branch agy-implement/handoff-demo, a one-commit-per-ticket confirmation, the cumulative per-provider token usage, and the exact commands to run next in a fresh context — /code-review for the integration branch and /scrutinize. It does not run either command, does not git push, and does not open a pull request.",
+      "expectations": [
+        "Names the integration branch and confirms one commit per ticket in dependency order",
+        "Reports cumulative per-provider token usage",
+        "Hands over the /code-review and /scrutinize commands to run in a fresh context",
+        "Runs no review, no git push, and opens no pull request"
+      ],
+      "files": []
     }
   ]
 }

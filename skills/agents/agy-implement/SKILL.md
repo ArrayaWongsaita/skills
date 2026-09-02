@@ -110,13 +110,19 @@ Follow [references/planning.md](references/planning.md). In short:
 
 ## Stage 1 — Execute (per wave, frontier order)
 
-Once the Plan is approved, run the preflight in
-[references/worktree-integration.md](references/worktree-integration.md), then
-work each wave in frontier order. The orchestrator dispatches every ticket to a
-worker and owns verification, skill routing, and merge-conflict resolution; it
-writes implementation code itself only to resolve a purely mechanical merge
-conflict. A ticket that no worker can finish within its retry budget becomes
-`BLOCKED` and waits for a human.
+Once the Plan is approved, work each wave in frontier order. The orchestrator
+dispatches every ticket to a worker and owns verification, skill routing, and
+merge-conflict resolution; it writes implementation code itself only to resolve a
+purely mechanical merge conflict. A ticket that no worker can finish within its
+retry budget becomes `BLOCKED` and waits for a human.
+
+### Preflight (once, before wave 0)
+
+Per [references/worktree-integration.md](references/worktree-integration.md): a
+target repository with uncommitted changes stops the run and asks — the run
+stashes nothing. Then create or switch to the integration branch
+`agy-implement/<feature-slug>` cut from `HEAD`, and add
+`.scratch/<feature-slug>/worktrees/` to `.gitignore`.
 
 ### Dispatch one worker per ticket
 
@@ -194,10 +200,26 @@ reality and rewinds before resuming.
 
 ## Stop — Handoff
 
-When every ticket is done, print the integration branch name, one-commit-per-ticket
-confirmation, cumulative per-provider token usage, and the exact `/code-review`
-and `/scrutinize` commands to run next in a fresh context. This skill hands off
-here — review, `git push`, and pull requests stay the user's explicit decision.
+When every ticket is integrated and the last wave's suite is green, print a
+handoff and stop. Name the integration branch, confirm one commit per ticket,
+give the per-provider token usage, and hand over the review commands:
+
+```text
+All <N> tickets integrated onto the integration branch
+agy-implement/<feature-slug> — one commit per ticket, in dependency order.
+
+Per-provider token usage:
+  <provider>   in <…>  out <…>  total <…>
+  ...
+
+Review is a separate pass. In a fresh context:
+/code-review agy-implement/<feature-slug>
+/scrutinize
+```
+
+This skill hands off here. Running `/code-review` or `/scrutinize`, `git push`,
+pull requests, and tracker updates stay the user's explicit decision — this run
+does none of them.
 
 ## Constraints
 

@@ -10,22 +10,22 @@ gate green.
 
 **Blocked by:** 02, 03, 04, 05
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Preflight halts a run when the target repo has uncommitted changes (asks, never
+- [x] Preflight halts a run when the target repo has uncommitted changes (asks, never
       auto-stashes), creates or switches to the integration branch
       `agy-implement/<feature-slug>`, and adds `.scratch/<slug>/worktrees/` to
       `.gitignore`
-- [ ] On completion the skill prints the integration branch name, one-commit-per-ticket
+- [x] On completion the skill prints the integration branch name, one-commit-per-ticket
       confirmation, cumulative per-provider token usage, and the `/code-review` +
       `/scrutinize` commands to run in a fresh context; it never pushes or opens a PR
-- [ ] `docs/skills/agents/agy-implement.md` is a complete human guide per the repo's
+- [x] `docs/skills/agents/agy-implement.md` is a complete human guide per the repo's
       skill-guide template
-- [ ] `docs/decisions/0004-agy-implement-standalone.md` records that `agy-implement` is a
+- [x] `docs/decisions/0004-agy-implement-standalone.md` records that `agy-implement` is a
       standalone skill that does not modify or depend on `grill-to-tickets` or
       `engineering-workflow` and owns its own copy of the machinery, in the bilingual
       format of `docs/decisions/0003-*`
-- [ ] `evals/evals.json` contains all 20 behavioral cases from the spec's Testing
+- [x] `evals/evals.json` contains all 20 behavioral cases from the spec's Testing
       Decisions, runnable through `skill-creator`'s existing eval tooling with no change
       to that tooling
-- [ ] `npm run docs:index`, `npm run validate`, and `npm test` all pass
+- [x] `npm run docs:index`, `npm run validate`, and `npm test` all pass

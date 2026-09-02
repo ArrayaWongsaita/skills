@@ -419,4 +419,77 @@ describe("agy-implement skill contract", () => {
       }
     });
   });
+
+  describe("ticket 06 — preflight, handoff, docs, ADR", () => {
+    async function allDocs(dir) {
+      return (await Promise.all([
+        readFile(path.resolve(dir, "SKILL.md"), "utf8"),
+        readFile(path.resolve(dir, "references/worktree-integration.md"), "utf8"),
+        readFile(path.resolve(dir, "references/status-and-resume.md"), "utf8"),
+      ])).join("\n");
+    }
+
+    it("preflight halts a dirty tree without stashing and sets up the integration branch", async () => {
+      for (const dir of skillDirs) {
+        const d = await allDocs(dir);
+        assert.match(d, /preflight/i);
+        assert.match(d, /uncommitted changes|dirty tree/i);
+        assert.match(d, /stash/i, "names stashing explicitly (to rule it out)");
+        assert.match(d, /agy-implement\/<feature-slug>/, "integration branch name");
+        assert.match(d, /\.scratch\/<(feature-)?slug>\/worktrees\/[\s\S]{0,40}\.gitignore|\.gitignore[\s\S]{0,80}worktrees/i);
+      }
+    });
+
+    it("the completion handoff names the branch, per-provider usage, and the review commands, and never pushes", async () => {
+      for (const body of await bothSkillBodies()) {
+        const stop = body.match(/##\s*Stop[\s\S]*?(?=\n## |$)/i);
+        assert.ok(stop, "Stop/Handoff section present");
+        const s = stop[0];
+        assert.match(s, /integration branch/i);
+        assert.match(s, /one commit per ticket|one-commit-per-ticket/i);
+        assert.match(s, /per-provider/i);
+        assert.match(s, /\/code-review/);
+        assert.match(s, /\/scrutinize/);
+        assert.match(s, /push|pull request/i);
+      }
+    });
+
+    it("ships a bilingual ADR 0004 recording the standalone stance", async () => {
+      const adr = await readFile(path.resolve("docs/decisions/0004-agy-implement-standalone.md"), "utf8");
+      assert.match(adr, /^# ADR 0004:/m);
+      assert.match(adr, /Status \/ สถานะ/);
+      assert.match(adr, /## Context \/ บริบท/);
+      assert.match(adr, /## Decision \/ การตัดสินใจ/);
+      assert.match(adr, /## Consequences \/ ผลที่ตามมา/);
+      assert.match(adr, /grill-to-tickets/);
+      assert.match(adr, /engineering-workflow/);
+      assert.match(adr, /standalone/i);
+      assert.match(adr, /own(s)? (its )?(own )?(copy|machinery)/i);
+    });
+
+    it("SKILL.md points at the standalone ADR and every reference file", async () => {
+      const refs = [
+        "references/planning.md",
+        "references/agy-contract.md",
+        "references/prompt-scaffold.md",
+        "references/worktree-integration.md",
+        "references/qwen-agent-skill.md",
+        "references/status-and-resume.md",
+      ];
+      for (const file of skillFiles) {
+        const c = await readFile(file, "utf8");
+        assert.match(c, /docs\/decisions\/0004-agy-implement-standalone\.md/);
+        for (const ref of refs) {
+          assert.match(c, new RegExp(ref.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+        }
+      }
+    });
+
+    it("the guide's Related files list matches the shipped reference set", async () => {
+      const guide = await readFile(path.resolve("docs/skills/agents/agy-implement.md"), "utf8");
+      for (const ref of ["planning.md", "agy-contract.md", "prompt-scaffold.md", "worktree-integration.md", "status-and-resume.md", "qwen-agent-skill.md"]) {
+        assert.match(guide, new RegExp(ref.replace(/\./g, "\\.")), `guide lists ${ref}`);
+      }
+    });
+  });
 });

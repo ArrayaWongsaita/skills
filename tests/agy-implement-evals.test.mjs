@@ -137,5 +137,36 @@ describe("agy-implement eval suite contract", () => {
       assert.ok(hay(/rewinds the integration branch|last still-good commit/i), "resume rewinds to last still-good commit");
       assert.ok(hay(/discarded commit/i), "resume lists the discarded commits");
     });
+
+    it("contains all 20 spec Testing-Decisions branches (ticket 06)", async () => {
+      const { evals } = await evalsJson();
+      assert.ok(evals.length >= 20, `expected >= 20 eval cases, got ${evals.length}`);
+      const hay = (re) => evals.some((e) => re.test(e.name) || re.test(e.expected_output));
+      const branches = {
+        "pure linear chain": /linear chain/i,
+        "one parallel wave": /parallel wave/i,
+        "overlap hint": /overlap hint|likely-overlapping/i,
+        "cross-cutting file": /cross-cutting|router/i,
+        "model at dispatch not planning": /dispatch order|at dispatch/i,
+        "no source mutation before approval": /no source mutation|before Plan approval/i,
+        "orchestrator never implements": /never (hand-code|implement)/i,
+        "design-encoding merge conflict": /design-encoding merge conflict|encodes/i,
+        "verification failure x3 -> BLOCKED": /three times then BLOCKED|TICKET_VERIFICATION_FAILED/i,
+        "provider failover separate budget": /failover does not consume/i,
+        "vacuous-test rejection": /vacuous/i,
+        "fabricated / not-actually-red": /fabricated|red reproduction/i,
+        "missing test->criterion coverage": /criterion with no test|no test/i,
+        "blocked ticket halts only its branch": /halts only its branch/i,
+        "resume after crash rewind": /rewinds the integration branch|last still-good commit/i,
+        "dirty tree at preflight": /dirty target tree|dirty-demo|uncommitted changes/i,
+        "no list -> agy default; list -> round-robin": /round-robin over dispatch order|no list/i,
+        "wide-refactor serial steps": /wide-refactor|expand-contract/i,
+        "worker package install -> replanned": /new dependency|package install/i,
+        "completion handoff": /completion handoff|hand over the review commands|review commands and never pushes/i,
+      };
+      for (const [label, re] of Object.entries(branches)) {
+        assert.ok(hay(re), `no eval case covers: ${label}`);
+      }
+    });
   });
 });

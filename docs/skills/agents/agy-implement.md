@@ -62,7 +62,8 @@ sub-command: `continue` resume พร้อม Reality reconciliation, `status` 
 - `references/planning.md` — parse ticket, สร้าง/ตรวจ DAG, คำนวณ wave, touch-set hint, เลือก seam
 - `references/agy-contract.md` — flag ของ `agy`, result envelope, การจัดการ failure/timeout
 - `references/prompt-scaffold.md` — template prompt worker ต่อ ticket พร้อม red-green-refactor เต็ม
-- `references/worktree-integration.md` — วงจร worktree, ลำดับ merge, การ route conflict
+- `references/worktree-integration.md` — วงจร worktree, ลำดับ merge, การ route conflict, preflight
+- `references/status-and-resume.md` — halt report, `status.md`, Reality reconciliation, rewind
 - `references/qwen-agent-skill.md` — prior art ที่ worker dispatch จำลองมา (captured verbatim)
 - `evals/evals.json` — เคสพฤติกรรม หนึ่งเคสต่อ decision branch, รูปแบบ benchmark ของ `skill-creator`
 - `evals/trigger-evals.json` — กันไม่ให้ description อ่านเหมือน model-invocable
@@ -138,8 +139,10 @@ are read-only.
   and failure/timeout handling
 - `references/prompt-scaffold.md` — the per-ticket worker prompt template with the
   full red-green-refactor protocol inline
-- `references/worktree-integration.md` — worktree lifecycle, merge order, and
-  conflict routing for the serial and parallel paths
+- `references/worktree-integration.md` — preflight, worktree lifecycle, merge
+  order, and conflict routing for the serial and parallel paths
+- `references/status-and-resume.md` — the halt report, `status.md` fields,
+  Reality reconciliation, and the resume rewind
 - `references/qwen-agent-skill.md` — the cited prior art the worker dispatch is
   modeled on, captured verbatim
 - `evals/evals.json` — behavioral cases, one per decision branch, in
