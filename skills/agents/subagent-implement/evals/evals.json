@@ -1,0 +1,413 @@
+{
+  "skill_name": "subagent-implement",
+  "evals": [
+    {
+      "id": 1,
+      "name": "pure linear chain runs one ticket at a time in dependency order",
+      "prompt": "/subagent-implement .scratch/linear-demo/ — the ticket set is 01 (Blocked by: None), 02 (Blocked by: 01), 03 (Blocked by: 02), 04 (Blocked by: 03). The parent spec.md names a single eval-harness test seam for the whole feature. Present the Plan.",
+      "expected_output": "The dependency order is 01, 02, 03, 04. The Plan shows the ticket table in that order and, per ticket, its blockers, the eval-harness test seam, its matched agent, and the retry budget MAX_TICKET_ATTEMPTS = 3. There is no model column and no wave table. Stage 0 stops for explicit approval without writing to any source file.",
+      "expectations": [
+        "Derives the dependency order 01..04 from the Blocked by edges",
+        "Shows blockers, test seam, matched agent, and retry budget per ticket, with no model column",
+        "Produces no wave table and estimates no touch-sets",
+        "Pauses for explicit approval and creates or modifies no file outside .scratch/linear-demo/"
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "independent tickets still run serially in v1",
+      "prompt": "/subagent-implement .scratch/independent-demo/ — ticket set: 01 (Blocked by: None), 02 (Blocked by: None), 03 (Blocked by: 01, 02). Present the Plan.",
+      "expected_output": "01 and 02 have no edge between them but v1 still runs them one after another in ascending ticket-number order, then 03. The Plan does not propose parallel execution; it notes that exploiting the independence of 01 and 02 is a deferred follow-up.",
+      "expectations": [
+        "Orders the run 01, 02, 03 and runs one ticket at a time",
+        "Does not dispatch 01 and 02 concurrently",
+        "Names parallel execution of independent tickets as a deferred follow-up",
+        "Pauses for approval before any source file changes"
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "cyclic ticket set is rejected up front",
+      "prompt": "/subagent-implement .scratch/cyclic-demo/ — ticket set: 01 (Blocked by: 03), 02 (Blocked by: 01), 03 (Blocked by: 02). Present the Plan.",
+      "expected_output": "The dependency graph has a cycle 01 -> 03 -> 02 -> 01. The run halts with BLOCKED (TICKET_SET_CYCLIC), naming the tickets in the cycle, before computing the dependency order or writing anything.",
+      "expectations": [
+        "Detects the cycle and halts with BLOCKED (TICKET_SET_CYCLIC)",
+        "Names the specific tickets forming the cycle",
+        "Halts before any other planning work and before touching any file",
+        "Dispatches no worker"
+      ],
+      "files": []
+    },
+    {
+      "id": 4,
+      "name": "missing blocker is rejected up front",
+      "prompt": "/subagent-implement .scratch/missing-blocker-demo/ — ticket set: 01 (Blocked by: None), 02 (Blocked by: 07). Ticket 07 does not exist. Present the Plan.",
+      "expected_output": "Ticket 02 names a non-existent blocker 07. The run halts with BLOCKED (TICKET_SET_MISSING_BLOCKER), naming ticket 02 and the dangling reference 07, before any other work.",
+      "expectations": [
+        "Detects the unresolvable blocker and halts with BLOCKED (TICKET_SET_MISSING_BLOCKER)",
+        "Names ticket 02 and the dangling reference to 07",
+        "Halts before computing the dependency order or touching any file"
+      ],
+      "files": []
+    },
+    {
+      "id": 5,
+      "name": "numbering inconsistent with topological order is rejected",
+      "prompt": "/subagent-implement .scratch/numbering-demo/ — ticket set: 01 (Blocked by: 02), 02 (Blocked by: None). Present the Plan.",
+      "expected_output": "Ticket 01 is blocked by the higher-numbered ticket 02, so the numbering is not consistent with a topological order. The run halts with BLOCKED (TICKET_SET_NUMBERING) naming 01 and 02.",
+      "expectations": [
+        "Detects that a lower-numbered ticket is blocked by a higher-numbered one",
+        "Halts with BLOCKED (TICKET_SET_NUMBERING) naming both tickets",
+        "Halts before dispatching any worker"
+      ],
+      "files": []
+    },
+    {
+      "id": 6,
+      "name": "no source mutation before Plan approval",
+      "prompt": "/subagent-implement .scratch/readonly-demo/ — a valid three-ticket set. Produce the Plan, then stop. The user does not reply.",
+      "expected_output": "Stage 0 parses the tickets, builds and validates the DAG, computes the dependency order, selects seams, matches an agent per ticket, and prints the Plan. It creates no worker branch, no integration branch, and no worktree, and modifies no file outside .scratch/readonly-demo/. It waits for explicit approval.",
+      "expectations": [
+        "Completes planning and prints the Plan",
+        "Creates no git branch, worktree, or commit during Stage 0",
+        "Modifies no file outside .scratch/readonly-demo/",
+        "Waits for explicit user approval before Stage 1"
+      ],
+      "files": []
+    },
+    {
+      "id": 7,
+      "name": "implementation-shaped custom agent is matched by wording",
+      "prompt": "/subagent-implement .scratch/agent-match-demo/ with a valid ticket set. The environment lists subagent types including one named feature-dev described as 'builds features end to end, test-first'. Present the Plan.",
+      "expected_output": "The orchestrator matches feature-dev for every ticket because its name and description clearly cover building software. The Plan's matched-agent column shows feature-dev. No per-ticket reasoning about which ticket suits which agent.",
+      "expectations": [
+        "Selects the feature-dev subagent type by the name/description wording match",
+        "Applies the same matched agent to every ticket",
+        "Shows the matched agent in the Plan",
+        "Does not reason about which ticket suits which agent"
+      ],
+      "files": []
+    },
+    {
+      "id": 8,
+      "name": "no implementation-shaped agent falls back to general-purpose",
+      "prompt": "/subagent-implement .scratch/fallback-demo/ with a valid ticket set. The environment lists only general-purpose, Explore, and Plan subagent types. Present the Plan.",
+      "expected_output": "No available agent is implementation-shaped, so the orchestrator falls back to general-purpose for every worker. The Plan's matched-agent column shows general-purpose. The verifier is Explore.",
+      "expectations": [
+        "Falls back to general-purpose when no available agent is implementation-shaped",
+        "Uses general-purpose for every worker",
+        "Names Explore as the verifier agent"
+      ],
+      "files": []
+    },
+    {
+      "id": 9,
+      "name": "the --agent pin overrides the match for the whole run",
+      "prompt": "/subagent-implement --agent code-monkey .scratch/pin-demo/ with a valid ticket set. The environment also lists a feature-dev agent. Present the Plan.",
+      "expected_output": "The run-level --agent code-monkey pin names the worker subagent type for every ticket and skips the wording match, so feature-dev is not chosen. The Plan shows code-monkey as the matched agent for all tickets.",
+      "expectations": [
+        "Honors the --agent pin over the wording match",
+        "Applies code-monkey to every ticket",
+        "Shows the pinned agent in the Plan"
+      ],
+      "files": []
+    },
+    {
+      "id": 10,
+      "name": "default omits model so the worker inherits; --model is a raw pass-through",
+      "prompt": "/subagent-implement .scratch/model-demo/ with a valid ticket set, then a second run /subagent-implement --model fast-cheap .scratch/model-demo/.",
+      "expected_output": "With no --model the worker dispatch omits the model field and the worker inherits the orchestrator's model, keeping the skill portable across harnesses. With --model fast-cheap the value is passed to every worker verbatim, with no interpretation and no per-ticket model reasoning.",
+      "expectations": [
+        "Omits the model field on dispatch when no --model is set",
+        "Passes the --model value to every worker unchanged when it is set",
+        "Never reasons about which model suits which ticket",
+        "Keeps the Plan free of a model column in both runs"
+      ],
+      "files": []
+    },
+    {
+      "id": 11,
+      "name": "a worker is dispatched into an isolated worktree, never as a fork",
+      "prompt": "/subagent-implement .scratch/dispatch-demo/ with an approved Plan. Dispatch ticket 01's worker.",
+      "expected_output": "The orchestrator writes .scratch/dispatch-demo/prompts/01.md, then dispatches one subagent with isolation: worktree against the worker branch subagent-implement/dispatch-demo/01 cut from integration HEAD. The subagent type is the matched worker agent, not fork, because a fork would inherit the orchestrator's context and model.",
+      "expectations": [
+        "Writes the self-contained prompt to .scratch/dispatch-demo/prompts/01.md before dispatch",
+        "Dispatches with isolation: worktree on a worker branch cut from integration HEAD",
+        "Uses the matched worker agent and not fork",
+        "Passes the prompt by value"
+      ],
+      "files": []
+    },
+    {
+      "id": 12,
+      "name": "the orchestrator never hand-codes a hard ticket, it goes BLOCKED",
+      "prompt": "/subagent-implement .scratch/hard-ticket-demo/ with an approved Plan. Ticket 03's worker fails verification three times; the third return still leaves one acceptance criterion with no test. The orchestrator could write the missing behaviour and test itself in a few minutes.",
+      "expected_output": "After the third verification failure the ticket becomes BLOCKED (TICKET_VERIFICATION_FAILED). The orchestrator records the failure output and keeps the worktree. It writes no implementation or test itself — an un-buildable ticket is a visible planning signal, not a hidden fallback.",
+      "expectations": [
+        "Marks ticket 03 BLOCKED (TICKET_VERIFICATION_FAILED) after the third failed attempt",
+        "Writes no implementation code or test for ticket 03 on the main thread",
+        "Records the failure output in status.md and keeps the ticket's worktree",
+        "Halts ticket 03's dependency branch rather than rescuing it"
+      ],
+      "files": []
+    },
+    {
+      "id": 13,
+      "name": "verification failure resumes the same worker three times then BLOCKED",
+      "prompt": "/subagent-implement .scratch/retry-demo/ with an approved Plan. Ticket 02's worker returns; the orchestrator's judgment finds the new test still fails green. Attempts 2 and 3, resumed with the specific failure, also fail.",
+      "expected_output": "Each failure resumes the same worker with SendMessage carrying the specific failure detail. After attempt 3 the ticket is BLOCKED (TICKET_VERIFICATION_FAILED) with the output in status.md and the worktree kept. Exactly three ticket attempts are consumed.",
+      "expectations": [
+        "Resumes the same worker by its subagent id/name with the specific failure each time",
+        "Consumes exactly MAX_TICKET_ATTEMPTS = 3 before blocking",
+        "Ends at BLOCKED (TICKET_VERIFICATION_FAILED) with the failure output recorded and the worktree kept",
+        "Does not start a downstream ticket that depends on 02"
+      ],
+      "files": []
+    },
+    {
+      "id": 14,
+      "name": "a worker crash counts as one attempt and re-dispatches a fresh worker",
+      "prompt": "/subagent-implement .scratch/crash-demo/ with an approved Plan. Ticket 01's worker subagent times out and is lost before returning.",
+      "expected_output": "The crash counts as one of the three ticket attempts. The orchestrator re-dispatches a fresh worker against the same worker branch. There is no separate failover budget — with no external provider in the loop, an infrastructure failure and a bad result draw from the same MAX_TICKET_ATTEMPTS = 3.",
+      "expectations": [
+        "Treats the timeout/lost subagent as one consumed attempt",
+        "Re-dispatches a fresh worker on the same worker branch",
+        "Uses no separate failover budget",
+        "Blocks the ticket if the three attempts are exhausted"
+      ],
+      "files": []
+    },
+    {
+      "id": 15,
+      "name": "vacuous-test return fails the orchestrator's judgment",
+      "prompt": "/subagent-implement .scratch/vacuous-demo/ with an approved Plan. Ticket 01's worker returns green with the only new test being expect(true).toBe(true).",
+      "expected_output": "The orchestrator's judgment rejects the return: the test is vacuous and maps to no real acceptance criterion. It counts as a verification failure and the worker is resumed with that specific reason. Ticket 01 is not integrated.",
+      "expectations": [
+        "Flags the expect(true).toBe(true) test as vacuous or tautological",
+        "Treats it as a verification failure, not a pass",
+        "Resumes the same worker asking for a test that measures the acceptance criteria",
+        "Does not squash-merge ticket 01"
+      ],
+      "files": []
+    },
+    {
+      "id": 16,
+      "name": "a fabricated red state fails when the verifier reproduces it",
+      "prompt": "/subagent-implement .scratch/fabricated-demo/ with an approved Plan. Ticket 02's worker pastes a convincing red output, but the verifier applies only the test files at the pre-ticket HEAD and the tests pass without the implementation.",
+      "expected_output": "The verifier's red reproduction shows the new tests pass at the pre-ticket HEAD, so the test-first guarantee fails regardless of the worker's pasted output. The orchestrator counts a verification failure and resumes the worker to write a test that is genuinely red first.",
+      "expectations": [
+        "Relies on the verifier's own red reproduction, not the worker's pasted output",
+        "Treats a test that passes without the implementation as a verification failure",
+        "Resumes the worker with the specific reason",
+        "Does not integrate ticket 02"
+      ],
+      "files": []
+    },
+    {
+      "id": 17,
+      "name": "missing test-to-criterion coverage fails the judgment",
+      "prompt": "/subagent-implement .scratch/coverage-demo/ with an approved Plan. Ticket 01 has three acceptance criteria; the worker returns green with tests covering only two of them.",
+      "expected_output": "The orchestrator's coverage check finds one acceptance criterion with no new test. It counts a verification failure and resumes the worker to add a test for the uncovered criterion. Ticket 01 is not integrated until every criterion maps to at least one new test.",
+      "expectations": [
+        "Maps each acceptance criterion to a new test and finds the gap",
+        "Treats the uncovered criterion as a verification failure",
+        "Resumes the same worker for the missing test",
+        "Withholds integration until coverage is complete"
+      ],
+      "files": []
+    },
+    {
+      "id": 18,
+      "name": "the verifier is a fresh Explore subagent, separate from the worker",
+      "prompt": "/subagent-implement .scratch/verifier-demo/ with an approved Plan. Ticket 01's worker returns its report.",
+      "expected_output": "The orchestrator dispatches a fresh Explore subagent as the verifier, told the pre-ticket HEAD, the worker branch, and the changed test files. The verifier reproduces red, runs green, runs the typecheck and the full suite, and returns raw evidence with no verdict. The orchestrator makes the pass/retry/BLOCKED decision from that evidence; it does not read the implementation files itself.",
+      "expectations": [
+        "Dispatches a separate Explore subagent per ticket for verification",
+        "Passes it the pre-ticket HEAD, the worker branch, and the changed test files",
+        "Has the verifier return raw evidence and render no verdict",
+        "Keeps the pass/retry/BLOCKED decision with the orchestrator"
+      ],
+      "files": []
+    },
+    {
+      "id": 19,
+      "name": "a verifier error falls back to the orchestrator running the tests once",
+      "prompt": "/subagent-implement .scratch/verifier-error-demo/ with an approved Plan. Ticket 02's verifier subagent errors out without returning evidence.",
+      "expected_output": "With no verifier evidence, the orchestrator runs the ticket's new tests once directly as a fallback check — the one place implementation-adjacent work re-enters the orchestrator's context, and only on failure. It then judges from that output.",
+      "expectations": [
+        "Detects the verifier error and does not treat the ticket as verified",
+        "Runs the ticket's new tests once directly as a fallback",
+        "Notes this is the exception to the context discipline",
+        "Judges the ticket from the fallback output"
+      ],
+      "files": []
+    },
+    {
+      "id": 20,
+      "name": "a verified ticket is squash-merged as one commit in dependency order",
+      "prompt": "/subagent-implement .scratch/merge-demo/ with an approved Plan. Ticket 01 passes the orchestrator's judgment.",
+      "expected_output": "The orchestrator squash-merges subagent-implement/merge-demo/01 onto the integration branch as exactly one commit named for the ticket, in ascending ticket-number order. The same commit ticks ticket 01's acceptance checkboxes and sets its Status to done. The worker's own commit count on its branch does not matter.",
+      "expectations": [
+        "Squash-merges the worker branch as exactly one commit",
+        "Names the commit for the ticket and merges in ascending ticket-number order",
+        "Ticks the ticket's acceptance checkboxes and sets its Status in the same commit",
+        "Treats one commit per ticket as an integration property, not a worker rule"
+      ],
+      "files": []
+    },
+    {
+      "id": 21,
+      "name": "a design-encoding merge conflict is surfaced, not resolved",
+      "prompt": "/subagent-implement .scratch/design-conflict-demo/ with an approved Plan. Integrating ticket 04 conflicts with ticket 03 over which module owns a shared validation contract.",
+      "expected_output": "The conflict encodes a design decision — which module owns the shared contract — so the orchestrator halts and surfaces that decision to the user rather than choosing silently. The affected ticket returns to Stage 0 planning.",
+      "expectations": [
+        "Recognises the conflict as design-encoding rather than mechanical",
+        "Halts and surfaces the decision to the user",
+        "Does not pick a resolution itself",
+        "Returns the affected ticket to Stage 0"
+      ],
+      "files": []
+    },
+    {
+      "id": 22,
+      "name": "a mechanical merge conflict is resolved by the orchestrator",
+      "prompt": "/subagent-implement .scratch/mechanical-conflict-demo/ with an approved Plan. Integrating ticket 02 conflicts with ticket 01 only over import ordering in one file.",
+      "expected_output": "The conflict is mechanical — import ordering, adjacent edits — so the orchestrator resolves it itself on the main thread and completes the squash-merge. No worker touches the conflict.",
+      "expectations": [
+        "Recognises the conflict as mechanical",
+        "Resolves it on the main thread and completes the merge",
+        "Does not dispatch a worker to resolve it",
+        "Does not surface it as a design decision"
+      ],
+      "files": []
+    },
+    {
+      "id": 23,
+      "name": "v1 serial has no separate integration gate",
+      "prompt": "/subagent-implement .scratch/no-gate-demo/ with an approved Plan. Ask how the post-merge state is checked.",
+      "expected_output": "Because the run is serial and each worker branch is cut from an integration HEAD that already carries every earlier ticket with nothing merged in between, the worker branch working tree equals the post-squash-merge working tree. The verifier's full-suite run on the worker branch already covers the post-merge state, so v1 runs no separate integration gate. The deferred parallel follow-up reintroduces one.",
+      "expectations": [
+        "States that the verifier's full-suite run covers the post-merge state in serial mode",
+        "Runs no separate full typecheck and suite after each squash-merge in v1",
+        "Names the per-wave integration gate as part of the deferred parallel follow-up"
+      ],
+      "files": []
+    },
+    {
+      "id": 24,
+      "name": "the worker worktree is removed after the commit lands",
+      "prompt": "/subagent-implement .scratch/cleanup-demo/ with an approved Plan. Ticket 01's commit has just landed on the integration branch.",
+      "expected_output": "The orchestrator removes ticket 01's worktree with git worktree remove and advances to the next frontier ticket. It removes the worktree explicitly because a harness that auto-cleans only unchanged worktrees keeps this one — the worker committed to it.",
+      "expectations": [
+        "Removes the worker worktree after the squash-merge commit lands",
+        "Removes it explicitly rather than relying on auto-clean",
+        "Advances to the next frontier ticket"
+      ],
+      "files": []
+    },
+    {
+      "id": 25,
+      "name": "a BLOCKED ticket halts only its dependency branch",
+      "prompt": "/subagent-implement .scratch/partial-demo/ with an approved Plan. Ticket set: 01 (None), 02 (None), 03 (Blocked by: 01), 04 (Blocked by: 02). Ticket 01 becomes BLOCKED after three failed attempts.",
+      "expected_output": "Ticket 01 is BLOCKED, so ticket 03 (which depends on it) is not started. Ticket 02 and ticket 04 have no dependency on 01, so they are reported as an available partial path. Everything already verified stays integrated. The halt report names the blocked ticket, its reason, the downstream tickets not started, and /subagent-implement continue.",
+      "expectations": [
+        "Holds ticket 03 because it transitively depends on the blocked ticket 01",
+        "Reports tickets 02 and 04 as an available partial path",
+        "Keeps already-verified work integrated",
+        "Prints a halt report with the blocked ticket, downstream fallout, and the continue command"
+      ],
+      "files": []
+    },
+    {
+      "id": 26,
+      "name": "resume rewinds the integration branch to the last still-good commit",
+      "prompt": "/subagent-implement continue crash-recovery — status.md records tickets 01, 02, 03 as integrated, but the user hand-edited a file and ticket 02's tests no longer pass.",
+      "expected_output": "Reality reconciliation dispatches a fresh verifier per integrated ticket. Ticket 02 no longer verifies, so the orchestrator resets the integration branch to the commit for ticket 01 (the last still-good commit), discards the worktrees for the invalidated tickets 02 and 03, lists the discarded commits at the top of the report, and re-dispatches from ticket 02. Then it re-presents the Plan.",
+      "expectations": [
+        "Re-verifies each integrated ticket with a fresh verifier before trusting status.md",
+        "Resets the integration branch to the last commit whose ticket still verifies",
+        "Discards the worktrees for the invalidated tickets and lists the discarded commits",
+        "Re-presents the Plan and resumes from the frontier"
+      ],
+      "files": []
+    },
+    {
+      "id": 27,
+      "name": "a dirty target tree at preflight stops and asks, no stash",
+      "prompt": "/subagent-implement .scratch/dirty-demo/ with an approved Plan. The target repository has uncommitted changes when execution begins.",
+      "expected_output": "The preflight finds uncommitted changes and stops to ask the user what to do. It stashes nothing and mixes the run with no existing work. Execution begins only once the tree is clean and the integration branch subagent-implement/dirty-demo is set up.",
+      "expectations": [
+        "Detects the dirty tree at preflight and halts",
+        "Asks the user rather than stashing",
+        "Starts no worker until the tree is clean",
+        "Creates or switches to the integration branch once clean"
+      ],
+      "files": []
+    },
+    {
+      "id": 28,
+      "name": "a worker that needs a new dependency stops and is replanned",
+      "prompt": "/subagent-implement .scratch/dependency-demo/ with an approved Plan. Ticket 02's worker determines it needs a new third-party package.",
+      "expected_output": "The worker stops and reports the needed dependency rather than running a package install, so the shared lockfile is never mutated by a worker. The orchestrator treats the new dependency as a Stage 0 planning decision and returns the ticket to planning.",
+      "expectations": [
+        "The worker reports the needed dependency instead of installing it",
+        "The shared lockfile stays untouched",
+        "The orchestrator returns the ticket to Stage 0 planning",
+        "No downstream ticket that depends on 02 starts"
+      ],
+      "files": []
+    },
+    {
+      "id": 29,
+      "name": "an untestable ticket returns to planning rather than shipping without a test",
+      "prompt": "/subagent-implement .scratch/untestable-demo/ — ticket 03's acceptance criteria cannot be exercised by an isolated test at any seam. Present the Plan.",
+      "expected_output": "Ticket 03 is a decomposition problem: no isolated test can exercise its acceptance criteria. The orchestrator returns it to planning rather than dispatching it to be implemented without a test.",
+      "expectations": [
+        "Identifies that no seam yields an isolated test for ticket 03",
+        "Returns ticket 03 to planning",
+        "Does not dispatch ticket 03 for implementation without a test"
+      ],
+      "files": []
+    },
+    {
+      "id": 30,
+      "name": "the completion handoff names the branch and review commands and never pushes",
+      "prompt": "/subagent-implement .scratch/handoff-demo/ with an approved Plan. Every ticket integrates and the last verifier's suite is green.",
+      "expected_output": "The handoff names the integration branch subagent-implement/handoff-demo, confirms one commit per ticket in dependency order, notes the orchestrator's context never held the implementation, and gives the exact next commands — /code-review since the merge-base with main, then /scrutinize — to run in a fresh context. It runs no review, no git push, and opens no pull request.",
+      "expectations": [
+        "Names the integration branch and confirms one commit per ticket",
+        "Hands over the /code-review and /scrutinize commands for a fresh context",
+        "Runs neither review itself",
+        "Does not push or open a pull request"
+      ],
+      "files": []
+    },
+    {
+      "id": 31,
+      "name": "status and list are read-only",
+      "prompt": "/subagent-implement status handoff-demo, then /subagent-implement list.",
+      "expected_output": "status parses .scratch/handoff-demo/status.md and reports the ticket table, each ticket's status and blockers, and any long-silent worker, mutating nothing. list reports one line per discovered run across every .scratch/*/status.md, mutating nothing.",
+      "expectations": [
+        "status reports the ticket table and per-ticket status without mutating anything",
+        "list reports one line per run without mutating anything",
+        "Neither sub-command dispatches a worker"
+      ],
+      "files": []
+    },
+    {
+      "id": 32,
+      "name": "the orchestrator keeps its own steps text-only",
+      "prompt": "/subagent-implement .scratch/context-demo/ with an approved Plan. Walk through what the orchestrator itself does for ticket 01 versus what it delegates.",
+      "expected_output": "The orchestrator itself only parses tickets, builds the DAG, writes the worker prompt, reads the worker report and the verifier report, judges, squash-merges, resolves a mechanical conflict, and writes status.md — all text-only. Reading ticket implementation files, running tests, and running the suite happen inside the worker and the verifier subagents. The single exception is the fallback test run when a verifier errors.",
+      "expectations": [
+        "Lists the orchestrator's own steps as text-only planning, judgment, and integration",
+        "Delegates implementation reading, test runs, and the suite to subagents",
+        "Names the verifier-error fallback as the one exception",
+        "Frames this division as the reason the skill exists"
+      ],
+      "files": []
+    }
+  ]
+}

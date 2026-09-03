@@ -1,0 +1,144 @@
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
+import { readFile, access } from "node:fs/promises";
+import { constants } from "node:fs";
+import path from "node:path";
+
+// The eval files are behavioral documentation in skill-creator's benchmark
+// format, not a CI gate — nothing here runs the prompts. This contract covers
+// what scripts/validate-skills.mjs cannot: the .agents/ mirror, one case per
+// decision branch, and drift between the skill prose and the eval claims.
+
+async function fileExists(filePath) {
+  await access(filePath, constants.R_OK);
+}
+
+async function readJson(filePath) {
+  return JSON.parse(await readFile(filePath, "utf8"));
+}
+
+const evalDirs = [
+  "skills/agents/subagent-implement/evals",
+  ".agents/skills/subagent-implement/evals",
+];
+const canonicalDir = evalDirs[0];
+
+const evalsJson = () => readJson(path.resolve(canonicalDir, "evals.json"));
+const triggerJson = () => readJson(path.resolve(canonicalDir, "trigger-evals.json"));
+
+describe("subagent-implement eval suite contract", () => {
+  it("ships trigger-evals.json and evals.json in the canonical and mirror copies", async () => {
+    for (const dir of evalDirs) {
+      await fileExists(path.resolve(dir, "trigger-evals.json"));
+      await fileExists(path.resolve(dir, "evals.json"));
+    }
+  });
+
+  it("keeps every eval file byte-identical across the skill copies", async () => {
+    for (const name of ["trigger-evals.json", "evals.json"]) {
+      const contents = await Promise.all(
+        evalDirs.map((dir) => readFile(path.resolve(dir, name), "utf8")),
+      );
+      for (const other of contents.slice(1)) {
+        assert.equal(other, contents[0], `${name} copies must match ${canonicalDir}`);
+      }
+    }
+  });
+
+  describe("trigger-evals.json", () => {
+    it("confirms both /subagent-implement and $subagent-implement trigger", async () => {
+      const positives = (await triggerJson()).filter((t) => t.should_trigger);
+      assert.ok(positives.some((t) => t.query.includes("/subagent-implement")));
+      assert.ok(positives.some((t) => t.query.includes("$subagent-implement")));
+    });
+
+    it("includes negative cases, none using an explicit subagent-implement invocation", async () => {
+      const negatives = (await triggerJson()).filter((t) => !t.should_trigger);
+      assert.ok(negatives.length >= 3, "at least three negative cases are required");
+      for (const item of negatives) {
+        assert.doesNotMatch(
+          item.query,
+          /[/$]subagent-implement/,
+          "negative cases must not use an explicit subagent-implement invocation",
+        );
+      }
+    });
+
+    it("has a negative case for a bare 'implement this' and for a sibling skill", async () => {
+      const negatives = (await triggerJson()).filter((t) => !t.should_trigger);
+      assert.ok(negatives.some((t) => /implement this|implement the tickets/i.test(t.query)));
+      assert.ok(negatives.some((t) => /engineering-workflow|agy-implement|\/implement\b/i.test(t.query)));
+    });
+  });
+
+  describe("evals.json", () => {
+    it("declares skill_name subagent-implement and unique ids and names", async () => {
+      const payload = await evalsJson();
+      assert.equal(payload.skill_name, "subagent-implement");
+      assert.ok(Array.isArray(payload.evals) && payload.evals.length > 0);
+      const ids = new Set();
+      const names = new Set();
+      for (const item of payload.evals) {
+        assert.ok(Number.isInteger(item.id) && !ids.has(item.id), `unique id ${item.id}`);
+        ids.add(item.id);
+        assert.ok(typeof item.name === "string" && !names.has(item.name), "unique name");
+        names.add(item.name);
+        assert.ok(Array.isArray(item.files), `case ${item.id} carries a files array`);
+        assert.ok(Array.isArray(item.expectations) && item.expectations.length > 0);
+      }
+    });
+
+    it("drives every case through an explicit subagent-implement invocation", async () => {
+      for (const item of (await evalsJson()).evals) {
+        assert.match(
+          item.prompt,
+          /[/$]subagent-implement/,
+          `case ${item.id} must invoke subagent-implement explicitly (disable-model-invocation)`,
+        );
+      }
+    });
+
+    it("covers every decision branch of the skill", async () => {
+      const { evals } = await evalsJson();
+      assert.ok(evals.length >= 24, `expected >= 24 eval cases, got ${evals.length}`);
+      const hay = (re) => evals.some((e) => re.test(e.name) || re.test(e.expected_output));
+      const branches = {
+        "pure linear chain": /linear chain|dependency order/i,
+        "independent tickets still serial": /independent tickets still|run one after another/i,
+        "cyclic ticket set rejected": /cycl|TICKET_SET_CYCLIC/i,
+        "missing blocker rejected": /missing blocker|TICKET_SET_MISSING_BLOCKER/i,
+        "numbering rejected": /numbering|TICKET_SET_NUMBERING/i,
+        "no source mutation before approval": /no source mutation|before Plan approval|before any source/i,
+        "implementation-shaped agent matched": /implementation-shaped|feature-dev|wording match/i,
+        "general-purpose fallback": /falls back to general-purpose/i,
+        "--agent pin overrides": /--agent .*pin|pin overrides/i,
+        "--model pass-through and inherit default": /inherit .*model|--model .*pass-through|raw pass-through/i,
+        "isolation worktree, never fork": /isolation: worktree|isolated worktree/i,
+        "orchestrator never implements": /never (hand-code|implement)|writes no implementation/i,
+        "verification failure x3 -> BLOCKED": /three times then BLOCKED|TICKET_VERIFICATION_FAILED/i,
+        "worker crash counts as one attempt": /crash counts as one|one of the three ticket attempts/i,
+        "vacuous-test rejection": /vacuous/i,
+        "fabricated red state rejection": /fabricated|reproduces it|passes without the implementation/i,
+        "missing test->criterion coverage": /coverage|criterion with no|no new test/i,
+        "fresh Explore verifier": /fresh Explore|separate Explore subagent/i,
+        "verifier error fallback": /verifier error|verifier .*errors|fallback/i,
+        "squash-merge one commit per ticket": /squash-merge|one commit/i,
+        "design-encoding merge conflict surfaced": /design-encoding|encodes a design|which module owns/i,
+        "mechanical merge conflict resolved": /mechanical .*conflict/i,
+        "no separate integration gate in v1": /no separate integration gate|no separate full/i,
+        "worktree removed after commit": /worktree .*(removed|remove) after/i,
+        "blocked ticket halts only its branch": /halts only its dependency branch|halts .* its dependency/i,
+        "resume rewinds to last still-good commit": /rewind|last still-good commit/i,
+        "dirty tree at preflight": /dirty .*tree|uncommitted changes/i,
+        "worker package install -> replanned": /new dependency|package install/i,
+        "untestable ticket -> replan": /untestable|no isolated test/i,
+        "completion handoff": /completion handoff|review commands and never pushes|hands over the/i,
+        "status and list read-only": /status .*list are read-only|read-only/i,
+        "context discipline text-only": /text-only|context .*never held|delegates implementation/i,
+      };
+      for (const [label, re] of Object.entries(branches)) {
+        assert.ok(hay(re), `no eval case covers: ${label}`);
+      }
+    });
+  });
+});
