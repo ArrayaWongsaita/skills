@@ -118,5 +118,16 @@ describe("review-to-pr eval suite contract", () => {
       assert.ok(hay(/dirty .*tree|git stash/i), "dirty tree stops and asks");
       assert.ok(hay(/both a ref and a slug/i), "argument that is both a ref and a slug");
     });
+
+    it("covers the Stage 1 code-review loop branches (ticket 03)", async () => {
+      const { evals } = await evalsJson();
+      const hay = (re) => evals.some((e) => re.test(e.name) || re.test(e.expected_output));
+      assert.ok(hay(/routes to Stage 2|blocker .*Stage 2/i), "blocker found -> Stage 2");
+      assert.ok(hay(/clean two-axis review|straight to Stage 3|routes to Stage 3/i), "clean review -> Stage 3");
+      assert.ok(hay(/non-blocking smell|carried[\s\S]*?not fixed/i), "non-blocking smell carried not fixed");
+      assert.ok(hay(/third .*review is the ceiling|three-cycle ceiling/i), "third cycle is the ceiling");
+      assert.ok(hay(/no-progress cycle/i), "no-progress cycle ends the loop early");
+      assert.ok(hay(/Standards-axis-only blocker|Standards axis only/i), "single-axis blocker still routes to Stage 2");
+    });
   });
 });

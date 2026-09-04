@@ -308,4 +308,74 @@ describe("review-to-pr skill contract", () => {
       }
     });
   });
+
+  describe("ticket 03 — Stage 1, the two-axis code-review loop", () => {
+    it("SKILL.md drives references/review-loop.md from a Stage 1 section that routes on the result", async () => {
+      for (const file of skillFiles) {
+        const content = await readFile(file, "utf8");
+        assert.match(content, /##\s*Stage 1/i);
+        assert.match(content, /references\/review-loop\.md/);
+      }
+      for (const body of await bothSkillBodies()) {
+        const s = stageSection(body, 1);
+        assert.ok(s, "Stage 1 section present");
+        assert.match(s, /code-review/i);
+        assert.match(s, /blocker[\s\S]*?Stage 2/i);
+        assert.match(s, /none[\s\S]*?Stage 3|Stage 3/i);
+      }
+    });
+
+    it("review-loop.md specifies the inline two-axis call reported side by side", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/review-loop.md"), "utf8");
+        assert.match(c, /inline/i);
+        assert.match(c, /Standards axis/);
+        assert.match(c, /Spec axis/);
+        assert.match(c, /parallel sub-agents?/i);
+        assert.match(c, /side by side/i);
+        assert.match(c, /rerank/i);
+        assert.match(c, /merge/i);
+        assert.match(c, /<review-point>\.\.\.HEAD/);
+      }
+    });
+
+    it("review-loop.md carries the gates.md blocking rule and the carried non-blocking case", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/review-loop.md"), "utf8");
+        assert.match(c, /gates\.md/);
+        assert.match(c, /Code normalization/i);
+        assert.match(c, /spec mismatch/i);
+        assert.match(c, /missing or wrong behaviour/i);
+        assert.match(c, /regression risk with no covering test/i);
+        assert.match(c, /documented-standard violation with a concrete consequence/i);
+        assert.match(c, /style preference/i);
+        assert.match(c, /carried[\s\S]*?not fixed|not fixed/i);
+        assert.match(c, /Standards axis only[\s\S]*?Spec axis only|either axis/i);
+      }
+    });
+
+    it("review-loop.md defines the findings ledger fields", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/review-loop.md"), "utf8");
+        assert.match(c, /findings/);
+        assert.match(c, /`id`|stable identit/i);
+        assert.match(c, /`axis`|standards.*spec/i);
+        assert.match(c, /open.*resolved.*stalled.*unfixable/is);
+        assert.match(c, /`cluster`/);
+      }
+    });
+
+    it("review-loop.md specifies the three-cycle ceiling and the no-progress early stop", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/review-loop.md"), "utf8");
+        assert.match(c, /one completed two-axis review consumes one (code )?cycle/i);
+        assert.match(c, /editing between reviews[\s\S]*?consumes no cycle/i);
+        assert.match(c, /ceiling is three cycles|three cycles/i);
+        assert.match(c, /code_cycles/);
+        assert.match(c, /no-progress/i);
+        assert.match(c, /resolves[\s\S]{0,12}blocker[\s\S]{0,40}nothing new/i);
+        assert.match(c, /stalled/);
+      }
+    });
+  });
 });
