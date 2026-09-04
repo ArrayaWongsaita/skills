@@ -141,5 +141,17 @@ describe("review-to-pr eval suite contract", () => {
       assert.ok(hay(/exactly one appended fix\(review\): commit|one fix\(review\): commit per cluster/i), "one fix(review): commit per cluster");
       assert.ok(hay(/orchestrator does not hand-code a dispatched cluster/i), "orchestrator does not hand-code a dispatched cluster");
     });
+
+    it("covers the Stage 3 system-scrutinize branches (ticket 05)", async () => {
+      const { evals } = await evalsJson();
+      const hay = (re) => evals.some((e) => re.test(e.name) || re.test(e.expected_output));
+      assert.ok(hay(/self-contained change skips the system gate/i), "self-contained -> gate skipped, noted in handoff");
+      assert.ok(hay(/cross-cutting change runs the system gate/i), "cross-cutting -> gate runs");
+      assert.ok(hay(/ship verdict closes the gate/i), "ship -> Stage 4");
+      assert.ok(hay(/fix-then-ship verdict drives the sub-loop/i), "fix-then-ship -> sub-loop with code-review re-run");
+      assert.ok(hay(/reject verdict stops the run/i), "reject -> stop");
+      assert.ok(hay(/two consecutive cycles end the sub-loop early/i), "two-consecutive-stall ends the sub-loop early");
+      assert.ok(hay(/scrutinize budget is independent of the code budget/i), "scrutinize budget independent of the code budget");
+    });
   });
 });

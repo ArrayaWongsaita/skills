@@ -474,4 +474,84 @@ describe("review-to-pr skill contract", () => {
       }
     });
   });
+
+  describe("ticket 05 — Stage 3, the conditional system-scrutinize gate", () => {
+    it("SKILL.md drives references/scrutiny-gate.md from a conditional Stage 3 section", async () => {
+      for (const file of skillFiles) {
+        const content = await readFile(file, "utf8");
+        assert.match(content, /##\s*Stage 3/i);
+        assert.match(content, /references\/scrutiny-gate\.md/);
+      }
+      for (const body of await bothSkillBodies()) {
+        const s = stageSection(body, 3);
+        assert.ok(s, "Stage 3 section present");
+        assert.match(s, /cross-cutting|risky/i);
+        assert.match(s, /skip[\s\S]*?Stage 4|self-contained/i);
+        assert.match(s, /scrutinize/i);
+      }
+    });
+
+    it("scrutiny-gate.md carries the full ADR 0003 cross-cutting checklist", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/scrutiny-gate.md"), "utf8");
+        assert.match(c, /ADR 0003|adr\/0003/);
+        assert.match(c, /routing/i);
+        assert.match(c, /DI container/i);
+        assert.match(c, /root schema/i);
+        assert.match(c, /migrations directory/i);
+        assert.match(c, /shared config/i);
+        assert.match(c, /\bauth\b/i);
+        assert.match(c, /concurrency or locking/i);
+        assert.match(c, /on-wire or on-disk format|on-wire \/ on-disk/i);
+        assert.match(c, /spans many modules/i);
+        assert.match(c, /structural finding/i);
+        assert.match(c, /self-contained[\s\S]*?skipped/i);
+      }
+    });
+
+    it("scrutiny-gate.md specifies the inline pass and verbatim verdict normalization", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/scrutiny-gate.md"), "utf8");
+        assert.match(c, /inline/i);
+        assert.match(c, /end-to-end/i);
+        assert.match(c, /git diff <review-point>\.\.\.HEAD/);
+        assert.match(c, /`ship`/);
+        assert.match(c, /`fix-then-ship`/);
+        assert.match(c, /`rework`/);
+        assert.match(c, /`reject`/);
+        assert.match(c, /no paraphrasing/i);
+      }
+    });
+
+    it("scrutiny-gate.md routes each verdict and stops on reject", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/scrutiny-gate.md"), "utf8");
+        assert.match(c, /`ship`[\s\S]*?Stage 4/i);
+        assert.match(c, /`fix-then-ship`[\s\S]*?sub-loop|sub-loop/i);
+        assert.match(c, /`reject`[\s\S]*?stop/i);
+        assert.match(c, /single biggest reason/i);
+        assert.match(c, /human decision/i);
+        assert.match(c, /no auto-loop/i);
+      }
+    });
+
+    it("scrutiny-gate.md specifies the never-skipped code-review sub-loop step", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/scrutiny-gate.md"), "utf8");
+        assert.match(c, /scrutinize\s*→\s*fix\s*→\s*tests or typecheck\s*→\s*code-review\s*→\s*scrutinize/);
+        assert.match(c, /always[\s\S]{0,10}run/i);
+        assert.match(c, /consumes a scrutinize cycle,?\s*not a code cycle/i);
+      }
+    });
+
+    it("scrutiny-gate.md gives the gate an independent six-cycle budget with a stall stop", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/scrutiny-gate.md"), "utf8");
+        assert.match(c, /six scrutinize cycles/i);
+        assert.match(c, /independent(ly)? of the[\s\S]*?code budget/i);
+        assert.match(c, /same blocking findings surviving two consecutive cycles/i);
+        assert.match(c, /cycle 7 needs explicit human[\s\S]*?authorization/i);
+      }
+    });
+  });
 });

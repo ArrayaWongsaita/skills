@@ -317,6 +317,96 @@
         "Accepts unfixable as the outcome if the worker cannot finish"
       ],
       "files": []
+    },
+    {
+      "id": 26,
+      "name": "a self-contained change skips the system gate and the handoff says so",
+      "prompt": "/review-to-pr — the code-review loop is closed. The integrated diff touches only src/subtitles/preferences.ts and its test, adds no routing, no schema, no auth, no format change, spans one module, and the code-review loop surfaced no structural finding.",
+      "expected_output": "No item on the ADR 0003 cross-cutting / risky checklist holds, so Stage 3 is skipped. The run goes straight to Stage 4. The Stage 5 handoff records the system gate as 'self-contained — skipped'.",
+      "expectations": [
+        "Judges the diff against the ADR 0003 checklist and finds no item holds",
+        "Skips the inline scrutinize pass",
+        "Goes straight to Stage 4 (full suite)",
+        "Records 'self-contained — skipped' in the handoff"
+      ],
+      "files": []
+    },
+    {
+      "id": 27,
+      "name": "a cross-cutting change runs the system gate",
+      "prompt": "/review-to-pr — the integrated diff adds a new route to src/app/router.ts and changes the shared AuthContext type that eight modules import.",
+      "expected_output": "The diff touches routing and a root shared type, so the checklist triggers and Stage 3 runs scrutinize inline end-to-end over git diff <review-point>...HEAD. The closing one-liner is normalized to exactly ship / fix-then-ship / rework / reject. The handoff will name the checklist item (routing / shared type) that triggered the gate.",
+      "expectations": [
+        "Triggers the system gate on the routing and shared-type checklist items",
+        "Runs scrutinize inline over git diff <review-point>...HEAD end-to-end",
+        "Normalizes the closing one-liner to exactly one of the four tokens",
+        "Records which checklist item triggered the gate for the handoff"
+      ],
+      "files": []
+    },
+    {
+      "id": 28,
+      "name": "a ship verdict closes the gate and advances to Stage 4",
+      "prompt": "/review-to-pr — the system gate ran and scrutinize closed with 'ship'.",
+      "expected_output": "The verdict normalizes to ship. The gate closes and the run advances to Stage 4 (the full-suite verifier). No sub-loop runs. The handoff records the gate as ran with verdict ship.",
+      "expectations": [
+        "Normalizes 'ship' to the ship verdict",
+        "Closes the gate and advances to Stage 4",
+        "Runs no sub-loop on a ship verdict"
+      ],
+      "files": []
+    },
+    {
+      "id": 29,
+      "name": "a fix-then-ship verdict drives the sub-loop with code-review re-run",
+      "prompt": "/review-to-pr — the system gate's first scrutinize pass closed with 'fix-then-ship': a retry path double-charges on a partial failure. Walk the sub-loop.",
+      "expected_output": "fix-then-ship enters the sub-loop scrutinize -> fix -> tests or typecheck -> code-review -> scrutinize. The fix goes through Stage 2 machinery as one fix(review): commit; the affected tests and typecheck run; the two-axis code-review is run again (never skipped) and consumes a scrutinize cycle, not a code cycle; then scrutinize re-runs. The loop repeats until scrutinize returns ship.",
+      "expectations": [
+        "Enters the sub-loop on fix-then-ship rather than stopping",
+        "Runs the two-axis code-review step every iteration, never skipping it",
+        "Counts the intra-sub-loop code-review against the scrutinize budget, not the code budget",
+        "Repeats until scrutinize returns ship"
+      ],
+      "files": []
+    },
+    {
+      "id": 30,
+      "name": "a reject verdict stops the run with the single biggest reason",
+      "prompt": "/review-to-pr — the system gate's scrutinize pass closed with 'reject': the whole approach reimplements a locking primitive the platform already provides and cannot be made correct as scoped.",
+      "expected_output": "reject stops the run immediately. The report gives the single biggest reason from scrutinize. There is no auto-loop back into fixing — a fresh attempt is a human decision. The handoff records the gate as ran with verdict reject and the run as not PR-ready.",
+      "expectations": [
+        "Stops the run on a reject verdict",
+        "Reports the single biggest reason from scrutinize",
+        "Does not auto-loop back into fixing",
+        "Records the run as not PR-ready"
+      ],
+      "files": []
+    },
+    {
+      "id": 31,
+      "name": "the same blocking findings surviving two consecutive cycles end the sub-loop early",
+      "prompt": "/review-to-pr — the scrutiny sub-loop is on cycle 3. Cycles 2 and 3 both close with the same one blocking finding, no new and no resolved findings between them.",
+      "expected_output": "The same blocking finding survived two consecutive cycles with no progress. The sub-loop ends early, before the six-cycle ceiling. The stalled finding, the cycles reviewed, and why no progress is possible are reported; the run does not mechanically re-review a fourth time.",
+      "expectations": [
+        "Detects the same blocking finding surviving two consecutive cycles",
+        "Ends the sub-loop early rather than continuing to cycle 6",
+        "Reports the stalled finding and the cycle history",
+        "Does not keep re-running scrutinize on a stalled finding"
+      ],
+      "files": []
+    },
+    {
+      "id": 32,
+      "name": "the scrutinize budget is independent of the code budget",
+      "prompt": "/review-to-pr — the Stage 1 code loop already spent all three code cycles resolving blockers. The system gate then triggers and its first scrutinize pass returns fix-then-ship.",
+      "expected_output": "The scrutinize gate runs on its own fresh six-cycle budget — the exhausted three-cycle code budget does not block it. The intra-sub-loop code-review steps consume scrutinize cycles, not the (already spent) code cycles. Passing the code gate never reset the scrutinize count and vice versa.",
+      "expectations": [
+        "Runs the system gate even though the code budget is spent",
+        "Gives scrutinize its own independent six-cycle ceiling",
+        "Counts the sub-loop code-review against the scrutinize budget",
+        "Keeps the two budgets from resetting each other"
+      ],
+      "files": []
     }
   ]
 }
