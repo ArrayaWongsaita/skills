@@ -217,4 +217,95 @@ describe("review-to-pr skill contract", () => {
       assert.match(adr, /own(s)? (its )?(own )?(copy|machinery)/i);
     });
   });
+
+  describe("ticket 02 — Stage 0, pin the review point", () => {
+    it("SKILL.md drives references/review-point.md from a read-only Stage 0 section", async () => {
+      for (const file of skillFiles) {
+        const content = await readFile(file, "utf8");
+        assert.match(content, /##\s*Stage 0[^\n]*review point/i);
+        assert.match(content, /references\/review-point\.md/);
+      }
+      for (const body of await bothSkillBodies()) {
+        const s = stageSection(body, 0);
+        assert.ok(s, "Stage 0 section present");
+        assert.match(s, /read-only/i);
+        assert.match(s, /\.scratch\/<feature-slug>\//);
+        assert.match(s, /mutates nothing|writes only|nothing else/i);
+        assert.match(s, /approv/i);
+      }
+    });
+
+    it("review-point.md specifies the preflight — clean tree, dirty stops and asks, no stash, main resolves", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/review-point.md"), "utf8");
+        assert.match(c, /preflight/i);
+        assert.match(c, /clean working tree|working tree is clean/i);
+        assert.match(c, /dirty|uncommitted/i);
+        assert.match(c, /stash/i, "names stashing explicitly to rule it out");
+        assert.match(c, /stops|asks/i);
+        assert.match(c, /`?main`? resolves|rev-parse --verify main/i);
+      }
+    });
+
+    it("review-point.md specifies both review-point resolution paths", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/review-point.md"), "utf8");
+        assert.match(c, /git rev-parse --verify/);
+        assert.match(c, /git merge-base main HEAD/);
+        assert.match(c, /pin(ned)? .* (whole|entire) run|pin it .* run/i);
+      }
+    });
+
+    it("review-point.md names the two halt conditions", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/review-point.md"), "utf8");
+        assert.match(c, /unresolvable ref|resolves as neither/i);
+        assert.match(c, /git diff <review-point>\.\.\.HEAD` is empty|empty .* nothing to review/i);
+        assert.match(c, /halt|stop/i);
+      }
+    });
+
+    it("review-point.md specifies feature-slug resolution in order", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/review-point.md"), "utf8");
+        assert.match(c, /explicit `?<slug>`? argument/i);
+        assert.match(c, /branch-name stem|segment after the last `?\/`?/i);
+        assert.match(c, /subagent-implement\/wishlist-sync.*wishlist-sync/i);
+        assert.match(c, /most recently modified `?\.scratch\/\*\/`? director/i);
+        assert.match(c, /named back[\s\S]*?confirm/i);
+      }
+    });
+
+    it("review-point.md specifies the spec source and the degraded mode", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/review-point.md"), "utf8");
+        assert.match(c, /spec\.md.*issues\//is);
+        assert.match(c, /commit messages? alone/i);
+        assert.match(c, /degraded/i);
+        assert.match(c, /commit-messages/);
+        assert.match(c, /handoff (states|records)/i);
+      }
+    });
+
+    it("review-point.md handles an argument that is both a ref and a slug", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/review-point.md"), "utf8");
+        assert.match(c, /both a ref and a slug/i);
+        assert.match(c, /review-point override/i);
+        assert.match(c, /slug[\s\S]*?falls back[\s\S]*?branch-name stem/i);
+      }
+    });
+
+    it("review-point.md defines the initial review-status.md field set and the pause", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/review-point.md"), "utf8");
+        for (const field of ["review_point", "feature_slug", "integration_branch", "spec_source", "stage"]) {
+          assert.match(c, new RegExp(field.replace(/_/g, "[_ ]")), `review-status.md records ${field}`);
+        }
+        assert.match(c, /commit count|rev-list --count/i);
+        assert.match(c, /file count|diff --stat/i);
+        assert.match(c, /explicit approval/i);
+      }
+    });
+  });
 });

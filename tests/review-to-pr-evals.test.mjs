@@ -105,5 +105,18 @@ describe("review-to-pr eval suite contract", () => {
       assert.ok(hay(/merge-base with main|git merge-base main HEAD/i), "default review point");
       assert.ok(hay(/no PR step|opens no pull request|no git push/i), "handoff performs no PR step");
     });
+
+    it("covers the Stage 0 review-point branches (ticket 02)", async () => {
+      const { evals } = await evalsJson();
+      const hay = (re) => evals.some((e) => re.test(e.name) || re.test(e.expected_output));
+      assert.ok(hay(/explicit ref .*overrides|overrides the review point/i), "explicit ref override");
+      assert.ok(hay(/branch-name stem/i), "branch-stem slug");
+      assert.ok(hay(/most recent(ly modified)? .*\.scratch|names? it back/i), "most-recent .scratch named back");
+      assert.ok(hay(/degraded|commit-messages|commit messages alone/i), "degraded Spec axis");
+      assert.ok(hay(/unresolvable|resolves as neither/i), "unresolvable ref halts");
+      assert.ok(hay(/empty diff|diff .*is empty/i), "empty diff halts");
+      assert.ok(hay(/dirty .*tree|git stash/i), "dirty tree stops and asks");
+      assert.ok(hay(/both a ref and a slug/i), "argument that is both a ref and a slug");
+    });
   });
 });

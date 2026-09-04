@@ -49,6 +49,105 @@
         "Leaves opening the PR as the next command the user runs by hand"
       ],
       "files": []
+    },
+    {
+      "id": 5,
+      "name": "an explicit ref argument overrides the review point",
+      "prompt": "/review-to-pr v2.4.0 — run from the integration branch. v2.4.0 is an existing tag that git rev-parse --verify resolves.",
+      "expected_output": "Because git rev-parse --verify v2.4.0 resolves, the tag is the review-point override — both code-review axes and every diff in the run measure against v2.4.0, not against git merge-base main HEAD. The feature slug still comes from the branch-name stem. review-status.md records review_point as the tag's commit with 'explicit v2.4.0'.",
+      "expectations": [
+        "Resolves v2.4.0 as a git ref and uses it as the review point",
+        "Does not fall back to git merge-base main HEAD when an explicit ref resolves",
+        "Records how the review point was resolved in review-status.md",
+        "Still derives the feature slug from the branch-name stem"
+      ],
+      "files": []
+    },
+    {
+      "id": 6,
+      "name": "the feature slug is the branch-name stem after the last slash",
+      "prompt": "/review-to-pr — run from the branch agy-implement/checkout-flow with no argument.",
+      "expected_output": "The slug is the segment after the last slash: checkout-flow. Stage 0 loads .scratch/checkout-flow/spec.md and .scratch/checkout-flow/issues/ for the Spec axis if they exist. The review point defaults to git merge-base main HEAD.",
+      "expectations": [
+        "Derives the slug checkout-flow from agy-implement/checkout-flow",
+        "Looks for the spec source under .scratch/checkout-flow/",
+        "Does not treat the agy-implement/ branch prefix as part of the slug"
+      ],
+      "files": []
+    },
+    {
+      "id": 7,
+      "name": "with no slug and no branch stem match, the most recent .scratch dir is named back",
+      "prompt": "/review-to-pr — run from a branch named review-work with no argument, and .scratch/ contains three feature directories, checkout-flow modified most recently.",
+      "expected_output": "The branch stem review-work matches no .scratch/ directory, so Stage 0 proposes the most recently modified one — .scratch/checkout-flow/ — and names it back to the user for confirmation before using it. It does not silently pick one.",
+      "expectations": [
+        "Falls back to the most recently modified .scratch/*/ directory",
+        "Names the proposed directory back to the user and waits for confirmation",
+        "Proceeds only once the user confirms the feature directory"
+      ],
+      "files": []
+    },
+    {
+      "id": 8,
+      "name": "no spec.md and no issues/ runs the Spec axis degraded against commit messages",
+      "prompt": "/review-to-pr .scratch/hotpatch/ — the directory has no spec.md and no issues/ subdirectory.",
+      "expected_output": "The Spec axis has no acceptance criteria to review against, so it runs against the commit messages alone. review-status.md records spec_source as commit-messages, and the Stage 5 handoff states the Spec axis ran in degraded mode. The run still proceeds — a missing spec is not a halt.",
+      "expectations": [
+        "Runs the Spec axis against the commit messages when no spec.md or issues/ exists",
+        "Records spec_source as commit-messages in review-status.md",
+        "States the degraded Spec axis in the handoff",
+        "Does not halt Stage 0 for a missing spec"
+      ],
+      "files": []
+    },
+    {
+      "id": 9,
+      "name": "an unresolvable argument halts Stage 0 with the reason named",
+      "prompt": "/review-to-pr feature-xyz — feature-xyz resolves as neither a git ref (git rev-parse --verify fails) nor an existing .scratch/feature-xyz/ directory.",
+      "expected_output": "Stage 0 halts and names the reason: the argument resolves as neither a git ref nor a .scratch/<slug>/ directory. No review-status.md is written past the halt note, no code-review runs.",
+      "expectations": [
+        "Detects that feature-xyz is neither a resolvable ref nor a feature directory",
+        "Halts Stage 0 naming the unresolvable argument as the reason",
+        "Runs no code-review and starts no fix work"
+      ],
+      "files": []
+    },
+    {
+      "id": 10,
+      "name": "an empty diff against the review point halts Stage 0",
+      "prompt": "/review-to-pr abc123 — abc123 resolves, but git diff abc123...HEAD is empty (HEAD is an ancestor of abc123 or equal to it).",
+      "expected_output": "Stage 0 halts naming the reason: git diff <review-point>...HEAD is empty, so there is nothing to review. The check runs here, before any parallel sub-agent is spawned.",
+      "expectations": [
+        "Runs git diff <review-point>...HEAD and finds it empty",
+        "Halts Stage 0 naming the empty diff as the reason",
+        "Spawns no code-review sub-agents"
+      ],
+      "files": []
+    },
+    {
+      "id": 11,
+      "name": "a dirty working tree stops Stage 0 and asks, stashing nothing",
+      "prompt": "/review-to-pr — run from the integration branch, which has an uncommitted change to src/config.ts.",
+      "expected_output": "Preflight finds the working tree dirty and stops before resolving the review point or writing review-status.md. It reports the uncommitted change and asks the user to deal with it. It runs no git stash and mixes its work with none of the user's changes.",
+      "expectations": [
+        "Halts at preflight because the working tree is dirty",
+        "Asks the user rather than proceeding",
+        "Runs no git stash",
+        "Leaves the user's uncommitted change exactly as it was"
+      ],
+      "files": []
+    },
+    {
+      "id": 12,
+      "name": "an argument that is both a ref and a slug is taken as the review-point override",
+      "prompt": "/review-to-pr checkout-flow — there is a branch named checkout-flow (git rev-parse --verify resolves it) and also a .scratch/checkout-flow/ directory.",
+      "expected_output": "The argument resolves as a git ref, so it is the review-point override: the run measures against the checkout-flow branch. The feature slug then falls back to the integration branch-name stem rather than also being checkout-flow from the argument.",
+      "expectations": [
+        "Takes checkout-flow as the review-point override because it resolves as a ref",
+        "Falls the feature slug back to the branch-name stem, not the argument",
+        "Records the review point as 'explicit checkout-flow' in review-status.md"
+      ],
+      "files": []
     }
   ]
 }
