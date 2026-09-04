@@ -407,6 +407,57 @@
         "Keeps the two budgets from resetting each other"
       ],
       "files": []
+    },
+    {
+      "id": 33,
+      "name": "a red full suite is a new blocker routed to Stage 2",
+      "prompt": "/review-to-pr — Stage 4. The fresh Explore verifier runs the whole typecheck and the whole test suite on integration HEAD; two suite tests fail, unrelated to any fix so far. Two code cycles have been spent.",
+      "expected_output": "The red suite is treated as a new blocker, not a silent pass. It enters the ledger and routes to Stage 2 for one code cycle: cluster, fix, one fix(review): commit, re-verify. Then Stage 4 re-runs. A code cycle remains available (two spent of three).",
+      "expectations": [
+        "Treats the red suite as a new blocker rather than passing",
+        "Routes it to Stage 2 for one code cycle",
+        "Re-runs the full-suite verifier after the fix lands",
+        "Does not open a PR while the suite is red"
+      ],
+      "files": []
+    },
+    {
+      "id": 34,
+      "name": "a red suite with the code ceiling spent stops and reports unresolved",
+      "prompt": "/review-to-pr — Stage 4. The full suite is red, and all three code cycles are already spent on earlier blockers.",
+      "expected_output": "With the code ceiling exhausted, the run cannot open another fix cycle. It stops and reports the red suite as unresolved / not PR-ready, with the failing output, the stage reached, the cycles spent (3/3), and the /review-to-pr continue command. It does not force a green result or open a PR.",
+      "expectations": [
+        "Stops rather than starting a fourth code cycle",
+        "Reports the red suite as unresolved / not PR-ready with the failing output",
+        "Includes the cycles spent and the /review-to-pr continue command",
+        "Opens no PR and force-pushes nothing"
+      ],
+      "files": []
+    },
+    {
+      "id": 35,
+      "name": "continue reconciles against reality before resuming",
+      "prompt": "/review-to-pr continue wishlist-sync — review-status.md records the run at Stage 3 with two fix(review): commits landed and blocker spec-2 resolved. Since then the user hand-edited a file spec-2's fix touched.",
+      "expected_output": "Before resuming, Reality reconciliation runs: it confirms the integration branch and both recorded fix_commits still exist, re-runs code-review against the pinned review_point and the full suite, and finds code-review reports spec-2 again. spec-2 is re-opened in the ledger (resolved -> open) and its commit is listed as superseded at the top of the report. The run then resumes from Stage 3 with the reconciled ledger; the cycle counts carry over.",
+      "expectations": [
+        "Confirms the integration branch and the recorded fix_commits still exist",
+        "Re-runs code-review and the full suite before trusting review-status.md",
+        "Re-opens spec-2 because its fix no longer holds and lists the superseded commit",
+        "Resumes from the recorded stage with cycle counts carried over"
+      ],
+      "files": []
+    },
+    {
+      "id": 36,
+      "name": "status is read-only",
+      "prompt": "/review-to-pr status wishlist-sync — review-status.md records a run mid-Stage-2.",
+      "expected_output": "status parses review-status.md and reports the cycle history and the findings ledger. It runs no code-review, no scrutinize, and no suite, cuts no branch, and writes to no file.",
+      "expectations": [
+        "Reports the cycle history and the findings ledger from review-status.md",
+        "Runs no code-review, scrutinize, or test suite",
+        "Mutates no file and cuts no branch"
+      ],
+      "files": []
     }
   ]
 }

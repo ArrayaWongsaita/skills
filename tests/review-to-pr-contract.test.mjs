@@ -554,4 +554,101 @@ describe("review-to-pr skill contract", () => {
       }
     });
   });
+
+  describe("ticket 06 — Stages 4-5, state, resume, and the full eval suite", () => {
+    it("SKILL.md has a Stage 4 section: fresh verifier, whole typecheck and whole suite, red is a blocker", async () => {
+      for (const body of await bothSkillBodies()) {
+        const s = stageSection(body, 4);
+        assert.ok(s, "Stage 4 section present");
+        assert.match(s, /fresh\s+`?Explore`?\s+verifier/i);
+        assert.match(s, /whole[\s\S]*?typecheck/i);
+        assert.match(s, /whole[\s\S]*?test suite|whole[\s\S]*?suite/i);
+        assert.match(s, /integration branch `?HEAD`?/i);
+        assert.match(s, /red[\s\S]*?new blocker/i);
+        assert.match(s, /Stage 2/);
+        assert.match(s, /ceiling[\s\S]*?spent[\s\S]*?unresolved|not PR-ready/i);
+      }
+    });
+
+    it("SKILL.md has a Stage 5 handoff section that performs no PR step", async () => {
+      for (const body of await bothSkillBodies()) {
+        const s = stageSection(body, 5);
+        assert.ok(s, "Stage 5 section present");
+        assert.match(s, /integration branch/i);
+        assert.match(s, /code-review/);
+        assert.match(s, /scrutinize/);
+        assert.match(s, /fix\(review\):/);
+        assert.match(s, /green.*suite|suite.*green/i);
+        assert.match(s, /\/pr-to-dev/);
+        assert.match(s, /no `?git push`?/i);
+        assert.match(s, /no `?gh`?/i);
+        assert.match(s, /no PR step|no `?\/pr-to-dev`?/i);
+      }
+      // the run must not instruct an actual push / gh / pr-to-dev call
+      for (const body of await bothSkillBodies()) {
+        assert.doesNotMatch(body, /run `?\/pr-to-dev`?|execute `?gh pr|`git push` origin/i);
+      }
+    });
+
+    it("status-and-resume.md defines the full review-status.md field set with no per-turn header", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/status-and-resume.md"), "utf8");
+        for (const field of [
+          "review_point", "feature_slug", "integration_branch", "spec_source",
+          "stage", "code_cycles", "scrutinize_cycles", "findings", "fix_commits",
+        ]) {
+          assert.match(c, new RegExp(field.replace(/_/g, "[_ ]")), `review-status.md records ${field}`);
+        }
+        assert.match(c, /whole record/i);
+        assert.match(c, /no per-turn state-header|no per-turn header/i);
+        assert.match(c, /open[\s\S]{0,6}resolved[\s\S]{0,10}stalled[\s\S]{0,10}unfixable/i);
+      }
+    });
+
+    it("status-and-resume.md specifies continue with Reality reconciliation and status read-only", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/status-and-resume.md"), "utf8");
+        assert.match(c, /Reality reconciliation/i);
+        assert.match(c, /integration branch exists/i);
+        assert.match(c, /fix_commits[\s\S]*?reachable|reachable from the branch tip/i);
+        assert.match(c, /re-run `?code-review`?[\s\S]*?full suite|re-run the full suite/i);
+        assert.match(c, /re-open/i);
+        assert.match(c, /superseded/i);
+        assert.match(c, /resume[\s\S]*?stage[\s\S]*?records|from the stage/i);
+        assert.match(c, /`\/review-to-pr status`?[\s\S]*?read-only/i);
+        assert.match(c, /mutating nothing/i);
+      }
+    });
+
+    it("status-and-resume.md defines the halt / partial report", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/status-and-resume.md"), "utf8");
+        assert.match(c, /partial report/i);
+        assert.match(c, /unresolved blockers/i);
+        assert.match(c, /stage reached/i);
+        assert.match(c, /cycles spent/i);
+        assert.match(c, /`\/review-to-pr continue`/);
+        assert.match(c, /force-pushed, reset, or discarded|Nothing is force-pushed/i);
+      }
+    });
+
+    it("the guide and the reference set stay in agreement", async () => {
+      const guide = await readFile(path.resolve("docs/skills/agents/review-to-pr.md"), "utf8");
+      for (const ref of SKILL_REFERENCES) {
+        assert.match(guide, new RegExp(ref.replace(/\./g, "\\.")), `guide lists ${ref}`);
+      }
+      for (const dir of skillDirs) {
+        const entries = (await readdir(path.resolve(dir, "references"))).sort();
+        assert.deepEqual(entries, [...SKILL_REFERENCES].sort());
+      }
+    });
+
+    it("the .scratch design-review record exists with the Gate 2 verdict", async () => {
+      const dr = await readFile(path.resolve(".scratch/review-to-pr/design-review.md"), "utf8");
+      assert.match(dr, /cycle/i);
+      assert.match(dr, /FIX_THEN_SHIP|fix-then-ship/i);
+      assert.match(dr, /blockingFindings|blocking findings/i);
+      assert.match(dr, /route/i);
+    });
+  });
 });

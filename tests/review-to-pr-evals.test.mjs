@@ -153,5 +153,60 @@ describe("review-to-pr eval suite contract", () => {
       assert.ok(hay(/two consecutive cycles end the sub-loop early/i), "two-consecutive-stall ends the sub-loop early");
       assert.ok(hay(/scrutinize budget is independent of the code budget/i), "scrutinize budget independent of the code budget");
     });
+
+    it("covers the Stage 4-5 state and resume branches (ticket 06)", async () => {
+      const { evals } = await evalsJson();
+      const hay = (re) => evals.some((e) => re.test(e.name) || re.test(e.expected_output));
+      assert.ok(hay(/red full suite is a new blocker/i), "red suite -> new blocker -> Stage 2");
+      assert.ok(hay(/red suite with the code ceiling spent/i), "red suite with ceiling spent -> stop unresolved");
+      assert.ok(hay(/continue reconciles against reality/i), "continue -> Reality reconciliation");
+      assert.ok(hay(/status is read-only/i), "status -> read-only");
+    });
+
+    it("carries at least one case per decision branch across every stage", async () => {
+      const { evals } = await evalsJson();
+      assert.ok(evals.length >= 30, `expected >= 30 eval cases, got ${evals.length}`);
+      const hay = (re) => evals.some((e) => re.test(e.name) || re.test(e.expected_output));
+      const branches = {
+        "explicit invocation only": /explicit invocation|does not start itself/i,
+        "default merge-base review point": /merge-base with main|git merge-base main HEAD/i,
+        "explicit ref override": /explicit ref .*overrides|overrides the review point/i,
+        "branch-stem slug": /branch-name stem/i,
+        "most-recent .scratch named back": /most recent(ly modified)? .*\.scratch|names? it back/i,
+        "degraded Spec axis": /degraded|commit-messages|commit messages alone/i,
+        "unresolvable ref halts": /unresolvable|resolves as neither/i,
+        "empty diff halts": /empty diff|diff .*is empty/i,
+        "dirty tree stops and asks": /dirty .*tree|git stash/i,
+        "argument is both ref and slug": /both a ref and a slug/i,
+        "blocker -> Stage 2": /routes to Stage 2|blocker .*Stage 2/i,
+        "clean review -> Stage 3": /clean two-axis review|straight to Stage 3/i,
+        "non-blocking smell carried not fixed": /non-blocking smell|carried[\s\S]*?not fixed/i,
+        "third cycle is the ceiling": /third .*review is the ceiling|three-cycle ceiling/i,
+        "no-progress cycle ends the loop": /no-progress cycle/i,
+        "single-axis blocker routes to Stage 2": /Standards-axis-only blocker/i,
+        "multi-file cluster dispatched": /multi-file cluster is dispatched/i,
+        "one-file no-test cluster inline": /one-file no-test-change cluster is hand-applied inline/i,
+        "missing-test blocker dispatched test-first": /missing-test blocker is dispatched test-first/i,
+        "three failed attempts -> unfixable": /three failed attempts leave the cluster unfixable/i,
+        "worker crash counts as one attempt": /worker crash counts as one attempt/i,
+        "one fix(review): commit per cluster": /exactly one appended fix\(review\): commit/i,
+        "orchestrator does not hand-code dispatched cluster": /orchestrator does not hand-code a dispatched cluster/i,
+        "self-contained -> gate skipped": /self-contained change skips the system gate/i,
+        "cross-cutting -> gate runs": /cross-cutting change runs the system gate/i,
+        "ship -> Stage 4": /ship verdict closes the gate/i,
+        "fix-then-ship -> sub-loop": /fix-then-ship verdict drives the sub-loop/i,
+        "reject -> stop": /reject verdict stops the run/i,
+        "two-consecutive-stall ends sub-loop": /two consecutive cycles end the sub-loop early/i,
+        "scrutinize budget independent of code budget": /scrutinize budget is independent of the code budget/i,
+        "red suite -> new blocker": /red full suite is a new blocker/i,
+        "red suite + ceiling spent -> stop": /red suite with the code ceiling spent/i,
+        "continue -> Reality reconciliation": /continue reconciles against reality/i,
+        "status -> read-only": /status is read-only/i,
+        "handoff -> /pr-to-dev, no PR step": /stops before the PR|no PR step|opens no pull request/i,
+      };
+      for (const [label, re] of Object.entries(branches)) {
+        assert.ok(hay(re), `no eval case covers: ${label}`);
+      }
+    });
   });
 });
