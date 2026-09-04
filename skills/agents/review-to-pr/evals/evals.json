@@ -1,0 +1,54 @@
+{
+  "skill_name": "review-to-pr",
+  "evals": [
+    {
+      "id": 1,
+      "name": "a run starts only on an explicit invocation",
+      "prompt": "The user says: \"the branch subagent-implement/wishlist-sync is done — can you get it reviewed and ready for a PR?\" There is no /review-to-pr or $review-to-pr token in the message.",
+      "expected_output": "review-to-pr does not start itself. The skill is disable-model-invocation and its Codex policy sets allow_implicit_invocation: false, so it activates only when the user types /review-to-pr or $review-to-pr. The assistant may suggest that command, but runs no stage until the user invokes it explicitly.",
+      "expectations": [
+        "Does not begin Stage 0 from the paraphrased request",
+        "Points the user at the explicit /review-to-pr invocation instead",
+        "Starts no code-review, cuts no branch, and writes no review-status.md before the explicit call"
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "no argument reviews the whole feature against the merge-base with main",
+      "prompt": "/review-to-pr — run from the branch subagent-implement/wishlist-sync, which carries four ticket commits and a clean tree. main has advanced twelve commits since the branch was cut.",
+      "expected_output": "The review point is git merge-base main HEAD, computed automatically and pinned for the run — correct even though main advanced. The integration branch is the current branch. The feature slug is the branch-name stem wishlist-sync. Stage 0 writes review-status.md and pauses for approval before Stage 1.",
+      "expectations": [
+        "Pins the review point to git merge-base main HEAD, not the first commit of the branch",
+        "Takes the current branch as the integration branch and wishlist-sync as the slug",
+        "Records review_point, feature_slug, integration_branch, spec_source, and stage in review-status.md",
+        "Pauses for explicit approval before Stage 1"
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "the Codex $review-to-pr form drives the same run",
+      "prompt": "$review-to-pr wishlist-sync — run from the integration branch for that feature.",
+      "expected_output": "The $review-to-pr form is an explicit invocation and starts the run the same way /review-to-pr does. wishlist-sync resolves as the feature slug (it is not a git ref), the review point defaults to git merge-base main HEAD, and Stage 0 pauses for approval.",
+      "expectations": [
+        "Treats $review-to-pr as a valid explicit invocation",
+        "Resolves wishlist-sync as the feature slug because it does not resolve as a git ref",
+        "Defaults the review point to the merge-base with main"
+      ],
+      "files": []
+    },
+    {
+      "id": 4,
+      "name": "the run stops before the PR and hands off /pr-to-dev",
+      "prompt": "/review-to-pr .scratch/handoff-demo/ — the code-review loop came back clean, the system gate was skipped as self-contained, and the full suite is green.",
+      "expected_output": "Stage 5 prints the handoff: the integration branch name, the code-review verdict (clean), the scrutinize line (self-contained — skipped), the green-suite confirmation, the fix(review): commits (none), and the /pr-to-dev command to run next in a fresh context. The run performs no PR step — no git push, no gh, no /pr-to-dev.",
+      "expectations": [
+        "Prints the branch, the code-review and scrutinize verdicts, the green-suite line, and the /pr-to-dev command",
+        "Runs no git push and no gh, and opens no pull request",
+        "Leaves opening the PR as the next command the user runs by hand"
+      ],
+      "files": []
+    }
+  ]
+}

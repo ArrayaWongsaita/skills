@@ -21,6 +21,7 @@ npx skills add ArrayaWongsaita/skills --all
 | `design-task-spec` | Design decision-complete software implementation task specifications from vague ideas or existing tickets. Use when explicitly asked to investigate a repository, stress-test requirements for a feature, bug fix, refactor, migration, integration, or infrastructure change, document relevant domain decisions, and produce a source-linked task that another agent can implement without making product or architecture decisions. Do not use this skill to implement the designed task. | [คู่มือ / Guide](agents/design-task-spec.md) |
 | `engineering-workflow` | Explicitly route a feature, bug, incident, or large engineering effort through pure-prompt cognitive orchestration, markdown state artifacts, evidence gates, bounded review loops, and resumable transitions. | [คู่มือ / Guide](agents/engineering-workflow.md) |
 | `grill-to-tickets` | Standalone composite skill that carries one idea from a relentless discovery interview through domain modeling, specification, a bounded design-review gate, and vertical ticket breakdown, then stops at published tickets without implementing. | [คู่มือ / Guide](agents/grill-to-tickets.md) |
+| `review-to-pr` | Pick up a verified-but-unreviewed integration branch where implement, agy-implement, or subagent-implement stopped and drive it to a PR-ready state — pin a review point, run a bounded two-axis code-review loop, cluster the blockers and land each as one fix(review) commit, run a conditional system scrutinize gate, get the full suite green, then hand off the PR command without opening the PR. | [คู่มือ / Guide](agents/review-to-pr.md) |
 | `subagent-implement` | Turn a directory of grill-to-tickets tickets into working code without spending the main agent's context on implementation — plan the dependency order, dispatch one native harness subagent per ticket to build it test-first in an isolated worktree, have a fresh verifier subagent reproduce the red state and run the suite, judge the two reports, integrate one commit per ticket onto a branch, and stop before review. | [คู่มือ / Guide](agents/subagent-implement.md) |
 
 ### Install this category / ติดตั้งทั้งหมวด
@@ -33,6 +34,7 @@ npx skills add ArrayaWongsaita/skills \
   --skill design-task-spec \
   --skill engineering-workflow \
   --skill grill-to-tickets \
+  --skill review-to-pr \
   --skill subagent-implement
 ```
 
