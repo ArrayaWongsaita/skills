@@ -160,10 +160,11 @@ return to Stage 1.
 ## Stage 3 — System scrutinize — only if cross-cutting or risky
 
 Follow [references/scrutiny-gate.md](references/scrutiny-gate.md). Judge the
-integrated diff against the cross-cutting / risky checklist from ADR 0003 — the
-diff touches routing, a DI container, a root schema, a migrations directory,
-shared config, auth, concurrency or locking, or an on-wire / on-disk format; or
-it spans many modules; or the code-review loop surfaced a structural finding.
+integrated diff against the cross-cutting / risky checklist (feature ADR 0003,
+spelled out in the reference) — the diff touches routing, a DI container, a root
+schema, a migrations directory, shared config, auth, concurrency or locking, or
+an on-wire / on-disk format; or it spans many modules; or the code-review loop
+surfaced a structural finding.
 
 - **None of those** → skip Stage 3, note "self-contained — skipped" for the
   handoff, go to Stage 4.
@@ -229,10 +230,10 @@ loses nothing.
   — goes to a worker subagent, except a one-file no-test cluster applied inline.
 - Fix commits are `fix(review):` commits appended to the integration branch, one
   per cluster, in the order the fixes are made. They stay their own commits
-  rather than folding into a ticket commit (ADR 0002).
-- `git push`, `gh`, `/pr-to-dev`, and issue-tracker updates run only when the
-  user explicitly asks — this run does none of them. Opening the PR is the next
-  command.
+  rather than folding into a ticket commit (feature ADR 0002).
+- The run performs no PR step — `git push`, `gh`, `/pr-to-dev`, and issue-tracker
+  updates are all left for the human. The handoff prints the `/pr-to-dev`
+  command; opening the PR is the next command, run by hand.
 - Keep `engineering-workflow`, `grill-to-tickets`, `agy-implement`,
   `subagent-implement`, every `mattpocock/skills`-sourced file, and
   `skills-lock.json` exactly as they are — this skill is standalone by design

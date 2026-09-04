@@ -150,6 +150,7 @@ describe("review-to-pr eval suite contract", () => {
       assert.ok(hay(/ship verdict closes the gate/i), "ship -> Stage 4");
       assert.ok(hay(/fix-then-ship verdict drives the sub-loop/i), "fix-then-ship -> sub-loop with code-review re-run");
       assert.ok(hay(/reject verdict stops the run/i), "reject -> stop");
+      assert.ok(hay(/rework verdict drives the same sub-loop/i), "rework -> sub-loop, distinct from reject");
       assert.ok(hay(/two consecutive cycles end the sub-loop early/i), "two-consecutive-stall ends the sub-loop early");
       assert.ok(hay(/scrutinize budget is independent of the code budget/i), "scrutinize budget independent of the code budget");
     });
@@ -165,7 +166,7 @@ describe("review-to-pr eval suite contract", () => {
 
     it("carries at least one case per decision branch across every stage", async () => {
       const { evals } = await evalsJson();
-      assert.ok(evals.length >= 30, `expected >= 30 eval cases, got ${evals.length}`);
+      assert.ok(evals.length >= 32, `expected >= 32 eval cases, got ${evals.length}`);
       const hay = (re) => evals.some((e) => re.test(e.name) || re.test(e.expected_output));
       const branches = {
         "explicit invocation only": /explicit invocation|does not start itself/i,
@@ -196,6 +197,7 @@ describe("review-to-pr eval suite contract", () => {
         "ship -> Stage 4": /ship verdict closes the gate/i,
         "fix-then-ship -> sub-loop": /fix-then-ship verdict drives the sub-loop/i,
         "reject -> stop": /reject verdict stops the run/i,
+        "rework -> sub-loop": /rework verdict drives the same sub-loop/i,
         "two-consecutive-stall ends sub-loop": /two consecutive cycles end the sub-loop early/i,
         "scrutinize budget independent of code budget": /scrutinize budget is independent of the code budget/i,
         "red suite -> new blocker": /red full suite is a new blocker/i,
@@ -203,6 +205,7 @@ describe("review-to-pr eval suite contract", () => {
         "continue -> Reality reconciliation": /continue reconciles against reality/i,
         "status -> read-only": /status is read-only/i,
         "handoff -> /pr-to-dev, no PR step": /stops before the PR|no PR step|opens no pull request/i,
+        "--agent pin and --model pass-through": /--agent pins the fix worker|--model is a raw pass-through/i,
       };
       for (const [label, re] of Object.entries(branches)) {
         assert.ok(hay(re), `no eval case covers: ${label}`);

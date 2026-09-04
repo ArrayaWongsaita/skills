@@ -112,7 +112,7 @@ to the integration branch, in the order the fixes are made:
 
 Record the commit in `review-status.md` under `fix_commits` (sha + summary +
 the cluster's finding ids). Fix commits stay their own commits — they are appended
-to the tip, in fix order, rather than folded into a ticket commit (ADR 0002).
+to the tip, in fix order, rather than folded into a ticket commit (feature ADR 0002).
 Then return to Stage 1 for the next two-axis review.
 
 ## 6. Unfixable blockers

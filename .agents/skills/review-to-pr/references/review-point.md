@@ -13,8 +13,12 @@ branch, runs no `code-review`, and makes no fix.
 - **`main` resolves.** `git rev-parse --verify main` succeeds. A repo whose
   integration target is not `main` needs the explicit `<ref>` argument (see §2);
   the skill infers no other target from remote `HEAD` or CI config.
-- **v1 accepts a feature integration branch only.** A branch that is a bug fix or
-  an incident is out of scope for v1 — say so and stop.
+- **v1 accepts a feature integration branch only.** Read the branch's shape: the
+  branch name (a `fix/`, `hotfix/`, or `incident/` prefix) and the commits in
+  `git log <review-point>..HEAD` (dominated by `fix:` / `revert:` commits with no
+  `feat:` ticket series, or a single emergency commit). When the branch reads as
+  a bug fix or an incident rather than a feature ticket series, name what you saw
+  and stop — bug-flow and incident-branch support is a deferred follow-up.
 
 ## 2. Resolve the review point
 

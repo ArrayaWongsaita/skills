@@ -28,8 +28,10 @@ integration branch ที่ verify แล้วแต่ยังไม่ม�
 คือ loop เดิมที่รันซ้ำแบบเดียวกันทุกครั้ง
 
 The owner wants the standalone splits decoupled and may remove
-`engineering-workflow` entirely later. This mirrors ADR 0003 (`grill-to-tickets`
-split §1–3) and ADR 0005 (`subagent-implement` is §7).
+`engineering-workflow` entirely later. This mirrors the standalone stance ADR
+0003 took for the `grill-to-tickets` §1–3 split; the `subagent-implement` = §7
+split lands on its own branch with its own repo ADR, so `review-to-pr` refers to
+it by skill name only and builds from `main` regardless of merge order.
 
 ## Decision / การตัดสินใจ
 
@@ -73,8 +75,8 @@ split §1–3) and ADR 0005 (`subagent-implement` is §7).
 - The code-review three-cycle budget, the scrutinize six-cycle budget, the stall
   rule, and the `status.md` + Reality reconciliation discipline now exist in a
   fourth place in the repo and can drift. A shared-`references/` refactor across
-  the implement/review siblings is a deferred follow-up, the same posture ADR
-  0004 and ADR 0005 take.
+  the implement/review siblings is a deferred follow-up, the same posture the
+  earlier standalone-split ADRs take.
 - The "cross-cutting or risky" judgment for the system gate is the orchestrator's
   call from a checklist rather than a formula; the mitigation is that the handoff
   always states whether the gate ran and why.

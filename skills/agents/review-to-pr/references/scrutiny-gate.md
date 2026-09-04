@@ -3,7 +3,9 @@
 `scrutinize` is an end-to-end code-path trace with its own six-cycle budget —
 expensive. On a self-contained feature whose blast radius the code-review Spec
 axis already covered, it mostly restates the code-review result. So Stage 3 runs
-it **only when the integrated change is cross-cutting or risky** (ADR 0003).
+it **only when the integrated change is cross-cutting or risky**. The checklist
+below is feature ADR 0003, spelled out in full so an installed reader needs no
+other file.
 
 ## 1. The cross-cutting / risky checklist
 

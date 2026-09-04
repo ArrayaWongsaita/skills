@@ -244,6 +244,9 @@ describe("review-to-pr skill contract", () => {
         assert.match(c, /stash/i, "names stashing explicitly to rule it out");
         assert.match(c, /stops|asks/i);
         assert.match(c, /`?main`? resolves|rev-parse --verify main/i);
+        assert.match(c, /feature integration branch only/i);
+        assert.match(c, /bug fix or an? incident|hotfix|incident/i);
+        assert.match(c, /branch name|git log <review-point>\.\.HEAD|`?fix:`?/i, "a criterion for spotting a non-feature branch");
       }
     });
 

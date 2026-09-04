@@ -3,13 +3,13 @@
   "evals": [
     {
       "id": 1,
-      "name": "a run starts only on an explicit invocation",
-      "prompt": "The user says: \"the branch subagent-implement/wishlist-sync is done — can you get it reviewed and ready for a PR?\" There is no /review-to-pr or $review-to-pr token in the message.",
-      "expected_output": "review-to-pr does not start itself. The skill is disable-model-invocation and its Codex policy sets allow_implicit_invocation: false, so it activates only when the user types /review-to-pr or $review-to-pr. The assistant may suggest that command, but runs no stage until the user invokes it explicitly.",
+      "name": "the run begins at the explicit invocation, not from earlier chat",
+      "prompt": "/review-to-pr — invoked now. Earlier in the same session the user said \"the branch subagent-implement/wishlist-sync is done, can you get it reviewed and PR-ready\" and the assistant did not act on that sentence.",
+      "expected_output": "Because review-to-pr is disable-model-invocation with allow_implicit_invocation: false, the earlier paraphrase triggered nothing — no Stage 0, no code-review, no review-status.md. The run starts here, at the explicit /review-to-pr token, from a clean Stage 0 preflight.",
       "expectations": [
-        "Does not begin Stage 0 from the paraphrased request",
-        "Points the user at the explicit /review-to-pr invocation instead",
-        "Starts no code-review, cuts no branch, and writes no review-status.md before the explicit call"
+        "Confirms the earlier paraphrased sentence started no stage",
+        "Begins the run at the explicit /review-to-pr invocation",
+        "Runs the Stage 0 preflight fresh rather than assuming earlier state"
       ],
       "files": []
     },
@@ -456,6 +456,32 @@
         "Reports the cycle history and the findings ledger from review-status.md",
         "Runs no code-review, scrutinize, or test suite",
         "Mutates no file and cuts no branch"
+      ],
+      "files": []
+    },
+    {
+      "id": 37,
+      "name": "a rework verdict drives the same sub-loop as fix-then-ship",
+      "prompt": "/review-to-pr — the system gate's scrutinize pass closed with 'rework': a major seam is in the wrong layer, but every fact needed to correct it is already settled and the correction does not need a human decision.",
+      "expected_output": "rework normalizes to the rework token and enters the sub-loop scrutinize -> fix -> tests or typecheck -> code-review -> scrutinize, the same route as fix-then-ship. The code-review step is run every iteration and consumes a scrutinize cycle, not a code cycle. The loop repeats until scrutinize returns ship. rework is distinct from reject, which would stop for a human decision.",
+      "expectations": [
+        "Normalizes 'rework' to the rework token, not to fix-then-ship or reject",
+        "Routes rework into the sub-loop rather than stopping",
+        "Runs the code-review step every iteration and counts it against the scrutinize budget",
+        "Keeps rework distinct from reject (which stops for a human decision)"
+      ],
+      "files": []
+    },
+    {
+      "id": 38,
+      "name": "--agent pins the fix worker and --model is a raw pass-through",
+      "prompt": "/review-to-pr --agent feature-dev --model claude-sonnet-5 — run from the integration branch.",
+      "expected_output": "--agent feature-dev pins every dispatched fix worker to that subagent type for the whole run, skipping the wording-match resolution. --model claude-sonnet-5 is passed to every worker as a raw value. With neither flag set, workers inherit the orchestrator's model and the agent type is resolved by wording match, else general-purpose. The flags change no stage logic.",
+      "expectations": [
+        "Pins every fix-worker dispatch to the feature-dev subagent type",
+        "Passes --model claude-sonnet-5 to each worker verbatim",
+        "Falls back to wording-match / general-purpose and an inherited model when the flags are absent",
+        "Does not let the flags change the stage flow or the budgets"
       ],
       "files": []
     }
