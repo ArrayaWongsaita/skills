@@ -378,4 +378,100 @@ describe("review-to-pr skill contract", () => {
       }
     });
   });
+
+  describe("ticket 04 — Stage 2, fix dispatch and the fix(review) commit", () => {
+    it("SKILL.md drives references/fix-dispatch.md from a Stage 2 section that returns to Stage 1", async () => {
+      for (const file of skillFiles) {
+        const content = await readFile(file, "utf8");
+        assert.match(content, /##\s*Stage 2/i);
+        assert.match(content, /references\/fix-dispatch\.md/);
+      }
+      for (const body of await bothSkillBodies()) {
+        const s = stageSection(body, 2);
+        assert.ok(s, "Stage 2 section present");
+        assert.match(s, /cluster/i);
+        assert.match(s, /fix\(review\):/);
+        assert.match(s, /return to Stage 1|back to Stage 1/i);
+      }
+    });
+
+    it("fix-dispatch.md specifies clustering and the dispatch-vs-inline rule", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/fix-dispatch.md"), "utf8");
+        assert.match(c, /one cluster per coherent fix/i);
+        assert.match(c, /new or changed test/i);
+        assert.match(c, /more than one file/i);
+        assert.match(c, /one file[\s\S]*?no test change/i);
+        assert.match(c, /hand-applied inline/i);
+        assert.match(c, /affected tests and the typecheck are run inline|run inline/i);
+        assert.match(c, /sanctioned context cost/i);
+      }
+    });
+
+    it("fix-dispatch.md cites subagent-implement and carries the worktree dispatch contract", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/fix-dispatch.md"), "utf8");
+        assert.match(c, /subagent-implement/);
+        assert.match(c, /review-to-pr\/<feature-slug>\/fix-<n>/);
+        assert.match(c, /integration `?HEAD`?/i);
+        assert.match(c, /\.scratch\/<feature-slug>\/prompts\/fix-<n>\.md/);
+        assert.match(c, /isolation:\s*"worktree"/);
+        assert.match(c, /\bfork\b/, "rules out fork explicitly");
+        assert.match(c, /--agent/);
+        assert.match(c, /general-purpose/);
+        assert.match(c, /--model/);
+        assert.match(c, /test-first/i);
+      }
+    });
+
+    it("fix-dispatch.md carries the fresh Explore verifier that renders no verdict", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/fix-dispatch.md"), "utf8");
+        assert.match(c, /fresh `?Explore`? subagent/i);
+        assert.match(c, /writes no files/i);
+        assert.match(c, /only the test files/i);
+        assert.match(c, /would-be-red|reproduce.*red/i);
+        assert.match(c, /no verdict/i);
+        assert.match(c, /vacuous|tautolog/i);
+        assert.match(c, /fallback/i);
+      }
+    });
+
+    it("fix-dispatch.md defines the retry budget and the SendMessage resume", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/fix-dispatch.md"), "utf8");
+        assert.match(c, /MAX_FIX_ATTEMPTS\s*=\s*3/);
+        assert.match(c, /SendMessage/);
+        assert.match(c, /same worker/i);
+        assert.match(c, /crash, timeout, or lost subagent[\s\S]*?one attempt/i);
+        assert.match(c, /\bno\s+separate\s+failover budget/i);
+      }
+    });
+
+    it("fix-dispatch.md specifies one appended fix(review): commit per cluster and the unfixable path", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/fix-dispatch.md"), "utf8");
+        assert.match(c, /exactly\*{0,2} one\*{0,2} `?fix\(review\)/i);
+        assert.match(c, /git merge --squash review-to-pr\/<feature-slug>\/fix-<n>/);
+        assert.match(c, /fix_commits/);
+        assert.match(c, /ADR 0002|adr\/0002/);
+        assert.match(c, /unfixable/);
+        assert.match(c, /worktree is kept|keeps the worktree/i);
+        assert.match(c, /not PR-ready/i);
+        assert.match(c, /writes no fix code[\s\S]*?dispatched cluster|visible signal/i);
+      }
+    });
+
+    it("fix-dispatch.md carries the five-item first-use confirmation checklist", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/fix-dispatch.md"), "utf8");
+        assert.match(c, /first[- ]use confirmation/i);
+        assert.match(c, /re-invokes the orchestrator on completion/i);
+        assert.match(c, /isolation: "worktree"`? keeps a worktree that has commits/i);
+        assert.match(c, /`?SendMessage`? resumes a backgrounded worker/i);
+        assert.match(c, /token usage/i);
+        assert.match(c, /`?Explore`? reads deeply enough/i);
+      }
+    });
+  });
 });

@@ -129,5 +129,17 @@ describe("review-to-pr eval suite contract", () => {
       assert.ok(hay(/no-progress cycle/i), "no-progress cycle ends the loop early");
       assert.ok(hay(/Standards-axis-only blocker|Standards axis only/i), "single-axis blocker still routes to Stage 2");
     });
+
+    it("covers the Stage 2 fix-dispatch branches (ticket 04)", async () => {
+      const { evals } = await evalsJson();
+      const hay = (re) => evals.some((e) => re.test(e.name) || re.test(e.expected_output));
+      assert.ok(hay(/multi-file cluster is dispatched|spans more than one file/i), "multi-file cluster dispatched");
+      assert.ok(hay(/one-file no-test-change cluster is hand-applied inline|hand-applies it inline/i), "one-file no-test cluster inline");
+      assert.ok(hay(/missing-test blocker is dispatched test-first|needs a new test/i), "missing-test blocker dispatched test-first");
+      assert.ok(hay(/three failed attempts leave the cluster unfixable/i), "three failed attempts -> unfixable + named in handoff");
+      assert.ok(hay(/worker crash counts as one attempt/i), "worker crash counts as one attempt");
+      assert.ok(hay(/exactly one appended fix\(review\): commit|one fix\(review\): commit per cluster/i), "one fix(review): commit per cluster");
+      assert.ok(hay(/orchestrator does not hand-code a dispatched cluster/i), "orchestrator does not hand-code a dispatched cluster");
+    });
   });
 });

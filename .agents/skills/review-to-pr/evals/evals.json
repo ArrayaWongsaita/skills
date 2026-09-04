@@ -226,6 +226,97 @@
         "Keeps the two axes' findings separate, not reranked or merged"
       ],
       "files": []
+    },
+    {
+      "id": 19,
+      "name": "a multi-file cluster is dispatched to a worker and a fresh verifier",
+      "prompt": "/review-to-pr — Stage 2. One cluster's fix spans src/api/handler.ts and src/api/schema.ts — two files, no test change strictly required but it touches more than one file.",
+      "expected_output": "Because the cluster spans more than one file, it is dispatched: a worker branch review-to-pr/<slug>/fix-1 cut from integration HEAD, a self-contained test-first prompt written to .scratch/<slug>/prompts/fix-1.md, an Agent call with isolation: worktree and a non-fork subagent type, then a fresh Explore verifier that reproduces the would-be-red, runs green + typecheck, and returns raw evidence with no verdict. The orchestrator judges.",
+      "expectations": [
+        "Dispatches the cluster because it spans more than one file",
+        "Cuts the worker branch review-to-pr/<slug>/fix-1 from integration HEAD and writes prompts/fix-1.md",
+        "Uses isolation: worktree and a non-fork subagent type",
+        "Runs a fresh Explore verifier that renders no verdict, then judges the evidence itself"
+      ],
+      "files": []
+    },
+    {
+      "id": 20,
+      "name": "a one-file no-test-change cluster is hand-applied inline",
+      "prompt": "/review-to-pr — Stage 2. One cluster is a single-line off-by-one fix in src/pagination.ts; the existing tests already cover the boundary and no test needs to change.",
+      "expected_output": "The cluster is confined to one file with no test change, so the orchestrator hand-applies it inline and runs the affected tests and the typecheck inline as the sanctioned context cost. It is not dispatched to a worker. It still lands as one fix(review): commit.",
+      "expectations": [
+        "Applies the one-file no-test fix inline rather than dispatching it",
+        "Runs the affected tests and the typecheck inline",
+        "Lands the inline fix as one fix(review): commit",
+        "Reserves inline fix code for exactly this one-file no-test case"
+      ],
+      "files": []
+    },
+    {
+      "id": 21,
+      "name": "a missing-test blocker is dispatched test-first",
+      "prompt": "/review-to-pr — Stage 1 found a blocker: regression risk with no covering test on the token-refresh path. Stage 2 clusters it.",
+      "expected_output": "The cluster needs a new test, so it is dispatched. The worker prompt is test-first: write the failing test that pins the missing coverage first, then the change. The verifier reproduces the would-be-red with only the test files applied, confirming the test fails for the missing behaviour before the fix.",
+      "expectations": [
+        "Dispatches the cluster because it needs a new test",
+        "Gives the worker a test-first prompt (failing test before the change)",
+        "Has the verifier reproduce red with only the test files applied",
+        "Judges the new test maps to the blocker and is not vacuous"
+      ],
+      "files": []
+    },
+    {
+      "id": 22,
+      "name": "three failed attempts leave the cluster unfixable and named in the handoff",
+      "prompt": "/review-to-pr — Stage 2. Cluster fix-2's worker returns three times; each time the verifier shows the new test still fails green. Attempts 2 and 3 were resumed with the specific gap via SendMessage.",
+      "expected_output": "After the third failure, cluster fix-2's blockers are left unfixable in the ledger, the worktree is kept, and the failure output is recorded in review-status.md. The orchestrator writes no fix code for fix-2 itself. The Stage 5 handoff names fix-2's blockers as not PR-ready. Exactly three attempts were consumed.",
+      "expectations": [
+        "Consumes exactly MAX_FIX_ATTEMPTS = 3 before giving up on fix-2",
+        "Resumes the same worker with the specific gap via SendMessage between attempts",
+        "Marks the cluster's blockers unfixable, keeps the worktree, records the failure",
+        "Writes no fix code for fix-2 on the main thread and names it not PR-ready in the handoff"
+      ],
+      "files": []
+    },
+    {
+      "id": 23,
+      "name": "a worker crash counts as one attempt and re-dispatches fresh",
+      "prompt": "/review-to-pr — Stage 2. Cluster fix-1's first worker times out with no usable return. The second worker returns a result that passes verification.",
+      "expected_output": "The timeout counts as one of the three fix attempts (there is no separate failover budget) and a fresh worker is re-dispatched against the same worker branch. The second worker's passing result is verified and the cluster lands as one fix(review): commit. Two attempts were consumed.",
+      "expectations": [
+        "Counts the worker timeout as one attempt against MAX_FIX_ATTEMPTS",
+        "Re-dispatches a fresh worker against the same worker branch",
+        "Does not treat the crash as a separate failover budget",
+        "Lands the eventual fix as one fix(review): commit"
+      ],
+      "files": []
+    },
+    {
+      "id": 24,
+      "name": "each cluster lands as exactly one appended fix(review): commit",
+      "prompt": "/review-to-pr — Stage 2 of cycle 1 has two clusters: fix-1 (dispatched, spans two files) and fix-2 (inline, one file). Both pass verification.",
+      "expected_output": "fix-1 is squash-merged from its worker branch as one commit 'fix(review): <summary>'; fix-2 is committed inline as one 'fix(review): <summary>'. Two commits, appended to the integration branch tip in the order the fixes were made, each recorded in review-status.md under fix_commits. Neither is folded into a ticket commit.",
+      "expectations": [
+        "Lands exactly one fix(review): commit per cluster",
+        "Squash-merges the dispatched cluster from its worker branch",
+        "Appends the commits in fix order and records them in fix_commits",
+        "Does not fold a fix into any ticket commit (adr/0002)"
+      ],
+      "files": []
+    },
+    {
+      "id": 25,
+      "name": "the orchestrator does not hand-code a dispatched cluster",
+      "prompt": "/review-to-pr — Stage 2. Cluster fix-3 is dispatched (needs a new test). Its worker is slow and the orchestrator could write the test and the fix itself in a few minutes.",
+      "expected_output": "The orchestrator waits for the worker and the verifier rather than writing the test or the implementation for fix-3 itself. Hand-coded fix code on the main thread is reserved for an inline one-file no-test cluster; a dispatched cluster the orchestrator cannot get finished becomes unfixable, a visible signal.",
+      "expectations": [
+        "Does not write implementation code or a test for the dispatched cluster fix-3",
+        "Keeps fix code on the main thread limited to the inline one-file no-test case",
+        "Lets the worker + verifier loop run rather than rescuing fix-3 by hand",
+        "Accepts unfixable as the outcome if the worker cannot finish"
+      ],
+      "files": []
     }
   ]
 }
