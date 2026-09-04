@@ -1,0 +1,489 @@
+{
+  "skill_name": "review-to-pr",
+  "evals": [
+    {
+      "id": 1,
+      "name": "the run begins at the explicit invocation, not from earlier chat",
+      "prompt": "/review-to-pr — invoked now. Earlier in the same session the user said \"the branch subagent-implement/wishlist-sync is done, can you get it reviewed and PR-ready\" and the assistant did not act on that sentence.",
+      "expected_output": "Because review-to-pr is disable-model-invocation with allow_implicit_invocation: false, the earlier paraphrase triggered nothing — no Stage 0, no code-review, no review-status.md. The run starts here, at the explicit /review-to-pr token, from a clean Stage 0 preflight.",
+      "expectations": [
+        "Confirms the earlier paraphrased sentence started no stage",
+        "Begins the run at the explicit /review-to-pr invocation",
+        "Runs the Stage 0 preflight fresh rather than assuming earlier state"
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "no argument reviews the whole feature against the merge-base with main",
+      "prompt": "/review-to-pr — run from the branch subagent-implement/wishlist-sync, which carries four ticket commits and a clean tree. main has advanced twelve commits since the branch was cut.",
+      "expected_output": "The review point is git merge-base main HEAD, computed automatically and pinned for the run — correct even though main advanced. The integration branch is the current branch. The feature slug is the branch-name stem wishlist-sync. Stage 0 writes review-status.md and pauses for approval before Stage 1.",
+      "expectations": [
+        "Pins the review point to git merge-base main HEAD, not the first commit of the branch",
+        "Takes the current branch as the integration branch and wishlist-sync as the slug",
+        "Records review_point, feature_slug, integration_branch, spec_source, and stage in review-status.md",
+        "Pauses for explicit approval before Stage 1"
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "the Codex $review-to-pr form drives the same run",
+      "prompt": "$review-to-pr wishlist-sync — run from the integration branch for that feature.",
+      "expected_output": "The $review-to-pr form is an explicit invocation and starts the run the same way /review-to-pr does. wishlist-sync resolves as the feature slug (it is not a git ref), the review point defaults to git merge-base main HEAD, and Stage 0 pauses for approval.",
+      "expectations": [
+        "Treats $review-to-pr as a valid explicit invocation",
+        "Resolves wishlist-sync as the feature slug because it does not resolve as a git ref",
+        "Defaults the review point to the merge-base with main"
+      ],
+      "files": []
+    },
+    {
+      "id": 4,
+      "name": "the run stops before the PR and hands off /pr-to-dev",
+      "prompt": "/review-to-pr .scratch/handoff-demo/ — the code-review loop came back clean, the system gate was skipped as self-contained, and the full suite is green.",
+      "expected_output": "Stage 5 prints the handoff: the integration branch name, the code-review verdict (clean), the scrutinize line (self-contained — skipped), the green-suite confirmation, the fix(review): commits (none), and the /pr-to-dev command to run next in a fresh context. The run performs no PR step — no git push, no gh, no /pr-to-dev.",
+      "expectations": [
+        "Prints the branch, the code-review and scrutinize verdicts, the green-suite line, and the /pr-to-dev command",
+        "Runs no git push and no gh, and opens no pull request",
+        "Leaves opening the PR as the next command the user runs by hand"
+      ],
+      "files": []
+    },
+    {
+      "id": 5,
+      "name": "an explicit ref argument overrides the review point",
+      "prompt": "/review-to-pr v2.4.0 — run from the integration branch. v2.4.0 is an existing tag that git rev-parse --verify resolves.",
+      "expected_output": "Because git rev-parse --verify v2.4.0 resolves, the tag is the review-point override — both code-review axes and every diff in the run measure against v2.4.0, not against git merge-base main HEAD. The feature slug still comes from the branch-name stem. review-status.md records review_point as the tag's commit with 'explicit v2.4.0'.",
+      "expectations": [
+        "Resolves v2.4.0 as a git ref and uses it as the review point",
+        "Does not fall back to git merge-base main HEAD when an explicit ref resolves",
+        "Records how the review point was resolved in review-status.md",
+        "Still derives the feature slug from the branch-name stem"
+      ],
+      "files": []
+    },
+    {
+      "id": 6,
+      "name": "the feature slug is the branch-name stem after the last slash",
+      "prompt": "/review-to-pr — run from the branch agy-implement/checkout-flow with no argument.",
+      "expected_output": "The slug is the segment after the last slash: checkout-flow. Stage 0 loads .scratch/checkout-flow/spec.md and .scratch/checkout-flow/issues/ for the Spec axis if they exist. The review point defaults to git merge-base main HEAD.",
+      "expectations": [
+        "Derives the slug checkout-flow from agy-implement/checkout-flow",
+        "Looks for the spec source under .scratch/checkout-flow/",
+        "Does not treat the agy-implement/ branch prefix as part of the slug"
+      ],
+      "files": []
+    },
+    {
+      "id": 7,
+      "name": "with no slug and no branch stem match, the most recent .scratch dir is named back",
+      "prompt": "/review-to-pr — run from a branch named review-work with no argument, and .scratch/ contains three feature directories, checkout-flow modified most recently.",
+      "expected_output": "The branch stem review-work matches no .scratch/ directory, so Stage 0 proposes the most recently modified one — .scratch/checkout-flow/ — and names it back to the user for confirmation before using it. It does not silently pick one.",
+      "expectations": [
+        "Falls back to the most recently modified .scratch/*/ directory",
+        "Names the proposed directory back to the user and waits for confirmation",
+        "Proceeds only once the user confirms the feature directory"
+      ],
+      "files": []
+    },
+    {
+      "id": 8,
+      "name": "no spec.md and no issues/ runs the Spec axis degraded against commit messages",
+      "prompt": "/review-to-pr .scratch/hotpatch/ — the directory has no spec.md and no issues/ subdirectory.",
+      "expected_output": "The Spec axis has no acceptance criteria to review against, so it runs against the commit messages alone. review-status.md records spec_source as commit-messages, and the Stage 5 handoff states the Spec axis ran in degraded mode. The run still proceeds — a missing spec is not a halt.",
+      "expectations": [
+        "Runs the Spec axis against the commit messages when no spec.md or issues/ exists",
+        "Records spec_source as commit-messages in review-status.md",
+        "States the degraded Spec axis in the handoff",
+        "Does not halt Stage 0 for a missing spec"
+      ],
+      "files": []
+    },
+    {
+      "id": 9,
+      "name": "an unresolvable argument halts Stage 0 with the reason named",
+      "prompt": "/review-to-pr feature-xyz — feature-xyz resolves as neither a git ref (git rev-parse --verify fails) nor an existing .scratch/feature-xyz/ directory.",
+      "expected_output": "Stage 0 halts and names the reason: the argument resolves as neither a git ref nor a .scratch/<slug>/ directory. No review-status.md is written past the halt note, no code-review runs.",
+      "expectations": [
+        "Detects that feature-xyz is neither a resolvable ref nor a feature directory",
+        "Halts Stage 0 naming the unresolvable argument as the reason",
+        "Runs no code-review and starts no fix work"
+      ],
+      "files": []
+    },
+    {
+      "id": 10,
+      "name": "an empty diff against the review point halts Stage 0",
+      "prompt": "/review-to-pr abc123 — abc123 resolves, but git diff abc123...HEAD is empty (HEAD is an ancestor of abc123 or equal to it).",
+      "expected_output": "Stage 0 halts naming the reason: git diff <review-point>...HEAD is empty, so there is nothing to review. The check runs here, before any parallel sub-agent is spawned.",
+      "expectations": [
+        "Runs git diff <review-point>...HEAD and finds it empty",
+        "Halts Stage 0 naming the empty diff as the reason",
+        "Spawns no code-review sub-agents"
+      ],
+      "files": []
+    },
+    {
+      "id": 11,
+      "name": "a dirty working tree stops Stage 0 and asks, stashing nothing",
+      "prompt": "/review-to-pr — run from the integration branch, which has an uncommitted change to src/config.ts.",
+      "expected_output": "Preflight finds the working tree dirty and stops before resolving the review point or writing review-status.md. It reports the uncommitted change and asks the user to deal with it. It runs no git stash and mixes its work with none of the user's changes.",
+      "expectations": [
+        "Halts at preflight because the working tree is dirty",
+        "Asks the user rather than proceeding",
+        "Runs no git stash",
+        "Leaves the user's uncommitted change exactly as it was"
+      ],
+      "files": []
+    },
+    {
+      "id": 12,
+      "name": "an argument that is both a ref and a slug is taken as the review-point override",
+      "prompt": "/review-to-pr checkout-flow — there is a branch named checkout-flow (git rev-parse --verify resolves it) and also a .scratch/checkout-flow/ directory.",
+      "expected_output": "The argument resolves as a git ref, so it is the review-point override: the run measures against the checkout-flow branch. The feature slug then falls back to the integration branch-name stem rather than also being checkout-flow from the argument.",
+      "expectations": [
+        "Takes checkout-flow as the review-point override because it resolves as a ref",
+        "Falls the feature slug back to the branch-name stem, not the argument",
+        "Records the review point as 'explicit checkout-flow' in review-status.md"
+      ],
+      "files": []
+    },
+    {
+      "id": 13,
+      "name": "a cycle that turns up a blocker routes to Stage 2",
+      "prompt": "/review-to-pr — Stage 0 is approved. The first two-axis code-review returns a Spec-axis finding: the spec asks for idempotent retries and the diff retries without a dedup key. Normalize and route.",
+      "expected_output": "The finding is a spec mismatch — missing behaviour the spec asked for — so it normalizes to a blocker. code_cycles is now 1. The blocker enters the ledger with axis spec and status open, and the run routes to Stage 2 to fix it, then returns to Stage 1 for the next review.",
+      "expectations": [
+        "Normalizes the missing idempotency behaviour to a blocker on the Spec axis",
+        "Increments code_cycles to 1 for the completed two-axis review",
+        "Records the blocker in the findings ledger with axis and status open",
+        "Routes to Stage 2 and plans to return to Stage 1 afterward"
+      ],
+      "files": []
+    },
+    {
+      "id": 14,
+      "name": "a clean two-axis review routes straight to Stage 3",
+      "prompt": "/review-to-pr — Stage 0 approved. The first code-review returns no blocking finding on either axis: one Standards-axis note about a slightly long function, no consequence.",
+      "expected_output": "The long-function note is a consequence-free smell — non-blocking. It is carried in the ledger and the handoff, not fixed. With no blocker this cycle, the run skips Stage 2 and goes to Stage 3 (the system-scrutinize gate judgment).",
+      "expectations": [
+        "Normalizes the long-function note to non-blocking",
+        "Carries the non-blocking note rather than fixing it",
+        "Routes to Stage 3 because no blocker was found",
+        "Does not enter Stage 2 when there is nothing to fix"
+      ],
+      "files": []
+    },
+    {
+      "id": 15,
+      "name": "a non-blocking smell is carried in the report, not fixed",
+      "prompt": "/review-to-pr — the code-review Standards axis flags possible Feature Envy on a helper and a Mysterious Name on a local variable. Neither has a concrete consequence. There are also two real blockers this cycle.",
+      "expected_output": "The Feature Envy and Mysterious Name findings are judgement-call smells with no concrete consequence, so they are non-blocking: recorded in the ledger with status open and axis standards, and listed in the Stage 5 handoff as 'carried, not fixed'. Only the two real blockers go to Stage 2 clustering.",
+      "expectations": [
+        "Classifies both smells as non-blocking judgement calls",
+        "Carries them in the findings ledger and the handoff without a fix",
+        "Sends only the two real blockers to Stage 2",
+        "Does not spend a fix attempt on a consequence-free smell"
+      ],
+      "files": []
+    },
+    {
+      "id": 16,
+      "name": "the third completed two-axis review is the ceiling",
+      "prompt": "/review-to-pr — cycles 1 and 2 each found and fixed blockers. Cycle 3's review still reports one blocker, but it is a newly surfaced one and the two earlier blockers are resolved.",
+      "expected_output": "code_cycles is 3 — the ceiling. Even though cycle 3 made progress (two resolved, one new), no fourth two-axis review runs. The run stops and reports the one open blocker as unresolved / not PR-ready, with the per-cycle history, and hands over /review-to-pr continue.",
+      "expectations": [
+        "Treats three completed two-axis reviews as the hard ceiling",
+        "Does not start a fourth review even though cycle 3 resolved blockers",
+        "Reports the surviving blocker as not PR-ready with the cycle history",
+        "Ends with the /review-to-pr continue command"
+      ],
+      "files": []
+    },
+    {
+      "id": 17,
+      "name": "a no-progress cycle ends the loop before the ceiling",
+      "prompt": "/review-to-pr — cycle 1 found blocker X and a fix landed. Cycle 2's review still reports X (the fix did not resolve it) and turns up nothing new.",
+      "expected_output": "Cycle 2 resolved no blocker and found nothing new — a no-progress cycle. The loop ends here, at cycle 2, before the three-cycle ceiling. Blocker X is marked stalled in the ledger and reported; the run does not mechanically re-review a third time.",
+      "expectations": [
+        "Detects the no-progress cycle (no blocker resolved, nothing new)",
+        "Ends the loop at cycle 2 rather than continuing to cycle 3",
+        "Marks blocker X stalled and reports it",
+        "Does not run a third review just because the budget allows it"
+      ],
+      "files": []
+    },
+    {
+      "id": 18,
+      "name": "a Standards-axis-only blocker routes to Stage 2 like any other",
+      "prompt": "/review-to-pr — the code-review Spec axis is clean, but the Standards axis finds a documented-standard violation with a concrete consequence: a raw SQL string built by concatenation where CONTRIBUTING.md mandates the query builder, opening an injection path.",
+      "expected_output": "A documented-standard violation with a concrete consequence is a blocker. It is on the Standards axis only, but that routes to Stage 2 exactly like a Spec-axis blocker. The two axes are not reranked or merged — the Standards finding stands on its own.",
+      "expectations": [
+        "Normalizes the documented-standard violation with a concrete consequence to a blocker",
+        "Routes a Standards-axis-only blocker to Stage 2",
+        "Does not downgrade it because the Spec axis was clean",
+        "Keeps the two axes' findings separate, not reranked or merged"
+      ],
+      "files": []
+    },
+    {
+      "id": 19,
+      "name": "a multi-file cluster is dispatched to a worker and a fresh verifier",
+      "prompt": "/review-to-pr — Stage 2. One cluster's fix spans src/api/handler.ts and src/api/schema.ts — two files, no test change strictly required but it touches more than one file.",
+      "expected_output": "Because the cluster spans more than one file, it is dispatched: a worker branch review-to-pr/<slug>/fix-1 cut from integration HEAD, a self-contained test-first prompt written to .scratch/<slug>/prompts/fix-1.md, an Agent call with isolation: worktree and a non-fork subagent type, then a fresh Explore verifier that reproduces the would-be-red, runs green + typecheck, and returns raw evidence with no verdict. The orchestrator judges.",
+      "expectations": [
+        "Dispatches the cluster because it spans more than one file",
+        "Cuts the worker branch review-to-pr/<slug>/fix-1 from integration HEAD and writes prompts/fix-1.md",
+        "Uses isolation: worktree and a non-fork subagent type",
+        "Runs a fresh Explore verifier that renders no verdict, then judges the evidence itself"
+      ],
+      "files": []
+    },
+    {
+      "id": 20,
+      "name": "a one-file no-test-change cluster is hand-applied inline",
+      "prompt": "/review-to-pr — Stage 2. One cluster is a single-line off-by-one fix in src/pagination.ts; the existing tests already cover the boundary and no test needs to change.",
+      "expected_output": "The cluster is confined to one file with no test change, so the orchestrator hand-applies it inline and runs the affected tests and the typecheck inline as the sanctioned context cost. It is not dispatched to a worker. It still lands as one fix(review): commit.",
+      "expectations": [
+        "Applies the one-file no-test fix inline rather than dispatching it",
+        "Runs the affected tests and the typecheck inline",
+        "Lands the inline fix as one fix(review): commit",
+        "Reserves inline fix code for exactly this one-file no-test case"
+      ],
+      "files": []
+    },
+    {
+      "id": 21,
+      "name": "a missing-test blocker is dispatched test-first",
+      "prompt": "/review-to-pr — Stage 1 found a blocker: regression risk with no covering test on the token-refresh path. Stage 2 clusters it.",
+      "expected_output": "The cluster needs a new test, so it is dispatched. The worker prompt is test-first: write the failing test that pins the missing coverage first, then the change. The verifier reproduces the would-be-red with only the test files applied, confirming the test fails for the missing behaviour before the fix.",
+      "expectations": [
+        "Dispatches the cluster because it needs a new test",
+        "Gives the worker a test-first prompt (failing test before the change)",
+        "Has the verifier reproduce red with only the test files applied",
+        "Judges the new test maps to the blocker and is not vacuous"
+      ],
+      "files": []
+    },
+    {
+      "id": 22,
+      "name": "three failed attempts leave the cluster unfixable and named in the handoff",
+      "prompt": "/review-to-pr — Stage 2. Cluster fix-2's worker returns three times; each time the verifier shows the new test still fails green. Attempts 2 and 3 were resumed with the specific gap via SendMessage.",
+      "expected_output": "After the third failure, cluster fix-2's blockers are left unfixable in the ledger, the worktree is kept, and the failure output is recorded in review-status.md. The orchestrator writes no fix code for fix-2 itself. The Stage 5 handoff names fix-2's blockers as not PR-ready. Exactly three attempts were consumed.",
+      "expectations": [
+        "Consumes exactly MAX_FIX_ATTEMPTS = 3 before giving up on fix-2",
+        "Resumes the same worker with the specific gap via SendMessage between attempts",
+        "Marks the cluster's blockers unfixable, keeps the worktree, records the failure",
+        "Writes no fix code for fix-2 on the main thread and names it not PR-ready in the handoff"
+      ],
+      "files": []
+    },
+    {
+      "id": 23,
+      "name": "a worker crash counts as one attempt and re-dispatches fresh",
+      "prompt": "/review-to-pr — Stage 2. Cluster fix-1's first worker times out with no usable return. The second worker returns a result that passes verification.",
+      "expected_output": "The timeout counts as one of the three fix attempts (there is no separate failover budget) and a fresh worker is re-dispatched against the same worker branch. The second worker's passing result is verified and the cluster lands as one fix(review): commit. Two attempts were consumed.",
+      "expectations": [
+        "Counts the worker timeout as one attempt against MAX_FIX_ATTEMPTS",
+        "Re-dispatches a fresh worker against the same worker branch",
+        "Does not treat the crash as a separate failover budget",
+        "Lands the eventual fix as one fix(review): commit"
+      ],
+      "files": []
+    },
+    {
+      "id": 24,
+      "name": "each cluster lands as exactly one appended fix(review): commit",
+      "prompt": "/review-to-pr — Stage 2 of cycle 1 has two clusters: fix-1 (dispatched, spans two files) and fix-2 (inline, one file). Both pass verification.",
+      "expected_output": "fix-1 is squash-merged from its worker branch as one commit 'fix(review): <summary>'; fix-2 is committed inline as one 'fix(review): <summary>'. Two commits, appended to the integration branch tip in the order the fixes were made, each recorded in review-status.md under fix_commits. Neither is folded into a ticket commit.",
+      "expectations": [
+        "Lands exactly one fix(review): commit per cluster",
+        "Squash-merges the dispatched cluster from its worker branch",
+        "Appends the commits in fix order and records them in fix_commits",
+        "Does not fold a fix into any ticket commit (adr/0002)"
+      ],
+      "files": []
+    },
+    {
+      "id": 25,
+      "name": "the orchestrator does not hand-code a dispatched cluster",
+      "prompt": "/review-to-pr — Stage 2. Cluster fix-3 is dispatched (needs a new test). Its worker is slow and the orchestrator could write the test and the fix itself in a few minutes.",
+      "expected_output": "The orchestrator waits for the worker and the verifier rather than writing the test or the implementation for fix-3 itself. Hand-coded fix code on the main thread is reserved for an inline one-file no-test cluster; a dispatched cluster the orchestrator cannot get finished becomes unfixable, a visible signal.",
+      "expectations": [
+        "Does not write implementation code or a test for the dispatched cluster fix-3",
+        "Keeps fix code on the main thread limited to the inline one-file no-test case",
+        "Lets the worker + verifier loop run rather than rescuing fix-3 by hand",
+        "Accepts unfixable as the outcome if the worker cannot finish"
+      ],
+      "files": []
+    },
+    {
+      "id": 26,
+      "name": "a self-contained change skips the system gate and the handoff says so",
+      "prompt": "/review-to-pr — the code-review loop is closed. The integrated diff touches only src/subtitles/preferences.ts and its test, adds no routing, no schema, no auth, no format change, spans one module, and the code-review loop surfaced no structural finding.",
+      "expected_output": "No item on the ADR 0003 cross-cutting / risky checklist holds, so Stage 3 is skipped. The run goes straight to Stage 4. The Stage 5 handoff records the system gate as 'self-contained — skipped'.",
+      "expectations": [
+        "Judges the diff against the ADR 0003 checklist and finds no item holds",
+        "Skips the inline scrutinize pass",
+        "Goes straight to Stage 4 (full suite)",
+        "Records 'self-contained — skipped' in the handoff"
+      ],
+      "files": []
+    },
+    {
+      "id": 27,
+      "name": "a cross-cutting change runs the system gate",
+      "prompt": "/review-to-pr — the integrated diff adds a new route to src/app/router.ts and changes the shared AuthContext type that eight modules import.",
+      "expected_output": "The diff touches routing and a root shared type, so the checklist triggers and Stage 3 runs scrutinize inline end-to-end over git diff <review-point>...HEAD. The closing one-liner is normalized to exactly ship / fix-then-ship / rework / reject. The handoff will name the checklist item (routing / shared type) that triggered the gate.",
+      "expectations": [
+        "Triggers the system gate on the routing and shared-type checklist items",
+        "Runs scrutinize inline over git diff <review-point>...HEAD end-to-end",
+        "Normalizes the closing one-liner to exactly one of the four tokens",
+        "Records which checklist item triggered the gate for the handoff"
+      ],
+      "files": []
+    },
+    {
+      "id": 28,
+      "name": "a ship verdict closes the gate and advances to Stage 4",
+      "prompt": "/review-to-pr — the system gate ran and scrutinize closed with 'ship'.",
+      "expected_output": "The verdict normalizes to ship. The gate closes and the run advances to Stage 4 (the full-suite verifier). No sub-loop runs. The handoff records the gate as ran with verdict ship.",
+      "expectations": [
+        "Normalizes 'ship' to the ship verdict",
+        "Closes the gate and advances to Stage 4",
+        "Runs no sub-loop on a ship verdict"
+      ],
+      "files": []
+    },
+    {
+      "id": 29,
+      "name": "a fix-then-ship verdict drives the sub-loop with code-review re-run",
+      "prompt": "/review-to-pr — the system gate's first scrutinize pass closed with 'fix-then-ship': a retry path double-charges on a partial failure. Walk the sub-loop.",
+      "expected_output": "fix-then-ship enters the sub-loop scrutinize -> fix -> tests or typecheck -> code-review -> scrutinize. The fix goes through Stage 2 machinery as one fix(review): commit; the affected tests and typecheck run; the two-axis code-review is run again (never skipped) and consumes a scrutinize cycle, not a code cycle; then scrutinize re-runs. The loop repeats until scrutinize returns ship.",
+      "expectations": [
+        "Enters the sub-loop on fix-then-ship rather than stopping",
+        "Runs the two-axis code-review step every iteration, never skipping it",
+        "Counts the intra-sub-loop code-review against the scrutinize budget, not the code budget",
+        "Repeats until scrutinize returns ship"
+      ],
+      "files": []
+    },
+    {
+      "id": 30,
+      "name": "a reject verdict stops the run with the single biggest reason",
+      "prompt": "/review-to-pr — the system gate's scrutinize pass closed with 'reject': the whole approach reimplements a locking primitive the platform already provides and cannot be made correct as scoped.",
+      "expected_output": "reject stops the run immediately. The report gives the single biggest reason from scrutinize. There is no auto-loop back into fixing — a fresh attempt is a human decision. The handoff records the gate as ran with verdict reject and the run as not PR-ready.",
+      "expectations": [
+        "Stops the run on a reject verdict",
+        "Reports the single biggest reason from scrutinize",
+        "Does not auto-loop back into fixing",
+        "Records the run as not PR-ready"
+      ],
+      "files": []
+    },
+    {
+      "id": 31,
+      "name": "the same blocking findings surviving two consecutive cycles end the sub-loop early",
+      "prompt": "/review-to-pr — the scrutiny sub-loop is on cycle 3. Cycles 2 and 3 both close with the same one blocking finding, no new and no resolved findings between them.",
+      "expected_output": "The same blocking finding survived two consecutive cycles with no progress. The sub-loop ends early, before the six-cycle ceiling. The stalled finding, the cycles reviewed, and why no progress is possible are reported; the run does not mechanically re-review a fourth time.",
+      "expectations": [
+        "Detects the same blocking finding surviving two consecutive cycles",
+        "Ends the sub-loop early rather than continuing to cycle 6",
+        "Reports the stalled finding and the cycle history",
+        "Does not keep re-running scrutinize on a stalled finding"
+      ],
+      "files": []
+    },
+    {
+      "id": 32,
+      "name": "the scrutinize budget is independent of the code budget",
+      "prompt": "/review-to-pr — the Stage 1 code loop already spent all three code cycles resolving blockers. The system gate then triggers and its first scrutinize pass returns fix-then-ship.",
+      "expected_output": "The scrutinize gate runs on its own fresh six-cycle budget — the exhausted three-cycle code budget does not block it. The intra-sub-loop code-review steps consume scrutinize cycles, not the (already spent) code cycles. Passing the code gate never reset the scrutinize count and vice versa.",
+      "expectations": [
+        "Runs the system gate even though the code budget is spent",
+        "Gives scrutinize its own independent six-cycle ceiling",
+        "Counts the sub-loop code-review against the scrutinize budget",
+        "Keeps the two budgets from resetting each other"
+      ],
+      "files": []
+    },
+    {
+      "id": 33,
+      "name": "a red full suite is a new blocker routed to Stage 2",
+      "prompt": "/review-to-pr — Stage 4. The fresh Explore verifier runs the whole typecheck and the whole test suite on integration HEAD; two suite tests fail, unrelated to any fix so far. Two code cycles have been spent.",
+      "expected_output": "The red suite is treated as a new blocker, not a silent pass. It enters the ledger and routes to Stage 2 for one code cycle: cluster, fix, one fix(review): commit, re-verify. Then Stage 4 re-runs. A code cycle remains available (two spent of three).",
+      "expectations": [
+        "Treats the red suite as a new blocker rather than passing",
+        "Routes it to Stage 2 for one code cycle",
+        "Re-runs the full-suite verifier after the fix lands",
+        "Does not open a PR while the suite is red"
+      ],
+      "files": []
+    },
+    {
+      "id": 34,
+      "name": "a red suite with the code ceiling spent stops and reports unresolved",
+      "prompt": "/review-to-pr — Stage 4. The full suite is red, and all three code cycles are already spent on earlier blockers.",
+      "expected_output": "With the code ceiling exhausted, the run cannot open another fix cycle. It stops and reports the red suite as unresolved / not PR-ready, with the failing output, the stage reached, the cycles spent (3/3), and the /review-to-pr continue command. It does not force a green result or open a PR.",
+      "expectations": [
+        "Stops rather than starting a fourth code cycle",
+        "Reports the red suite as unresolved / not PR-ready with the failing output",
+        "Includes the cycles spent and the /review-to-pr continue command",
+        "Opens no PR and force-pushes nothing"
+      ],
+      "files": []
+    },
+    {
+      "id": 35,
+      "name": "continue reconciles against reality before resuming",
+      "prompt": "/review-to-pr continue wishlist-sync — review-status.md records the run at Stage 3 with two fix(review): commits landed and blocker spec-2 resolved. Since then the user hand-edited a file spec-2's fix touched.",
+      "expected_output": "Before resuming, Reality reconciliation runs: it confirms the integration branch and both recorded fix_commits still exist, re-runs code-review against the pinned review_point and the full suite, and finds code-review reports spec-2 again. spec-2 is re-opened in the ledger (resolved -> open) and its commit is listed as superseded at the top of the report. The run then resumes from Stage 3 with the reconciled ledger; the cycle counts carry over.",
+      "expectations": [
+        "Confirms the integration branch and the recorded fix_commits still exist",
+        "Re-runs code-review and the full suite before trusting review-status.md",
+        "Re-opens spec-2 because its fix no longer holds and lists the superseded commit",
+        "Resumes from the recorded stage with cycle counts carried over"
+      ],
+      "files": []
+    },
+    {
+      "id": 36,
+      "name": "status is read-only",
+      "prompt": "/review-to-pr status wishlist-sync — review-status.md records a run mid-Stage-2.",
+      "expected_output": "status parses review-status.md and reports the cycle history and the findings ledger. It runs no code-review, no scrutinize, and no suite, cuts no branch, and writes to no file.",
+      "expectations": [
+        "Reports the cycle history and the findings ledger from review-status.md",
+        "Runs no code-review, scrutinize, or test suite",
+        "Mutates no file and cuts no branch"
+      ],
+      "files": []
+    },
+    {
+      "id": 37,
+      "name": "a rework verdict drives the same sub-loop as fix-then-ship",
+      "prompt": "/review-to-pr — the system gate's scrutinize pass closed with 'rework': a major seam is in the wrong layer, but every fact needed to correct it is already settled and the correction does not need a human decision.",
+      "expected_output": "rework normalizes to the rework token and enters the sub-loop scrutinize -> fix -> tests or typecheck -> code-review -> scrutinize, the same route as fix-then-ship. The code-review step is run every iteration and consumes a scrutinize cycle, not a code cycle. The loop repeats until scrutinize returns ship. rework is distinct from reject, which would stop for a human decision.",
+      "expectations": [
+        "Normalizes 'rework' to the rework token, not to fix-then-ship or reject",
+        "Routes rework into the sub-loop rather than stopping",
+        "Runs the code-review step every iteration and counts it against the scrutinize budget",
+        "Keeps rework distinct from reject (which stops for a human decision)"
+      ],
+      "files": []
+    },
+    {
+      "id": 38,
+      "name": "--agent pins the fix worker and --model is a raw pass-through",
+      "prompt": "/review-to-pr --agent feature-dev --model claude-sonnet-5 — run from the integration branch.",
+      "expected_output": "--agent feature-dev pins every dispatched fix worker to that subagent type for the whole run, skipping the wording-match resolution. --model claude-sonnet-5 is passed to every worker as a raw value. With neither flag set, workers inherit the orchestrator's model and the agent type is resolved by wording match, else general-purpose. The flags change no stage logic.",
+      "expectations": [
+        "Pins every fix-worker dispatch to the feature-dev subagent type",
+        "Passes --model claude-sonnet-5 to each worker verbatim",
+        "Falls back to wording-match / general-purpose and an inherited model when the flags are absent",
+        "Does not let the flags change the stage flow or the budgets"
+      ],
+      "files": []
+    }
+  ]
+}
