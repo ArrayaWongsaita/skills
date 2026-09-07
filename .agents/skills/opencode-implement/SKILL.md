@@ -53,9 +53,9 @@ Explicit invocation only:
 - Codex command: `$opencode-implement <dir|slug>`
 
 `<dir|slug>` is a `.scratch/<feature-slug>/` directory, a bare `<feature-slug>`,
-or omitted. An explicit argument wins. With no argument, the most recently
-modified `.scratch/*/issues/` directory is used and named back to the user for
-confirmation.
+or omitted. An explicit argument wins.
+With no argument, the most recently modified `.scratch/*/issues/` directory is
+used and named back to the user for confirmation.
 
 Codex policy is declared in `agents/openai.yaml`
 (`allow_implicit_invocation: false`). Claude Code installations rely on
@@ -104,6 +104,37 @@ calibration probe.
 ├── logs/<NN>-<K>.err     # opencode stderr per sub-step run
 └── worktrees/<NN>/       # one git worktree per ticket (gitignored), created one at a time
 ```
+
+## Stage 0 — Plan (read-only)
+
+Follow [references/planning.md](references/planning.md). In short:
+
+1. **Resolve the target** and load every ticket, the parent `spec.md`, the
+   feature `CONTEXT.md` / `adr/`, and the repo's own decisions.
+2. **Parse** every ticket in the `to-tickets` local format.
+3. **Build and validate the dependency DAG** — acyclic, every blocker resolvable,
+   numbering consistent with a topological order. A cycle, a missing blocker, or
+   inconsistent numbering **halts the run before any other work**
+   (`BLOCKED (TICKET_SET_CYCLIC / TICKET_SET_MISSING_BLOCKER / TICKET_SET_NUMBERING)`),
+   naming the specific broken ticket.
+4. **Compute the dependency order** — ascending ticket number where the numbering
+   is valid — and the frontier. No waves (adr/0005).
+5. **Select a test seam per ticket** from the parent spec's Testing Decisions
+   where they constrain it, otherwise the narrowest public boundary that
+   exercises the ticket's acceptance criteria. A ticket no isolated test can
+   exercise returns to planning rather than shipping without a test.
+6. **Build a criterion-level step plan** for every ticket — an ordered chain of
+   sub-steps, one acceptance criterion each by default, split finer (by file or
+   layer) where a single criterion is estimated over the context budget, biased
+   toward over-splitting. Record each sub-step's file scope.
+7. **Predict each ticket's path** — `local`, or `subagent-fallback` where a
+   criterion cannot be split fine enough to fit (flagged for
+   `BLOCKED (TICKET_TOO_LARGE_FOR_CONTEXT)` under `--no-fallback`).
+8. **Emit the Plan** — the dependency-ordered ticket table plus, per ticket: its
+   blockers, test seam, step plan (the ordered sub-steps and their file scopes),
+   predicted path, and retry budgets; and the editable run parameters. Pause for
+   explicit approval, and mutate no file outside `.scratch/<feature-slug>/` until
+   the user approves.
 
 ## Constraints
 

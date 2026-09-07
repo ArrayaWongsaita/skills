@@ -1,0 +1,130 @@
+{
+  "skill_name": "opencode-implement",
+  "evals": [
+    {
+      "id": 1,
+      "name": "pure linear chain plans one commit per ticket in dependency order",
+      "prompt": "/opencode-implement .scratch/linear-demo/ — the ticket set is 01 (Blocked by: None), 02 (Blocked by: 01), 03 (Blocked by: 02). The parent spec.md names a single eval-harness test seam for the whole feature, and each ticket has one acceptance criterion. Present the Plan.",
+      "expected_output": "The dependency order is 01, 02, 03. The Plan shows the ticket table in that order and, per ticket, its blockers, the eval-harness test seam, a one-sub-step step plan (one criterion each), the predicted path `local`, and the retry budgets MAX_TICKET_ATTEMPTS = 3 and MAX_OPENCODE_RETRIES = 3. There is no wave table and no model column. Stage 0 stops for explicit approval without writing to any source file.",
+      "expectations": [
+        "Derives the dependency order 01, 02, 03 from the Blocked by edges",
+        "Gives each ticket a one-sub-step step plan and predicts the path `local`",
+        "Shows blockers, test seam, step plan, predicted path, and retry budgets per ticket, with no wave table and no model column",
+        "Pauses for explicit approval and creates or modifies no file outside .scratch/linear-demo/"
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "independent tickets are still planned to run serially",
+      "prompt": "/opencode-implement .scratch/independent-demo/ — ticket set: 01 (Blocked by: None), 02 (Blocked by: None), 03 (Blocked by: 01, 02). Present the Plan.",
+      "expected_output": "01 and 02 have no edge between them but the run still works them one after another in ascending ticket-number order, then 03. The Plan does not propose parallel execution; execution is serial because one local model instance serializes inference regardless (parallelism is a non-goal, not a deferred follow-up).",
+      "expectations": [
+        "Orders the run 01, 02, 03 and works one ticket at a time",
+        "Does not dispatch 01 and 02 concurrently and proposes no wave",
+        "States that parallelism is a non-goal for a single local model",
+        "Pauses for approval before any source file changes"
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "cyclic ticket set is rejected up front",
+      "prompt": "/opencode-implement .scratch/cyclic-demo/ — ticket set: 01 (Blocked by: 03), 02 (Blocked by: 01), 03 (Blocked by: 02). Present the Plan.",
+      "expected_output": "The dependency graph has a cycle 01 -> 03 -> 02 -> 01. The run halts with BLOCKED (TICKET_SET_CYCLIC), naming the tickets in the cycle, before computing the dependency order or writing anything.",
+      "expectations": [
+        "Detects the cycle and halts with BLOCKED (TICKET_SET_CYCLIC)",
+        "Names the specific tickets forming the cycle",
+        "Halts before any other planning work and before touching any file",
+        "Dispatches no worker"
+      ],
+      "files": []
+    },
+    {
+      "id": 4,
+      "name": "missing blocker is rejected up front",
+      "prompt": "/opencode-implement .scratch/missing-blocker-demo/ — ticket set: 01 (Blocked by: None), 02 (Blocked by: 07). Ticket 07 does not exist. Present the Plan.",
+      "expected_output": "Ticket 02 names a non-existent blocker 07. The run halts with BLOCKED (TICKET_SET_MISSING_BLOCKER), naming ticket 02 and the dangling reference 07, before any other work.",
+      "expectations": [
+        "Detects the unresolvable blocker and halts with BLOCKED (TICKET_SET_MISSING_BLOCKER)",
+        "Names ticket 02 and the dangling reference to 07",
+        "Halts before computing the dependency order or touching any file"
+      ],
+      "files": []
+    },
+    {
+      "id": 5,
+      "name": "numbering inconsistent with topological order is rejected",
+      "prompt": "/opencode-implement .scratch/numbering-demo/ — ticket set: 01 (Blocked by: 02), 02 (Blocked by: None). Present the Plan.",
+      "expected_output": "Ticket 01 is blocked by the higher-numbered ticket 02, so the numbering is not consistent with a topological order. The run halts with BLOCKED (TICKET_SET_NUMBERING) naming 01 and 02.",
+      "expectations": [
+        "Detects the numbering inconsistency and halts with BLOCKED (TICKET_SET_NUMBERING)",
+        "Names both ticket 01 and ticket 02",
+        "Halts before touching any file"
+      ],
+      "files": []
+    },
+    {
+      "id": 6,
+      "name": "a one-criterion ticket becomes a one-sub-step chain",
+      "prompt": "/opencode-implement .scratch/one-crit-demo/ — a single ticket 01 (Blocked by: None) with exactly one acceptance criterion, small in scope. Present the Plan.",
+      "expected_output": "Ticket 01's step plan is a single sub-step covering its one criterion, estimated within the context budget. The Plan shows a one-sub-step chain and predicts the path `local`. This is indistinguishable from running the ticket whole.",
+      "expectations": [
+        "Builds a step plan of exactly one sub-step for the single criterion",
+        "Predicts the path `local`",
+        "Does not split the sub-step further when it fits the budget"
+      ],
+      "files": []
+    },
+    {
+      "id": 7,
+      "name": "a four-criterion ticket becomes a four-sub-step chain by default",
+      "prompt": "/opencode-implement .scratch/four-crit-demo/ — a single ticket 01 (Blocked by: None) with four acceptance criteria, each a distinct behaviour at the same seam. Present the Plan.",
+      "expected_output": "Ticket 01's step plan is four sub-steps, one acceptance criterion each, ordered so each builds on the last. Each sub-step has its own file scope. The predicted path is `local`.",
+      "expectations": [
+        "Builds a step plan of four sub-steps, one criterion per sub-step",
+        "Orders the sub-steps so dependencies between criteria are respected",
+        "Records a file scope per sub-step",
+        "Predicts the path `local`"
+      ],
+      "files": []
+    },
+    {
+      "id": 8,
+      "name": "a single criterion over the context budget is split finer",
+      "prompt": "/opencode-implement .scratch/big-crit-demo/ — a single ticket 01 (Blocked by: None) with one acceptance criterion whose implementation touches a schema file, a service file, and an API handler, estimated well over the context budget. Present the Plan.",
+      "expected_output": "The one criterion's sub-step is estimated over the ~13k-token context budget, so the orchestrator splits it finer along a natural line (schema, then service, then handler). The step plan shows the split sub-steps, each within budget, and the predicted path stays `local`.",
+      "expectations": [
+        "Estimates the criterion's sub-step over the context budget",
+        "Splits it into smaller sub-steps by file or layer, each within budget",
+        "Shows the split in the step plan and keeps the predicted path `local`",
+        "Biases toward over-splitting rather than risking an overflowing sub-step"
+      ],
+      "files": []
+    },
+    {
+      "id": 9,
+      "name": "no source is mutated before Plan approval",
+      "prompt": "/opencode-implement .scratch/readonly-demo/ — a valid three-ticket set. Present the Plan, then stop.",
+      "expected_output": "The orchestrator produces the Plan and pauses. No file outside .scratch/readonly-demo/ is created or modified: no integration branch, no worktree, no worker dispatch, no opencode.json.",
+      "expectations": [
+        "Emits the Plan and pauses for explicit approval",
+        "Creates or modifies no file outside .scratch/readonly-demo/",
+        "Creates no integration branch, no worktree, and dispatches no worker"
+      ],
+      "files": []
+    },
+    {
+      "id": 10,
+      "name": "no argument resolves to the most recently modified issues directory",
+      "prompt": "/opencode-implement — no argument. The most recently modified .scratch/*/issues/ directory is .scratch/subtitle-preferences/issues/.",
+      "expected_output": "The orchestrator selects .scratch/subtitle-preferences/issues/, names it back to the user, and waits for confirmation before parsing the tickets.",
+      "expectations": [
+        "Selects the most recently modified .scratch/*/issues/ directory",
+        "Names the resolved directory back to the user",
+        "Waits for confirmation before parsing or planning"
+      ],
+      "files": []
+    }
+  ]
+}

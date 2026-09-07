@@ -165,6 +165,85 @@ describe("opencode-implement skill contract", () => {
     });
   });
 
+  describe("Stage 0 — Plan (read-only)", () => {
+    it("SKILL.md drives references/planning.md from a Stage 0 section", async () => {
+      for (const file of skillFiles) {
+        const content = await readFile(file, "utf8");
+        assert.match(content, /##\s*Stage 0[^\n]*Plan/i);
+        assert.match(content, /references\/planning\.md/);
+      }
+    });
+
+    it("Stage 0 pauses for explicit approval and mutates nothing outside .scratch", async () => {
+      for (const body of await bothSkillBodies()) {
+        const stage0 = body.match(/##\s*Stage 0[\s\S]*?(?=\n## )/i);
+        assert.ok(stage0, "Stage 0 section present");
+        assert.match(stage0[0], /approv/i);
+        assert.match(stage0[0], /\.scratch\/<feature-slug>\//);
+      }
+    });
+
+    it("planning.md specifies parsing, DAG validation, dependency order, and seam selection", async () => {
+      for (const dir of skillDirs) {
+        const planning = await readFile(path.resolve(dir, "references/planning.md"), "utf8");
+        assert.match(planning, /Blocked by/i);
+        assert.match(planning, /acyclic|cycle/i);
+        assert.match(planning, /TICKET_SET_CYCLIC/);
+        assert.match(planning, /TICKET_SET_MISSING_BLOCKER/);
+        assert.match(planning, /TICKET_SET_NUMBERING/);
+        assert.match(planning, /topological|numbering/i);
+        assert.match(planning, /dependency order/i);
+        assert.match(planning, /test seam/i);
+        assert.match(planning, /Testing Decisions/);
+        assert.match(planning, /halt/i);
+      }
+    });
+
+    it("planning.md drops waves, touch-sets, and the model column", async () => {
+      for (const dir of skillDirs) {
+        const planning = await readFile(path.resolve(dir, "references/planning.md"), "utf8");
+        assert.match(planning, /no wave|without a wave|no wave computation/i);
+        assert.match(planning, /touch-set/i);
+        assert.match(planning, /no model column/i);
+        assert.match(planning, /non-goal/i);
+      }
+    });
+
+    it("planning.md builds a criterion-level step plan per ticket with a budget and a split rule", async () => {
+      for (const dir of skillDirs) {
+        const planning = await readFile(path.resolve(dir, "references/planning.md"), "utf8");
+        assert.match(planning, /step plan/i);
+        assert.match(planning, /one acceptance criterion per sub-step|one criterion per sub-step/i);
+        assert.match(planning, /one-sub-step chain|single criterion is a one-sub-step/i);
+        assert.match(planning, /context budget/i);
+        assert.match(planning, /~?13k/);
+        assert.match(planning, /32k/);
+        assert.match(planning, /split(s|ting)? (it )?finer|split finer/i);
+        assert.match(planning, /over-split|bias/i);
+        assert.match(planning, /file scope/i);
+        assert.match(planning, /probe C/);
+      }
+    });
+
+    it("planning.md predicts each ticket's path and handles --no-fallback", async () => {
+      for (const dir of skillDirs) {
+        const planning = await readFile(path.resolve(dir, "references/planning.md"), "utf8");
+        assert.match(planning, /predict.*path|path.*predict/i);
+        assert.match(planning, /`?local`?/);
+        assert.match(planning, /subagent-fallback/);
+        assert.match(planning, /TICKET_TOO_LARGE_FOR_CONTEXT/);
+        assert.match(planning, /--no-fallback/);
+      }
+    });
+
+    it("resolves the target from an explicit dir, a slug, or the most recent issues dir", async () => {
+      for (const body of await bothSkillBodies()) {
+        assert.match(body, /most recent(ly modified)?\s+`?\.scratch\/\*\/issues\/`?/i);
+        assert.match(body, /nam(e|ed) (it )?back|confirm/i);
+      }
+    });
+  });
+
   describe("standalone ADR 0007", () => {
     it("ships a bilingual ADR recording the standalone local-first sibling stance", async () => {
       const adr = await readFile(path.resolve("docs/decisions/0007-opencode-implement-standalone.md"), "utf8");
