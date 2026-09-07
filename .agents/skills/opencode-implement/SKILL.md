@@ -136,6 +136,43 @@ Follow [references/planning.md](references/planning.md). In short:
    explicit approval, and mutate no file outside `.scratch/<feature-slug>/` until
    the user approves.
 
+## Stage 1 — Execute (serial, dependency order)
+
+Once the Plan is approved, work each ticket in dependency order, one at a time.
+No parallelism — one local model instance serializes inference regardless
+(adr/0005).
+
+### Preflight (once)
+
+- The target repo has no uncommitted changes — a dirty tree stops the run and
+  asks; the run stashes nothing.
+- Create or switch to the integration branch `opencode-implement/<feature-slug>`,
+  cut from the current `HEAD`.
+- Add `.scratch/<feature-slug>/worktrees/` to `.gitignore`.
+- Confirm `opencode` is on `PATH`, `opencode models` lists the run's model, and
+  Ollama is reachable.
+- **Smoke test** — one trivial `opencode run` with nothing else using the local
+  model, per [references/worker-contract.md](references/worker-contract.md). A
+  slow, stuck, or failed smoke test stops the run before a multi-hour attempt.
+
+### Dispatch one worker per sub-step
+
+Follow [references/worker-contract.md](references/worker-contract.md) for the
+`opencode run` invocation, the timeout wrapper, the `{"snapshot": false}` setup,
+and the event-stream parse, and
+[references/prompt-scaffold.md](references/prompt-scaffold.md) for the worker
+prompt.
+
+For the current ticket, cut its worktree `.scratch/<slug>/worktrees/<NN>` and
+worker branch `opencode-implement/<slug>/<NN>` from integration `HEAD`. Then, for
+each sub-step in the step plan, in order: write the self-contained prompt to
+`.scratch/<slug>/prompts/<NN>/<K>.md`, dispatch one background `opencode run`
+worker against the worktree, and parse `logs/<NN>-<K>.jsonl`.
+
+An `opencode` failure (error event, non-zero exit, missing envelope, timeout or
+stall kill) re-dispatches a fresh worker with a progress note naming the failure,
+up to `MAX_OPENCODE_RETRIES = 3`. Exhausting that budget escalates the ticket.
+
 ## Constraints
 
 - The orchestrator dispatches every ticket to a worker (local sub-steps, or the

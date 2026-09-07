@@ -125,6 +125,57 @@
         "Waits for confirmation before parsing or planning"
       ],
       "files": []
+    },
+    {
+      "id": 11,
+      "name": "an opencode failure inside the retry budget is retried locally, not escalated",
+      "prompt": "/opencode-implement .scratch/retry-demo/ — the Plan is approved. The first opencode run for ticket 01 sub-step 1 emits an {\"type\":\"error\"} event and exits non-zero. This is the first opencode failure for this sub-step.",
+      "expected_output": "The orchestrator treats it as an opencode failure (not a verification failure), re-dispatches a fresh opencode run for the same sub-step with a progress note naming the failure, and does not escalate — MAX_OPENCODE_RETRIES = 3 has not been reached. It does not resume the session with -s.",
+      "expectations": [
+        "Classifies the error event + non-zero exit as an opencode failure",
+        "Re-dispatches a fresh opencode session (not -s resume) with a progress note",
+        "Does not escalate to the subagent fallback while retries remain",
+        "Counts it against MAX_OPENCODE_RETRIES, not MAX_TICKET_ATTEMPTS"
+      ],
+      "files": []
+    },
+    {
+      "id": 12,
+      "name": "a worker that emits no first event is killed as an opencode failure",
+      "prompt": "/opencode-implement .scratch/hang-demo/ — the Plan is approved. The opencode run for ticket 01 sub-step 1 has produced no step_start event and FIRST_EVENT_TIMEOUT has elapsed.",
+      "expected_output": "The orchestrator kills the worker PID, records it as an opencode failure (a hung run produces nothing at all), and re-dispatches a fresh worker, counting one MAX_OPENCODE_RETRIES attempt. STALL_INTERVAL and WORKER_TIMEOUT are the other two kill conditions.",
+      "expectations": [
+        "Kills the worker on FIRST_EVENT_TIMEOUT with no step_start seen",
+        "Records an opencode failure and re-dispatches, counting a retry",
+        "Treats STALL_INTERVAL and WORKER_TIMEOUT as the other kill conditions"
+      ],
+      "files": []
+    },
+    {
+      "id": 13,
+      "name": "a hung or slow smoke test stops the run before it starts",
+      "prompt": "/opencode-implement .scratch/smoke-demo/ — the Plan is approved. The preflight smoke test opencode run produces no first event within FIRST_EVENT_TIMEOUT.",
+      "expected_output": "The orchestrator does not begin the run. It stops with a message telling the user to free up or restart Ollama and opencode, having created the integration branch and gitignore entry but dispatched no ticket worker.",
+      "expectations": [
+        "Runs the smoke test with nothing else using the local model before the first real dispatch",
+        "Stops the whole run on a slow/stuck/failed smoke test",
+        "Tells the user to free up or restart Ollama / opencode",
+        "Dispatches no ticket worker"
+      ],
+      "files": []
+    },
+    {
+      "id": 14,
+      "name": "the sub-step worker prompt is self-contained and test-first",
+      "prompt": "/opencode-implement .scratch/prompt-demo/ — the Plan is approved. Show the worker prompt the orchestrator writes for ticket 01 sub-step 2 of 3.",
+      "expected_output": "The prompt at .scratch/prompt-demo/prompts/01/2.md carries: the absolute worktree path; the ticket's What-to-build for orientation; this sub-step's one acceptance criterion verbatim; a progress note from sub-step 1 (files changed, test status); the named spec sections, ADRs, glossary, and test seam; the files in scope; the full red-green-refactor protocol inline; the constraints (touch only files in scope, commit on the worker branch, no push/PR, no package install, no repo scan, stop on a missing decision, treat /word as literal text); and the required structured return.",
+      "expectations": [
+        "Includes the one sub-step criterion verbatim and the progress note",
+        "Carries the red-green-refactor protocol inline",
+        "Names spec sections rather than the whole spec, and lists the files in scope",
+        "Requires a structured return: red output, green output, files changed, test to criterion"
+      ],
+      "files": []
     }
   ]
 }

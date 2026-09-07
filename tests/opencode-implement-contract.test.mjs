@@ -244,6 +244,111 @@ describe("opencode-implement skill contract", () => {
     });
   });
 
+  describe("Stage 1 — the opencode worker contract", () => {
+    it("SKILL.md has a Stage 1 section with a preflight and a smoke test", async () => {
+      for (const body of await bothSkillBodies()) {
+        const stage1 = body.match(/##\s*Stage 1[\s\S]*?(?=\n## )/i);
+        assert.ok(stage1, "Stage 1 section present");
+        const s = stage1[0];
+        assert.match(s, /preflight/i);
+        assert.match(s, /uncommitted changes|dirty tree/i);
+        assert.match(s, /stash/i);
+        assert.match(s, /opencode-implement\/<feature-slug>/);
+        assert.match(s, /\.gitignore/);
+        assert.match(s, /smoke test/i);
+        assert.match(s, /serial/i);
+        assert.match(s, /references\/worker-contract\.md/);
+        assert.match(s, /references\/prompt-scaffold\.md/);
+      }
+    });
+
+    it("worker-contract.md documents the opencode run invocation and snapshot handling", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/worker-contract.md"), "utf8");
+        assert.match(c, /opencode run --format json/);
+        assert.match(c, /--model/);
+        assert.match(c, /--dir/);
+        assert.match(c, /--dangerously-skip-permissions/);
+        assert.match(c, /no `--print-timeout`|no --print-timeout/i);
+        assert.match(c, /"snapshot":\s*false/);
+        assert.match(c, /\.git\/info\/exclude/);
+        assert.match(c, /merge --squash/);
+      }
+    });
+
+    it("worker-contract.md defines the three timeouts and the macOS timeout workaround", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/worker-contract.md"), "utf8");
+        assert.match(c, /FIRST_EVENT_TIMEOUT/);
+        assert.match(c, /STALL_INTERVAL/);
+        assert.match(c, /WORKER_TIMEOUT/);
+        assert.match(c, /timeout` is not on macOS|no `timeout`|background/i);
+        assert.match(c, /kill/i);
+        assert.match(c, /provisional/i);
+        assert.match(c, /probe C/);
+      }
+    });
+
+    it("worker-contract.md parses the event stream defensively and separates opencode vs verification failure", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/worker-contract.md"), "utf8");
+        assert.match(c, /newline-delimited\s+JSON/i);
+        assert.match(c, /ignore\s+lines\s+that\s+do\s+not\s+parse/i);
+        assert.match(c, /step_start/);
+        assert.match(c, /step_finish/);
+        assert.match(c, /part\.reason:\s*"stop"|reason.*stop/i);
+        assert.match(c, /error/);
+        assert.match(c, /tokens\.total/);
+        assert.match(c, /cost.*0|`0` local/i);
+        assert.match(c, /opencode`?\s+failure/i);
+        assert.match(c, /verification failure/i);
+        assert.match(c, /distinct/i);
+      }
+    });
+
+    it("worker-contract.md carries state by a fresh session + progress note, never -s resume", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/worker-contract.md"), "utf8");
+        assert.match(c, /fresh\s+`?opencode run`?/i);
+        assert.match(c, /-s\s+`?<session>`?|session\s+resume/i);
+        assert.match(c, /replays[\s\S]{0,30}transcript/i);
+        assert.match(c, /progress note/i);
+        assert.match(c, /MAX_OPENCODE_RETRIES\s*=\s*3/);
+      }
+    });
+
+    it("worker-contract.md specifies the preflight smoke test with exclusive model access", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/worker-contract.md"), "utf8");
+        assert.match(c, /smoke test/i);
+        assert.match(c, /nothing else using the local model/i);
+        assert.match(c, /bash/i);
+        assert.match(c, /edit/i);
+        assert.match(c, /restart Ollama|free up/i);
+      }
+    });
+
+    it("prompt-scaffold.md is per-sub-step, self-contained, and test-first", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/prompt-scaffold.md"), "utf8");
+        assert.match(c, /sub-step/i);
+        assert.match(c, /Working directory/i);
+        assert.match(c, /acceptance criterion/i);
+        assert.match(c, /Progress note/i);
+        assert.match(c, /Test seam/i);
+        assert.match(c, /Files in scope/i);
+        assert.match(c, /red.*green.*refactor|failing test/is);
+        assert.match(c, /package install/i);
+        assert.match(c, /push[\s\S]{0,40}pull\s+request/i);
+        assert.match(c, /missing decision|stop and report/i);
+        assert.match(c, /literal text|reach for no slash/i);
+        assert.match(c, /Red output/);
+        assert.match(c, /Green output/);
+        assert.match(c, /Test .*criterion/i);
+      }
+    });
+  });
+
   describe("standalone ADR 0007", () => {
     it("ships a bilingual ADR recording the standalone local-first sibling stance", async () => {
       const adr = await readFile(path.resolve("docs/decisions/0007-opencode-implement-standalone.md"), "utf8");
