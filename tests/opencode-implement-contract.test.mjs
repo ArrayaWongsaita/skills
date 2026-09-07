@@ -157,11 +157,38 @@ describe("opencode-implement skill contract", () => {
       }
     });
 
-    it("publishes a bilingual human guide with the install command", async () => {
+    it("publishes a bilingual human guide with the install command and the reference set", async () => {
       const guide = await readFile(path.resolve("docs/skills/agents/opencode-implement.md"), "utf8");
       assert.match(guide, /^## ภาษาไทย \/ Thai\s*$/m);
       assert.match(guide, /^## English \/ ภาษาอังกฤษ\s*$/m);
       assert.match(guide, /npx skills add ArrayaWongsaita\/skills --skill opencode-implement/);
+      assert.match(guide, /background|overnight/i);
+      assert.match(guide, /reliab|hang|slow/i);
+      for (const ref of SKILL_REFERENCES) {
+        assert.match(guide, new RegExp(ref.replace(/\./g, "\\.")), `guide lists ${ref}`);
+      }
+    });
+
+    it("ships exactly the declared reference set in both copies, and SKILL.md links each", async () => {
+      for (const dir of skillDirs) {
+        const entries = (await readdir(path.resolve(dir, "references"))).sort();
+        assert.deepEqual(entries, [...SKILL_REFERENCES].sort());
+      }
+      for (const file of skillFiles) {
+        const c = await readFile(file, "utf8");
+        for (const ref of SKILL_REFERENCES) {
+          assert.match(c, new RegExp(`references/${ref}`.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+        }
+      }
+    });
+
+    it("keeps every reference file byte-identical across the skill copies", async () => {
+      for (const ref of SKILL_REFERENCES) {
+        const [canonical, mirror] = await Promise.all(
+          skillDirs.map((dir) => readFile(path.resolve(dir, `references/${ref}`), "utf8")),
+        );
+        assert.equal(canonical, mirror, `references/${ref} copies must match`);
+      }
     });
   });
 

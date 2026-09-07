@@ -23,9 +23,16 @@ model local ทำไม่ได้ **จะ fall back ไป native subagent �
 `subagent-implement` (รักษา context ของ main agent) — ตัวนี้เน้น local-first และ
 หั่นงานให้พอดี context
 
-**เป็นเครื่องมือ background ที่ช้า** — local inference บน model 27B แบบ serial ใช้
-เวลาหลายนาทีต่อ sub-step ดังนั้น ticket set จริงคือ run ที่กินเวลาหลายชั่วโมง เปิด
-ทิ้งไว้แล้วเดินจากไป resume ได้ถ้าถูกขัดจังหวะ
+**เป็นเครื่องมือ background/overnight ที่ช้า** — local inference บน model 27B แบบ
+serial ใช้เวลาหลายนาทีต่อ sub-step ดังนั้น ticket set จริงคือ run ที่กินเวลาหลาย
+ชั่วโมง เปิดทิ้งไว้แล้วเดินจากไป resume ได้ถ้าถูกขัดจังหวะ
+
+**ข้อควรรู้เรื่องความเสถียร:** จาก probe ชั้น `opencode`↔Ollama บนเครื่องนี้เคยค้าง
+โดยไม่มี output (ประมาณ 1 ใน 3 ของ run) ทั้งที่ Ollama เองยัง healthy skill รับมือ
+ด้วย preflight smoke test, timeout สามชั้น (first-event / stall / overall),
+retry ของ `opencode` 3 ครั้ง แล้ว fall back — แต่ผู้ใช้ควรปล่อยให้ local model ว่าง
+สำหรับ run นี้คนเดียว (อย่าเปิด opencode TUI คู่กัน) และตั้ง `--no-fallback` ถ้า
+ต้องการ Claude-token = 0 จริงๆ
 
 ติดตั้ง:
 

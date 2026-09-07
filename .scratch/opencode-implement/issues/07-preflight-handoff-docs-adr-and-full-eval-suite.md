@@ -12,32 +12,32 @@ full behavioral eval suite, with every repo gate green.
 
 **Blocked by:** 02, 03, 04, 05, 06
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Preflight (`references/worktree-integration.md` + SKILL.md) halts a run when the
+- [x] Preflight (`references/worktree-integration.md` + SKILL.md) halts a run when the
       target repo has uncommitted changes (asks, never auto-stashes), creates or
       switches to `opencode-implement/<feature-slug>` from `HEAD`, adds
       `.scratch/<slug>/worktrees/` to `.gitignore`, confirms `opencode` on `PATH` +
       `opencode models` lists the model + Ollama reachable, and runs the smoke test from
       ticket 03
-- [ ] On completion the skill prints the integration branch name, one-commit-per-ticket
+- [x] On completion the skill prints the integration branch name, one-commit-per-ticket
       confirmation, per-path token usage with each fallback ticket named (Claude tokens
       spent, code left the machine), and `/code-review since <merge-base with main>` then
       `/scrutinize` to run in a fresh context; it never pushes or opens a PR
-- [ ] `docs/skills/agents/opencode-implement.md` is a complete bilingual human guide per
+- [x] `docs/skills/agents/opencode-implement.md` is a complete bilingual human guide per
       the repo's skill-guide template — what it is, when to use it (and when to use
       `/implement`, `/agy-implement`, `/subagent-implement` instead), that it is a
       slow background/overnight tool, the `--model` / `--fallback-agent` / `--no-fallback`
       options, and the local-model reliability caveat
-- [ ] `docs/decisions/0007-opencode-implement-standalone.md` records the standalone
+- [x] `docs/decisions/0007-opencode-implement-standalone.md` records the standalone
       local-first stance in the bilingual format of `docs/decisions/0005`–`0006` (a
       draft exists in the feature directory work — finalize and place it, verify the
       number is still free)
-- [ ] `evals/evals.json` contains every behavioral case from the spec's Testing
+- [x] `evals/evals.json` contains every behavioral case from the spec's Testing
       Decisions (~30), each with `id`, unique `name`, `prompt`, `expected_output`, a
       non-empty `expectations` array, and a `files` array — runnable through
       `skill-creator`'s existing eval tooling with no change to that tooling
-- [ ] SKILL.md's `references/` links all resolve and stay inside the skill directory;
+- [x] SKILL.md's `references/` links all resolve and stay inside the skill directory;
       `skills/agents/opencode-implement/` and `.agents/skills/opencode-implement/` are
       byte-identical
-- [ ] `npm run docs:index`, `npm run validate`, and `npm test` all pass
+- [x] `npm run docs:index`, `npm run validate`, and `npm test` all pass
