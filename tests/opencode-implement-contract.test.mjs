@@ -349,6 +349,74 @@ describe("opencode-implement skill contract", () => {
     });
   });
 
+  describe("Stage 1 — chain, verification, integration", () => {
+    it("SKILL.md Stage 1 drives decomposition.md and worktree-integration.md", async () => {
+      for (const body of await bothSkillBodies()) {
+        const s = body.match(/##\s*Stage 1[\s\S]*?(?=\n## )/i)[0];
+        assert.match(s, /references\/decomposition\.md/);
+        assert.match(s, /references\/worktree-integration\.md/);
+        assert.match(s, /checkpoint check/i);
+        assert.match(s, /re-split/i);
+        assert.match(s, /verification gate/i);
+        assert.match(s, /reproduce[\s\S]{0,30}red/i);
+        assert.match(s, /MAX_TICKET_ATTEMPTS\s*=\s*3/);
+        assert.match(s, /squash-merge/i);
+        assert.match(s, /one commit/i);
+        assert.match(s, /INTEGRATION_DESIGN_CONFLICT/);
+      }
+    });
+
+    it("decomposition.md runs the sub-step loop with progress notes and a checkpoint check", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/decomposition.md"), "utf8");
+        assert.match(c, /progress note/i);
+        assert.match(c, /commits? on the worker branch/i);
+        assert.match(c, /checkpoint check/i);
+        assert.match(c, /typechecks?|compiles?/i);
+        assert.match(c, /red\/green|red.*green/i);
+        assert.match(c, /re-split/i);
+        assert.match(c, /overflow/i);
+        assert.match(c, /truncated edit/i);
+        assert.match(c, /status\.md/);
+        assert.match(c, /not counted against `?MAX_TICKET_ATTEMPTS`?|not[\s\S]{0,20}MAX_TICKET_ATTEMPTS/i);
+        assert.match(c, /TICKET_TOO_LARGE_FOR_CONTEXT/);
+      }
+    });
+
+    it("worktree-integration.md defines the worktree, the verification gate, and the squash-merge", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/worktree-integration.md"), "utf8");
+        assert.match(c, /preflight/i);
+        assert.match(c, /uncommitted changes|dirty tree/i);
+        assert.match(c, /stash/i);
+        assert.match(c, /opencode-implement\/<feature-slug>/);
+        assert.match(c, /git worktree add/);
+        assert.match(c, /symlink/i);
+        assert.match(c, /package install/i);
+        assert.match(c, /"snapshot":\s*false/);
+        assert.match(c, /pre-ticket integration `?HEAD`?/i);
+        assert.match(c, /only the ticket's test files/i);
+        assert.match(c, /vacuous|tautolog/i);
+        assert.match(c, /MAX_TICKET_ATTEMPTS\s*=\s*3/);
+        assert.match(c, /merge --squash/);
+        assert.match(c, /ascending ticket-number order/i);
+        assert.match(c, /checkbox/i);
+        assert.match(c, /mechanical conflict/i);
+        assert.match(c, /INTEGRATION_DESIGN_CONFLICT/);
+        assert.match(c, /no\s+separate\s+integration\s+gate/i);
+        assert.match(c, /worktree remove/i);
+      }
+    });
+
+    it("keeps the orchestrator out of ticket implementation", async () => {
+      for (const body of await bothSkillBodies()) {
+        assert.match(body, /orchestrator dispatches every ticket/i);
+        assert.match(body, /mechanical merge conflict|mechanical conflict/i);
+        assert.match(body, /BLOCKED/);
+      }
+    });
+  });
+
   describe("standalone ADR 0007", () => {
     it("ships a bilingual ADR recording the standalone local-first sibling stance", async () => {
       const adr = await readFile(path.resolve("docs/decisions/0007-opencode-implement-standalone.md"), "utf8");

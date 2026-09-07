@@ -155,23 +155,51 @@ No parallelism — one local model instance serializes inference regardless
   model, per [references/worker-contract.md](references/worker-contract.md). A
   slow, stuck, or failed smoke test stops the run before a multi-hour attempt.
 
-### Dispatch one worker per sub-step
+### Run the ticket's step plan
 
-Follow [references/worker-contract.md](references/worker-contract.md) for the
-`opencode run` invocation, the timeout wrapper, the `{"snapshot": false}` setup,
-and the event-stream parse, and
-[references/prompt-scaffold.md](references/prompt-scaffold.md) for the worker
-prompt.
+Follow [references/worktree-integration.md](references/worktree-integration.md)
+for the worktree, [references/decomposition.md](references/decomposition.md) for
+the sub-step loop, [references/worker-contract.md](references/worker-contract.md)
+for the `opencode run` invocation and the event-stream parse, and
+[references/prompt-scaffold.md](references/prompt-scaffold.md) for the prompt.
 
-For the current ticket, cut its worktree `.scratch/<slug>/worktrees/<NN>` and
-worker branch `opencode-implement/<slug>/<NN>` from integration `HEAD`. Then, for
-each sub-step in the step plan, in order: write the self-contained prompt to
-`.scratch/<slug>/prompts/<NN>/<K>.md`, dispatch one background `opencode run`
-worker against the worktree, and parse `logs/<NN>-<K>.jsonl`.
+Cut the ticket's worktree `.scratch/<slug>/worktrees/<NN>` and worker branch
+`opencode-implement/<slug>/<NN>` from integration `HEAD`. Then, for each sub-step
+in the step plan, in order: write the self-contained prompt (including the
+**progress note**) to `.scratch/<slug>/prompts/<NN>/<K>.md`, dispatch one
+background `opencode run` worker, have the worker commit on the worker branch, run
+the **checkpoint check**, and write the next progress note. A sub-step that
+overflows at runtime is **re-split** and the re-split recorded in `status.md`.
 
-An `opencode` failure (error event, non-zero exit, missing envelope, timeout or
-stall kill) re-dispatches a fresh worker with a progress note naming the failure,
-up to `MAX_OPENCODE_RETRIES = 3`. Exhausting that budget escalates the ticket.
+An `opencode` failure re-dispatches a fresh worker with a progress note, up to
+`MAX_OPENCODE_RETRIES = 3`. A checkpoint failure re-dispatches the sub-step, up to
+`MAX_TICKET_ATTEMPTS = 3`.
+
+### Verification gate (orchestrator, per ticket)
+
+After the ticket's whole chain passes its checkpoints, the orchestrator — not a
+worker — runs the gate in the worktree, per
+[references/worktree-integration.md](references/worktree-integration.md):
+
+1. Every sub-step's return is well-formed.
+2. **Reproduce the whole ticket's red state** — on a scratch checkout at the
+   pre-ticket integration `HEAD`, apply only the ticket's test files, run them,
+   confirm they fail for missing behaviour, not a compile error.
+3. Every acceptance criterion maps to a new, non-vacuous test.
+4. **Green** — the new/changed tests pass; the typecheck passes.
+
+Any failure re-dispatches the failing sub-step with the specific failure, up to
+`MAX_TICKET_ATTEMPTS = 3`. Exhausting that escalates the ticket to the fallback,
+or `BLOCKED (TICKET_VERIFICATION_FAILED)` under `--no-fallback`.
+
+### Integration (orchestrator, per ticket)
+
+Squash-merge the verified worker branch onto `opencode-implement/<feature-slug>`
+as exactly one commit in ascending ticket-number order, ticking the ticket file's
+checkboxes and setting its `Status:`. A mechanical conflict the orchestrator
+resolves; a design-encoding conflict halts with
+`BLOCKED (INTEGRATION_DESIGN_CONFLICT)` and is surfaced. Run the full typecheck
+and suite on the integrated result, then `git worktree remove` and advance.
 
 ## Constraints
 
