@@ -321,6 +321,92 @@
         "Reports per-path token totals with local runs at cost 0"
       ],
       "files": []
+    },
+    {
+      "id": 27,
+      "name": "a BLOCKED ticket halts only its dependency branch",
+      "prompt": "/opencode-implement .scratch/partial-demo/ — ticket set: 01 (None), 02 (01), 03 (01), 04 (02). Ticket 02 becomes BLOCKED (TICKET_VERIFICATION_FAILED) after its fallback also fails. 01 and 03 are already integrated.",
+      "expected_output": "01 and 03 stay integrated. 04 is not started because it is transitively blocked by 02. The run stops at the next frontier and the halt report names ticket 02 (with its reason), names 04 as not started, and reports that 03's branch is complete. The resume command is /opencode-implement continue partial-demo.",
+      "expectations": [
+        "Keeps 01 and 03 integrated and stops 04 as transitively blocked by 02",
+        "Halts at the next frontier rather than the whole run",
+        "Names the blocked ticket, its reason, and the downstream tickets not started",
+        "Prints the /opencode-implement continue command"
+      ],
+      "files": []
+    },
+    {
+      "id": 28,
+      "name": "status.md records the per-ticket fields and the integration ref",
+      "prompt": "/opencode-implement status subtitle-preferences — the run has 01 integrated (local), 02 in progress at sub-step 2 of 3 (local), 03 not started.",
+      "expected_output": "The read-only status report shows the ticket table in dependency order with each ticket's status, path, and blockers; 02's sub_step position; cumulative per-path token totals (local = cost 0); the integration branch ref opencode-implement/subtitle-preferences and its commit. It mutates nothing.",
+      "expectations": [
+        "Shows status, path, and blockers per ticket and 02's sub-step position",
+        "Reports cumulative per-path token totals and the integration branch ref",
+        "Mutates no file"
+      ],
+      "files": []
+    },
+    {
+      "id": 29,
+      "name": "continue discards a half-built ticket and re-dispatches it from clean",
+      "prompt": "/opencode-implement continue crash-demo — status.md records ticket 03 as 'verifying' when the session died; its worker branch opencode-implement/crash-demo/03 and worktree exist with commits. 01 and 02 are integrated and still verify.",
+      "expected_output": "Reality reconciliation confirms 01 and 02 still verify, then discards ticket 03's worker branch and worktree (a killed opencode worker can leave an odd git state) and re-dispatches ticket 03 from clean integration HEAD. It re-presents the Plan and resumes from ticket 03.",
+      "expectations": [
+        "Re-verifies the committed tickets 01 and 02 before trusting status.md",
+        "Discards the half-built worker branch and worktree for ticket 03",
+        "Re-dispatches ticket 03 from clean integration HEAD and re-presents the Plan"
+      ],
+      "files": []
+    },
+    {
+      "id": 30,
+      "name": "continue rewinds the integration branch when a committed ticket no longer verifies",
+      "prompt": "/opencode-implement continue drift-demo — status.md records 01, 02, 03 integrated. On re-verification ticket 02's tests now fail because the user hand-edited a file.",
+      "expected_output": "The orchestrator resets the integration branch to ticket 01's commit (the last still-verifying commit), discards the worktrees for 02 and 03, lists the discarded commits (02 and 03) at the top of the report, and re-dispatches from ticket 02. The Plan is re-presented against this reconciled reality.",
+      "expectations": [
+        "Detects that committed ticket 02 no longer verifies",
+        "Resets the integration branch to the last still-verifying commit (01)",
+        "Lists the discarded commits at the top of the report",
+        "Re-dispatches from ticket 02"
+      ],
+      "files": []
+    },
+    {
+      "id": 31,
+      "name": "a dirty target tree at preflight stops the run",
+      "prompt": "/opencode-implement .scratch/dirty-demo/ — the Plan is approved but the target repository has uncommitted changes.",
+      "expected_output": "Preflight halts the run and asks the user to deal with the uncommitted changes. It does not stash anything, does not create the integration branch, and dispatches no worker.",
+      "expectations": [
+        "Detects the dirty tree at preflight and stops",
+        "Does not stash or auto-commit the user's changes",
+        "Creates no integration branch and dispatches no worker"
+      ],
+      "files": []
+    },
+    {
+      "id": 32,
+      "name": "a worker that needs a new dependency stops and is replanned",
+      "prompt": "/opencode-implement .scratch/dep-demo/ — the Plan is approved. Ticket 01 sub-step 1's worker reports that the criterion needs a new third-party package that is not installed.",
+      "expected_output": "The worker stops and reports the missing dependency rather than running a package install. The orchestrator returns ticket 01 to Stage 0 planning as a dependency decision; the shared lockfile is untouched.",
+      "expectations": [
+        "The worker stops and reports rather than running npm/pip/cargo install",
+        "The orchestrator treats a new dependency as a planning decision and replans",
+        "The shared lockfile is not mutated"
+      ],
+      "files": []
+    },
+    {
+      "id": 33,
+      "name": "the completion handoff names the branch and the review commands and never pushes",
+      "prompt": "/opencode-implement .scratch/handoff-demo/ — all four tickets integrated, the last suite green, all local.",
+      "expected_output": "The handoff prints: all 4 tickets integrated onto opencode-implement/handoff-demo, one commit per ticket in dependency order; per-path token usage (local, cost 0); and the exact commands /code-review since <merge-base with main> then /scrutinize to run in a fresh context. It performs no review, no git push, and opens no PR.",
+      "expectations": [
+        "Names the integration branch and confirms one commit per ticket",
+        "Prints /code-review since <merge-base> and /scrutinize as the next step",
+        "Runs no review and does not push or open a PR"
+      ],
+      "files": []
     }
   ]
 }

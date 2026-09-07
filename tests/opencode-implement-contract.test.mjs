@@ -474,6 +474,78 @@ describe("opencode-implement skill contract", () => {
     });
   });
 
+  describe("state, resume, and handoff", () => {
+    it("a BLOCKED ticket halts only its dependency branch and the report names the fallout", async () => {
+      for (const dir of skillDirs) {
+        const d = await readFile(path.resolve(dir, "references/status-and-resume.md"), "utf8");
+        assert.match(d, /halts? only (its|the) (own )?dependency branch/i);
+        assert.match(d, /next frontier/i);
+        assert.match(d, /downstream tickets?[\s\S]{0,20}not started|not started/i);
+        assert.match(d, /partial path/i);
+        assert.match(d, /`?\/opencode-implement continue`?/);
+        assert.match(d, /TICKET_VERIFICATION_FAILED/);
+        assert.match(d, /INTEGRATION_DESIGN_CONFLICT/);
+      }
+    });
+
+    it("status.md persists the per-ticket fields, the integration ref, and per-path totals", async () => {
+      for (const dir of skillDirs) {
+        const d = await readFile(path.resolve(dir, "references/status-and-resume.md"), "utf8");
+        assert.match(d, /status\.md/);
+        for (const field of ["status", "path", "sub_step", "session_ids", "subagent_id", "attempts", "opencode_retries", "worker_branch", "commit"]) {
+          assert.match(d, new RegExp(field.replace(/_/g, "[_ ]")), `status.md records ${field}`);
+        }
+        assert.match(d, /integration branch ref/i);
+        assert.match(d, /per-path token totals|cumulative per-path/i);
+        assert.match(d, /no per-turn state-header/i);
+      }
+    });
+
+    it("continue reconciles reality, discards half-built tickets, and rewinds on drift", async () => {
+      for (const dir of skillDirs) {
+        const d = await readFile(path.resolve(dir, "references/status-and-resume.md"), "utf8");
+        assert.match(d, /Reality reconciliation/i);
+        assert.match(d, /Git refs?/i);
+        assert.match(d, /half-built|mid-run/i);
+        assert.match(d, /discard[\s\S]{0,30}worktree/i);
+        assert.match(d, /re-dispatch[\s\S]{0,40}clean/i);
+        assert.match(d, /last still-verifying commit/i);
+        assert.match(d, /reset the integration branch/i);
+        assert.match(d, /discarded commits/i);
+      }
+    });
+
+    it("status and list are read-only", async () => {
+      for (const dir of skillDirs) {
+        const d = await readFile(path.resolve(dir, "references/status-and-resume.md"), "utf8");
+        assert.match(d, /read-only/i);
+        assert.match(d, /`?\/opencode-implement status`?/);
+        assert.match(d, /`?\/opencode-implement list`?/);
+      }
+    });
+
+    it("the completion handoff names the branch and the review commands and never pushes", async () => {
+      for (const body of await bothSkillBodies()) {
+        const stop = body.match(/##\s*Stop[\s\S]*?(?=\n## |$)/i);
+        assert.ok(stop, "Stop/Handoff section present");
+        const s = stop[0];
+        assert.match(s, /integration branch|opencode-implement\/<feature-slug>/i);
+        assert.match(s, /one commit\s+per ticket|one-commit-per-ticket/i);
+        assert.match(s, /per-path token usage/i);
+        assert.match(s, /\/code-review/);
+        assert.match(s, /\/scrutinize/);
+        assert.match(s, /push|pull request/i);
+      }
+    });
+
+    it("SKILL.md has a State section and drives status-and-resume.md", async () => {
+      for (const body of await bothSkillBodies()) {
+        assert.match(body, /##\s*State, failure, and resume/i);
+        assert.match(body, /references\/status-and-resume\.md/);
+      }
+    });
+  });
+
   describe("standalone ADR 0007", () => {
     it("ships a bilingual ADR recording the standalone local-first sibling stance", async () => {
       const adr = await readFile(path.resolve("docs/decisions/0007-opencode-implement-standalone.md"), "utf8");

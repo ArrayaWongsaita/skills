@@ -83,6 +83,8 @@ calibration probe.
 
 ## Sub-commands
 
+Detailed in [references/status-and-resume.md](references/status-and-resume.md).
+
 - `/opencode-implement continue [slug]` — resume an interrupted run: reconcile
   against reality, discard any half-built worktree, rewind the integration branch
   if a committed ticket no longer verifies, then re-present the Plan and
@@ -216,6 +218,51 @@ checkboxes and setting its `Status:`. A mechanical conflict the orchestrator
 resolves; a design-encoding conflict halts with
 `BLOCKED (INTEGRATION_DESIGN_CONFLICT)` and is surfaced. Run the full typecheck
 and suite on the integrated result, then `git worktree remove` and advance.
+
+## State, failure, and resume
+
+Follow [references/status-and-resume.md](references/status-and-resume.md). Run
+state lives in `.scratch/<feature-slug>/status.md` — the dependency-ordered ticket
+table, each ticket's `{status, path, sub_step, session_ids, subagent_id,
+attempts, opencode_retries, worker_branch, commit, tokens}`, the integration
+branch ref, and cumulative per-path token totals — updated as each ticket
+transitions. There is no per-turn state-header block.
+
+A `BLOCKED` ticket halts only its own dependency branch: the in-flight ticket
+finishes, passing work stays integrated, and the run stops at the next frontier
+with a report naming the blocked tickets, their reasons, the downstream tickets
+not started, the independent tickets that could still run, and the
+`/opencode-implement continue` command.
+
+`/opencode-implement continue` reconciles `status.md` against reality first —
+git refs, worktrees, and each committed ticket's acceptance checks — discards any
+half-built worker branch and worktree and re-dispatches that ticket from clean,
+and, when a committed ticket no longer verifies, rewinds the integration branch
+to the last still-verifying commit and lists the discarded commits before
+re-dispatching. `status` and `list` are read-only.
+
+## Stop — Handoff
+
+When every ticket is integrated and the last ticket's suite is green, print a
+handoff and stop:
+
+```text
+All <N> tickets integrated onto opencode-implement/<feature-slug> — one commit
+per ticket, in dependency order.
+
+Per-path token usage:
+  local             <M> tickets   cost 0
+  subagent-fallback <K> tickets   in <…>  out <…>  total <…>
+    ticket <NN>: subagent fallback — Claude tokens spent, code left the machine
+    ...
+
+Review is a separate pass. In a fresh context, from this branch:
+/code-review since <merge-base with main>
+/scrutinize
+```
+
+This run stops here — it runs no review, no `git push`, and opens no pull
+request.
 
 ## Constraints
 
