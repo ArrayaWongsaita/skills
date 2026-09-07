@@ -192,6 +192,22 @@ Any failure re-dispatches the failing sub-step with the specific failure, up to
 `MAX_TICKET_ATTEMPTS = 3`. Exhausting that escalates the ticket to the fallback,
 or `BLOCKED (TICKET_VERIFICATION_FAILED)` under `--no-fallback`.
 
+### Automatic fallback to a native subagent
+
+Follow [references/fallback.md](references/fallback.md). When the local path
+cannot deliver a ticket — a criterion that cannot be split fine enough
+(`TICKET_TOO_LARGE_FOR_CONTEXT`), the verification gate failed
+`MAX_TICKET_ATTEMPTS` times, or `opencode` failed past `MAX_OPENCODE_RETRIES` —
+the orchestrator discards the ticket's partial worktree and worker branch and
+dispatches **one native subagent** (Agent tool, `subagent_type` = the
+`--fallback-agent` value, `isolation: "worktree"`) for the whole ticket from
+clean integration `HEAD`, then runs the same verification gate. **No approval
+pause.** The fallback spends Claude tokens and sends the ticket off the machine,
+so it is predicted in the Plan and named in the handoff. `--no-fallback` /
+`--strict-local` suppresses it and `BLOCKED`s the ticket instead.
+`BLOCKED (TICKET_VERIFICATION_FAILED)` now means the fallback subagent also
+failed its full attempt budget.
+
 ### Integration (orchestrator, per ticket)
 
 Squash-merge the verified worker branch onto `opencode-implement/<feature-slug>`

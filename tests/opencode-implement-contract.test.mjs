@@ -417,6 +417,63 @@ describe("opencode-implement skill contract", () => {
     });
   });
 
+  describe("Stage 1 — automatic subagent fallback", () => {
+    it("SKILL.md Stage 1 has an automatic fallback subsection with no approval pause", async () => {
+      for (const body of await bothSkillBodies()) {
+        const s = body.match(/##\s*Stage 1[\s\S]*?(?=\n## )/i)[0];
+        assert.match(s, /references\/fallback\.md/);
+        assert.match(s, /automatic fallback|automatically fall|fallback to a native subagent/i);
+        assert.match(s, /no\s+approval\s+pause|no\s+pause/i);
+        assert.match(s, /--no-fallback/);
+        assert.match(s, /TICKET_TOO_LARGE_FOR_CONTEXT/);
+      }
+    });
+
+    it("fallback.md lists the three triggers and the --no-fallback behaviour", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/fallback.md"), "utf8");
+        assert.match(c, /TICKET_TOO_LARGE_FOR_CONTEXT/);
+        assert.match(c, /MAX_TICKET_ATTEMPTS\s*=\s*3/);
+        assert.match(c, /MAX_OPENCODE_RETRIES\s*=\s*3/);
+        assert.match(c, /within[\s\S]{0,20}retry budget[\s\S]{0,30}not escalated|retried locally, not escalated/i);
+        assert.match(c, /--no-fallback/);
+        assert.match(c, /--strict-local/);
+        assert.match(c, /BLOCKED \(TICKET_TOO_LARGE_FOR_CONTEXT\)/);
+        assert.match(c, /BLOCKED \(TICKET_VERIFICATION_FAILED\)/);
+      }
+    });
+
+    it("fallback.md dispatches one whole-ticket subagent from clean HEAD, never fork", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/fallback.md"), "utf8");
+        assert.match(c, /discard[\s\S]{0,40}partial[\s\S]{0,30}worktree/i);
+        assert.match(c, /fresh worker branch/i);
+        assert.match(c, /integration `?HEAD`?/i);
+        assert.match(c, /subagent_type/);
+        assert.match(c, /--fallback-agent/);
+        assert.match(c, /general-purpose/);
+        assert.match(c, /isolation:\s*"worktree"/);
+        assert.match(c, /\bfork\b/i);
+        assert.match(c, /whole ticket/i);
+        assert.match(c, /no progress note|no decomposition/i);
+        assert.match(c, /SendMessage/);
+      }
+    });
+
+    it("fallback.md keeps the orchestrator as the verification authority and discloses the cost", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/fallback.md"), "utf8");
+        assert.match(c, /same[\s\S]{0,40}verification gate/i);
+        assert.match(c, /no verifier subagent|verification authority/i);
+        assert.match(c, /Claude tokens/i);
+        assert.match(c, /left the\s+machine|off the\s+machine/i);
+        assert.match(c, /status\.md/);
+        assert.match(c, /handoff/i);
+        assert.match(c, /tokens\.fallback/);
+      }
+    });
+  });
+
   describe("standalone ADR 0007", () => {
     it("ships a bilingual ADR recording the standalone local-first sibling stance", async () => {
       const adr = await readFile(path.resolve("docs/decisions/0007-opencode-implement-standalone.md"), "utf8");

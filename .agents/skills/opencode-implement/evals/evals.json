@@ -249,6 +249,78 @@
         "Does not resolve the conflict itself or write ticket implementation code"
       ],
       "files": []
+    },
+    {
+      "id": 21,
+      "name": "three failed local verification attempts escalate to the subagent with no pause",
+      "prompt": "/opencode-implement .scratch/escalate-demo/ — the Plan is approved, fallback is on (default). Ticket 01 fails the verification gate three times on the local model.",
+      "expected_output": "After the third failure the orchestrator discards ticket 01's partial worktree and worker branch, cuts a fresh worker branch from integration HEAD, and dispatches one native subagent (subagent_type = general-purpose, isolation: worktree) for the whole ticket — with no approval pause. The ticket's path becomes subagent-fallback and the escalation is recorded in status.md.",
+      "expectations": [
+        "Escalates automatically after MAX_TICKET_ATTEMPTS = 3 local verification failures, with no approval pause",
+        "Discards the partial local worktree and worker branch and starts the subagent from clean integration HEAD",
+        "Dispatches one native subagent for the whole ticket via the Agent tool, never fork",
+        "Records the escalation and its trigger in status.md and sets the path to subagent-fallback"
+      ],
+      "files": []
+    },
+    {
+      "id": 22,
+      "name": "TICKET_TOO_LARGE_FOR_CONTEXT escalates directly with fallback on",
+      "prompt": "/opencode-implement .scratch/toolarge-demo/ — fallback is on (default). Ticket 02 has a single acceptance criterion that cannot be split fine enough to fit the context budget even after re-splitting by file and layer.",
+      "expected_output": "The orchestrator does not BLOCK. It escalates ticket 02 straight to the subagent fallback (TICKET_TOO_LARGE_FOR_CONTEXT trigger), running the whole ticket from clean integration HEAD and verifying with the same gate.",
+      "expectations": [
+        "Recognises the criterion cannot be split under budget and triggers the fallback, not a BLOCK",
+        "Runs the subagent for the whole ticket and verifies with the orchestrator's gate"
+      ],
+      "files": []
+    },
+    {
+      "id": 23,
+      "name": "--no-fallback turns the too-large trigger into a BLOCK",
+      "prompt": "/opencode-implement --no-fallback .scratch/strict-demo/ — same as toolarge-demo: ticket 02's one criterion cannot be split under the context budget.",
+      "expected_output": "With --no-fallback the orchestrator does not escalate. Ticket 02 becomes BLOCKED (TICKET_TOO_LARGE_FOR_CONTEXT). The run spends zero Claude tokens and no code leaves the machine.",
+      "expectations": [
+        "Suppresses the subagent fallback entirely under --no-fallback / --strict-local",
+        "Produces BLOCKED (TICKET_TOO_LARGE_FOR_CONTEXT) instead of escalating",
+        "Spends no Claude tokens"
+      ],
+      "files": []
+    },
+    {
+      "id": 24,
+      "name": "opencode failures past the retry budget escalate to the subagent",
+      "prompt": "/opencode-implement .scratch/opencodefail-demo/ — fallback is on. Ticket 01 sub-step 1's opencode run fails (error event / timeout kill) four times: three retries then a fourth attempt.",
+      "expected_output": "MAX_OPENCODE_RETRIES = 3 is exhausted, so the ticket escalates to the subagent fallback (opencode-failures-exhausted trigger), from clean integration HEAD. An opencode hiccup within the budget would have been retried locally instead.",
+      "expectations": [
+        "Retries opencode failures up to MAX_OPENCODE_RETRIES = 3 locally",
+        "Escalates to the subagent fallback once that budget is exhausted",
+        "Does not escalate an opencode hiccup that is still within the retry budget"
+      ],
+      "files": []
+    },
+    {
+      "id": 25,
+      "name": "the fallback subagent also failing its budget is the only BLOCKED (TICKET_VERIFICATION_FAILED)",
+      "prompt": "/opencode-implement .scratch/blocked-demo/ — fallback is on. Ticket 01 escalated to the subagent, which then fails the verification gate three times.",
+      "expected_output": "Only after the fallback subagent exhausts its own MAX_TICKET_ATTEMPTS = 3 does ticket 01 become BLOCKED (TICKET_VERIFICATION_FAILED), with the failure output recorded and the worktree kept. The orchestrator never hand-codes the ticket.",
+      "expectations": [
+        "Reaches BLOCKED (TICKET_VERIFICATION_FAILED) only when the fallback subagent also fails its full budget",
+        "Keeps the worktree and records the failure output",
+        "Does not implement the ticket itself to rescue the run"
+      ],
+      "files": []
+    },
+    {
+      "id": 26,
+      "name": "every escalation is disclosed in status.md and the handoff",
+      "prompt": "/opencode-implement .scratch/disclose-demo/ — a five-ticket run where ticket 03 took the subagent fallback and the rest ran local.",
+      "expected_output": "status.md records ticket 03's path as subagent-fallback with its trigger and tokens.fallback. The completion handoff names ticket 03 explicitly: 'ticket 03: subagent fallback — Claude tokens spent, code left the machine', alongside the per-path token totals (local = cost 0).",
+      "expectations": [
+        "Records the fallback path, trigger, and token usage per ticket in status.md",
+        "Names each fallback ticket in the handoff with its Claude token spend and the privacy note",
+        "Reports per-path token totals with local runs at cost 0"
+      ],
+      "files": []
     }
   ]
 }
