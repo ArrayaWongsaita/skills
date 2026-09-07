@@ -1,0 +1,412 @@
+{
+  "skill_name": "opencode-implement",
+  "evals": [
+    {
+      "id": 1,
+      "name": "pure linear chain plans one commit per ticket in dependency order",
+      "prompt": "/opencode-implement .scratch/linear-demo/ — the ticket set is 01 (Blocked by: None), 02 (Blocked by: 01), 03 (Blocked by: 02). The parent spec.md names a single eval-harness test seam for the whole feature, and each ticket has one acceptance criterion. Present the Plan.",
+      "expected_output": "The dependency order is 01, 02, 03. The Plan shows the ticket table in that order and, per ticket, its blockers, the eval-harness test seam, a one-sub-step step plan (one criterion each), the predicted path `local`, and the retry budgets MAX_TICKET_ATTEMPTS = 3 and MAX_OPENCODE_RETRIES = 3. There is no wave table and no model column. Stage 0 stops for explicit approval without writing to any source file.",
+      "expectations": [
+        "Derives the dependency order 01, 02, 03 from the Blocked by edges",
+        "Gives each ticket a one-sub-step step plan and predicts the path `local`",
+        "Shows blockers, test seam, step plan, predicted path, and retry budgets per ticket, with no wave table and no model column",
+        "Pauses for explicit approval and creates or modifies no file outside .scratch/linear-demo/"
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "independent tickets are still planned to run serially",
+      "prompt": "/opencode-implement .scratch/independent-demo/ — ticket set: 01 (Blocked by: None), 02 (Blocked by: None), 03 (Blocked by: 01, 02). Present the Plan.",
+      "expected_output": "01 and 02 have no edge between them but the run still works them one after another in ascending ticket-number order, then 03. The Plan does not propose parallel execution; execution is serial because one local model instance serializes inference regardless (parallelism is a non-goal, not a deferred follow-up).",
+      "expectations": [
+        "Orders the run 01, 02, 03 and works one ticket at a time",
+        "Does not dispatch 01 and 02 concurrently and proposes no wave",
+        "States that parallelism is a non-goal for a single local model",
+        "Pauses for approval before any source file changes"
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "cyclic ticket set is rejected up front",
+      "prompt": "/opencode-implement .scratch/cyclic-demo/ — ticket set: 01 (Blocked by: 03), 02 (Blocked by: 01), 03 (Blocked by: 02). Present the Plan.",
+      "expected_output": "The dependency graph has a cycle 01 -> 03 -> 02 -> 01. The run halts with BLOCKED (TICKET_SET_CYCLIC), naming the tickets in the cycle, before computing the dependency order or writing anything.",
+      "expectations": [
+        "Detects the cycle and halts with BLOCKED (TICKET_SET_CYCLIC)",
+        "Names the specific tickets forming the cycle",
+        "Halts before any other planning work and before touching any file",
+        "Dispatches no worker"
+      ],
+      "files": []
+    },
+    {
+      "id": 4,
+      "name": "missing blocker is rejected up front",
+      "prompt": "/opencode-implement .scratch/missing-blocker-demo/ — ticket set: 01 (Blocked by: None), 02 (Blocked by: 07). Ticket 07 does not exist. Present the Plan.",
+      "expected_output": "Ticket 02 names a non-existent blocker 07. The run halts with BLOCKED (TICKET_SET_MISSING_BLOCKER), naming ticket 02 and the dangling reference 07, before any other work.",
+      "expectations": [
+        "Detects the unresolvable blocker and halts with BLOCKED (TICKET_SET_MISSING_BLOCKER)",
+        "Names ticket 02 and the dangling reference to 07",
+        "Halts before computing the dependency order or touching any file"
+      ],
+      "files": []
+    },
+    {
+      "id": 5,
+      "name": "numbering inconsistent with topological order is rejected",
+      "prompt": "/opencode-implement .scratch/numbering-demo/ — ticket set: 01 (Blocked by: 02), 02 (Blocked by: None). Present the Plan.",
+      "expected_output": "Ticket 01 is blocked by the higher-numbered ticket 02, so the numbering is not consistent with a topological order. The run halts with BLOCKED (TICKET_SET_NUMBERING) naming 01 and 02.",
+      "expectations": [
+        "Detects the numbering inconsistency and halts with BLOCKED (TICKET_SET_NUMBERING)",
+        "Names both ticket 01 and ticket 02",
+        "Halts before touching any file"
+      ],
+      "files": []
+    },
+    {
+      "id": 6,
+      "name": "a one-criterion ticket becomes a one-sub-step chain",
+      "prompt": "/opencode-implement .scratch/one-crit-demo/ — a single ticket 01 (Blocked by: None) with exactly one acceptance criterion, small in scope. Present the Plan.",
+      "expected_output": "Ticket 01's step plan is a single sub-step covering its one criterion, estimated within the context budget. The Plan shows a one-sub-step chain and predicts the path `local`. This is indistinguishable from running the ticket whole.",
+      "expectations": [
+        "Builds a step plan of exactly one sub-step for the single criterion",
+        "Predicts the path `local`",
+        "Does not split the sub-step further when it fits the budget"
+      ],
+      "files": []
+    },
+    {
+      "id": 7,
+      "name": "a four-criterion ticket becomes a four-sub-step chain by default",
+      "prompt": "/opencode-implement .scratch/four-crit-demo/ — a single ticket 01 (Blocked by: None) with four acceptance criteria, each a distinct behaviour at the same seam. Present the Plan.",
+      "expected_output": "Ticket 01's step plan is four sub-steps, one acceptance criterion each, ordered so each builds on the last. Each sub-step has its own file scope. The predicted path is `local`.",
+      "expectations": [
+        "Builds a step plan of four sub-steps, one criterion per sub-step",
+        "Orders the sub-steps so dependencies between criteria are respected",
+        "Records a file scope per sub-step",
+        "Predicts the path `local`"
+      ],
+      "files": []
+    },
+    {
+      "id": 8,
+      "name": "a single criterion over the context budget is split finer",
+      "prompt": "/opencode-implement .scratch/big-crit-demo/ — a single ticket 01 (Blocked by: None) with one acceptance criterion whose implementation touches a schema file, a service file, and an API handler, estimated well over the context budget. Present the Plan.",
+      "expected_output": "The one criterion's sub-step is estimated over the ~13k-token context budget, so the orchestrator splits it finer along a natural line (schema, then service, then handler). The step plan shows the split sub-steps, each within budget, and the predicted path stays `local`.",
+      "expectations": [
+        "Estimates the criterion's sub-step over the context budget",
+        "Splits it into smaller sub-steps by file or layer, each within budget",
+        "Shows the split in the step plan and keeps the predicted path `local`",
+        "Biases toward over-splitting rather than risking an overflowing sub-step"
+      ],
+      "files": []
+    },
+    {
+      "id": 9,
+      "name": "no source is mutated before Plan approval",
+      "prompt": "/opencode-implement .scratch/readonly-demo/ — a valid three-ticket set. Present the Plan, then stop.",
+      "expected_output": "The orchestrator produces the Plan and pauses. No file outside .scratch/readonly-demo/ is created or modified: no integration branch, no worktree, no worker dispatch, no opencode.json.",
+      "expectations": [
+        "Emits the Plan and pauses for explicit approval",
+        "Creates or modifies no file outside .scratch/readonly-demo/",
+        "Creates no integration branch, no worktree, and dispatches no worker"
+      ],
+      "files": []
+    },
+    {
+      "id": 10,
+      "name": "no argument resolves to the most recently modified issues directory",
+      "prompt": "/opencode-implement — no argument. The most recently modified .scratch/*/issues/ directory is .scratch/subtitle-preferences/issues/.",
+      "expected_output": "The orchestrator selects .scratch/subtitle-preferences/issues/, names it back to the user, and waits for confirmation before parsing the tickets.",
+      "expectations": [
+        "Selects the most recently modified .scratch/*/issues/ directory",
+        "Names the resolved directory back to the user",
+        "Waits for confirmation before parsing or planning"
+      ],
+      "files": []
+    },
+    {
+      "id": 11,
+      "name": "an opencode failure inside the retry budget is retried locally, not escalated",
+      "prompt": "/opencode-implement .scratch/retry-demo/ — the Plan is approved. The first opencode run for ticket 01 sub-step 1 emits an {\"type\":\"error\"} event and exits non-zero. This is the first opencode failure for this sub-step.",
+      "expected_output": "The orchestrator treats it as an opencode failure (not a verification failure), re-dispatches a fresh opencode run for the same sub-step with a progress note naming the failure, and does not escalate — MAX_OPENCODE_RETRIES = 3 has not been reached. It does not resume the session with -s.",
+      "expectations": [
+        "Classifies the error event + non-zero exit as an opencode failure",
+        "Re-dispatches a fresh opencode session (not -s resume) with a progress note",
+        "Does not escalate to the subagent fallback while retries remain",
+        "Counts it against MAX_OPENCODE_RETRIES, not MAX_TICKET_ATTEMPTS"
+      ],
+      "files": []
+    },
+    {
+      "id": 12,
+      "name": "a worker that emits no first event is killed as an opencode failure",
+      "prompt": "/opencode-implement .scratch/hang-demo/ — the Plan is approved. The opencode run for ticket 01 sub-step 1 has produced no step_start event and FIRST_EVENT_TIMEOUT has elapsed.",
+      "expected_output": "The orchestrator kills the worker PID, records it as an opencode failure (a hung run produces nothing at all), and re-dispatches a fresh worker, counting one MAX_OPENCODE_RETRIES attempt. STALL_INTERVAL and WORKER_TIMEOUT are the other two kill conditions.",
+      "expectations": [
+        "Kills the worker on FIRST_EVENT_TIMEOUT with no step_start seen",
+        "Records an opencode failure and re-dispatches, counting a retry",
+        "Treats STALL_INTERVAL and WORKER_TIMEOUT as the other kill conditions"
+      ],
+      "files": []
+    },
+    {
+      "id": 13,
+      "name": "a hung or slow smoke test stops the run before it starts",
+      "prompt": "/opencode-implement .scratch/smoke-demo/ — the Plan is approved. The preflight smoke test opencode run produces no first event within FIRST_EVENT_TIMEOUT.",
+      "expected_output": "The orchestrator does not begin the run. It stops with a message telling the user to free up or restart Ollama and opencode, having created the integration branch and gitignore entry but dispatched no ticket worker.",
+      "expectations": [
+        "Runs the smoke test with nothing else using the local model before the first real dispatch",
+        "Stops the whole run on a slow/stuck/failed smoke test",
+        "Tells the user to free up or restart Ollama / opencode",
+        "Dispatches no ticket worker"
+      ],
+      "files": []
+    },
+    {
+      "id": 14,
+      "name": "the sub-step worker prompt is self-contained and test-first",
+      "prompt": "/opencode-implement .scratch/prompt-demo/ — the Plan is approved. Show the worker prompt the orchestrator writes for ticket 01 sub-step 2 of 3.",
+      "expected_output": "The prompt at .scratch/prompt-demo/prompts/01/2.md carries: the absolute worktree path; the ticket's What-to-build for orientation; this sub-step's one acceptance criterion verbatim; a progress note from sub-step 1 (files changed, test status); the named spec sections, ADRs, glossary, and test seam; the files in scope; the full red-green-refactor protocol inline; the constraints (touch only files in scope, commit on the worker branch, no push/PR, no package install, no repo scan, stop on a missing decision, treat /word as literal text); and the required structured return.",
+      "expectations": [
+        "Includes the one sub-step criterion verbatim and the progress note",
+        "Carries the red-green-refactor protocol inline",
+        "Names spec sections rather than the whole spec, and lists the files in scope",
+        "Requires a structured return: red output, green output, files changed, test to criterion"
+      ],
+      "files": []
+    },
+    {
+      "id": 15,
+      "name": "a one-criterion ticket runs end to end and lands as one commit",
+      "prompt": "/opencode-implement .scratch/e2e-demo/ — a single ticket 01 (Blocked by: None) with one acceptance criterion. The Plan is approved. The opencode worker writes a failing test, makes it pass, and returns a well-formed red/green report.",
+      "expected_output": "The orchestrator runs the one sub-step, passes the checkpoint check, runs the verification gate (reproduce red at the pre-ticket HEAD with only the test file, confirm coverage and non-vacuity, run green + typecheck), and squash-merges the worker branch onto opencode-implement/e2e-demo as one commit named for the ticket that also ticks its checkboxes. The worktree is removed.",
+      "expectations": [
+        "Runs the checkpoint check after the sub-step and the full verification gate after the chain",
+        "Reproduces the red state itself at the pre-ticket integration HEAD",
+        "Squash-merges one commit per ticket in ticket-number order and ticks the checkboxes",
+        "Removes the worktree after the integrated suite is green"
+      ],
+      "files": []
+    },
+    {
+      "id": 16,
+      "name": "a multi-criterion chain carries state by commit and progress note, never -s resume",
+      "prompt": "/opencode-implement .scratch/chain-demo/ — ticket 01 has three acceptance criteria. The Plan is approved with a three-sub-step step plan.",
+      "expected_output": "The orchestrator dispatches sub-step 1, has the worker commit on the worker branch, runs the checkpoint, writes a progress note (files changed, test status), then dispatches sub-step 2 as a fresh opencode session with that progress note — not opencode run -s. Same for sub-step 3. The verification gate runs once, after sub-step 3.",
+      "expectations": [
+        "Commits each sub-step on the worker branch and writes a progress note between sub-steps",
+        "Dispatches each sub-step as a fresh opencode session, never -s resume",
+        "Runs the checkpoint check per sub-step and the verification gate once at the end"
+      ],
+      "files": []
+    },
+    {
+      "id": 17,
+      "name": "a sub-step that overflows at runtime is re-split, not failed",
+      "prompt": "/opencode-implement .scratch/resplit-demo/ — the Plan is approved. Ticket 01 sub-step 2's worker returns a truncated edit and a green run that does not actually cover the criterion; the checkpoint check fails with overflow symptoms.",
+      "expected_output": "The orchestrator recognises the overflow, re-splits sub-step 2 along a natural line (by file or layer) into finer sub-steps, records the re-split in status.md, and runs the finer sub-steps. The re-split is not counted against MAX_TICKET_ATTEMPTS — the wrong size estimate is the plan's fault.",
+      "expectations": [
+        "Detects the overflow from the checkpoint failure plus symptoms (truncated edit, uncovered criterion)",
+        "Re-splits sub-step 2 into finer sub-steps and records it in status.md",
+        "Does not count the re-split against MAX_TICKET_ATTEMPTS"
+      ],
+      "files": []
+    },
+    {
+      "id": 18,
+      "name": "a fabricated / not-actually-red test fails verification",
+      "prompt": "/opencode-implement .scratch/notred-demo/ — the Plan is approved. Ticket 01's worker returns a green report, but when the orchestrator applies only the new test file at the pre-ticket HEAD it passes without the implementation.",
+      "expected_output": "The verification gate's red reproduction fails: the test passes without the implementation, so it never measured a missing behaviour. This is a verification failure; the orchestrator re-dispatches the failing sub-step with that specific detail, up to MAX_TICKET_ATTEMPTS = 3.",
+      "expectations": [
+        "Runs the orchestrator's own red reproduction rather than trusting the worker's pasted output",
+        "Treats a test that passes without the implementation as a verification failure",
+        "Re-dispatches the failing sub-step with the specific failure, counting a MAX_TICKET_ATTEMPTS attempt"
+      ],
+      "files": []
+    },
+    {
+      "id": 19,
+      "name": "a vacuous test and missing criterion coverage each fail verification",
+      "prompt": "/opencode-implement .scratch/vacuous-demo/ — the Plan is approved. Ticket 01 has two criteria. The worker's return includes one test that is expect(true).toBe(true) and leaves the second criterion with no test.",
+      "expected_output": "The verification gate rejects the ticket on two counts: the vacuous assertion, and the acceptance criterion with no covering test. The orchestrator re-dispatches with both details, up to MAX_TICKET_ATTEMPTS = 3.",
+      "expectations": [
+        "Flags expect(true).toBe(true) as a vacuous test",
+        "Flags the acceptance criterion left uncovered by any new test",
+        "Re-dispatches the failing sub-step(s) rather than integrating"
+      ],
+      "files": []
+    },
+    {
+      "id": 20,
+      "name": "a design-encoding merge conflict is surfaced, not resolved",
+      "prompt": "/opencode-implement .scratch/conflict-demo/ — the Plan is approved. Integrating ticket 03's verified worker branch conflicts with ticket 02's commit over which module owns a shared validation contract.",
+      "expected_output": "The orchestrator recognises the conflict encodes a design decision (module ownership of a shared contract), halts with BLOCKED (INTEGRATION_DESIGN_CONFLICT), and surfaces the decision to the user. It does not pick a side. Ticket 03 returns to Stage 0.",
+      "expectations": [
+        "Distinguishes a design-encoding conflict from a mechanical one",
+        "Halts with BLOCKED (INTEGRATION_DESIGN_CONFLICT) and surfaces the decision",
+        "Does not resolve the conflict itself or write ticket implementation code"
+      ],
+      "files": []
+    },
+    {
+      "id": 21,
+      "name": "three failed local verification attempts escalate to the subagent with no pause",
+      "prompt": "/opencode-implement .scratch/escalate-demo/ — the Plan is approved, fallback is on (default). Ticket 01 fails the verification gate three times on the local model.",
+      "expected_output": "After the third failure the orchestrator discards ticket 01's partial worktree and worker branch, cuts a fresh worker branch from integration HEAD, and dispatches one native subagent (subagent_type = general-purpose, isolation: worktree) for the whole ticket — with no approval pause. The ticket's path becomes subagent-fallback and the escalation is recorded in status.md.",
+      "expectations": [
+        "Escalates automatically after MAX_TICKET_ATTEMPTS = 3 local verification failures, with no approval pause",
+        "Discards the partial local worktree and worker branch and starts the subagent from clean integration HEAD",
+        "Dispatches one native subagent for the whole ticket via the Agent tool, never fork",
+        "Records the escalation and its trigger in status.md and sets the path to subagent-fallback"
+      ],
+      "files": []
+    },
+    {
+      "id": 22,
+      "name": "TICKET_TOO_LARGE_FOR_CONTEXT escalates directly with fallback on",
+      "prompt": "/opencode-implement .scratch/toolarge-demo/ — fallback is on (default). Ticket 02 has a single acceptance criterion that cannot be split fine enough to fit the context budget even after re-splitting by file and layer.",
+      "expected_output": "The orchestrator does not BLOCK. It escalates ticket 02 straight to the subagent fallback (TICKET_TOO_LARGE_FOR_CONTEXT trigger), running the whole ticket from clean integration HEAD and verifying with the same gate.",
+      "expectations": [
+        "Recognises the criterion cannot be split under budget and triggers the fallback, not a BLOCK",
+        "Runs the subagent for the whole ticket and verifies with the orchestrator's gate"
+      ],
+      "files": []
+    },
+    {
+      "id": 23,
+      "name": "--no-fallback turns the too-large trigger into a BLOCK",
+      "prompt": "/opencode-implement --no-fallback .scratch/strict-demo/ — same as toolarge-demo: ticket 02's one criterion cannot be split under the context budget.",
+      "expected_output": "With --no-fallback the orchestrator does not escalate. Ticket 02 becomes BLOCKED (TICKET_TOO_LARGE_FOR_CONTEXT). The run spends zero Claude tokens and no code leaves the machine.",
+      "expectations": [
+        "Suppresses the subagent fallback entirely under --no-fallback / --strict-local",
+        "Produces BLOCKED (TICKET_TOO_LARGE_FOR_CONTEXT) instead of escalating",
+        "Spends no Claude tokens"
+      ],
+      "files": []
+    },
+    {
+      "id": 24,
+      "name": "opencode failures past the retry budget escalate to the subagent",
+      "prompt": "/opencode-implement .scratch/opencodefail-demo/ — fallback is on. Ticket 01 sub-step 1's opencode run fails (error event / timeout kill) four times: three retries then a fourth attempt.",
+      "expected_output": "MAX_OPENCODE_RETRIES = 3 is exhausted, so the ticket escalates to the subagent fallback (opencode-failures-exhausted trigger), from clean integration HEAD. An opencode hiccup within the budget would have been retried locally instead.",
+      "expectations": [
+        "Retries opencode failures up to MAX_OPENCODE_RETRIES = 3 locally",
+        "Escalates to the subagent fallback once that budget is exhausted",
+        "Does not escalate an opencode hiccup that is still within the retry budget"
+      ],
+      "files": []
+    },
+    {
+      "id": 25,
+      "name": "the fallback subagent also failing its budget is the only BLOCKED (TICKET_VERIFICATION_FAILED)",
+      "prompt": "/opencode-implement .scratch/blocked-demo/ — fallback is on. Ticket 01 escalated to the subagent, which then fails the verification gate three times.",
+      "expected_output": "Only after the fallback subagent exhausts its own MAX_TICKET_ATTEMPTS = 3 does ticket 01 become BLOCKED (TICKET_VERIFICATION_FAILED), with the failure output recorded and the worktree kept. The orchestrator never hand-codes the ticket.",
+      "expectations": [
+        "Reaches BLOCKED (TICKET_VERIFICATION_FAILED) only when the fallback subagent also fails its full budget",
+        "Keeps the worktree and records the failure output",
+        "Does not implement the ticket itself to rescue the run"
+      ],
+      "files": []
+    },
+    {
+      "id": 26,
+      "name": "every escalation is disclosed in status.md and the handoff",
+      "prompt": "/opencode-implement .scratch/disclose-demo/ — a five-ticket run where ticket 03 took the subagent fallback and the rest ran local.",
+      "expected_output": "status.md records ticket 03's path as subagent-fallback with its trigger and tokens.fallback. The completion handoff names ticket 03 explicitly: 'ticket 03: subagent fallback — Claude tokens spent, code left the machine', alongside the per-path token totals (local = cost 0).",
+      "expectations": [
+        "Records the fallback path, trigger, and token usage per ticket in status.md",
+        "Names each fallback ticket in the handoff with its Claude token spend and the privacy note",
+        "Reports per-path token totals with local runs at cost 0"
+      ],
+      "files": []
+    },
+    {
+      "id": 27,
+      "name": "a BLOCKED ticket halts only its dependency branch",
+      "prompt": "/opencode-implement .scratch/partial-demo/ — ticket set: 01 (None), 02 (01), 03 (01), 04 (02). Ticket 02 becomes BLOCKED (TICKET_VERIFICATION_FAILED) after its fallback also fails. 01 and 03 are already integrated.",
+      "expected_output": "01 and 03 stay integrated. 04 is not started because it is transitively blocked by 02. The run stops at the next frontier and the halt report names ticket 02 (with its reason), names 04 as not started, and reports that 03's branch is complete. The resume command is /opencode-implement continue partial-demo.",
+      "expectations": [
+        "Keeps 01 and 03 integrated and stops 04 as transitively blocked by 02",
+        "Halts at the next frontier rather than the whole run",
+        "Names the blocked ticket, its reason, and the downstream tickets not started",
+        "Prints the /opencode-implement continue command"
+      ],
+      "files": []
+    },
+    {
+      "id": 28,
+      "name": "status.md records the per-ticket fields and the integration ref",
+      "prompt": "/opencode-implement status subtitle-preferences — the run has 01 integrated (local), 02 in progress at sub-step 2 of 3 (local), 03 not started.",
+      "expected_output": "The read-only status report shows the ticket table in dependency order with each ticket's status, path, and blockers; 02's sub_step position; cumulative per-path token totals (local = cost 0); the integration branch ref opencode-implement/subtitle-preferences and its commit. It mutates nothing.",
+      "expectations": [
+        "Shows status, path, and blockers per ticket and 02's sub-step position",
+        "Reports cumulative per-path token totals and the integration branch ref",
+        "Mutates no file"
+      ],
+      "files": []
+    },
+    {
+      "id": 29,
+      "name": "continue discards a half-built ticket and re-dispatches it from clean",
+      "prompt": "/opencode-implement continue crash-demo — status.md records ticket 03 as 'verifying' when the session died; its worker branch opencode-implement/crash-demo/03 and worktree exist with commits. 01 and 02 are integrated and still verify.",
+      "expected_output": "Reality reconciliation confirms 01 and 02 still verify, then discards ticket 03's worker branch and worktree (a killed opencode worker can leave an odd git state) and re-dispatches ticket 03 from clean integration HEAD. It re-presents the Plan and resumes from ticket 03.",
+      "expectations": [
+        "Re-verifies the committed tickets 01 and 02 before trusting status.md",
+        "Discards the half-built worker branch and worktree for ticket 03",
+        "Re-dispatches ticket 03 from clean integration HEAD and re-presents the Plan"
+      ],
+      "files": []
+    },
+    {
+      "id": 30,
+      "name": "continue rewinds the integration branch when a committed ticket no longer verifies",
+      "prompt": "/opencode-implement continue drift-demo — status.md records 01, 02, 03 integrated. On re-verification ticket 02's tests now fail because the user hand-edited a file.",
+      "expected_output": "The orchestrator resets the integration branch to ticket 01's commit (the last still-verifying commit), discards the worktrees for 02 and 03, lists the discarded commits (02 and 03) at the top of the report, and re-dispatches from ticket 02. The Plan is re-presented against this reconciled reality.",
+      "expectations": [
+        "Detects that committed ticket 02 no longer verifies",
+        "Resets the integration branch to the last still-verifying commit (01)",
+        "Lists the discarded commits at the top of the report",
+        "Re-dispatches from ticket 02"
+      ],
+      "files": []
+    },
+    {
+      "id": 31,
+      "name": "a dirty target tree at preflight stops the run",
+      "prompt": "/opencode-implement .scratch/dirty-demo/ — the Plan is approved but the target repository has uncommitted changes.",
+      "expected_output": "Preflight halts the run and asks the user to deal with the uncommitted changes. It does not stash anything, does not create the integration branch, and dispatches no worker.",
+      "expectations": [
+        "Detects the dirty tree at preflight and stops",
+        "Does not stash or auto-commit the user's changes",
+        "Creates no integration branch and dispatches no worker"
+      ],
+      "files": []
+    },
+    {
+      "id": 32,
+      "name": "a worker that needs a new dependency stops and is replanned",
+      "prompt": "/opencode-implement .scratch/dep-demo/ — the Plan is approved. Ticket 01 sub-step 1's worker reports that the criterion needs a new third-party package that is not installed.",
+      "expected_output": "The worker stops and reports the missing dependency rather than running a package install. The orchestrator returns ticket 01 to Stage 0 planning as a dependency decision; the shared lockfile is untouched.",
+      "expectations": [
+        "The worker stops and reports rather than running npm/pip/cargo install",
+        "The orchestrator treats a new dependency as a planning decision and replans",
+        "The shared lockfile is not mutated"
+      ],
+      "files": []
+    },
+    {
+      "id": 33,
+      "name": "the completion handoff names the branch and the review commands and never pushes",
+      "prompt": "/opencode-implement .scratch/handoff-demo/ — all four tickets integrated, the last suite green, all local.",
+      "expected_output": "The handoff prints: all 4 tickets integrated onto opencode-implement/handoff-demo, one commit per ticket in dependency order; per-path token usage (local, cost 0); and the exact commands /code-review since <merge-base with main> then /scrutinize to run in a fresh context. It performs no review, no git push, and opens no PR.",
+      "expectations": [
+        "Names the integration branch and confirms one commit per ticket",
+        "Prints /code-review since <merge-base> and /scrutinize as the next step",
+        "Runs no review and does not push or open a PR"
+      ],
+      "files": []
+    }
+  ]
+}
