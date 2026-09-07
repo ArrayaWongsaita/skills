@@ -8,35 +8,35 @@ eval suite. This is the "make the change easy" prefactor for tickets 02–07.
 
 **Blocked by:** None (can start immediately)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `skills/agents/opencode-implement/SKILL.md` has frontmatter `name:
+- [x] `skills/agents/opencode-implement/SKILL.md` has frontmatter `name:
       opencode-implement`, a description (≥ 80 chars) naming the full span (read a ticket
       directory → plan → criterion-level decompose → dispatch local `opencode` workers →
       verify → auto-fallback to a native subagent when the local model cannot deliver →
       integrate one commit per ticket → stop before review), and
       `disable-model-invocation: true`
-- [ ] `skills/agents/opencode-implement/agents/openai.yaml` sets
+- [x] `skills/agents/opencode-implement/agents/openai.yaml` sets
       `allow_implicit_invocation: false` with a display name and a `default_prompt` that
       invokes `$opencode-implement`, mirroring the shape of
       `skills/agents/agy-implement/agents/openai.yaml`
-- [ ] The skill is mirrored byte-identical to `.agents/skills/opencode-implement/`, and
+- [x] The skill is mirrored byte-identical to `.agents/skills/opencode-implement/`, and
       the symlink `.claude/skills/opencode-implement → ../../.agents/skills/opencode-implement`
       exists (matching the other agent skills)
-- [ ] A human guide exists at `docs/skills/agents/opencode-implement.md` following the
+- [x] A human guide exists at `docs/skills/agents/opencode-implement.md` following the
       repo's skill-guide template — `## ภาษาไทย / Thai` and `## English / ภาษาอังกฤษ`
       sections and the `npx skills add ArrayaWongsaita/skills --skill opencode-implement`
       line (stub sections acceptable; completed in ticket 07)
-- [ ] SKILL.md documents the invocation surface — `/opencode-implement <dir|slug>`,
+- [x] SKILL.md documents the invocation surface — `/opencode-implement <dir|slug>`,
       `$opencode-implement <dir|slug>`, the `continue` / `status` / `list` sub-commands,
       and the run options `--model provider/model` (default `ollama/qwen3.8:27b-mlx-32k`),
       `--fallback-agent <name>` (default `general-purpose`), `--no-fallback` /
       `--strict-local` (each behavior specified in later tickets)
-- [ ] `skills/agents/opencode-implement/evals/trigger-evals.json` asserts
+- [x] `skills/agents/opencode-implement/evals/trigger-evals.json` asserts
       `/opencode-implement`, `$opencode-implement`, and the sub-command / option forms
       trigger (`should_trigger: true`), and that a generic "implement this", a bare
       mention of tickets, of `opencode` or Ollama, and a mention of a sibling skill
       (`agy-implement`, `subagent-implement`) do not (`should_trigger: false`) — with at
       least one positive and one negative case
-- [ ] `npm run docs:index`, `npm run validate`, and `npm test` all pass with the new
+- [x] `npm run docs:index`, `npm run validate`, and `npm test` all pass with the new
       skill present
