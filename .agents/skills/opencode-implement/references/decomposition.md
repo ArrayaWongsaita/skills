@@ -30,9 +30,12 @@ A cheap check the orchestrator runs in the worktree after each sub-step — not 
 full verification gate, which runs once at ticket completion:
 
 - The worktree still typechecks / compiles.
-- The tests written so far are in the red/green state the step plan expects for
-  this point: the criterion test this sub-step just wrote is **green** (the
-  sub-step implemented it), and no earlier sub-step's test has regressed to red.
+- The tests touched so far are in the **red or green state the step plan expects
+  for this point**: a sub-step that finished its criterion leaves that criterion's
+  test **green**; a sub-step that only lays groundwork for a criterion split
+  across sub-steps (a schema, a seam, a layer) legitimately leaves the
+  behavioural test still **red**, and the step plan says which. No earlier
+  sub-step's completed (green) test has regressed to red.
 - The worker's return is well-formed — it pasted a red run and a green run and
   named the files it changed.
 

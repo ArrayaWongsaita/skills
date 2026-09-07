@@ -54,7 +54,7 @@ Ubiquitous language for the `opencode-implement` skill. Use these names verbatim
 | **session id** | The `sessionID` (`ses_…`) present on every event, including `error` events. Recorded in `status.md`. Not used for retry carry-over (adr/0006 — fresh session + progress note). |
 | **step_finish** | The event carrying `part.reason` (`"stop"` on clean completion) and `part.tokens` `{total, input, output, reasoning, cache}` and `part.cost` (`0` for a local model). Token usage is rolled into `status.md`. |
 | **worker failure** | Exit code ≠ 0, an `{"type":"error"}` event, a missing `step_finish`, a truncated return, or a timeout. Distinct from a **verification failure** (worker finished, output is wrong). |
-| **stall** | A running worker that emits no new event for `STALL_INTERVAL` (default 10 min). Flagged `possibly stalled` in `status`; a worker with no output at all by `WORKER_TIMEOUT` (default 30 min, editable in the Plan) is killed as a worker failure. |
+| **stall** | A running worker that emits no new event for `STALL_INTERVAL` (default 8 min). Flagged `possibly stalled` in `status`; a worker with no first event by `FIRST_EVENT_TIMEOUT` (default 6 min) or still running at `WORKER_TIMEOUT` (default 45 min) is killed as a worker failure. All three are editable in the Plan and provisional pending validation probe C. |
 
 ## Run states
 

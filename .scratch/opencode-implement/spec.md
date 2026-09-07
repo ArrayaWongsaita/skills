@@ -376,9 +376,9 @@ Confirmed by probe (2026-09-07, `ollama/qwen3.8:27b-mlx-32k`; design-blocking pr
   `opencode run --format json --model <model> --dir <worktree> --dangerously-skip-permissions "<prompt>"`
   under a hard timeout (`timeout`/`gtimeout` if present, else a background-PID + `sleep` +
   `kill` wrapper — `timeout` is not on macOS by default). No `--print-timeout` and no
-  `--disable-slash-commands` flag exists in `opencode run`. Whether a `/foo` token in the
-  ticket body can trigger anything inside a worker is validation probe E's secondary
-  check; if it can, the prompt scaffold fences ticket text in a quoted block.
+  `--disable-slash-commands` flag exists in `opencode run`. The prompt scaffold fences
+  all copied ticket text in a `>` quoted block regardless, so a `/foo` token in the
+  ticket body is inert; validation probe E's secondary check confirms that is enough.
 - **Output**: newline-delimited JSON events on stdout, sometimes interleaved with
   non-JSON log lines (e.g. `ERROR (#…): failed {…}`). Event types seen: `step_start`,
   `tool_use` (carries full file contents and diffs — verbose), `text`, `step_finish`,

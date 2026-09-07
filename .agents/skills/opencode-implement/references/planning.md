@@ -133,12 +133,13 @@ Present the **Plan**: the ticket table in dependency order plus, per ticket:
 | test seam | step 5 |
 | step plan — the ordered sub-steps and each one's file scope | step 6 |
 | predicted path (`local` / `subagent-fallback`) | step 7 |
-| retry budgets — `MAX_TICKET_ATTEMPTS = 3`, `MAX_OPENCODE_RETRIES = 3` | fixed |
+| retry budgets — `MAX_TICKET_ATTEMPTS`, `MAX_OPENCODE_RETRIES` (both 3) | step 8 |
 
-Also show the editable run parameters: `--model` (default
-`ollama/qwen3.8:27b-mlx-32k`), `--fallback-agent` (default `general-purpose`),
-`--no-fallback`, `FIRST_EVENT_TIMEOUT`, `STALL_INTERVAL`, `WORKER_TIMEOUT`, and
-the context budget — all provisional pending validation probe C.
+Also show the editable run parameters, every one adjustable at approval:
+`--model` (default `ollama/qwen3.8:27b-mlx-32k`), `--fallback-agent` (default
+`general-purpose`), `--no-fallback`, `FIRST_EVENT_TIMEOUT`, `STALL_INTERVAL`,
+`WORKER_TIMEOUT`, `MAX_TICKET_ATTEMPTS`, `MAX_OPENCODE_RETRIES`, and the context
+budget — the timeouts and the budget provisional pending validation probe C.
 
 The Plan has **no model column** — every worker uses the one `--model` value.
 
