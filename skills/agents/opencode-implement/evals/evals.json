@@ -396,6 +396,32 @@
         "Runs no review and does not push or open a PR"
       ],
       "files": []
+    },
+    {
+      "id": 34,
+      "name": "the run's model resolves once before wave 0 and every later worker is pinned to it explicitly",
+      "prompt": "/opencode-implement .scratch/model-pin-demo/ — ticket set: 01 (Blocked by: None), 02 (Blocked by: None), both independent and assigned to wave 0 for parallel execution. The Plan is approved with no --model flag given at invocation.",
+      "expected_output": "Before wave 0 starts, the orchestrator dispatches one resolution check with no --model flag so opencode run resolves its own model, reads the resolved value back (opencode models, or the sessionID/model field on the first step_start event), and records it in the Plan and status.md. Ticket 01's worker for wave 0 runs on that resolved model. Ticket 02 — the second, later worker dispatched concurrently in the same wave — receives that same captured value as an explicit --model flag, even though the user gave none at invocation. The orchestrator never re-resolves mid-run: every worker for the rest of the run, in every later wave too, keeps that one pinned model.",
+      "expectations": [
+        "Resolves the model exactly once, before wave 0, only when the user gave no --model at invocation",
+        "Records the resolved model in the Plan and status.md before any worker is dispatched",
+        "Dispatches ticket 02 — the second/later/concurrent worker in the same wave — with the resolved value as an explicit --model flag",
+        "Never re-resolves the model mid-run; every subsequent worker, in this wave and every later one, is pinned to that same captured value"
+      ],
+      "files": []
+    },
+    {
+      "id": 35,
+      "name": "verification failure resumes the same session while an opencode-process failure never does",
+      "prompt": "/opencode-implement .scratch/retry-rules-demo/ — the Plan is approved and the run's model is already resolved and pinned. Ticket 01's opencode worker finishes cleanly but the verification gate rejects its output as not covering the acceptance criterion. Separately, ticket 02's opencode run crashes with a non-zero exit before emitting a step_start event, so it has no sessionID at all.",
+      "expected_output": "The two failure types follow different rules. Ticket 01's worker finished cleanly, so its session is known-good: the orchestrator resumes it — opencode run -s <session> --format json --model <pinned-model> --dir <worktree> --dangerously-skip-permissions \"<specific failure detail>\" — carrying the verification failure as the next turn, counted against MAX_TICKET_ATTEMPTS. Ticket 02's opencode-process failure has no sessionID to resume, so the orchestrator never attempts a session resume; instead it retries as a fresh dispatch on the same pinned model, from the same clean prompt, counted against MAX_OPENCODE_RETRIES — never a session resume.",
+      "expectations": [
+        "Resumes ticket 01's session with opencode run -s <session>, carrying the specific verification failure as the next turn, counted against MAX_TICKET_ATTEMPTS",
+        "Never attempts a session resume for ticket 02's opencode-process failure, which has no sessionID at all",
+        "Re-dispatches ticket 02 as a fresh opencode run on the same pinned model, from the same clean prompt, counted against MAX_OPENCODE_RETRIES",
+        "States plainly that the retry rule is chosen by failure type — verification failure resumes, opencode-process failure never does"
+      ],
+      "files": []
     }
   ]
 }

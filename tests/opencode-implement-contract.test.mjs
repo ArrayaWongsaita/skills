@@ -316,7 +316,71 @@ describe("opencode-implement skill contract", () => {
       }
     });
 
-    it("worker-contract.md defines the three timeouts and the macOS timeout workaround", async () => {
+    it("worker-contract.md specifies the whole-ticket invocation with a pinned model flag", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/worker-contract.md"), "utf8");
+        // Canonical flag order from acceptance criteria
+        assert.match(
+          c,
+          /opencode run --format json --model <[^>]+> --dir <[^>]+> --dangerously-skip-permissions/,
+          "invocation must include --model <pinned-model> --dir <worktree> in the canonical flag order",
+        );
+        // Must NOT reference sub-step paths like prompts/NN/K.md
+        assert.doesNotMatch(c, /prompts\/\d+\/\d+/, "must not reference sub-step prompt paths");
+        // Must reference the whole-ticket prompt path
+        assert.match(c, /prompts\/\d+\.md|prompts\/<NN>\.md/, "must reference whole-ticket prompt path");
+      }
+    });
+
+    it("worker-contract.md specifies model-resolution-and-pin: resolve once before wave 0, capture and pin to every worker", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/worker-contract.md"), "utf8");
+        // Resolution once, before wave 0
+        assert.match(c, /resolv\w+\s+\w+\s+(?:once|model)\b|once[\s\S]{0,30}resolv/i, "must state model is resolved once");
+        assert.match(c, /before\s+wave\s+0|before\s+any\s+worker/i, "must state resolution happens before wave 0");
+        // Read back via opencode models or first event stream
+        assert.match(
+          c,
+          /opencode models|step_start[\s\S]{0,60}resolved|first[\s\S]{0,30}event[\s\S]{0,30}resolv/i,
+          "must name the mechanism to read back the resolved model",
+        );
+        // Pinned
+        assert.match(c, /pinned|pin/i, "must state the model is pinned");
+        // Every worker receives it
+        assert.match(
+          c,
+          /every\s+(?:subsequent\s+)?worker|every\s+(?:parallel\s+)?worker|every\s+worker/i,
+          "must state every worker receives the pinned model",
+        );
+        // As explicit --model flag
+        assert.match(
+          c,
+          /explicit\s+--model|--model.*explicit|captured\s+value.*--model|--model.*captured/i,
+          "must state the captured value is passed as an explicit --model flag",
+        );
+        // Recorded in status.md and Plan
+        assert.match(c, /status\.md/i, "must state the resolved model is recorded in status.md");
+        assert.match(c, /Plan/i, "must state the resolved model is recorded in the Plan");
+      }
+    });
+
+    it("worker-contract.md states the two model-resolution paths: user-passed --model or opencode resolves its own", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/worker-contract.md"), "utf8");
+        assert.match(
+          c,
+          /user\s+passed\s+--model|--model\s+at\s+invocation|invocation.*--model/i,
+          "must describe the user-passed --model path",
+        );
+        assert.match(
+          c,
+          /no\s+--model\s+flag|without\s+--model|omit\s+--model|no\s+`--model`/i,
+          "must describe the no-flag path where opencode resolves its own model",
+        );
+      }
+    });
+
+    it("worker-contract.md defines the three timeouts as provisional with no old numeric defaults or probe C reference", async () => {
       for (const dir of skillDirs) {
         const c = await readFile(path.resolve(dir, "references/worker-contract.md"), "utf8");
         assert.match(c, /FIRST_EVENT_TIMEOUT/);
@@ -325,7 +389,20 @@ describe("opencode-implement skill contract", () => {
         assert.match(c, /timeout` is not on macOS|no `timeout`|background/i);
         assert.match(c, /kill/i);
         assert.match(c, /provisional/i);
-        assert.match(c, /probe C/);
+        // Must NOT reference "probe C" (old local-model calibration label)
+        assert.doesNotMatch(c, /probe C\b/, "must not reference probe C (old local-model calibration)");
+        // Must reference a fresh calibration probe against the hosted model
+        assert.match(
+          c,
+          /calibrat\w+\s+probe|fresh\s+calibrat|calibrat\w+.*hosted|hosted.*calibrat/i,
+          "must state timeouts need fresh calibration against the resolved hosted model",
+        );
+        // Must NOT carry old local-model numeric defaults written as provisional (6m, 8m, 45m)
+        assert.doesNotMatch(
+          c,
+          /provisional\s+6m|provisional\s+8m|provisional\s+45m|\(provisional\s+\d/,
+          "must not carry old numeric timeout defaults from the local-model probe",
+        );
       }
     });
 
@@ -338,33 +415,80 @@ describe("opencode-implement skill contract", () => {
         assert.match(c, /step_finish/);
         assert.match(c, /part\.reason:\s*"stop"|reason.*stop/i);
         assert.match(c, /error/);
-        assert.match(c, /tokens\.total/);
-        assert.match(c, /cost.*0|`0` local/i);
         assert.match(c, /opencode`?\s+failure/i);
         assert.match(c, /verification failure/i);
         assert.match(c, /distinct/i);
       }
     });
 
-    it("worker-contract.md carries state by a fresh session + progress note, never -s resume", async () => {
+    it("worker-contract.md specifies two distinct retry rules: verification failure resumes session; opencode-process failure redispatches fresh", async () => {
       for (const dir of skillDirs) {
         const c = await readFile(path.resolve(dir, "references/worker-contract.md"), "utf8");
-        assert.match(c, /fresh\s+`?opencode run`?/i);
-        assert.match(c, /-s\s+`?<session>`?|session\s+resume/i);
-        assert.match(c, /replays[\s\S]{0,30}transcript/i);
-        assert.match(c, /progress note/i);
-        assert.match(c, /MAX_OPENCODE_RETRIES\s*=\s*3/);
+        // Must describe two rules
+        assert.match(c, /two\s+(?:distinct\s+)?rules?|two\s+retry|distinct\s+rules?/i, "must describe two distinct retry rules");
+
+        // Rule 1: verification failure → resume same session via opencode run -s <session>
+        assert.match(
+          c,
+          /verification\s+failure[\s\S]{0,400}opencode run -s|opencode run -s[\s\S]{0,400}verification\s+failure/i,
+          "must specify that verification failure uses opencode run -s <session>",
+        );
+        assert.match(c, /MAX_TICKET_ATTEMPTS\s*=\s*3/, "must bound verification-failure retries");
+        assert.match(
+          c,
+          /specific\s+failure|failure\s+as\s+the\s+next\s+turn|next\s+turn/i,
+          "must state the specific failure is carried as the next turn",
+        );
+
+        // Rule 2: opencode-process failure → fresh dispatch, never a session resume
+        assert.match(
+          c,
+          /opencode.{0,30}(?:process\s+)?failure[\s\S]{0,300}fresh\s+dispatch|fresh\s+dispatch[\s\S]{0,300}opencode.{0,30}(?:process\s+)?failure/i,
+          "must specify that opencode-process failure uses fresh dispatch",
+        );
+        assert.match(c, /MAX_OPENCODE_RETRIES\s*=\s*3/, "must bound opencode-process retries");
+        assert.match(
+          c,
+          /never\s+(?:a\s+)?(?:session\s+)?resume|crash[\s\S]{0,200}no\s+(?:session|sessionID)|no\s+sessionID|killed before[\s\S]{0,60}sessionID/i,
+          "must state that an opencode-process failure never resumes a session",
+        );
+
+        // The old single-rule patterns must be gone
+        assert.doesNotMatch(c, /progress note/i, "must not carry the old progress-note retry pattern");
+        assert.doesNotMatch(
+          c,
+          /replays[\s\S]{0,30}transcript/i,
+          "must not carry the old 32k-window replay rationale",
+        );
       }
     });
 
-    it("worker-contract.md specifies the preflight smoke test with exclusive model access", async () => {
+    it("worker-contract.md specifies that multiple opencode run processes may be in flight concurrently, one per parallel worker", async () => {
       for (const dir of skillDirs) {
         const c = await readFile(path.resolve(dir, "references/worker-contract.md"), "utf8");
-        assert.match(c, /smoke test/i);
-        assert.match(c, /nothing else using the local model/i);
-        assert.match(c, /bash/i);
-        assert.match(c, /edit/i);
-        assert.match(c, /restart Ollama|free up/i);
+        assert.match(
+          c,
+          /multiple\s+`?opencode run`?\s+processes?|concurrent[\s\S]{0,100}opencode run|opencode run[\s\S]{0,100}concurrent/i,
+          "must state that multiple opencode run processes may be in flight at once",
+        );
+        assert.match(
+          c,
+          /one\s+per\s+(?:parallel\s+)?worker|each\s+(?:parallel\s+)?worker[\s\S]{0,100}--dir/i,
+          "must state each parallel worker has its own --dir <worktree>",
+        );
+        assert.match(
+          c,
+          /(?:background-PID|background\s+PID)[\s\S]{0,300}per\s+worker|per\s+worker[\s\S]{0,300}(?:background-PID|background\s+PID)/i,
+          "must state the background-PID timeout watcher is applied per worker, not per run",
+        );
+      }
+    });
+
+    it("worker-contract.md drops the Ollama-specific smoke-test caveat and the 'nothing else using the local model' requirement", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/worker-contract.md"), "utf8");
+        assert.doesNotMatch(c, /nothing else using the local model/i, "must drop the local-model exclusivity caveat");
+        assert.doesNotMatch(c, /restart Ollama/i, "must drop the Ollama restart message");
       }
     });
 

@@ -109,7 +109,6 @@ describe("opencode-implement eval suite contract", () => {
       // boundary), not just its topic word.
       const branches = {
         "pure linear chain": /Wave 0 = \{01\}[\s\S]{0,400}a wave table and no model column/i,
-        "independent tickets still serial": /no edge between them[\s\S]{0,80}(one after another|serial)/i,
         "cyclic ticket set": /BLOCKED \(TICKET_SET_CYCLIC\)/,
         "missing blocker": /BLOCKED \(TICKET_SET_MISSING_BLOCKER\)/,
         "numbering inconsistent": /BLOCKED \(TICKET_SET_NUMBERING\)/,
@@ -119,17 +118,12 @@ describe("opencode-implement eval suite contract", () => {
         "no-arg -> most recent issues dir": /names it back to the user[\s\S]{0,40}waits for confirmation/i,
         "opencode failure within budget retried locally": /opencode failure[\s\S]{0,120}(re-dispatches|retried)[\s\S]{0,120}does not escalate/i,
         "no first event -> killed": /kills the worker PID, records it as an opencode failure/i,
-        "hung smoke test -> run does not start": /smoke test[\s\S]{0,160}(does not begin|does not start|stops the (whole )?run)/i,
-        "worker prompt self-contained test-first": /this sub-step's one acceptance criterion verbatim[\s\S]{0,300}red-green-refactor protocol inline/i,
-        "one-criterion end to end + one commit": /(end to end|checkpoint check)[\s\S]{0,240}squash-merge[\s\S]{0,120}one commit/i,
-        "chain carries state by progress note not -s": /progress note[\s\S]{0,120}(not opencode run -s|never[\s\S]{0,6}-s|never opencode -s)/i,
-        "runtime re-split recorded not failed": /re-split[\s\S]{0,120}(records? the re-split in status\.md|not counted against MAX_TICKET_ATTEMPTS)/i,
         "fabricated / not-actually-red": /(passes without the implementation|not-actually-red)[\s\S]{0,120}verification failure/i,
         "vacuous test / missing coverage": /vacuous[\s\S]{0,160}(no covering test|left the second criterion with no test|uncovered)/i,
         "design-encoding merge conflict": /BLOCKED \(INTEGRATION_DESIGN_CONFLICT\)[\s\S]{0,120}(surfaces|does not pick)/i,
-        "3 local verify fails -> auto escalate no pause": /After the third failure[\s\S]{0,240}with no approval pause/i,
+        "3 verify fails -> auto escalate no pause": /After the third failure[\s\S]{0,240}with no approval pause/i,
         "TICKET_TOO_LARGE + fallback -> subagent directly": /does not BLOCK[\s\S]{0,120}(escalates|subagent)|TICKET_TOO_LARGE_FOR_CONTEXT[\s\S]{0,80}subagent (fallback )?directly/i,
-        "--no-fallback -> BLOCK": /--no-fallback[\s\S]{0,140}BLOCKED \(TICKET_TOO_LARGE_FOR_CONTEXT\)/,
+        "--opencode-only or --no-fallback -> BLOCK": /(?:--opencode-only|--no-fallback)[\s\S]{0,140}BLOCKED \(TICKET_TOO_LARGE_FOR_CONTEXT\)/,
         "opencode failures past budget -> escalate": /MAX_OPENCODE_RETRIES = 3 is exhausted[\s\S]{0,80}(escalates|fallback)/i,
         "fallback also fails -> BLOCKED (TICKET_VERIFICATION_FAILED)": /fallback subagent[\s\S]{0,160}BLOCKED \(TICKET_VERIFICATION_FAILED\)/i,
         "escalation disclosed in status.md + handoff": /status\.md records[\s\S]{0,200}handoff[\s\S]{0,160}(Claude tokens spent|left the machine)/i,
@@ -140,6 +134,10 @@ describe("opencode-implement eval suite contract", () => {
         "dirty tree at preflight": /uncommitted changes[\s\S]{0,120}does not stash[\s\S]{0,120}dispatches no worker/i,
         "worker needs new dependency -> replan": /(new[\s\S]{0,12}dependency|package install)[\s\S]{0,200}(replans?|Stage 0)[\s\S]{0,120}lockfile/i,
         "completion handoff names branch + review commands, no push": /\/code-review[\s\S]{0,60}\/scrutinize[\s\S]{0,200}(no[\s\S]{0,8}push|opens no PR|does not push)/i,
+        // New branches required by ticket 02
+        "model resolved once and pinned — later worker gets explicit --model": /explicit\s*--model[\s\S]{0,300}(?:second|later|concurrent)[\s\S]{0,200}worker|(?:second|later|concurrent)[\s\S]{0,200}worker[\s\S]{0,300}explicit\s*--model/i,
+        "verification-failure retry resumes same session": /opencode run -s[\s\S]{0,200}verif|verif[\s\S]{0,400}opencode run -s[\s\S]{0,200}(?:same session|resume)/i,
+        "opencode-process failure retries as fresh dispatch, never resume": /(?:opencode.{0,20}(?:process\s+)?failure|fresh\s+dispatch)[\s\S]{0,200}(?:fresh\s+dispatch|never\s+(?:a\s+)?(?:session\s+)?resume)/i,
       };
       for (const [label, re] of Object.entries(branches)) {
         assert.ok(hay(re), `no eval case covers: ${label}`);
