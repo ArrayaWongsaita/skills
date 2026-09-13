@@ -30,9 +30,9 @@ minutes per sub-step, so a real feature's ticket set is an hours-long run you
 start and walk away from — resumable if it is interrupted.
 
 ```
-Stage 0: Plan (read-only)   parse tickets -> dependency DAG -> dependency order
-   |                        build a criterion-level step plan per ticket, predict
-   |                        each ticket's path, emit the Plan
+Stage 0: Plan (read-only)   parse tickets -> dependency DAG -> execution waves
+   |                        estimate touch-sets + overlap flags -> test seams ->
+   |                        emit the wave-table Plan
    | (pause: explicit approval, no source mutated)
    v
 Stage 1: Execute, one ticket at a time in dependency order
@@ -119,24 +119,26 @@ Follow [references/planning.md](references/planning.md). In short:
    inconsistent numbering **halts the run before any other work**
    (`BLOCKED (TICKET_SET_CYCLIC / TICKET_SET_MISSING_BLOCKER / TICKET_SET_NUMBERING)`),
    naming the specific broken ticket.
-4. **Compute the dependency order** — ascending ticket number where the numbering
-   is valid — and the frontier. No waves (adr/0005).
-5. **Select a test seam per ticket** from the parent spec's Testing Decisions
+4. **Compute execution waves** — wave 0 is every ticket with no blockers; wave
+   K is every ticket whose blockers all landed in an earlier wave. Two tickets
+   in the same wave with no blocking edge between them are independent
+   candidates for running at the same time.
+5. **Estimate each ticket's touch-set** as an advisory hint, and raise a
+   `likely-overlapping — consider serializing` flag on an independent
+   same-wave pair whose estimated touch-sets intersect or either of which
+   touches a cross-cutting file (router, DI container, root schema,
+   migrations, `package.json`/lockfiles, CI config, shared config). The
+   integration gate, not this heuristic, is the correctness guarantee.
+6. **Select a test seam per ticket** from the parent spec's Testing Decisions
    where they constrain it, otherwise the narrowest public boundary that
    exercises the ticket's acceptance criteria. A ticket no isolated test can
    exercise returns to planning rather than shipping without a test.
-6. **Build a criterion-level step plan** for every ticket — an ordered chain of
-   sub-steps, one acceptance criterion each by default, split finer (by file or
-   layer) where a single criterion is estimated over the context budget, biased
-   toward over-splitting. Record each sub-step's file scope.
-7. **Predict each ticket's path** — `local`, or `subagent-fallback` where a
-   criterion cannot be split fine enough to fit (flagged for
-   `BLOCKED (TICKET_TOO_LARGE_FOR_CONTEXT)` under `--no-fallback`).
-8. **Emit the Plan** — the dependency-ordered ticket table plus, per ticket: its
-   blockers, test seam, step plan (the ordered sub-steps and their file scopes),
-   predicted path, and retry budgets; and the editable run parameters. Pause for
-   explicit approval, and mutate no file outside `.scratch/<feature-slug>/` until
-   the user approves.
+7. **Emit the Plan** — the wave table plus, per ticket: its blockers,
+   estimated touch-set, serial/parallel proposal with overlap flags, test
+   seam, and retry budgets (`MAX_TICKET_ATTEMPTS`, `MAX_OPENCODE_RETRIES`);
+   and the editable run parameters, including the concurrency cap (default
+   4). Pause for explicit approval, and mutate no file outside
+   `.scratch/<feature-slug>/` until the user approves.
 
 ## Stage 1 — Execute (serial, dependency order)
 
@@ -160,9 +162,9 @@ No parallelism — one local model instance serializes inference regardless
 ### Run the ticket's step plan
 
 Follow [references/worktree-integration.md](references/worktree-integration.md)
-for the worktree, [references/decomposition.md](references/decomposition.md) for
-the sub-step loop, [references/worker-contract.md](references/worker-contract.md)
-for the `opencode run` invocation and the event-stream parse, and
+for the worktree. The ticket is dispatched whole in one worker call — see
+[references/worker-contract.md](references/worker-contract.md) for the
+`opencode run` invocation and the event-stream parse — and
 [references/prompt-scaffold.md](references/prompt-scaffold.md) for the prompt.
 
 Cut the ticket's worktree `.scratch/<slug>/worktrees/<NN>` and worker branch

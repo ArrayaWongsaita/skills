@@ -10,7 +10,6 @@ const SKILL_REFERENCES = [
   "planning.md",
   "worker-contract.md",
   "prompt-scaffold.md",
-  "decomposition.md",
   "fallback.md",
   "worktree-integration.md",
   "status-and-resume.md",
@@ -210,7 +209,7 @@ describe("opencode-implement skill contract", () => {
       }
     });
 
-    it("planning.md specifies parsing, DAG validation, dependency order, and seam selection", async () => {
+    it("planning.md specifies parsing, DAG validation, wave computation, and seam selection", async () => {
       for (const dir of skillDirs) {
         const planning = await readFile(path.resolve(dir, "references/planning.md"), "utf8");
         assert.match(planning, /Blocked by/i);
@@ -219,47 +218,46 @@ describe("opencode-implement skill contract", () => {
         assert.match(planning, /TICKET_SET_MISSING_BLOCKER/);
         assert.match(planning, /TICKET_SET_NUMBERING/);
         assert.match(planning, /topological|numbering/i);
-        assert.match(planning, /dependency order/i);
+        assert.match(planning, /execution waves/i);
         assert.match(planning, /test seam/i);
         assert.match(planning, /Testing Decisions/);
         assert.match(planning, /halt/i);
       }
     });
 
-    it("planning.md drops waves, touch-sets, and the model column", async () => {
+    it("planning.md computes execution waves, estimates touch-sets, and still drops the model column", async () => {
       for (const dir of skillDirs) {
         const planning = await readFile(path.resolve(dir, "references/planning.md"), "utf8");
-        assert.match(planning, /no wave|without a wave|no wave computation/i);
+        assert.match(planning, /Wave 0/i);
+        assert.match(planning, /Wave K/i);
         assert.match(planning, /touch-set/i);
+        assert.match(planning, /likely-overlapping/i);
         assert.match(planning, /no model column/i);
-        assert.match(planning, /non-goal/i);
       }
     });
 
-    it("planning.md builds a criterion-level step plan per ticket with a budget and a split rule", async () => {
+    it("planning.md estimates touch-sets as an advisory hint and flags cross-cutting overlap, with no step-plan/context-budget language", async () => {
       for (const dir of skillDirs) {
         const planning = await readFile(path.resolve(dir, "references/planning.md"), "utf8");
-        assert.match(planning, /step plan/i);
-        assert.match(planning, /one acceptance criterion per sub-step|one criterion per sub-step/i);
-        assert.match(planning, /one-sub-step chain|single criterion is a one-sub-step/i);
-        assert.match(planning, /context budget/i);
-        assert.match(planning, /~?13k/);
-        assert.match(planning, /32k/);
-        assert.match(planning, /split(s|ting)? (it )?finer|split finer/i);
-        assert.match(planning, /over-split|bias/i);
-        assert.match(planning, /file scope/i);
-        assert.match(planning, /probe C/);
+        assert.match(planning, /advisory/i);
+        assert.match(planning, /likely-overlapping — consider serializing/);
+        assert.match(planning, /router/i);
+        assert.match(planning, /DI container/i);
+        assert.match(planning, /migrations/i);
+        assert.match(planning, /package\.json/);
+        assert.match(planning, /CI config/i);
+        assert.doesNotMatch(planning, /step plan/i);
+        assert.doesNotMatch(planning, /sub-step/i);
+        assert.doesNotMatch(planning, /context budget/i);
       }
     });
 
-    it("planning.md predicts each ticket's path and handles --no-fallback", async () => {
+    it("planning.md no longer predicts each ticket's path", async () => {
       for (const dir of skillDirs) {
         const planning = await readFile(path.resolve(dir, "references/planning.md"), "utf8");
-        assert.match(planning, /predict.*path|path.*predict/i);
-        assert.match(planning, /`?local`?/);
-        assert.match(planning, /subagent-fallback/);
-        assert.match(planning, /TICKET_TOO_LARGE_FOR_CONTEXT/);
-        assert.match(planning, /--no-fallback/);
+        assert.doesNotMatch(planning, /predict(s|ing)?\s+each ticket/i);
+        assert.doesNotMatch(planning, /subagent-fallback/i);
+        assert.doesNotMatch(planning, /TICKET_TOO_LARGE_FOR_CONTEXT/);
       }
     });
 
@@ -267,6 +265,21 @@ describe("opencode-implement skill contract", () => {
       for (const body of await bothSkillBodies()) {
         assert.match(body, /most recent(ly modified)?\s+`?\.scratch\/\*\/issues\/`?/i);
         assert.match(body, /nam(e|ed) (it )?back|confirm/i);
+      }
+    });
+
+    it("SKILL.md's Stage 0 section summarizes the wave table, touch-set estimate, overlap flags, and concurrency cap", async () => {
+      for (const body of await bothSkillBodies()) {
+        const stage0 = body.match(/##\s*Stage 0[\s\S]*?(?=\n## )/i)[0];
+        assert.match(stage0, /wave/i);
+        assert.match(stage0, /touch-set/i);
+        assert.match(stage0, /overlap/i);
+        assert.match(stage0, /concurrency cap/i);
+        assert.match(stage0, /MAX_TICKET_ATTEMPTS/);
+        assert.match(stage0, /MAX_OPENCODE_RETRIES/);
+        assert.doesNotMatch(stage0, /step plan/i);
+        assert.doesNotMatch(stage0, /sub-step/i);
+        assert.doesNotMatch(stage0, /predicted path/i);
       }
     });
   });
@@ -377,10 +390,12 @@ describe("opencode-implement skill contract", () => {
   });
 
   describe("Stage 1 — chain, verification, integration", () => {
-    it("SKILL.md Stage 1 drives decomposition.md and worktree-integration.md", async () => {
+    it("SKILL.md Stage 1 dispatches the whole ticket and drives worktree-integration.md", async () => {
       for (const body of await bothSkillBodies()) {
         const s = body.match(/##\s*Stage 1[\s\S]*?(?=\n## )/i)[0];
-        assert.match(s, /references\/decomposition\.md/);
+        assert.match(s, /whole in one worker call/i);
+        assert.doesNotMatch(s, /decomposition\.md/);
+        assert.match(s, /references\/worker-contract\.md/);
         assert.match(s, /references\/worktree-integration\.md/);
         assert.match(s, /checkpoint check/i);
         assert.match(s, /re-split/i);
@@ -390,23 +405,6 @@ describe("opencode-implement skill contract", () => {
         assert.match(s, /squash-merge/i);
         assert.match(s, /one commit/i);
         assert.match(s, /INTEGRATION_DESIGN_CONFLICT/);
-      }
-    });
-
-    it("decomposition.md runs the sub-step loop with progress notes and a checkpoint check", async () => {
-      for (const dir of skillDirs) {
-        const c = await readFile(path.resolve(dir, "references/decomposition.md"), "utf8");
-        assert.match(c, /progress note/i);
-        assert.match(c, /commits? on the worker branch/i);
-        assert.match(c, /checkpoint check/i);
-        assert.match(c, /typechecks?|compiles?/i);
-        assert.match(c, /red\/green|red.*green/i);
-        assert.match(c, /re-split/i);
-        assert.match(c, /overflow/i);
-        assert.match(c, /truncated edit/i);
-        assert.match(c, /status\.md/);
-        assert.match(c, /not counted against `?MAX_TICKET_ATTEMPTS`?|not[\s\S]{0,20}MAX_TICKET_ATTEMPTS/i);
-        assert.match(c, /TICKET_TOO_LARGE_FOR_CONTEXT/);
       }
     });
 

@@ -108,14 +108,13 @@ describe("opencode-implement eval suite contract", () => {
       // Each pattern asserts the branch's CLAIM (an outcome, a token, a
       // boundary), not just its topic word.
       const branches = {
-        "pure linear chain": /dependency order is 01, 02, 03[\s\S]{0,600}no wave table and no model column/i,
+        "pure linear chain": /Wave 0 = \{01\}[\s\S]{0,400}a wave table and no model column/i,
         "independent tickets still serial": /no edge between them[\s\S]{0,80}(one after another|serial)/i,
         "cyclic ticket set": /BLOCKED \(TICKET_SET_CYCLIC\)/,
         "missing blocker": /BLOCKED \(TICKET_SET_MISSING_BLOCKER\)/,
         "numbering inconsistent": /BLOCKED \(TICKET_SET_NUMBERING\)/,
-        "one-criterion -> one-sub-step": /(one|single|a) sub-step[\s\S]{0,60}(one criterion|its one criterion)|one-sub-step chain/i,
-        "multi-criterion -> multi-sub-step": /four sub-steps, one[\s\S]{0,20}criterion/i,
-        "criterion over budget -> split finer": /over the[\s\S]{0,20}context budget[\s\S]{0,140}split(s|ting)? (it )?finer/i,
+        "wave assignment across independent branches": /Wave 0 = \{01, 02\}[\s\S]{0,400}Wave 1 = \{03, 04\}/,
+        "same-wave overlapping touch-set flagged": /likely-overlapping — consider serializing[\s\S]{0,200}intersect/i,
         "no source mutation before approval": /no file outside[\s\S]{0,60}(created or modified|is created)/i,
         "no-arg -> most recent issues dir": /names it back to the user[\s\S]{0,40}waits for confirmation/i,
         "opencode failure within budget retried locally": /opencode failure[\s\S]{0,120}(re-dispatches|retried)[\s\S]{0,120}does not escalate/i,

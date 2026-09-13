@@ -3,13 +3,13 @@
   "evals": [
     {
       "id": 1,
-      "name": "pure linear chain plans one commit per ticket in dependency order",
+      "name": "pure linear chain plans one ticket per wave, all serial",
       "prompt": "/opencode-implement .scratch/linear-demo/ — the ticket set is 01 (Blocked by: None), 02 (Blocked by: 01), 03 (Blocked by: 02). The parent spec.md names a single eval-harness test seam for the whole feature, and each ticket has one acceptance criterion. Present the Plan.",
-      "expected_output": "The dependency order is 01, 02, 03. The Plan shows the ticket table in that order and, per ticket, its blockers, the eval-harness test seam, a one-sub-step step plan (one criterion each), the predicted path `local`, and the retry budgets MAX_TICKET_ATTEMPTS = 3 and MAX_OPENCODE_RETRIES = 3. There is no wave table and no model column. Stage 0 stops for explicit approval without writing to any source file.",
+      "expected_output": "Wave 0 = {01}, wave 1 = {02}, wave 2 = {03} — each ticket is blocked only by the previous one, so no two tickets share a wave. The Plan's wave table shows, per ticket, its estimated touch-set, a serial disposition with the reason (blocked by the prior ticket), no overlap flag, the eval-harness test seam, and the retry budgets MAX_TICKET_ATTEMPTS = 3 and MAX_OPENCODE_RETRIES = 3. There is a wave table and no model column. Stage 0 stops for explicit approval without writing to any source file.",
       "expectations": [
-        "Derives the dependency order 01, 02, 03 from the Blocked by edges",
-        "Gives each ticket a one-sub-step step plan and predicts the path `local`",
-        "Shows blockers, test seam, step plan, predicted path, and retry budgets per ticket, with no wave table and no model column",
+        "Assigns waves 0, 1, 2 to 01, 02, 03 respectively, derived from the Blocked by edges",
+        "Marks every ticket serial because each depends on the previous ticket, with no overlap flag",
+        "Shows wave, touch-set, disposition, test seam, and retry budgets per ticket in the wave table, with no model column",
         "Pauses for explicit approval and creates or modifies no file outside .scratch/linear-demo/"
       ],
       "files": []
@@ -66,39 +66,28 @@
     },
     {
       "id": 6,
-      "name": "a one-criterion ticket becomes a one-sub-step chain",
-      "prompt": "/opencode-implement .scratch/one-crit-demo/ — a single ticket 01 (Blocked by: None) with exactly one acceptance criterion, small in scope. Present the Plan.",
-      "expected_output": "Ticket 01's step plan is a single sub-step covering its one criterion, estimated within the context budget. The Plan shows a one-sub-step chain and predicts the path `local`. This is indistinguishable from running the ticket whole.",
+      "name": "wave computation from independent branches assigns each ticket its wave",
+      "prompt": "/opencode-implement .scratch/wavebranch-demo/ — ticket set: 01 (Blocked by: None), 02 (Blocked by: None), 03 (Blocked by: 01), 04 (Blocked by: 02). 01/03 and 02/04 are two independent dependency branches. Present the Plan.",
+      "expected_output": "Wave 0 = {01, 02} — both have an empty Blocked by set. Wave 1 = {03, 04} — 03's only blocker (01) and 04's only blocker (02) each landed in wave 0. The wave table shows each ticket's wave, its estimated touch-set, a serial/parallel proposal with overlap flags, its test seam, and the retry budgets — no model column. Stops for explicit approval without writing to any source file.",
       "expectations": [
-        "Builds a step plan of exactly one sub-step for the single criterion",
-        "Predicts the path `local`",
-        "Does not split the sub-step further when it fits the budget"
+        "Assigns wave 0 to 01 and 02, since both have an empty Blocked by set",
+        "Assigns wave 1 to 03 and 04, since each one's only blocker landed in the previous wave",
+        "Treats 01/02 as independent candidates within wave 0 and 03/04 as independent candidates within wave 1",
+        "Shows wave, touch-set, disposition+overlap flags, test seam, and retry budgets per ticket, with no model column",
+        "Pauses for explicit approval and creates or modifies no file outside .scratch/wavebranch-demo/"
       ],
       "files": []
     },
     {
       "id": 7,
-      "name": "a four-criterion ticket becomes a four-sub-step chain by default",
-      "prompt": "/opencode-implement .scratch/four-crit-demo/ — a single ticket 01 (Blocked by: None) with four acceptance criteria, each a distinct behaviour at the same seam. Present the Plan.",
-      "expected_output": "Ticket 01's step plan is four sub-steps, one acceptance criterion each, ordered so each builds on the last. Each sub-step has its own file scope. The predicted path is `local`.",
+      "name": "a same-wave overlapping touch-set pair is flagged likely-overlapping",
+      "prompt": "/opencode-implement .scratch/overlap-demo/ — ticket set: 01 (Blocked by: None), 02 (Blocked by: None). Both are estimated to modify src/reports/list.ts. Present the Plan.",
+      "expected_output": "01 and 02 both land in wave 0 with no Blocked by edge between them. The Plan flags {01, 02} 'likely-overlapping — consider serializing' because their estimated touch-sets intersect on src/reports/list.ts, with the default suggestion to serialize. The user decides at Plan approval whether to serialize or run them in parallel anyway — the integration gate, not this heuristic, is the correctness guarantee.",
       "expectations": [
-        "Builds a step plan of four sub-steps, one criterion per sub-step",
-        "Orders the sub-steps so dependencies between criteria are respected",
-        "Records a file scope per sub-step",
-        "Predicts the path `local`"
-      ],
-      "files": []
-    },
-    {
-      "id": 8,
-      "name": "a single criterion over the context budget is split finer",
-      "prompt": "/opencode-implement .scratch/big-crit-demo/ — a single ticket 01 (Blocked by: None) with one acceptance criterion whose implementation touches a schema file, a service file, and an API handler, estimated well over the context budget. Present the Plan.",
-      "expected_output": "The one criterion's sub-step is estimated over the ~13k-token context budget, so the orchestrator splits it finer along a natural line (schema, then service, then handler). The step plan shows the split sub-steps, each within budget, and the predicted path stays `local`.",
-      "expectations": [
-        "Estimates the criterion's sub-step over the context budget",
-        "Splits it into smaller sub-steps by file or layer, each within budget",
-        "Shows the split in the step plan and keeps the predicted path `local`",
-        "Biases toward over-splitting rather than risking an overflowing sub-step"
+        "Places 01 and 02 together in wave 0 as independent tickets",
+        "Raises the likely-overlapping — consider serializing flag on the 01/02 pair with the touch-set intersection as the reason",
+        "States serialize as the default suggestion but leaves the choice to the user at Plan approval",
+        "Notes the integration gate, not the touch-set heuristic, is the correctness guarantee"
       ],
       "files": []
     },

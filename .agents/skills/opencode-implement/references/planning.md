@@ -17,11 +17,7 @@ Load, from the resolved feature directory:
 - every `issues/<NN>-<slug>.md` ticket file
 - the parent `spec.md` — Implementation Decisions, Testing Decisions, seams
 - `CONTEXT.md` (domain glossary) and `adr/` in the feature directory
-- the repository's root `CONTEXT.md` and `docs/decisions/` (or `docs/adr/`) if present
-
-Reading these once, here, is the orchestrator's one deliberate context cost: it
-is what lets every worker prompt be self-contained. Implementation reading
-happens inside workers.
+- the repository's root `CONTEXT.md` / `docs/adr/` (or `docs/decisions/`) if present
 
 ## 2. Parse the ticket format
 
@@ -52,31 +48,59 @@ naming the specific broken ticket:
 
 - **Acyclic.** A cycle (`03` blocked by `05`, `05` blocked by `03`) halts with
   `BLOCKED (TICKET_SET_CYCLIC)`, naming and reporting the tickets in the cycle.
-- **Blockers resolvable.** A `Blocked by` entry that matches no existing ticket
-  number or title halts with `BLOCKED (TICKET_SET_MISSING_BLOCKER)`, naming the
-  ticket and the dangling reference.
+- **Blockers resolvable.** An unresolvable blocker — a `Blocked by` entry that
+  matches no existing ticket number or title — halts with
+  `BLOCKED (TICKET_SET_MISSING_BLOCKER)` (a missing blocker), naming the ticket
+  and the dangling reference.
 - **Numbering consistent with a topological order.** `to-tickets` numbers tickets
   from `01` in dependency order, so every ticket's blockers should have lower
   numbers. A ticket blocked by a higher-numbered ticket halts with
   `BLOCKED (TICKET_SET_NUMBERING)` naming both.
 
-## 4. Compute the dependency order
+## 4. Compute execution waves
 
-- The **frontier** is every ticket whose `Blocked by` set is fully satisfied by
-  tickets already integrated (at the start, every ticket with no blockers).
-- The **dependency order** is a topological ordering of the whole set. Where the
-  ticket numbering is valid (step 3), ascending ticket number *is* a valid
-  dependency order; use it, so "one commit per ticket in dependency order" and
-  "ascending ticket number" mean the same thing.
+- **Wave 0** = every ticket whose `Blocked by` set is empty.
+- **Wave K** = every ticket whose blockers all landed in waves `< K`.
 
-The run works one ticket at a time in this order. Tickets with no edge between
-them are still worked one after another — execution is serial and parallelism is
-a non-goal, because one local model instance serializes inference regardless
-(adr/0005). There is no wave computation, no touch-set estimation, and no model
-column: those exist in `agy-implement` only to schedule and de-risk concurrency
-across providers.
+Within a wave, two tickets with no `Blocked by` edge between them are
+**independent tickets** — the candidates for running at the same time.
 
-## 5. Select a test seam per ticket
+## 5. Estimate each ticket's touch-set (advisory hint)
+
+For each ticket, estimate the files and directories it will create or modify,
+from the "What to build" text, the parent spec, and a look at the current
+codebase. This is an **advisory hint shown in the Plan, not a gate** — a
+pre-implementation guess is not reliable enough to gate concurrency on, and the
+integration gate catches the same collisions deterministically.
+
+Raise a **`likely-overlapping — consider serializing`** flag on a pair of
+independent same-wave tickets when either:
+
+- their estimated touch-sets intersect, or
+- either ticket touches a **cross-cutting file**.
+
+The cross-cutting-file list is configurable; the defaults are:
+
+- the router / route table
+- the DI container
+- the root ORM schema
+- the migrations directory
+- `package.json` and lockfiles (`package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`)
+- CI configuration
+- shared env / config modules
+
+The default suggestion for a flagged pair is to serialize it within the wave. The
+user decides at Plan approval which flagged tickets to serialize and which to run
+in parallel anyway — the integration gate, not this heuristic, is what guarantees
+correctness.
+
+A ticket that `to-tickets` sequenced as a **wide-refactor expand–contract batch**
+runs as ordered serial steps on the integration branch — `to-tickets` stratifies
+expand | migrate batches | contract into successive waves, and the integration
+gate runs the full suite at each wave boundary, so the batch stays green step to
+step. It gets no wide-refactor-specific handling beyond honoring the order.
+
+## 6. Select a test seam per ticket
 
 The orchestrator selects each ticket's test seam at planning, using the parent
 spec's **Testing Decisions** as the primary input wherever they constrain it.
@@ -88,64 +112,32 @@ inventing one. A ticket whose acceptance criteria cannot be exercised by an
 isolated test at any seam is a decomposition problem — it returns to planning
 rather than being implemented without a test.
 
-## 6. Build a criterion-level step plan per ticket
+## 7. Emit the Plan and pause
 
-Every ticket gets a **step plan** — an ordered chain of **sub-steps** — because a
-tracer-bullet ticket does not fit the local model's 32k-token window (adr/0006).
-
-- **Default fault line: one acceptance criterion per sub-step.** A ticket with a
-  single criterion is a one-sub-step chain (behaves like running the ticket
-  whole). A ticket with four criteria is a four-sub-step chain.
-- Order the sub-steps so each builds on the last — a criterion that establishes a
-  seam or a data shape another criterion needs comes first.
-- **Estimate each sub-step's content** against the **context budget**:
-  provisionally ~13k tokens of sub-step-specific content
-  (`micro-prompt + named spec sections + ADRs + files the sub-step must read +
-  expected edits + reasoning headroom`), derived as `32k window − ~11k input
-  floor − ~4k headroom − ~4k reasoning reserve`. The exact number is pinned by
-  validation probe C.
-- **A sub-step over budget is split finer** along the next natural line — a file,
-  a layer (schema / logic / interface). The **bias is to over-split**: an extra
-  ~3-minute sub-step is cheap; a sub-step that overflows and hangs is not.
-- Record each sub-step's **file scope** — the files it reads and the files it may
-  write — so the worker prompt can be tight and the checkpoint check knows what
-  to look at.
-
-## 7. Predict each ticket's path
-
-- `local` — the whole step plan is expected to run on `opencode` workers.
-- `subagent-fallback` — the ticket has a single criterion that cannot be split
-  fine enough to get under the context budget. Under `--no-fallback` this is
-  instead flagged for `BLOCKED (TICKET_TOO_LARGE_FOR_CONTEXT)`.
-
-The prediction is information for the Plan; the actual path is decided at runtime
-(a `local` ticket still escalates if it fails verification or `opencode` keeps
-failing — see [fallback.md](fallback.md)).
-
-## 8. Emit the Plan and pause
-
-Present the **Plan**: the ticket table in dependency order plus, per ticket:
+Present the **Plan**: a wave table plus, per ticket:
 
 | field | source |
 |---|---|
-| ticket number and title | step 2 |
-| blockers | step 2 |
-| test seam | step 5 |
-| step plan — the ordered sub-steps and each one's file scope | step 6 |
-| predicted path (`local` / `subagent-fallback`) | step 7 |
-| retry budgets — `MAX_TICKET_ATTEMPTS`, `MAX_OPENCODE_RETRIES` (both 3) | step 8 |
+| wave | step 4 |
+| estimated touch-set | step 5 (advisory) |
+| serial / parallel proposal + reason | step 4 + step 5 flags |
+| overlap flags | step 5 |
+| test seam | step 6 |
+| retry budgets | `MAX_TICKET_ATTEMPTS = 3`, `MAX_OPENCODE_RETRIES = 3` |
 
-Also show the editable run parameters, every one adjustable at approval:
-`--model` (default `ollama/qwen3.8:27b-mlx-32k`), `--fallback-agent` (default
-`general-purpose`), `--no-fallback`, `FIRST_EVENT_TIMEOUT`, `STALL_INTERVAL`,
-`WORKER_TIMEOUT`, `MAX_TICKET_ATTEMPTS`, `MAX_OPENCODE_RETRIES`, and the context
-budget — the timeouts and the budget provisional pending validation probe C.
+The Plan has **no model column** — one resolved model, captured once before
+wave 0 and pinned for the rest of the run, serves every worker (see
+[worker-contract.md](worker-contract.md)); model is not assigned per ticket or
+per dispatch.
 
-The Plan has **no model column** — every worker uses the one `--model` value.
+Also show the editable run parameters: the concurrency cap (default 4),
+`FIRST_EVENT_TIMEOUT`, `STALL_INTERVAL`, `WORKER_TIMEOUT`,
+`MAX_TICKET_ATTEMPTS`, and `MAX_OPENCODE_RETRIES`.
 
-Then pause for explicit approval. Adjust the Plan on request — the step plans,
-the fault line for a ticket, the run parameters. Mutate no file outside
-`.scratch/<feature-slug>/` before approval.
+Then pause for explicit approval. Adjust the Plan on request — which flagged
+tickets serialize, which waves run in parallel, the concurrency cap, or the
+timeouts and retry budgets. Mutate no file outside `.scratch/<feature-slug>/`
+before approval.
 
 `continue` re-runs this procedure against current reality and re-presents the
 Plan before resuming execution.
