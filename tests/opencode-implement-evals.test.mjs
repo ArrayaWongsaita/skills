@@ -124,6 +124,8 @@ describe("opencode-implement eval suite contract", () => {
         "3 verify fails -> auto escalate no pause": /After the third failure[\s\S]{0,240}with no approval pause/i,
         "TICKET_TOO_LARGE + fallback -> subagent directly": /does not BLOCK[\s\S]{0,120}(escalates|subagent)|TICKET_TOO_LARGE_FOR_CONTEXT[\s\S]{0,80}subagent (fallback )?directly/i,
         "--opencode-only or --no-fallback -> BLOCK": /(?:--opencode-only|--no-fallback)[\s\S]{0,140}BLOCKED \(TICKET_TOO_LARGE_FOR_CONTEXT\)/,
+        "--opencode-only suppresses fallback the same way --no-fallback did": /--opencode-only[\s\S]{0,300}(?:same way|as .*--no-fallback|--no-fallback did)/i,
+        "--strict-local still works as a deprecated alias": /--strict-local[\s\S]{0,200}deprecated/i,
         "opencode failures past budget -> escalate": /MAX_OPENCODE_RETRIES = 3 is exhausted[\s\S]{0,80}(escalates|fallback)/i,
         "fallback also fails -> BLOCKED (TICKET_VERIFICATION_FAILED)": /fallback subagent[\s\S]{0,160}BLOCKED \(TICKET_VERIFICATION_FAILED\)/i,
         "escalation disclosed in status.md + handoff": /status\.md records[\s\S]{0,200}handoff[\s\S]{0,160}(Claude tokens spent|left the machine)/i,

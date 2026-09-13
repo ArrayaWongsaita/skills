@@ -450,6 +450,30 @@
         "States that the wave boundary gates only the next wave's start, never an individual ticket's own integration"
       ],
       "files": []
+    },
+    {
+      "id": 38,
+      "name": "--opencode-only suppresses fallback the same way --no-fallback did",
+      "prompt": "/opencode-implement --opencode-only .scratch/opencode-only-demo/ — same as toolarge-demo: ticket 02's single acceptance criterion is genuinely too large even for the resolved model's context window.",
+      "expected_output": "--opencode-only is the current alias for --no-fallback (--strict-local is a deprecated alias for the same flag). Under --opencode-only the orchestrator suppresses the subagent fallback the same way --no-fallback did: ticket 02 becomes BLOCKED (TICKET_TOO_LARGE_FOR_CONTEXT) instead of escalating, the run spends zero Claude tokens, and no code leaves the machine.",
+      "expectations": [
+        "Recognizes --opencode-only as the alias for --no-fallback, suppressing the fallback tier identically",
+        "Produces BLOCKED (TICKET_TOO_LARGE_FOR_CONTEXT) instead of escalating, exactly as --no-fallback did",
+        "Spends no Claude tokens and sends no code off the machine"
+      ],
+      "files": []
+    },
+    {
+      "id": 39,
+      "name": "--strict-local still works as a deprecated alias for --no-fallback",
+      "prompt": "/opencode-implement --strict-local .scratch/strict-local-demo/ — same as opencode-only-demo: ticket 02's single acceptance criterion is genuinely too large even for the resolved model's context window.",
+      "expected_output": "--strict-local is deprecated in favor of --opencode-only but still works for one release: the orchestrator treats it exactly as --no-fallback / --opencode-only, suppressing the fallback tier so ticket 02 becomes BLOCKED (TICKET_TOO_LARGE_FOR_CONTEXT) rather than escalating. Nothing about the outcome differs from using --opencode-only directly.",
+      "expectations": [
+        "Accepts --strict-local as a working, deprecated alias rather than rejecting it",
+        "Suppresses the fallback tier identically to --no-fallback / --opencode-only",
+        "Produces BLOCKED (TICKET_TOO_LARGE_FOR_CONTEXT) instead of escalating"
+      ],
+      "files": []
     }
   ]
 }

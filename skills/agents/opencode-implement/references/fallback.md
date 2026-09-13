@@ -1,31 +1,41 @@
 # Automatic native-subagent fallback
 
-A ticket the local model cannot deliver escalates to one native harness subagent
-for the **whole ticket**. Escalation is automatic and unattended — no approval
-pause (adr/0007). Suppressed by `--no-fallback` / `--strict-local`.
+Any single resolved model — however capable — has a **capability ceiling**. A
+third failed attempt on that model is a signal to try a **structurally
+different executor** — not a fourth attempt on the same one: a ticket the
+resolved model cannot deliver escalates to one native harness subagent (a
+structurally different executor, with a different context and toolset) for the
+**whole ticket**. Escalation is automatic and unattended — no approval pause.
+Suppressed by `--no-fallback` (alias `--opencode-only`; `--strict-local` is a
+deprecated alias for one release, see below).
 
 ## Triggers
 
-1. **`TICKET_TOO_LARGE_FOR_CONTEXT`** — a single acceptance-criterion sub-step
-   cannot be split fine enough to get under the context budget, at planning or at
-   runtime (see [decomposition.md](decomposition.md)).
+1. **`TICKET_TOO_LARGE_FOR_CONTEXT`** — the ticket is genuinely too large even
+   for the resolved model's context window. With no planning-time
+   context-budget estimate to predict this in advance, it now surfaces only at
+   runtime, and is a **rare edge case** rather than the common case it once
+   was.
 2. **Verification budget exhausted** — the ticket failed the verification gate
-   `MAX_TICKET_ATTEMPTS = 3` times on the local model.
+   `MAX_TICKET_ATTEMPTS = 3` times on the main `opencode` path.
 3. **`opencode` failures exhausted** — `opencode` failed (error event, non-zero
    exit, missing envelope, first-event / stall / overall timeout kill) past
-   `MAX_OPENCODE_RETRIES = 3` re-dispatches.
+   `MAX_OPENCODE_RETRIES = 3` fresh re-dispatches on the same pinned model (see
+   Rule 2 in [worker-contract.md](worker-contract.md)).
 
-An `opencode` hiccup *within* the retry budget is retried locally, not escalated.
+An `opencode` hiccup *within* the retry budget is retried locally, not escalated
+(see [worker-contract.md](worker-contract.md)).
 
-Under `--no-fallback` these instead produce
+Under `--no-fallback` / `--opencode-only` these instead produce
 `BLOCKED (TICKET_TOO_LARGE_FOR_CONTEXT)` / `BLOCKED (TICKET_VERIFICATION_FAILED)`.
 
 ## Dispatch
 
-Discard the ticket's partial local worktree and delete its worker branch, then
-cut a fresh worker branch `opencode-implement/<slug>/<NN>` from the current
-integration `HEAD` — the subagent does the whole ticket from clean, with no
-half-built state to reverse-engineer.
+Discard the ticket's partial worktree and delete its worker branch, then cut a
+fresh worker branch `opencode-implement/<slug>/<NN>` from the **current**
+integration `HEAD` (per [worktree-integration.md](worktree-integration.md),
+this may already include former wave-mates' work) — the subagent does the
+whole ticket from clean, with no half-built state to reverse-engineer.
 
 ```
 Agent(
@@ -41,15 +51,16 @@ Agent(
   types). Never `fork` — a fork would inherit the orchestrator's context.
 - The prompt is the [prompt-scaffold.md](prompt-scaffold.md) template for the
   **whole ticket**: all acceptance criteria, no progress note, no "sub-step of
-  M". A subagent has a large context window, so there is no decomposition.
+  M". A subagent has a different context and toolset from the resolved model,
+  so there is no decomposition.
 - The worker branch is cut from integration `HEAD` and the subagent commits on
-  it, the same as a local worker branch.
+  it, the same as a main-path worker branch.
 
 ## Verification and budget
 
 The fallback result runs through the **same orchestrator-run verification gate**
-as a local worker (see [worktree-integration.md](worktree-integration.md)) — the
-orchestrator is the verification authority (adr/0002); there is no verifier
+as a main-path worker (see [worktree-integration.md](worktree-integration.md))
+— the orchestrator is the verification authority; there is no verifier
 subagent.
 
 - A verification failure resumes the same subagent:
@@ -63,17 +74,30 @@ subagent.
 
 ## Cost and privacy — recorded and disclosed
 
-The fallback spends Claude tokens and sends the ticket's prompt and code context
-to a hosted model — both breaks from the skill's local / zero-cost / private
-purpose (adr/0003). So:
+The main `opencode` path now spends real money too (`tokens.main`, see
+[worker-contract.md](worker-contract.md)) — cost disclosure is no longer
+asymmetric between the two paths. The fallback path remains distinct in kind:
+it spends Claude tokens **and** sends the ticket's prompt and code context to a
+hosted subagent, so it is the only path whose spend leaves the machine. So:
 
 - **Plan** — the ticket is marked `subagent-fallback (predicted)`; approving the
   Plan authorizes any escalation.
 - **`status.md`** — every actual escalation is recorded with its trigger and its
-  token usage under `tokens.fallback`.
+  token usage under `tokens.fallback`, alongside the main path's cumulative
+  `tokens.main`.
 - **Handoff** — each ticket that took the fallback is named in the completion
   handoff: "ticket `<NN>`: subagent fallback — Claude tokens spent, code left the
   machine".
+
+## Suppression flag — `--opencode-only` (alias), `--strict-local` (deprecated)
+
+`--no-fallback` remains the primary flag name, unchanged. `--opencode-only` is
+its current alias: the guarantee it names — stay inside `opencode`, spend no
+Claude tokens, send no code off the machine via fallback — no longer has
+anything to do with "local" now that the main path runs on a resolved hosted
+model, so the alias is named for what it actually guarantees. `--strict-local`
+is kept working as a **deprecated alias** for one release rather than removed
+outright.
 
 ## Points to confirm on first real use
 

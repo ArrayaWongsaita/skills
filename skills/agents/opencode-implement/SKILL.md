@@ -72,9 +72,10 @@ Set once at invocation:
   failover.
 - `--fallback-agent <name>` — the `subagent_type` for the fallback path. Default
   `general-purpose`.
-- `--no-fallback` (alias `--strict-local`) — suppress the subagent fallback
-  entirely, so the run spends zero Claude tokens and no code leaves the machine.
-  A ticket the local model cannot deliver becomes `BLOCKED` instead of escalating.
+- `--no-fallback` (alias `--opencode-only`; `--strict-local` is a deprecated
+  alias, kept for one release) — suppress the subagent fallback entirely, so
+  the run spends zero Claude tokens and no code leaves the machine. A ticket
+  the local model cannot deliver becomes `BLOCKED` instead of escalating.
 
 Editable run parameters shown at Plan approval: `FIRST_EVENT_TIMEOUT`,
 `STALL_INTERVAL`, `WORKER_TIMEOUT`, `MAX_TICKET_ATTEMPTS`, `MAX_OPENCODE_RETRIES`,
@@ -208,7 +209,8 @@ dispatches **one native subagent** (Agent tool, `subagent_type` = the
 clean integration `HEAD`, then runs the same verification gate. **No approval
 pause.** The fallback spends Claude tokens and sends the ticket off the machine,
 so it is predicted in the Plan and named in the handoff. `--no-fallback` /
-`--strict-local` suppresses it and `BLOCKED`s the ticket instead.
+`--opencode-only` (`--strict-local` is a deprecated alias) suppresses it and
+`BLOCKED`s the ticket instead.
 `BLOCKED (TICKET_VERIFICATION_FAILED)` now means the fallback subagent also
 failed its full attempt budget.
 

@@ -717,6 +717,80 @@ describe("opencode-implement skill contract", () => {
         assert.match(c, /tokens\.fallback/);
       }
     });
+
+    it("fallback.md's opening rationale is reframed around a capability ceiling, dropping the local-model-is-weak framing", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/fallback.md"), "utf8");
+        assert.doesNotMatch(c, /27B/i, "must drop the '27B local model' framing");
+        assert.doesNotMatch(c, /weak and slow/i, "must drop the 'weak and slow' framing");
+        assert.doesNotMatch(c, /\blocal model\b/i, "must drop 'local model' framing entirely");
+        assert.doesNotMatch(c, /decomposition\.md/, "must not link to the removed decomposition.md");
+        assert.match(c, /capability ceiling/i, "must state the capability-ceiling rationale");
+        assert.match(
+          c,
+          /structurally different executor/i,
+          "must name a structurally different executor as the reason to escalate",
+        );
+        assert.match(
+          c,
+          /third failed attempt|three failed attempts/i,
+          "must state a third failed attempt is the signal to escalate, not a fourth attempt on the same model",
+        );
+        assert.match(c, /fourth attempt/i, "must contrast with a fourth attempt on the same model");
+      }
+    });
+
+    it("fallback.md keeps TICKET_TOO_LARGE_FOR_CONTEXT as a rare runtime edge case with no context-budget/decomposition language", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/fallback.md"), "utf8");
+        assert.match(c, /TICKET_TOO_LARGE_FOR_CONTEXT/);
+        assert.match(c, /rare/i, "must frame the trigger as rare");
+        assert.match(c, /runtime/i, "must frame the trigger as a runtime edge case, not a planning-time prediction");
+        assert.doesNotMatch(c, /context budget/i, "must not carry the retired context-budget language");
+        assert.doesNotMatch(c, /split fine enough/i, "must not carry the retired decomposition language");
+      }
+    });
+
+    it("fallback.md renames the suppression alias to --opencode-only, keeps --no-fallback primary, and documents --strict-local as a deprecated alias", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/fallback.md"), "utf8");
+        assert.match(c, /--no-fallback/);
+        assert.match(c, /--opencode-only/);
+        assert.match(c, /--strict-local/);
+        assert.match(
+          c,
+          /--strict-local[^\n]{0,100}deprecated|deprecated[^\n]{0,100}--strict-local/i,
+          "must document --strict-local as a deprecated alias",
+        );
+      }
+    });
+
+    it("fallback.md's cost-and-privacy section discloses tokens.main for the main path alongside tokens.fallback", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/fallback.md"), "utf8");
+        assert.match(c, /tokens\.main/, "must name tokens.main for the main path's real spend");
+        assert.match(c, /tokens\.fallback/);
+        assert.match(
+          c,
+          /only path[^\n]{0,80}(?:leaves|left) the machine|only[^\n]{0,80}spend[^\n]{0,80}leaves the machine/i,
+          "must still note the fallback path is the only one whose spend leaves the machine",
+        );
+      }
+    });
+
+    it("SKILL.md's suppression-flag mention documents --opencode-only with --strict-local as a deprecated alias, --no-fallback unchanged", async () => {
+      for (const file of skillFiles) {
+        const content = await readFile(file, "utf8");
+        assert.match(content, /--no-fallback/);
+        assert.match(content, /--opencode-only/);
+        assert.match(content, /--strict-local/);
+        assert.match(
+          content,
+          /--strict-local[^\n]{0,120}deprecated|deprecated[^\n]{0,120}--strict-local/i,
+          "SKILL.md must document --strict-local as a deprecated alias",
+        );
+      }
+    });
   });
 
   describe("state, resume, and handoff", () => {
