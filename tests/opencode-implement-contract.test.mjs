@@ -492,15 +492,18 @@ describe("opencode-implement skill contract", () => {
       }
     });
 
-    it("prompt-scaffold.md is per-sub-step, self-contained, and test-first", async () => {
+    it("prompt-scaffold.md is a whole-ticket scaffold, self-contained, and test-first", async () => {
       for (const dir of skillDirs) {
         const c = await readFile(path.resolve(dir, "references/prompt-scaffold.md"), "utf8");
-        assert.match(c, /sub-step/i);
         assert.match(c, /Working directory/i);
-        assert.match(c, /acceptance criterion/i);
-        assert.match(c, /Progress note/i);
+        assert.match(c, /What to build/i);
+        assert.match(c, /Acceptance criteria/i);
+        assert.match(c, /every one/i);
+        assert.match(c, /Context you need/i);
+        assert.match(c, /Parent spec/i);
+        assert.match(c, /ADRs?/i);
+        assert.match(c, /Domain glossary/i);
         assert.match(c, /Test seam/i);
-        assert.match(c, /Files in scope/i);
         assert.match(c, /red.*green.*refactor|failing test/is);
         assert.match(c, /package install/i);
         assert.match(c, /push[\s\S]{0,40}pull\s+request/i);
@@ -508,7 +511,14 @@ describe("opencode-implement skill contract", () => {
         assert.match(c, /literal text|reach for no slash/i);
         assert.match(c, /Red output/);
         assert.match(c, /Green output/);
+        assert.match(c, /Files changed/i);
         assert.match(c, /Test .*criterion/i);
+        // Whole-ticket, not per-sub-step
+        assert.match(c, /prompts\/<?NN>?\.md|prompts\/\d+\.md/, "one prompt file per ticket");
+        assert.doesNotMatch(c, /Progress note/i, "the progress-note section is removed");
+        assert.doesNotMatch(c, /sub-step/i, "no sub-step framing remains");
+        assert.doesNotMatch(c, /Files in scope/i, "no per-sub-step file-scope section remains");
+        assert.doesNotMatch(c, /prompts\/\d+\/\d+/, "must not reference sub-step nested prompt paths");
       }
     });
   });
@@ -552,8 +562,94 @@ describe("opencode-implement skill contract", () => {
         assert.match(c, /checkbox/i);
         assert.match(c, /mechanical conflict/i);
         assert.match(c, /INTEGRATION_DESIGN_CONFLICT/);
-        assert.match(c, /no\s+separate\s+integration\s+gate/i);
+        assert.match(c, /full suite/i);
         assert.match(c, /worktree remove/i);
+      }
+    });
+
+    it("worktree-integration.md's preflight drops the Ollama check and the smoke test", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/worktree-integration.md"), "utf8");
+        const preflight = c.match(/##\s*Preflight[\s\S]*?(?=\n## )/i);
+        assert.ok(preflight, "Preflight section present");
+        assert.match(preflight[0], /opencode`?\s+on\s+`?PATH/i);
+        assert.match(preflight[0], /opencode models/);
+        assert.match(preflight[0], /pinned model|resolved model/i);
+        assert.doesNotMatch(preflight[0], /ollama/i, "no Ollama-reachability check");
+        assert.doesNotMatch(preflight[0], /smoke test/i, "no local-specific smoke test");
+      }
+    });
+
+    it("worktree-integration.md specifies serial-vs-parallel dispatch within a wave, the concurrency cap, the queue, and the possibly-stalled flag", async () => {
+      for (const dir of skillDirs) {
+        const raw = await readFile(path.resolve(dir, "references/worktree-integration.md"), "utf8");
+        const c = raw.replace(/\s+/g, " "); // tolerate markdown line-wrap between words
+        assert.match(c, /[Ss]erial tickets?/);
+        assert.match(c, /dependency edge/i);
+        assert.match(c, /flagged pair|likely-overlapping/i);
+        assert.match(c, /one worktree slot at a time/i);
+        assert.match(c, /background/i);
+        assert.match(c, /one background worker per (?:independent )?ticket/i);
+        assert.match(c, /concurrency cap/i);
+        assert.match(c, /default\s*4/);
+        assert.match(c, /queue/i);
+        assert.match(c, /start(s)? as slots free/i);
+        assert.match(c, /possibly stalled/i);
+        assert.match(c, /10 minutes|configurable interval/i);
+        assert.match(c, /without blocking (its |the )?wave-mates/i);
+        assert.match(c, /own log file|its own log/i);
+      }
+    });
+
+    it("worktree-integration.md specifies per-ticket integration, not gated on the whole wave", async () => {
+      for (const dir of skillDirs) {
+        const raw = await readFile(path.resolve(dir, "references/worktree-integration.md"), "utf8");
+        const c = raw.replace(/\s+/g, " "); // tolerate markdown line-wrap between words
+        assert.match(c, /per-ticket integration|per ticket, not gated on the whole wave/i);
+        assert.match(
+          c,
+          /as soon as it (?:passes|clears|is ready).{0,200}verification/i,
+          "a ticket integrates as soon as it passes verification",
+        );
+        assert.match(
+          c,
+          /independent of (?:whether )?its wave-mates|whether or not its wave-mates|does not (?:hold up|block) its wave-mates/i,
+          "integration for one ticket does not wait on its wave-mates",
+        );
+        assert.match(
+          c,
+          /escalat\w+ to (?:the )?fallback.{0,300}integrates? the same way|fallback tier.{0,300}integrates? the same way/i,
+          "an escalated ticket still integrates the same way once fallback-verified",
+        );
+        assert.match(
+          c,
+          /cut from whatever (?:integration )?`?HEAD`? exists/i,
+          "the fallback-verified ticket's integration is cut from whatever HEAD exists by then",
+        );
+      }
+    });
+
+    it("worktree-integration.md specifies the wave boundary gates only the start of the next wave", async () => {
+      for (const dir of skillDirs) {
+        const raw = await readFile(path.resolve(dir, "references/worktree-integration.md"), "utf8");
+        const c = raw.replace(/\s+/g, " "); // tolerate markdown line-wrap between words
+        assert.match(c, /wave boundary/i);
+        assert.match(
+          c,
+          /next wave.{0,120}(?:does not start|waits?|start(s)? only)|(?:does not start|waits?).{0,120}next wave/i,
+          "the next wave does not start until the current wave is fully resolved",
+        );
+        assert.match(
+          c,
+          /every ticket in (?:the current|that) wave[\s\S]{0,80}terminal state/i,
+          "every ticket in the current wave must reach a terminal state first",
+        );
+        assert.match(c, /integrated,? or `?BLOCKED`?/i, "terminal state means integrated or BLOCKED");
+        assert.match(
+          c,
+          /never gates? (?:any )?individual ticket'?s? own integration|does not gate (?:any )?individual ticket'?s? own integration/i,
+          "the wave boundary never gates an individual ticket's own integration",
+        );
       }
     });
 

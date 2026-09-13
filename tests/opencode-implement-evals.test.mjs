@@ -138,6 +138,11 @@ describe("opencode-implement eval suite contract", () => {
         "model resolved once and pinned — later worker gets explicit --model": /explicit\s*--model[\s\S]{0,300}(?:second|later|concurrent)[\s\S]{0,200}worker|(?:second|later|concurrent)[\s\S]{0,200}worker[\s\S]{0,300}explicit\s*--model/i,
         "verification-failure retry resumes same session": /opencode run -s[\s\S]{0,200}verif|verif[\s\S]{0,400}opencode run -s[\s\S]{0,200}(?:same session|resume)/i,
         "opencode-process failure retries as fresh dispatch, never resume": /(?:opencode.{0,20}(?:process\s+)?failure|fresh\s+dispatch)[\s\S]{0,200}(?:fresh\s+dispatch|never\s+(?:a\s+)?(?:session\s+)?resume)/i,
+        // New branches required by ticket 03
+        "parallel dispatch respects the concurrency cap and queues the remainder": /concurrency cap[\s\S]{0,300}queue[\s\S]{0,200}|queue[\s\S]{0,300}concurrency cap[\s\S]{0,200}/i,
+        "possibly-stalled worker flagged without blocking wave-mates": /possibly stalled[\s\S]{0,300}without (?:blocking|pausing|stopping)[\s\S]{0,120}wave-mates|without (?:blocking|pausing|stopping)[\s\S]{0,200}wave-mates[\s\S]{0,200}possibly stalled/i,
+        "fallback escalation integrates on its own without blocking already-passed wave-mates": /(?:escalat\w+ to (?:the )?fallback|fallback tier)[\s\S]{0,300}(?:integrates? on its own|does not (?:wait|block))[\s\S]{0,300}wave-mates|wave-mates[\s\S]{0,300}(?:integrates? on its own|does not (?:wait|block))[\s\S]{0,300}fallback/i,
+        "next wave waits until every ticket in the current wave reaches a terminal state": /next wave[\s\S]{0,200}(?:does not start|waits?)[\s\S]{0,200}terminal state/i,
       };
       for (const [label, re] of Object.entries(branches)) {
         assert.ok(hay(re), `no eval case covers: ${label}`);

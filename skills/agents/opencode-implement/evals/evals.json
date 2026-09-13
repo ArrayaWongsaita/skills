@@ -142,64 +142,66 @@
     },
     {
       "id": 13,
-      "name": "a hung or slow smoke test stops the run before it starts",
-      "prompt": "/opencode-implement .scratch/smoke-demo/ — the Plan is approved. The preflight smoke test opencode run produces no first event within FIRST_EVENT_TIMEOUT.",
-      "expected_output": "The orchestrator does not begin the run. It stops with a message telling the user to free up or restart Ollama and opencode, having created the integration branch and gitignore entry but dispatched no ticket worker.",
+      "name": "preflight confirms opencode on PATH and the pinned model, with no smoke test and no Ollama check",
+      "prompt": "/opencode-implement .scratch/preflight-demo/ — the Plan is approved and the run's model is already resolved and pinned. Preflight runs before wave 0.",
+      "expected_output": "Preflight confirms the target repo is clean (a dirty tree stops and asks, never stashes), creates or switches to the integration branch opencode-implement/preflight-demo from HEAD, adds .scratch/preflight-demo/worktrees/ to .gitignore, confirms opencode is on PATH, and confirms opencode models lists the pinned model. There is no Ollama-reachability check and no local-specific smoke-test dispatch — both were dropped along with the retired local-model path.",
       "expectations": [
-        "Runs the smoke test with nothing else using the local model before the first real dispatch",
-        "Stops the whole run on a slow/stuck/failed smoke test",
-        "Tells the user to free up or restart Ollama / opencode",
-        "Dispatches no ticket worker"
+        "Confirms the target repo is clean before doing anything else, and never stashes a dirty tree",
+        "Creates or switches to opencode-implement/preflight-demo from HEAD and gitignores the worktrees directory",
+        "Confirms opencode is on PATH and that opencode models lists the pinned model",
+        "Runs no Ollama-reachability check and dispatches no smoke test"
       ],
       "files": []
     },
     {
       "id": 14,
-      "name": "the sub-step worker prompt is self-contained and test-first",
-      "prompt": "/opencode-implement .scratch/prompt-demo/ — the Plan is approved. Show the worker prompt the orchestrator writes for ticket 01 sub-step 2 of 3.",
-      "expected_output": "The prompt at .scratch/prompt-demo/prompts/01/2.md carries: the absolute worktree path; the ticket's What-to-build for orientation; this sub-step's one acceptance criterion verbatim; a progress note from sub-step 1 (files changed, test status); the named spec sections, ADRs, glossary, and test seam; the files in scope; the full red-green-refactor protocol inline; the constraints (touch only files in scope, commit on the worker branch, no push/PR, no package install, no repo scan, stop on a missing decision, treat /word as literal text); and the required structured return.",
+      "name": "the whole-ticket worker prompt is self-contained, absolute, and test-first",
+      "prompt": "/opencode-implement .scratch/prompt-demo/ — the Plan is approved. Show the worker prompt the orchestrator writes for ticket 01.",
+      "expected_output": "The prompt at .scratch/prompt-demo/prompts/01.md carries: the absolute worktree path; the ticket's whole What-to-build paragraph verbatim; every acceptance criterion verbatim, not a subset; the named parent-spec sections, the relevant ADRs, the domain glossary, and the assigned test seam; the full red-green-refactor protocol inline; the constraints (touch only what the ticket needs, commit on the worker branch, no push/PR, no package install, no repo scan, stop on a missing decision, treat any /word token as literal text); and the required structured return (red output, green output, files changed, test-to-criterion table). There is no progress-note section and no sub-step framing — the whole ticket is one dispatch, one prompt file.",
       "expectations": [
-        "Includes the one sub-step criterion verbatim and the progress note",
-        "Carries the red-green-refactor protocol inline",
-        "Names spec sections rather than the whole spec, and lists the files in scope",
-        "Requires a structured return: red output, green output, files changed, test to criterion"
+        "Includes the whole What-to-build paragraph and every acceptance criterion verbatim, in one prompt file per ticket",
+        "Carries the red-green-refactor protocol inline and the required structured return",
+        "Names spec sections and ADRs rather than the whole spec, plus the domain glossary and assigned test seam",
+        "Carries no progress-note section and no sub-step-of-M framing"
       ],
       "files": []
     },
     {
       "id": 15,
       "name": "a one-criterion ticket runs end to end and lands as one commit",
-      "prompt": "/opencode-implement .scratch/e2e-demo/ — a single ticket 01 (Blocked by: None) with one acceptance criterion. The Plan is approved. The opencode worker writes a failing test, makes it pass, and returns a well-formed red/green report.",
-      "expected_output": "The orchestrator runs the one sub-step, passes the checkpoint check, runs the verification gate (reproduce red at the pre-ticket HEAD with only the test file, confirm coverage and non-vacuity, run green + typecheck), and squash-merges the worker branch onto opencode-implement/e2e-demo as one commit named for the ticket that also ticks its checkboxes. The worktree is removed.",
+      "prompt": "/opencode-implement .scratch/e2e-demo/ — a single ticket 01 (Blocked by: None) with one acceptance criterion. The Plan is approved. The opencode worker builds the whole ticket in one dispatch, writes a failing test, makes it pass, and returns a well-formed red/green report.",
+      "expected_output": "The orchestrator runs the verification gate (reproduce red at the pre-ticket HEAD with only the test file, confirm coverage and non-vacuity, run green + typecheck), and squash-merges the worker branch onto opencode-implement/e2e-demo as one commit named for the ticket that also ticks its checkboxes, with the full suite run on that result. The worktree is removed once that ticket's own integration gate is green.",
       "expectations": [
-        "Runs the checkpoint check after the sub-step and the full verification gate after the chain",
+        "Runs the full verification gate once, after the worker's single whole-ticket dispatch",
         "Reproduces the red state itself at the pre-ticket integration HEAD",
-        "Squash-merges one commit per ticket in ticket-number order and ticks the checkboxes",
-        "Removes the worktree after the integrated suite is green"
+        "Squash-merges one commit per ticket in ticket-number order, ticks the checkboxes, and runs the full suite on the result",
+        "Removes the worktree once that ticket's own integration gate is green"
       ],
       "files": []
     },
     {
       "id": 16,
-      "name": "a multi-criterion chain carries state by commit and progress note, never -s resume",
-      "prompt": "/opencode-implement .scratch/chain-demo/ — ticket 01 has three acceptance criteria. The Plan is approved with a three-sub-step step plan.",
-      "expected_output": "The orchestrator dispatches sub-step 1, has the worker commit on the worker branch, runs the checkpoint, writes a progress note (files changed, test status), then dispatches sub-step 2 as a fresh opencode session with that progress note — not opencode run -s. Same for sub-step 3. The verification gate runs once, after sub-step 3.",
+      "name": "parallel dispatch of an approved wave respects the concurrency cap and queues the remainder",
+      "prompt": "/opencode-implement .scratch/cap-demo/ — wave 0 has six independent tickets (01-06), all approved for parallel execution, with the concurrency cap left at its default of 4.",
+      "expected_output": "The orchestrator dispatches four background opencode run workers at once — one each for tickets 01-04 — each in its own worktree and each writing its own log file. Tickets 05 and 06 wait in the queue. As soon as a slot frees (one of the first four workers finishes), the next queued ticket (05, then 06) is dispatched, until all six have run. At no point are more than four opencode run workers in flight at once, honoring the concurrency cap.",
       "expectations": [
-        "Commits each sub-step on the worker branch and writes a progress note between sub-steps",
-        "Dispatches each sub-step as a fresh opencode session, never -s resume",
-        "Runs the checkpoint check per sub-step and the verification gate once at the end"
+        "Dispatches exactly four workers at once for the first four tickets, one worktree and one log file each",
+        "Queues tickets 05 and 06 rather than dispatching all six immediately",
+        "Starts each queued ticket only as a slot frees, never exceeding the concurrency cap of 4",
+        "Runs the whole wave to completion through the queue, not just the first four tickets"
       ],
       "files": []
     },
     {
       "id": 17,
-      "name": "a sub-step that overflows at runtime is re-split, not failed",
-      "prompt": "/opencode-implement .scratch/resplit-demo/ — the Plan is approved. Ticket 01 sub-step 2's worker returns a truncated edit and a green run that does not actually cover the criterion; the checkpoint check fails with overflow symptoms.",
-      "expected_output": "The orchestrator recognises the overflow, re-splits sub-step 2 along a natural line (by file or layer) into finer sub-steps, records the re-split in status.md, and runs the finer sub-steps. The re-split is not counted against MAX_TICKET_ATTEMPTS — the wrong size estimate is the plan's fault.",
+      "name": "a worker that writes no new output for the stall interval is flagged possibly stalled without blocking its wave-mates",
+      "prompt": "/opencode-implement .scratch/stall-demo/ — wave 0 has three independent tickets (01, 02, 03) dispatched in parallel. Ticket 02's worker has written no new log output for longer than STALL_INTERVAL (default 10 minutes); tickets 01 and 03 are still producing output normally.",
+      "expected_output": "The orchestrator flags ticket 02 possibly stalled in status.md without killing it and without pausing tickets 01 or 03 — they keep running, finish, pass verification, and integrate normally while 02 is still flagged. Only WORKER_TIMEOUT, not the stall flag itself, would eventually kill 02 as an opencode failure.",
       "expectations": [
-        "Detects the overflow from the checkpoint failure plus symptoms (truncated edit, uncovered criterion)",
-        "Re-splits sub-step 2 into finer sub-steps and records it in status.md",
-        "Does not count the re-split against MAX_TICKET_ATTEMPTS"
+        "Flags ticket 02 possibly stalled in status.md once STALL_INTERVAL elapses with no new output",
+        "Does not kill the stalled worker on the stall flag alone",
+        "Lets tickets 01 and 03 keep running, verifying, and integrating without blocking on 02's stall",
+        "Notes WORKER_TIMEOUT, not the stall flag, is what would eventually kill a worker that never recovers"
       ],
       "files": []
     },
@@ -420,6 +422,32 @@
         "Never attempts a session resume for ticket 02's opencode-process failure, which has no sessionID at all",
         "Re-dispatches ticket 02 as a fresh opencode run on the same pinned model, from the same clean prompt, counted against MAX_OPENCODE_RETRIES",
         "States plainly that the retry rule is chosen by failure type — verification failure resumes, opencode-process failure never does"
+      ],
+      "files": []
+    },
+    {
+      "id": 36,
+      "name": "a ticket escalating to fallback integrates on its own without blocking already-passed wave-mates",
+      "prompt": "/opencode-implement .scratch/wave-fallback-demo/ — wave 1 has three independent tickets (04, 05, 06). Tickets 04 and 06 pass verification on the opencode path; ticket 05 exhausts its main-path budget and escalates to the fallback tier, which takes noticeably longer than 04 and 06.",
+      "expected_output": "Tickets 04 and 06 are squash-merged onto the integration branch as soon as each passes verification, in ascending ticket-number order relative to what's already integrated, each with the full suite run on that result — neither waits for ticket 05's fallback subagent to finish. Ticket 05 escalates to the fallback tier instead of integrating there, and integrates the same way once the fallback subagent's result passes the same verification gate, cut from whatever integration HEAD exists at that point (which already includes 04 and 06's work).",
+      "expectations": [
+        "Squash-merges 04 and 06 as soon as each clears verification, independent of ticket 05's fallback escalation",
+        "Runs the full suite on each of 04 and 06's integrated results without waiting on 05",
+        "Escalates 05 to the fallback tier rather than blocking 04 and 06's integration on it",
+        "Integrates 05 the same way once fallback-verified, cut from the HEAD that already includes 04 and 06"
+      ],
+      "files": []
+    },
+    {
+      "id": 37,
+      "name": "the next wave waits until every ticket in the current wave reaches a terminal state",
+      "prompt": "/opencode-implement .scratch/wave-boundary-demo/ — wave 0 has two tickets, 01 and 02. Ticket 01 has already integrated. Ticket 02 is still inside the fallback tier, not yet integrated or BLOCKED. Wave 1's tickets are all blocked only by wave-0 tickets.",
+      "expected_output": "Wave 1 does not start. Even though 01 has already integrated, the orchestrator waits until 02 reaches a terminal state — integrated or BLOCKED — before dispatching any wave-1 ticket. The wave boundary gates only the start of the next wave, never 01's own already-completed integration.",
+      "expectations": [
+        "Does not dispatch any wave-1 ticket while 02 has not yet reached a terminal state",
+        "Waits for 02 specifically, even though its wave-mate 01 already integrated",
+        "Treats integrated and BLOCKED as the only terminal states that satisfy the wave boundary",
+        "States that the wave boundary gates only the next wave's start, never an individual ticket's own integration"
       ],
       "files": []
     }
