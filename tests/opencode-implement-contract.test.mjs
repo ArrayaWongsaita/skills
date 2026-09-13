@@ -794,7 +794,7 @@ describe("opencode-implement skill contract", () => {
   });
 
   describe("state, resume, and handoff", () => {
-    it("a BLOCKED ticket halts only its dependency branch and the report names the fallout", async () => {
+    it("a BLOCKED ticket halts only its dependency branch, and the report names the blocked ticket, the fallout, and the available partial path", async () => {
       for (const dir of skillDirs) {
         const d = await readFile(path.resolve(dir, "references/status-and-resume.md"), "utf8");
         assert.match(d, /halts? only (its|the) (own )?dependency branch/i);
@@ -802,44 +802,118 @@ describe("opencode-implement skill contract", () => {
         assert.match(d, /downstream tickets?[\s\S]{0,20}not started|not started/i);
         assert.match(d, /partial path/i);
         assert.match(d, /`?\/opencode-implement continue`?/);
+        // BLOCKED conditions unchanged in kind
         assert.match(d, /TICKET_VERIFICATION_FAILED/);
+        assert.match(d, /TICKET_TOO_LARGE_FOR_CONTEXT/);
         assert.match(d, /INTEGRATION_DESIGN_CONFLICT/);
+        // Per-ticket integration precedent: a BLOCKED ticket does not hold up
+        // its wave-mates or the whole wave — everything that already passed
+        // integrates regardless of the block.
+        assert.match(
+          d,
+          /everything that passed[\s\S]{0,80}integrated|already integrated stays integrated/i,
+          "must state everything that already passed is integrated, per-ticket, not held for the whole wave",
+        );
+        // Independent later waves are named as an available path, not auto-started
+        assert.match(
+          d,
+          /independent (?:later )?(?:tickets?|waves?)[\s\S]{0,120}(?:not started automatically|available partial path)/i,
+          "must state independent later waves are reported as an available partial path, not auto-started",
+        );
+        // Halt report contents, itemized
+        const haltReport = d.match(/###\s*Halt report[\s\S]*?(?=\n##)/i);
+        assert.ok(haltReport, "Halt report subsection present");
+        assert.match(haltReport[0], /each `?BLOCKED`? ticket/i);
+        assert.match(haltReport[0], /reason/i);
+        assert.match(haltReport[0], /downstream tickets?/i);
+        assert.match(haltReport[0], /independent tickets?\/?waves?|independent tickets? and waves?/i);
+        assert.match(haltReport[0], /\/opencode-implement continue/);
       }
     });
 
-    it("status.md persists the per-ticket fields, the integration ref, and per-path totals", async () => {
+    it("status.md holds the wave table, the pinned resolved model, the new per-ticket fields, and cumulative usage split by path", async () => {
       for (const dir of skillDirs) {
         const d = await readFile(path.resolve(dir, "references/status-and-resume.md"), "utf8");
         assert.match(d, /status\.md/);
-        for (const field of ["status", "path", "sub_step", "session_ids", "subagent_id", "attempts", "opencode_retries", "worker_branch", "commit"]) {
+        // Wave table: wave, tickets, serial/parallel disposition
+        assert.match(d, /wave table/i);
+        assert.match(d, /serial/i);
+        assert.match(d, /parallel/i);
+        assert.match(d, /disposition/i);
+        // Pinned resolved model
+        assert.match(d, /pinned resolved model|resolved.{0,10}pinned model|pinned model/i);
+        // New per-ticket fields
+        for (const field of ["status", "session_id", "attempts", "opencode_retries", "worker_branch", "commit", "usage"]) {
           assert.match(d, new RegExp(field.replace(/_/g, "[_ ]")), `status.md records ${field}`);
         }
+        // Old per-sub-step shape must be gone from the LIVE per-ticket field
+        // list (a one-time contrast naming the retired fields, the same way
+        // the acceptance criteria themselves do, is fine — it must not be
+        // part of what status.md actually records going forward).
+        const perTicketBullet = d.match(/- per ticket:[\s\S]*?(?=\n- the \*\*integration branch ref)/i);
+        assert.ok(perTicketBullet, "a 'per ticket:' bullet describing the live fields is present");
+        assert.doesNotMatch(perTicketBullet[0], /\bsub_step\b/i, "must drop the old sub_step field from the live shape");
+        assert.doesNotMatch(perTicketBullet[0], /\bsession_ids\b/i, "must drop the old plural session_ids[] field from the live shape");
+        assert.doesNotMatch(perTicketBullet[0], /\bsubagent_id\b/i, "must drop the old subagent_id field from the live shape");
+        assert.doesNotMatch(perTicketBullet[0], /tokens:\s*\{\s*local/i, "must drop the old tokens:{local, fallback} shape from the live per-ticket field");
+        // Integration branch ref
         assert.match(d, /integration branch ref/i);
-        assert.match(d, /per-path token totals|cumulative per-path/i);
+        // Cumulative usage split by path
+        assert.match(d, /tokens\.main/);
+        assert.match(d, /tokens\.fallback/);
+        assert.match(d, /cumulative usage|cumulative[\s\S]{0,20}per path/i);
         assert.match(d, /no per-turn state-header/i);
       }
     });
 
-    it("continue reconciles reality, discards half-built tickets, and rewinds on drift", async () => {
+    it("continue confirms git refs and worker branch/worktree existence, discards and re-dispatches mid-run tickets from clean HEAD, re-verifies integrated tickets, and rewinds on drift", async () => {
       for (const dir of skillDirs) {
         const d = await readFile(path.resolve(dir, "references/status-and-resume.md"), "utf8");
-        assert.match(d, /Reality reconciliation/i);
+        assert.match(d, /reconcile[\s\S]{0,20}(?:it )?against reality|reality reconciliation/i);
         assert.match(d, /Git refs?/i);
+        assert.match(
+          d,
+          /worker branch[\s\S]{0,60}worktree[\s\S]{0,30}(?:still )?exists?/i,
+          "must confirm each recorded worker branch and worktree still exists",
+        );
         assert.match(d, /half-built|mid-run/i);
         assert.match(d, /discard[\s\S]{0,30}worktree/i);
         assert.match(d, /re-dispatch[\s\S]{0,40}clean/i);
+        assert.match(d, /re-run its verification|re-verif/i, "must re-verify tickets recorded as integrated");
         assert.match(d, /last still-verifying commit/i);
         assert.match(d, /reset the integration branch/i);
         assert.match(d, /discarded commits/i);
+        assert.match(
+          d,
+          /discarded commits[\s\S]{0,120}top of the report|top of the report[\s\S]{0,120}discarded commits/i,
+          "must list the discarded commits at the top of the report",
+        );
+        assert.match(d, /re-present the Plan/i);
+        assert.match(d, /resume[\s\S]{0,30}(?:from )?the frontier|frontier/i);
       }
     });
 
-    it("status and list are read-only", async () => {
+    it("status and list are read-only; status reports the wave table, blockers, per-path usage, pinned model, and stalled workers; list is unchanged", async () => {
       for (const dir of skillDirs) {
         const d = await readFile(path.resolve(dir, "references/status-and-resume.md"), "utf8");
         assert.match(d, /read-only/i);
         assert.match(d, /`?\/opencode-implement status`?/);
         assert.match(d, /`?\/opencode-implement list`?/);
+        const statusSection = d.match(/##\s*`?\/opencode-implement status[\s\S]*?(?=\n## )/i);
+        assert.ok(statusSection, "status/list section present");
+        const s = statusSection[0];
+        const sFlat = s.replace(/\s+/g, " "); // tolerate markdown line-wrap between words
+        assert.match(s, /wave table/i);
+        assert.match(s, /status[\s\S]{0,20}blockers|blockers/i);
+        assert.match(s, /cumulative usage per path|tokens\.main[\s\S]{0,40}tokens\.fallback/i);
+        assert.match(s, /pinned[\s\S]{0,10}model|resolved model/i);
+        assert.match(s, /possibly stalled/i);
+        assert.match(
+          sFlat,
+          /slug, integration branch, tickets done\s*\/\s*total|slug.{0,20}integration branch.{0,20}tickets/i,
+          "list must report one line per run: slug, integration branch, tickets done/total",
+        );
+        assert.match(s, /running,?\s*blocked,?\s*(?:or\s*)?complete/i);
       }
     });
 

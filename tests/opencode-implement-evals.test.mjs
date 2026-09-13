@@ -128,7 +128,7 @@ describe("opencode-implement eval suite contract", () => {
         "--strict-local still works as a deprecated alias": /--strict-local[\s\S]{0,200}deprecated/i,
         "opencode failures past budget -> escalate": /MAX_OPENCODE_RETRIES = 3 is exhausted[\s\S]{0,80}(escalates|fallback)/i,
         "fallback also fails -> BLOCKED (TICKET_VERIFICATION_FAILED)": /fallback subagent[\s\S]{0,160}BLOCKED \(TICKET_VERIFICATION_FAILED\)/i,
-        "escalation disclosed in status.md + handoff": /status\.md records[\s\S]{0,200}handoff[\s\S]{0,160}(Claude tokens spent|left the machine)/i,
+        "escalation disclosed in status.md + handoff, alongside tokens.main": /status\.md records[\s\S]{0,200}handoff[\s\S]{0,160}(Claude tokens spent|left the machine)/i,
         "BLOCKED halts only its branch": /stay integrated[\s\S]{0,200}(transitively blocked|not started)[\s\S]{0,200}next frontier/i,
         "status.md fields + integration ref": /status[\s\S]{0,10}report[\s\S]{0,240}integration branch ref|status\.md[\s\S]{0,160}integration branch ref/i,
         "continue discards half-built, re-dispatch clean": /discards? [\s\S]{0,60}worker branch and worktree[\s\S]{0,120}(re-dispatches|from clean)/i,
@@ -136,6 +136,11 @@ describe("opencode-implement eval suite contract", () => {
         "dirty tree at preflight": /uncommitted changes[\s\S]{0,120}does not stash[\s\S]{0,120}dispatches no worker/i,
         "worker needs new dependency -> replan": /(new[\s\S]{0,12}dependency|package install)[\s\S]{0,200}(replans?|Stage 0)[\s\S]{0,120}lockfile/i,
         "completion handoff names branch + review commands, no push": /\/code-review[\s\S]{0,60}\/scrutinize[\s\S]{0,200}(no[\s\S]{0,8}push|opens no PR|does not push)/i,
+        // New branches required by ticket 05 (state, resume, cost/model disclosure)
+        "tokens.main accumulates across main-path tickets and is shown alongside tokens.fallback": /tokens\.main[\s\S]{0,300}tokens\.fallback|tokens\.fallback[\s\S]{0,300}tokens\.main/i,
+        "the pinned resolved model is recorded in status.md and shown in the Plan": /resolved model[\s\S]{0,200}status\.md[\s\S]{0,200}Plan|status\.md[\s\S]{0,200}resolved model[\s\S]{0,200}Plan/i,
+        "a BLOCKED ticket's independent later wave is reported as an available partial path, not started automatically": /independent[\s\S]{0,80}wave[\s\S]{0,200}(?:available partial path|not started automatically)|(?:available partial path|not started automatically)[\s\S]{0,200}independent[\s\S]{0,80}wave/i,
+        "list reports one line per run: slug, integration branch, tickets done/total, running/blocked/complete": /slug[\s\S]{0,200}integration branch[\s\S]{0,200}(?:done\s*\/\s*total|done\/total)[\s\S]{0,200}(?:running|blocked|complete)/i,
         // New branches required by ticket 02
         "model resolved once and pinned — later worker gets explicit --model": /explicit\s*--model[\s\S]{0,300}(?:second|later|concurrent)[\s\S]{0,200}worker|(?:second|later|concurrent)[\s\S]{0,200}worker[\s\S]{0,300}explicit\s*--model/i,
         "verification-failure retry resumes same session": /opencode run -s[\s\S]{0,200}verif|verif[\s\S]{0,400}opencode run -s[\s\S]{0,200}(?:same session|resume)/i,

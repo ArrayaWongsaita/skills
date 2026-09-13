@@ -303,13 +303,13 @@
     },
     {
       "id": 26,
-      "name": "every escalation is disclosed in status.md and the handoff",
-      "prompt": "/opencode-implement .scratch/disclose-demo/ — a five-ticket run where ticket 03 took the subagent fallback and the rest ran local.",
-      "expected_output": "status.md records ticket 03's path as subagent-fallback with its trigger and tokens.fallback. The completion handoff names ticket 03 explicitly: 'ticket 03: subagent fallback — Claude tokens spent, code left the machine', alongside the per-path token totals (local = cost 0).",
+      "name": "every escalation is disclosed in status.md and the handoff, alongside the main path's real spend",
+      "prompt": "/opencode-implement .scratch/disclose-demo/ — a five-ticket run on the resolved model deepseek/v4.1-flash-hosted, where ticket 03 escalated to the subagent fallback and the other four built and integrated on the main opencode path.",
+      "expected_output": "status.md records ticket 03's escalation with its trigger and its share of tokens.fallback, alongside the cumulative tokens.main already spent by the four main-path tickets on the resolved model. The completion handoff names ticket 03 explicitly: 'ticket 03: subagent fallback — Claude tokens spent, code left the machine', alongside both per-path totals: tokens.main (real spend against deepseek/v4.1-flash-hosted) and tokens.fallback — the main path is no longer 'cost: 0'.",
       "expectations": [
-        "Records the fallback path, trigger, and token usage per ticket in status.md",
-        "Names each fallback ticket in the handoff with its Claude token spend and the privacy note",
-        "Reports per-path token totals with local runs at cost 0"
+        "Records the fallback escalation, its trigger, and its token usage in status.md",
+        "Names the fallback ticket in the handoff with its Claude token spend and the privacy note",
+        "Reports both per-path totals — tokens.main (real spend against the resolved model) and tokens.fallback — not the old cost: 0 framing for the main path"
       ],
       "files": []
     },
@@ -328,12 +328,13 @@
     },
     {
       "id": 28,
-      "name": "status.md records the per-ticket fields and the integration ref",
-      "prompt": "/opencode-implement status subtitle-preferences — the run has 01 integrated (local), 02 in progress at sub-step 2 of 3 (local), 03 not started.",
-      "expected_output": "The read-only status report shows the ticket table in dependency order with each ticket's status, path, and blockers; 02's sub_step position; cumulative per-path token totals (local = cost 0); the integration branch ref opencode-implement/subtitle-preferences and its commit. It mutates nothing.",
+      "name": "status.md status report shows the wave table, the pinned model, cumulative usage per path, and the integration ref",
+      "prompt": "/opencode-implement status subtitle-preferences — the run's resolved model is deepseek/v4.1-flash-hosted. status.md records wave 0 = {01, 02} (01 integrated on the main path, 02 still verifying on the main path, no worker flagged stalled) and wave 1 = {03} (not started, blocked by 02).",
+      "expected_output": "The read-only status report shows the wave table (wave 0 = {01, 02}, wave 1 = {03}), each ticket's status and blockers, the integration branch ref opencode-implement/subtitle-preferences and its commit, the pinned resolved model deepseek/v4.1-flash-hosted, per-ticket fields (status, session_id, attempts, opencode_retries, worker_branch, commit, usage) for 01 and 02, and cumulative usage split by path (tokens.main, tokens.fallback). It mutates nothing.",
       "expectations": [
-        "Shows status, path, and blockers per ticket and 02's sub-step position",
-        "Reports cumulative per-path token totals and the integration branch ref",
+        "Shows the wave table (wave 0 = {01, 02}, wave 1 = {03}) with each ticket's status and blockers",
+        "Names the pinned resolved model deepseek/v4.1-flash-hosted",
+        "Reports cumulative usage split by path — tokens.main and tokens.fallback — and the integration branch ref",
         "Mutates no file"
       ],
       "files": []
@@ -341,20 +342,20 @@
     {
       "id": 29,
       "name": "continue discards a half-built ticket and re-dispatches it from clean",
-      "prompt": "/opencode-implement continue crash-demo — status.md records ticket 03 as 'verifying' when the session died; its worker branch opencode-implement/crash-demo/03 and worktree exist with commits. 01 and 02 are integrated and still verify.",
-      "expected_output": "Reality reconciliation confirms 01 and 02 still verify, then discards ticket 03's worker branch and worktree (a killed opencode worker can leave an odd git state) and re-dispatches ticket 03 from clean integration HEAD. It re-presents the Plan and resumes from ticket 03.",
+      "prompt": "/opencode-implement continue crash-demo — wave 1's only ticket, 03, is recorded 'verifying' when the session died; its worker branch opencode-implement/crash-demo/03 and worktree exist with commits. Wave 0's tickets 01 and 02 are integrated and still verify.",
+      "expected_output": "Reality reconciliation confirms the integration branch and every recorded worker branch/worktree exist, re-verifies 01 and 02 (still green), then discards ticket 03's worker branch and worktree (a killed opencode worker can leave an odd git state) and re-dispatches ticket 03 from clean integration HEAD. It re-presents the Plan (wave table included) and resumes from ticket 03.",
       "expectations": [
-        "Re-verifies the committed tickets 01 and 02 before trusting status.md",
-        "Discards the half-built worker branch and worktree for ticket 03",
-        "Re-dispatches ticket 03 from clean integration HEAD and re-presents the Plan"
+        "Confirms the integration branch and each recorded worker branch/worktree exist before trusting status.md",
+        "Re-verifies the integrated wave-0 tickets 01 and 02",
+        "Discards the half-built worker branch and worktree for ticket 03 and re-dispatches it from clean integration HEAD, re-presenting the Plan"
       ],
       "files": []
     },
     {
       "id": 30,
       "name": "continue rewinds the integration branch when a committed ticket no longer verifies",
-      "prompt": "/opencode-implement continue drift-demo — status.md records 01, 02, 03 integrated. On re-verification ticket 02's tests now fail because the user hand-edited a file.",
-      "expected_output": "The orchestrator resets the integration branch to ticket 01's commit (the last still-verifying commit), discards the worktrees for 02 and 03, lists the discarded commits (02 and 03) at the top of the report, and re-dispatches from ticket 02. The Plan is re-presented against this reconciled reality.",
+      "prompt": "/opencode-implement continue drift-demo — status.md records wave 0 = {01, 02} and wave 1 = {03}, all three integrated. On re-verification ticket 02's tests now fail because the user hand-edited a file.",
+      "expected_output": "The orchestrator resets the integration branch to ticket 01's commit (the last still-verifying commit), discards the worktrees for 02 and 03, lists the discarded commits (02 and 03) at the top of the report, and re-dispatches from ticket 02. The Plan — wave table and pinned model included — is re-presented against this reconciled reality.",
       "expectations": [
         "Detects that committed ticket 02 no longer verifies",
         "Resets the integration branch to the last still-verifying commit (01)",
@@ -389,11 +390,12 @@
     },
     {
       "id": 33,
-      "name": "the completion handoff names the branch and the review commands and never pushes",
-      "prompt": "/opencode-implement .scratch/handoff-demo/ — all four tickets integrated, the last suite green, all local.",
-      "expected_output": "The handoff prints: all 4 tickets integrated onto opencode-implement/handoff-demo, one commit per ticket in dependency order; per-path token usage (local, cost 0); and the exact commands /code-review since <merge-base with main> then /scrutinize to run in a fresh context. It performs no review, no git push, and opens no PR.",
+      "name": "the completion handoff names the branch, the pinned model, both per-path token totals, and the review commands, and never pushes",
+      "prompt": "/opencode-implement .scratch/handoff-demo/ — all four tickets integrated on the resolved model deepseek/v4.1-flash-hosted, the last suite green, no ticket escalated to the fallback tier.",
+      "expected_output": "The handoff prints: all 4 tickets integrated onto opencode-implement/handoff-demo, one commit per ticket in dependency order; the pinned resolved model deepseek/v4.1-flash-hosted; per-path token usage — tokens.main (the run's real spend against the resolved model) and tokens.fallback (zero, since nothing escalated); and the exact commands /code-review since <merge-base with main> then /scrutinize to run in a fresh context. It performs no review, no git push, and opens no PR.",
       "expectations": [
         "Names the integration branch and confirms one commit per ticket",
+        "Names the pinned resolved model and reports both tokens.main and tokens.fallback, with tokens.main carrying the run's real spend",
         "Prints /code-review since <merge-base> and /scrutinize as the next step",
         "Runs no review and does not push or open a PR"
       ],
@@ -472,6 +474,56 @@
         "Accepts --strict-local as a working, deprecated alias rather than rejecting it",
         "Suppresses the fallback tier identically to --no-fallback / --opencode-only",
         "Produces BLOCKED (TICKET_TOO_LARGE_FOR_CONTEXT) instead of escalating"
+      ],
+      "files": []
+    },
+    {
+      "id": 40,
+      "name": "the resolved model is recorded in status.md and shown in the Plan",
+      "prompt": "/opencode-implement .scratch/model-record-demo/ — no --model flag given at invocation. The model-resolution check before wave 0 resolves to deepseek/v4.1-flash-hosted.",
+      "expected_output": "Before wave 0 starts, the orchestrator writes the resolved model deepseek/v4.1-flash-hosted into status.md as the pinned resolved model, and the same value appears in the Plan that is presented for approval — not a guess, a fact read back from opencode models. Every worker dispatched afterward, in every wave, carries this same value as an explicit --model flag.",
+      "expectations": [
+        "Records the resolved model deepseek/v4.1-flash-hosted in status.md before wave 0 starts",
+        "Shows the same resolved model in the Plan presented for approval",
+        "Treats the resolved model as a fact confirmed via opencode models, not an assumption"
+      ],
+      "files": []
+    },
+    {
+      "id": 41,
+      "name": "tokens.main accumulates across main-path tickets and is shown in the Plan, status.md, and the handoff alongside tokens.fallback",
+      "prompt": "/opencode-implement .scratch/tokens-main-demo/ — three tickets (01, 02, 03) each build and integrate on the main opencode path, spending real tokens against the resolved model deepseek/v4.1-flash-hosted; no ticket escalates to the fallback tier.",
+      "expected_output": "As each of 01, 02, and 03 clears verification and integrates, its opencode usage is added to the running cumulative tokens.main in status.md — the main path is no longer 'cost: 0'. The status report shows the accumulated tokens.main alongside tokens.fallback (zero, since nothing escalated), and the completion handoff prints the same tokens.main total as real spend against the resolved model, next to tokens.fallback.",
+      "expectations": [
+        "Accumulates tokens.main across all three main-path tickets as each one integrates",
+        "Shows the accumulated tokens.main in status.md alongside tokens.fallback",
+        "Shows the same tokens.main total, as real spend, in the completion handoff alongside tokens.fallback"
+      ],
+      "files": []
+    },
+    {
+      "id": 42,
+      "name": "a BLOCKED ticket's independent later wave is reported as an available partial path, not started automatically",
+      "prompt": "/opencode-implement .scratch/wave-partial-demo/ — ticket set: 01 (None), 02 (None), 03 (01), 04 (02). Wave 0 = {01, 02}; wave 1 = {03, 04}. Ticket 01 becomes BLOCKED (TICKET_VERIFICATION_FAILED) after its fallback also fails. Ticket 02 passes and integrates.",
+      "expected_output": "Ticket 03 is not started — it is transitively blocked by 01. Wave 1 as a whole does not start automatically even though ticket 04 depends only on 02 (already integrated): the orchestrator reports wave 1's independent ticket 04 as an available partial path it could dispatch, but does not start it without the user resuming via /opencode-implement continue wave-partial-demo. 02 stays integrated.",
+      "expectations": [
+        "Does not start ticket 03, transitively blocked by the BLOCKED ticket 01",
+        "Does not auto-start ticket 04 even though its only blocker (02) already integrated",
+        "Names ticket 04 in the halt report as an independent, available partial path rather than dispatching it",
+        "Keeps 02 integrated and ends the halt report with the /opencode-implement continue command"
+      ],
+      "files": []
+    },
+    {
+      "id": 43,
+      "name": "/opencode-implement list reports one line per run: slug, integration branch, tickets done/total, and running/blocked/complete",
+      "prompt": "/opencode-implement list — three runs exist under .scratch/: subtitle-preferences (2 of 4 tickets integrated, still running), partial-demo (2 of 4 integrated, one BLOCKED), handoff-demo (4 of 4 integrated).",
+      "expected_output": "list prints one line per run, unchanged in shape from before this feature: subtitle-preferences — opencode-implement/subtitle-preferences — 2/4 — running; partial-demo — opencode-implement/partial-demo — 2/4 — blocked; handoff-demo — opencode-implement/handoff-demo — 4/4 — complete. It reads every .scratch/*/status.md and mutates nothing.",
+      "expectations": [
+        "Prints exactly one line per discovered run",
+        "Each line names the slug, the integration branch, and tickets done/total",
+        "Each line states whether the run is running, blocked, or complete",
+        "Mutates no file while listing"
       ],
       "files": []
     }
