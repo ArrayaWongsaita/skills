@@ -44,7 +44,7 @@
     "should_trigger": false
   },
   {
-    "query": "Can you run this ticket directory through Ollama locally?",
+    "query": "Can you run this ticket directory on whatever hosted model opencode has configured?",
     "should_trigger": false
   },
   {

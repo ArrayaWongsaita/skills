@@ -66,7 +66,7 @@ describe("opencode-implement skill contract", () => {
 
     it("names the full span in its description", async () => {
       const meta = parseFrontmatter(await readFile(skillFiles[0], "utf8"));
-      for (const beat of [/ticket/i, /local/i, /opencode/i, /sub-step|decompos/i, /verif/i, /fall ?back/i, /integrat/i, /review/i]) {
+      for (const beat of [/ticket/i, /opencode/i, /hosted/i, /wave|parallel/i, /verif/i, /fall ?back/i, /integrat/i, /review/i]) {
         assert.match(meta.description, beat);
       }
     });
@@ -88,18 +88,34 @@ describe("opencode-implement skill contract", () => {
         assert.match(content, /\blist\b/);
         assert.match(content, /explicit/i);
         assert.match(content, /--model/);
-        assert.match(content, /ollama\/qwen3\.8:27b-mlx-32k/);
+        assert.match(content.replace(/\s+/g, " "), /no skill-level default/i);
         assert.match(content, /--fallback-agent/);
+        assert.match(content, /--opencode-only/);
         assert.match(content, /--no-fallback/);
+        assert.match(content, /--strict-local/);
+        assert.match(content, /concurrency cap/i);
       }
     });
 
-    it("frames the skill as a slow serial local-first tool", async () => {
+    it("frames the skill as a hosted-model, wave/parallel skill, with no local/Ollama/zero-cost/private/slow-background language", async () => {
       for (const body of await bothSkillBodies()) {
-        assert.match(body, /local/i);
-        assert.match(body, /serial/i);
-        assert.match(body, /background|hours-long|slow/i);
-        assert.match(body, /parallelism is a non-goal|non-goal/i);
+        assert.match(body, /hosted/i);
+        assert.match(body, /wave/i);
+        assert.match(body, /parallel/i);
+        assert.match(body, /concurrency cap/i);
+        // Every ticket-06 purge target, scoped so the legitimate
+        // `to-tickets` local format ticket-naming phrase (unrelated to
+        // "local model" execution) is not a false positive, and neither is
+        // the --strict-local flag NAME (a literal deprecated-alias token,
+        // not prose describing the skill as local).
+        const withoutExemptions = body
+          .replace(/`?to-tickets`?\s*local format/gi, "")
+          .replace(/--strict-local/gi, "");
+        assert.doesNotMatch(withoutExemptions, /\blocal\b/i, "no 'local' language outside the to-tickets local format name and the --strict-local flag name");
+        assert.doesNotMatch(body, /ollama/i, "no Ollama language");
+        assert.doesNotMatch(body, /zero-cost/i, "no zero-cost framing");
+        assert.doesNotMatch(body, /\bprivate\b/i, "no privacy framing");
+        assert.doesNotMatch(body, /slow background/i, "no 'slow background tool' framing");
       }
     });
 
@@ -161,8 +177,8 @@ describe("opencode-implement skill contract", () => {
       assert.match(guide, /^## ภาษาไทย \/ Thai\s*$/m);
       assert.match(guide, /^## English \/ ภาษาอังกฤษ\s*$/m);
       assert.match(guide, /npx skills add ArrayaWongsaita\/skills --skill opencode-implement/);
-      assert.match(guide, /background|overnight/i);
-      assert.match(guide, /reliab|hang|slow/i);
+      assert.match(guide, /hosted/i);
+      assert.match(guide, /wave|parallel/i);
       for (const ref of SKILL_REFERENCES) {
         assert.match(guide, new RegExp(ref.replace(/\./g, "\\.")), `guide lists ${ref}`);
       }
@@ -285,7 +301,7 @@ describe("opencode-implement skill contract", () => {
   });
 
   describe("Stage 1 — the opencode worker contract", () => {
-    it("SKILL.md has a Stage 1 section with a preflight and a smoke test", async () => {
+    it("SKILL.md has a Stage 1 section with a preflight and no smoke test or Ollama check", async () => {
       for (const body of await bothSkillBodies()) {
         const stage1 = body.match(/##\s*Stage 1[\s\S]*?(?=\n## )/i);
         assert.ok(stage1, "Stage 1 section present");
@@ -295,10 +311,12 @@ describe("opencode-implement skill contract", () => {
         assert.match(s, /stash/i);
         assert.match(s, /opencode-implement\/<feature-slug>/);
         assert.match(s, /\.gitignore/);
-        assert.match(s, /smoke test/i);
         assert.match(s, /serial/i);
+        assert.match(s, /concurrency cap/i);
         assert.match(s, /references\/worker-contract\.md/);
         assert.match(s, /references\/prompt-scaffold\.md/);
+        assert.doesNotMatch(s, /smoke test/i, "no smoke test — dropped along with the retired local-model path");
+        assert.doesNotMatch(s, /ollama/i, "no Ollama-reachability check");
       }
     });
 
@@ -527,18 +545,19 @@ describe("opencode-implement skill contract", () => {
     it("SKILL.md Stage 1 dispatches the whole ticket and drives worktree-integration.md", async () => {
       for (const body of await bothSkillBodies()) {
         const s = body.match(/##\s*Stage 1[\s\S]*?(?=\n## )/i)[0];
-        assert.match(s, /whole in one worker call/i);
+        assert.match(s, /whole[\s\S]{0,20}in one worker call/i);
         assert.doesNotMatch(s, /decomposition\.md/);
         assert.match(s, /references\/worker-contract\.md/);
         assert.match(s, /references\/worktree-integration\.md/);
-        assert.match(s, /checkpoint check/i);
-        assert.match(s, /re-split/i);
+        assert.match(s, /resolve[\s\S]{0,20}pin/i);
         assert.match(s, /verification gate/i);
         assert.match(s, /reproduce[\s\S]{0,30}red/i);
         assert.match(s, /MAX_TICKET_ATTEMPTS\s*=\s*3/);
         assert.match(s, /squash-merge/i);
         assert.match(s, /one commit/i);
         assert.match(s, /INTEGRATION_DESIGN_CONFLICT/);
+        assert.doesNotMatch(s, /checkpoint check/i, "no per-sub-step checkpoint check — decomposition is gone");
+        assert.doesNotMatch(s, /re-split/i, "no runtime re-split — decomposition is gone");
       }
     });
 
@@ -778,15 +797,26 @@ describe("opencode-implement skill contract", () => {
       }
     });
 
-    it("SKILL.md's suppression-flag mention documents --opencode-only with --strict-local as a deprecated alias, --no-fallback unchanged", async () => {
+    it("SKILL.md documents --no-fallback as the primary suppression flag, with --opencode-only as its current alias and --strict-local as a deprecated alias", async () => {
       for (const file of skillFiles) {
-        const content = await readFile(file, "utf8");
+        const raw = await readFile(file, "utf8");
+        const content = raw.replace(/\s+/g, " "); // tolerate markdown line-wrap between words
         assert.match(content, /--no-fallback/);
         assert.match(content, /--opencode-only/);
         assert.match(content, /--strict-local/);
         assert.match(
           content,
-          /--strict-local[^\n]{0,120}deprecated|deprecated[^\n]{0,120}--strict-local/i,
+          /--no-fallback[\s\S]{0,80}primary|primary[\s\S]{0,80}--no-fallback/i,
+          "SKILL.md must present --no-fallback as the primary suppression flag",
+        );
+        assert.match(
+          content,
+          /--opencode-only[\s\S]{0,120}(?:current alias|is its alias)|(?:current alias|is its alias)[\s\S]{0,120}--opencode-only/i,
+          "SKILL.md must document --opencode-only as the current alias of --no-fallback",
+        );
+        assert.match(
+          content,
+          /--strict-local[\s\S]{0,120}deprecated|deprecated[\s\S]{0,120}--strict-local/i,
           "SKILL.md must document --strict-local as a deprecated alias",
         );
       }
@@ -917,17 +947,20 @@ describe("opencode-implement skill contract", () => {
       }
     });
 
-    it("the completion handoff names the branch and the review commands and never pushes", async () => {
+    it("the completion handoff names the branch, the pinned model, both per-path token totals, and the review commands, and never pushes", async () => {
       for (const body of await bothSkillBodies()) {
         const stop = body.match(/##\s*Stop[\s\S]*?(?=\n## |$)/i);
         assert.ok(stop, "Stop/Handoff section present");
         const s = stop[0];
         assert.match(s, /integration branch|opencode-implement\/<feature-slug>/i);
         assert.match(s, /one commit\s+per ticket|one-commit-per-ticket/i);
-        assert.match(s, /per-path token usage/i);
+        assert.match(s, /resolved model/i);
+        assert.match(s, /tokens\.main/);
+        assert.match(s, /tokens\.fallback/);
         assert.match(s, /\/code-review/);
         assert.match(s, /\/scrutinize/);
         assert.match(s, /push|pull request/i);
+        assert.doesNotMatch(s, /cost:?\s*0|zero-cost/i, "no 'cost: 0' framing for the main path");
       }
     });
 

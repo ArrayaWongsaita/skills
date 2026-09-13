@@ -16,14 +16,14 @@
     },
     {
       "id": 2,
-      "name": "independent tickets are still planned to run serially",
-      "prompt": "/opencode-implement .scratch/independent-demo/ — ticket set: 01 (Blocked by: None), 02 (Blocked by: None), 03 (Blocked by: 01, 02). Present the Plan.",
-      "expected_output": "01 and 02 have no edge between them but the run still works them one after another in ascending ticket-number order, then 03. The Plan does not propose parallel execution; execution is serial because one local model instance serializes inference regardless (parallelism is a non-goal, not a deferred follow-up).",
+      "name": "a same-wave pair the user chose to serialize is dispatched one at a time, not concurrently",
+      "prompt": "/opencode-implement .scratch/serialize-choice-demo/ — ticket set: 01 (Blocked by: None), 02 (Blocked by: None), both estimated to modify src/reports/list.ts and flagged likely-overlapping — consider serializing. At Plan approval the user chooses to serialize the {01, 02} pair rather than run them in parallel. Stage 1 begins.",
+      "expected_output": "The orchestrator honors the user's choice to serialize the flagged pair: it reuses one worktree slot at a time, in ticket-number order — dispatching, verifying, and integrating ticket 01 before starting ticket 02's worker — even though both landed in wave 0 as independent tickets and the Plan would otherwise propose running them in parallel. This differs from an unflagged independent pair, which the Plan proposes running concurrently by default.",
       "expectations": [
-        "Orders the run 01, 02, 03 and works one ticket at a time",
-        "Does not dispatch 01 and 02 concurrently and proposes no wave",
-        "States that parallelism is a non-goal for a single local model",
-        "Pauses for approval before any source file changes"
+        "Recognizes the user's Plan-approval choice to serialize the flagged {01, 02} pair",
+        "Reuses one worktree slot at a time for 01 and 02, in ticket-number order, rather than dispatching both concurrently",
+        "Starts ticket 02's worker only after ticket 01 reaches a terminal state",
+        "Contrasts this with an unflagged independent pair, which the Plan proposes running in parallel by default"
       ],
       "files": []
     },
@@ -117,13 +117,13 @@
     },
     {
       "id": 11,
-      "name": "an opencode failure inside the retry budget is retried locally, not escalated",
-      "prompt": "/opencode-implement .scratch/retry-demo/ — the Plan is approved. The first opencode run for ticket 01 sub-step 1 emits an {\"type\":\"error\"} event and exits non-zero. This is the first opencode failure for this sub-step.",
-      "expected_output": "The orchestrator treats it as an opencode failure (not a verification failure), re-dispatches a fresh opencode run for the same sub-step with a progress note naming the failure, and does not escalate — MAX_OPENCODE_RETRIES = 3 has not been reached. It does not resume the session with -s.",
+      "name": "an opencode failure inside the retry budget is retried as a fresh dispatch, not escalated",
+      "prompt": "/opencode-implement .scratch/retry-demo/ — the Plan is approved and the run's model is already resolved and pinned. The first opencode run for ticket 01 emits an {\"type\":\"error\"} event and exits non-zero. This is the first opencode failure for this ticket.",
+      "expected_output": "The orchestrator treats it as an opencode failure (not a verification failure), re-dispatches a fresh opencode run for the whole ticket, and does not escalate — MAX_OPENCODE_RETRIES = 3 has not been reached. The redispatch uses the same pinned model and the same clean prompt as the first attempt; it never resumes the session and carries no progress note.",
       "expectations": [
-        "Classifies the error event + non-zero exit as an opencode failure",
-        "Re-dispatches a fresh opencode session (not -s resume) with a progress note",
-        "Does not escalate to the subagent fallback while retries remain",
+        "Classifies the error event + non-zero exit as an opencode failure, not a verification failure",
+        "Re-dispatches a fresh opencode run for the whole ticket, on the same pinned model, from the same clean prompt — never a session resume",
+        "Does not escalate to the subagent fallback while MAX_OPENCODE_RETRIES budget remains",
         "Counts it against MAX_OPENCODE_RETRIES, not MAX_TICKET_ATTEMPTS"
       ],
       "files": []
@@ -131,11 +131,11 @@
     {
       "id": 12,
       "name": "a worker that emits no first event is killed as an opencode failure",
-      "prompt": "/opencode-implement .scratch/hang-demo/ — the Plan is approved. The opencode run for ticket 01 sub-step 1 has produced no step_start event and FIRST_EVENT_TIMEOUT has elapsed.",
-      "expected_output": "The orchestrator kills the worker PID, records it as an opencode failure (a hung run produces nothing at all), and re-dispatches a fresh worker, counting one MAX_OPENCODE_RETRIES attempt. STALL_INTERVAL and WORKER_TIMEOUT are the other two kill conditions.",
+      "prompt": "/opencode-implement .scratch/hang-demo/ — the Plan is approved. The opencode run for ticket 01 has produced no step_start event and FIRST_EVENT_TIMEOUT has elapsed.",
+      "expected_output": "The orchestrator kills the worker PID, records it as an opencode failure (a hung run produces nothing at all), and re-dispatches a fresh worker for the whole ticket on the same pinned model, counting one MAX_OPENCODE_RETRIES attempt. STALL_INTERVAL and WORKER_TIMEOUT are the other two kill conditions.",
       "expectations": [
         "Kills the worker on FIRST_EVENT_TIMEOUT with no step_start seen",
-        "Records an opencode failure and re-dispatches, counting a retry",
+        "Records an opencode failure and re-dispatches fresh on the same pinned model, counting a retry",
         "Treats STALL_INTERVAL and WORKER_TIMEOUT as the other kill conditions"
       ],
       "files": []
@@ -209,11 +209,11 @@
       "id": 18,
       "name": "a fabricated / not-actually-red test fails verification",
       "prompt": "/opencode-implement .scratch/notred-demo/ — the Plan is approved. Ticket 01's worker returns a green report, but when the orchestrator applies only the new test file at the pre-ticket HEAD it passes without the implementation.",
-      "expected_output": "The verification gate's red reproduction fails: the test passes without the implementation, so it never measured a missing behaviour. This is a verification failure; the orchestrator re-dispatches the failing sub-step with that specific detail, up to MAX_TICKET_ATTEMPTS = 3.",
+      "expected_output": "The verification gate's red reproduction fails: the test passes without the implementation, so it never measured a missing behaviour. This is a verification failure; the orchestrator resumes the same opencode session with that specific failure as the next turn, up to MAX_TICKET_ATTEMPTS = 3.",
       "expectations": [
         "Runs the orchestrator's own red reproduction rather than trusting the worker's pasted output",
         "Treats a test that passes without the implementation as a verification failure",
-        "Re-dispatches the failing sub-step with the specific failure, counting a MAX_TICKET_ATTEMPTS attempt"
+        "Resumes the same opencode session with the specific failure as the next turn, counting a MAX_TICKET_ATTEMPTS attempt"
       ],
       "files": []
     },
@@ -221,11 +221,11 @@
       "id": 19,
       "name": "a vacuous test and missing criterion coverage each fail verification",
       "prompt": "/opencode-implement .scratch/vacuous-demo/ — the Plan is approved. Ticket 01 has two criteria. The worker's return includes one test that is expect(true).toBe(true) and leaves the second criterion with no test.",
-      "expected_output": "The verification gate rejects the ticket on two counts: the vacuous assertion, and the acceptance criterion with no covering test. The orchestrator re-dispatches with both details, up to MAX_TICKET_ATTEMPTS = 3.",
+      "expected_output": "The verification gate rejects the ticket on two counts: the vacuous assertion, and the acceptance criterion with no covering test. The orchestrator resumes the same opencode session with both failure details as the next turn, up to MAX_TICKET_ATTEMPTS = 3.",
       "expectations": [
         "Flags expect(true).toBe(true) as a vacuous test",
         "Flags the acceptance criterion left uncovered by any new test",
-        "Re-dispatches the failing sub-step(s) rather than integrating"
+        "Resumes the same opencode session with both failure details as the next turn, rather than integrating"
       ],
       "files": []
     },
@@ -243,44 +243,21 @@
     },
     {
       "id": 21,
-      "name": "three failed local verification attempts escalate to the subagent with no pause",
-      "prompt": "/opencode-implement .scratch/escalate-demo/ — the Plan is approved, fallback is on (default). Ticket 01 fails the verification gate three times on the local model.",
+      "name": "three failed verification attempts on the main opencode path escalate to the subagent with no pause",
+      "prompt": "/opencode-implement .scratch/escalate-demo/ — the Plan is approved, fallback is on (default). Ticket 01 fails the verification gate three times on the main opencode path.",
       "expected_output": "After the third failure the orchestrator discards ticket 01's partial worktree and worker branch, cuts a fresh worker branch from integration HEAD, and dispatches one native subagent (subagent_type = general-purpose, isolation: worktree) for the whole ticket — with no approval pause. The ticket's path becomes subagent-fallback and the escalation is recorded in status.md.",
       "expectations": [
-        "Escalates automatically after MAX_TICKET_ATTEMPTS = 3 local verification failures, with no approval pause",
-        "Discards the partial local worktree and worker branch and starts the subagent from clean integration HEAD",
+        "Escalates automatically after MAX_TICKET_ATTEMPTS = 3 main-path verification failures, with no approval pause",
+        "Discards the partial main-path worktree and worker branch and starts the subagent from clean integration HEAD",
         "Dispatches one native subagent for the whole ticket via the Agent tool, never fork",
         "Records the escalation and its trigger in status.md and sets the path to subagent-fallback"
       ],
       "files": []
     },
     {
-      "id": 22,
-      "name": "TICKET_TOO_LARGE_FOR_CONTEXT escalates directly with fallback on",
-      "prompt": "/opencode-implement .scratch/toolarge-demo/ — fallback is on (default). Ticket 02 has a single acceptance criterion that cannot be split fine enough to fit the context budget even after re-splitting by file and layer.",
-      "expected_output": "The orchestrator does not BLOCK. It escalates ticket 02 straight to the subagent fallback (TICKET_TOO_LARGE_FOR_CONTEXT trigger), running the whole ticket from clean integration HEAD and verifying with the same gate.",
-      "expectations": [
-        "Recognises the criterion cannot be split under budget and triggers the fallback, not a BLOCK",
-        "Runs the subagent for the whole ticket and verifies with the orchestrator's gate"
-      ],
-      "files": []
-    },
-    {
-      "id": 23,
-      "name": "--no-fallback turns the too-large trigger into a BLOCK",
-      "prompt": "/opencode-implement --no-fallback .scratch/strict-demo/ — same as toolarge-demo: ticket 02's one criterion cannot be split under the context budget.",
-      "expected_output": "With --no-fallback the orchestrator does not escalate. Ticket 02 becomes BLOCKED (TICKET_TOO_LARGE_FOR_CONTEXT). The run spends zero Claude tokens and no code leaves the machine.",
-      "expectations": [
-        "Suppresses the subagent fallback entirely under --no-fallback / --strict-local",
-        "Produces BLOCKED (TICKET_TOO_LARGE_FOR_CONTEXT) instead of escalating",
-        "Spends no Claude tokens"
-      ],
-      "files": []
-    },
-    {
       "id": 24,
       "name": "opencode failures past the retry budget escalate to the subagent",
-      "prompt": "/opencode-implement .scratch/opencodefail-demo/ — fallback is on. Ticket 01 sub-step 1's opencode run fails (error event / timeout kill) four times: three retries then a fourth attempt.",
+      "prompt": "/opencode-implement .scratch/opencodefail-demo/ — fallback is on. Ticket 01's opencode run fails (error event / timeout kill) four times: three retries then a fourth attempt.",
       "expected_output": "MAX_OPENCODE_RETRIES = 3 is exhausted, so the ticket escalates to the subagent fallback (opencode-failures-exhausted trigger), from clean integration HEAD. An opencode hiccup within the budget would have been retried locally instead.",
       "expectations": [
         "Retries opencode failures up to MAX_OPENCODE_RETRIES = 3 locally",
@@ -379,7 +356,7 @@
     {
       "id": 32,
       "name": "a worker that needs a new dependency stops and is replanned",
-      "prompt": "/opencode-implement .scratch/dep-demo/ — the Plan is approved. Ticket 01 sub-step 1's worker reports that the criterion needs a new third-party package that is not installed.",
+      "prompt": "/opencode-implement .scratch/dep-demo/ — the Plan is approved. Ticket 01's worker reports that the ticket needs a new third-party package that is not installed.",
       "expected_output": "The worker stops and reports the missing dependency rather than running a package install. The orchestrator returns ticket 01 to Stage 0 planning as a dependency decision; the shared lockfile is untouched.",
       "expectations": [
         "The worker stops and reports rather than running npm/pip/cargo install",
@@ -456,11 +433,11 @@
     {
       "id": 38,
       "name": "--opencode-only suppresses fallback the same way --no-fallback did",
-      "prompt": "/opencode-implement --opencode-only .scratch/opencode-only-demo/ — same as toolarge-demo: ticket 02's single acceptance criterion is genuinely too large even for the resolved model's context window.",
-      "expected_output": "--opencode-only is the current alias for --no-fallback (--strict-local is a deprecated alias for the same flag). Under --opencode-only the orchestrator suppresses the subagent fallback the same way --no-fallback did: ticket 02 becomes BLOCKED (TICKET_TOO_LARGE_FOR_CONTEXT) instead of escalating, the run spends zero Claude tokens, and no code leaves the machine.",
+      "prompt": "/opencode-implement --opencode-only .scratch/opencode-only-demo/ — same as escalate-demo: ticket 01 fails the verification gate three times on the main opencode path, exhausting MAX_TICKET_ATTEMPTS.",
+      "expected_output": "--no-fallback remains the primary flag name; --opencode-only is its current alias (the guarantee it names no longer has anything to do with 'local' now that the main path runs on a resolved hosted model). Under --opencode-only the orchestrator suppresses the subagent fallback the same way --no-fallback always did: ticket 01 becomes BLOCKED (TICKET_VERIFICATION_FAILED) directly off the main path's own exhausted budget, instead of escalating. The run spends zero Claude tokens and no code leaves the machine.",
       "expectations": [
-        "Recognizes --opencode-only as the alias for --no-fallback, suppressing the fallback tier identically",
-        "Produces BLOCKED (TICKET_TOO_LARGE_FOR_CONTEXT) instead of escalating, exactly as --no-fallback did",
+        "Recognizes --no-fallback as the primary suppression flag, with --opencode-only as its current alias and --strict-local as a deprecated alias",
+        "Suppresses the subagent fallback so the main path's own exhausted MAX_TICKET_ATTEMPTS budget yields BLOCKED (TICKET_VERIFICATION_FAILED) instead of escalating, exactly as --no-fallback did",
         "Spends no Claude tokens and sends no code off the machine"
       ],
       "files": []
@@ -468,12 +445,12 @@
     {
       "id": 39,
       "name": "--strict-local still works as a deprecated alias for --no-fallback",
-      "prompt": "/opencode-implement --strict-local .scratch/strict-local-demo/ — same as opencode-only-demo: ticket 02's single acceptance criterion is genuinely too large even for the resolved model's context window.",
-      "expected_output": "--strict-local is deprecated in favor of --opencode-only but still works for one release: the orchestrator treats it exactly as --no-fallback / --opencode-only, suppressing the fallback tier so ticket 02 becomes BLOCKED (TICKET_TOO_LARGE_FOR_CONTEXT) rather than escalating. Nothing about the outcome differs from using --opencode-only directly.",
+      "prompt": "/opencode-implement --strict-local .scratch/strict-local-demo/ — same as opencode-only-demo: ticket 01 fails the verification gate three times on the main opencode path, exhausting MAX_TICKET_ATTEMPTS.",
+      "expected_output": "--strict-local is a deprecated alias of --no-fallback (whose current alias is --opencode-only), kept working for one release rather than removed outright: the orchestrator treats it identically, suppressing the fallback tier so ticket 01 becomes BLOCKED (TICKET_VERIFICATION_FAILED) rather than escalating. Nothing about the outcome differs from using --no-fallback directly.",
       "expectations": [
-        "Accepts --strict-local as a working, deprecated alias rather than rejecting it",
+        "Accepts --strict-local as a working, deprecated alias of --no-fallback rather than rejecting it",
         "Suppresses the fallback tier identically to --no-fallback / --opencode-only",
-        "Produces BLOCKED (TICKET_TOO_LARGE_FOR_CONTEXT) instead of escalating"
+        "Produces BLOCKED (TICKET_VERIFICATION_FAILED) instead of escalating"
       ],
       "files": []
     },

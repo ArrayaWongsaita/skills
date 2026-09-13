@@ -115,3 +115,44 @@ background ที่พึ่ง `status.md` + `continue`
 - **Wire it into `engineering-workflow` as an `IMPLEMENTATION` delegate.** Rejected for
   the same reason ADRs 0004–0006 rejected it — it couples the skill to one the owner may
   remove.
+
+## Addendum (2026-09-13) — local-execution framing superseded
+
+This ADR's Context and Decision above describe `opencode-implement` as it shipped:
+built around a local, free, private Ollama model, with criterion-level
+decomposition and serial-only execution as direct consequences of that
+model's constraints. The user has since stopped using local models in
+`opencode` entirely and moved to a resolved, pinned **hosted** model. The
+`opencode-implement-hosted-model` feature reworks the skill accordingly:
+decomposition and serial-only dispatch are dropped in favor of wave
+computation and parallel dispatch (converging with `agy-implement`'s
+execution shape), and the "zero-cost, private, local" framing above no longer
+applies — every ticket on the main path now spends real, disclosed token
+usage (`tokens.main`) against the resolved model.
+
+This ADR's differentiation-by-local-execution framing is therefore
+**superseded**, not reversed: `opencode-implement` remains standalone (this
+ADR's Decision §1–4 still hold — its own copy of the planning/worktree/
+verification/state machinery, no dependency on the sibling skills, stopping
+before review), and it keeps its one differentiator the hosted-model
+siblings still lack — the automatic native-subagent fallback tier (feature
+ADR 0007, amended, not reversed, by
+[`adr/0003-fallback-tier-retained.md`](../../.scratch/opencode-implement-hosted-model/adr/0003-fallback-tier-retained.md)).
+What changes is only *why* the skill is standalone: no longer "runs on a
+local model," but "resolves and pins exactly one hosted model per run, with
+`opencode` (not `agy`) as its delegate CLI and a fallback tier `agy-implement`
+does not have."
+
+See
+[`.scratch/opencode-implement-hosted-model/adr/0001-hosted-only.md`](../../.scratch/opencode-implement-hosted-model/adr/0001-hosted-only.md)
+for the decision record and
+[`.scratch/opencode-implement-hosted-model/spec.md`](../../.scratch/opencode-implement-hosted-model/spec.md)
+for the full migration spec. The original text above is left as a historical
+record and is not rewritten.
+
+การตัดสินใจเดิมด้านบนอธิบาย `opencode-implement` แบบที่ปล่อยครั้งแรก — รันบน local
+model (Ollama) ฟรีและเป็นส่วนตัว ผู้ใช้เลิกใช้ local model ใน `opencode` แล้วย้ายไปใช้
+hosted model ที่ resolve แล้ว pin ไว้ตัวเดียวต่อ run กรอบ "local-execution" ด้านบนจึงถูก
+**แทนที่ (superseded)** ไม่ใช่ถูกล้ม — skill ยังคง standalone และยังมี fallback tier
+เป็นจุดต่างจาก `agy-implement` เหมือนเดิม รายละเอียดอยู่ที่
+`.scratch/opencode-implement-hosted-model/adr/0001-hosted-only.md`

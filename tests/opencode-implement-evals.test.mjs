@@ -64,11 +64,18 @@ describe("opencode-implement eval suite contract", () => {
       }
     });
 
-    it("has a negative case for a bare 'implement this', for a sibling skill, and for a bare opencode/Ollama mention", async () => {
+    it("has a negative case for a bare 'implement this', for a sibling skill, and for a bare mention of a hosted model — no Ollama-specific case remains", async () => {
       const negatives = (await triggerJson()).filter((t) => !t.should_trigger);
       assert.ok(negatives.some((t) => /implement this|implement the tickets/i.test(t.query)));
       assert.ok(negatives.some((t) => /agy-implement|subagent-implement|\/implement\b/i.test(t.query)));
-      assert.ok(negatives.some((t) => /opencode|ollama/i.test(t.query)));
+      assert.ok(
+        negatives.some((t) => /hosted model/i.test(t.query)),
+        "has a negative case mentioning a hosted model",
+      );
+      assert.ok(
+        !negatives.some((t) => /ollama/i.test(t.query)),
+        "no Ollama-specific non-trigger case remains — replaced with a generic hosted-model mention",
+      );
     });
   });
 
@@ -114,16 +121,15 @@ describe("opencode-implement eval suite contract", () => {
         "numbering inconsistent": /BLOCKED \(TICKET_SET_NUMBERING\)/,
         "wave assignment across independent branches": /Wave 0 = \{01, 02\}[\s\S]{0,400}Wave 1 = \{03, 04\}/,
         "same-wave overlapping touch-set flagged": /likely-overlapping — consider serializing[\s\S]{0,200}intersect/i,
+        "a flagged pair the user chose to serialize is actually serialized": /chose to serialize[\s\S]{0,300}(?:one worktree slot at a time|one at a time)|(?:one worktree slot at a time|one at a time)[\s\S]{0,300}chose to serialize/i,
         "no source mutation before approval": /no file outside[\s\S]{0,60}(created or modified|is created)/i,
         "no-arg -> most recent issues dir": /names it back to the user[\s\S]{0,40}waits for confirmation/i,
-        "opencode failure within budget retried locally": /opencode failure[\s\S]{0,120}(re-dispatches|retried)[\s\S]{0,120}does not escalate/i,
+        "opencode failure within budget retried, not escalated": /opencode failure[\s\S]{0,120}(re-dispatches|retried)[\s\S]{0,120}does not escalate/i,
         "no first event -> killed": /kills the worker PID, records it as an opencode failure/i,
         "fabricated / not-actually-red": /(passes without the implementation|not-actually-red)[\s\S]{0,120}verification failure/i,
         "vacuous test / missing coverage": /vacuous[\s\S]{0,160}(no covering test|left the second criterion with no test|uncovered)/i,
         "design-encoding merge conflict": /BLOCKED \(INTEGRATION_DESIGN_CONFLICT\)[\s\S]{0,120}(surfaces|does not pick)/i,
         "3 verify fails -> auto escalate no pause": /After the third failure[\s\S]{0,240}with no approval pause/i,
-        "TICKET_TOO_LARGE + fallback -> subagent directly": /does not BLOCK[\s\S]{0,120}(escalates|subagent)|TICKET_TOO_LARGE_FOR_CONTEXT[\s\S]{0,80}subagent (fallback )?directly/i,
-        "--opencode-only or --no-fallback -> BLOCK": /(?:--opencode-only|--no-fallback)[\s\S]{0,140}BLOCKED \(TICKET_TOO_LARGE_FOR_CONTEXT\)/,
         "--opencode-only suppresses fallback the same way --no-fallback did": /--opencode-only[\s\S]{0,300}(?:same way|as .*--no-fallback|--no-fallback did)/i,
         "--strict-local still works as a deprecated alias": /--strict-local[\s\S]{0,200}deprecated/i,
         "opencode failures past budget -> escalate": /MAX_OPENCODE_RETRIES = 3 is exhausted[\s\S]{0,80}(escalates|fallback)/i,
