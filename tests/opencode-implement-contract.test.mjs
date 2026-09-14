@@ -10,7 +10,6 @@ const SKILL_REFERENCES = [
   "planning.md",
   "worker-contract.md",
   "prompt-scaffold.md",
-  "decomposition.md",
   "fallback.md",
   "worktree-integration.md",
   "status-and-resume.md",
@@ -67,7 +66,7 @@ describe("opencode-implement skill contract", () => {
 
     it("names the full span in its description", async () => {
       const meta = parseFrontmatter(await readFile(skillFiles[0], "utf8"));
-      for (const beat of [/ticket/i, /local/i, /opencode/i, /sub-step|decompos/i, /verif/i, /fall ?back/i, /integrat/i, /review/i]) {
+      for (const beat of [/ticket/i, /opencode/i, /hosted/i, /wave|parallel/i, /verif/i, /fall ?back/i, /integrat/i, /review/i]) {
         assert.match(meta.description, beat);
       }
     });
@@ -89,18 +88,34 @@ describe("opencode-implement skill contract", () => {
         assert.match(content, /\blist\b/);
         assert.match(content, /explicit/i);
         assert.match(content, /--model/);
-        assert.match(content, /ollama\/qwen3\.8:27b-mlx-32k/);
+        assert.match(content.replace(/\s+/g, " "), /no skill-level default/i);
         assert.match(content, /--fallback-agent/);
+        assert.match(content, /--opencode-only/);
         assert.match(content, /--no-fallback/);
+        assert.match(content, /--strict-local/);
+        assert.match(content, /concurrency cap/i);
       }
     });
 
-    it("frames the skill as a slow serial local-first tool", async () => {
+    it("frames the skill as a hosted-model, wave/parallel skill, with no local/Ollama/zero-cost/private/slow-background language", async () => {
       for (const body of await bothSkillBodies()) {
-        assert.match(body, /local/i);
-        assert.match(body, /serial/i);
-        assert.match(body, /background|hours-long|slow/i);
-        assert.match(body, /parallelism is a non-goal|non-goal/i);
+        assert.match(body, /hosted/i);
+        assert.match(body, /wave/i);
+        assert.match(body, /parallel/i);
+        assert.match(body, /concurrency cap/i);
+        // Every ticket-06 purge target, scoped so the legitimate
+        // `to-tickets` local format ticket-naming phrase (unrelated to
+        // "local model" execution) is not a false positive, and neither is
+        // the --strict-local flag NAME (a literal deprecated-alias token,
+        // not prose describing the skill as local).
+        const withoutExemptions = body
+          .replace(/`?to-tickets`?\s*local format/gi, "")
+          .replace(/--strict-local/gi, "");
+        assert.doesNotMatch(withoutExemptions, /\blocal\b/i, "no 'local' language outside the to-tickets local format name and the --strict-local flag name");
+        assert.doesNotMatch(body, /ollama/i, "no Ollama language");
+        assert.doesNotMatch(body, /zero-cost/i, "no zero-cost framing");
+        assert.doesNotMatch(body, /\bprivate\b/i, "no privacy framing");
+        assert.doesNotMatch(body, /slow background/i, "no 'slow background tool' framing");
       }
     });
 
@@ -162,8 +177,8 @@ describe("opencode-implement skill contract", () => {
       assert.match(guide, /^## ภาษาไทย \/ Thai\s*$/m);
       assert.match(guide, /^## English \/ ภาษาอังกฤษ\s*$/m);
       assert.match(guide, /npx skills add ArrayaWongsaita\/skills --skill opencode-implement/);
-      assert.match(guide, /background|overnight/i);
-      assert.match(guide, /reliab|hang|slow/i);
+      assert.match(guide, /hosted/i);
+      assert.match(guide, /wave|parallel/i);
       for (const ref of SKILL_REFERENCES) {
         assert.match(guide, new RegExp(ref.replace(/\./g, "\\.")), `guide lists ${ref}`);
       }
@@ -210,7 +225,7 @@ describe("opencode-implement skill contract", () => {
       }
     });
 
-    it("planning.md specifies parsing, DAG validation, dependency order, and seam selection", async () => {
+    it("planning.md specifies parsing, DAG validation, wave computation, and seam selection", async () => {
       for (const dir of skillDirs) {
         const planning = await readFile(path.resolve(dir, "references/planning.md"), "utf8");
         assert.match(planning, /Blocked by/i);
@@ -219,47 +234,46 @@ describe("opencode-implement skill contract", () => {
         assert.match(planning, /TICKET_SET_MISSING_BLOCKER/);
         assert.match(planning, /TICKET_SET_NUMBERING/);
         assert.match(planning, /topological|numbering/i);
-        assert.match(planning, /dependency order/i);
+        assert.match(planning, /execution waves/i);
         assert.match(planning, /test seam/i);
         assert.match(planning, /Testing Decisions/);
         assert.match(planning, /halt/i);
       }
     });
 
-    it("planning.md drops waves, touch-sets, and the model column", async () => {
+    it("planning.md computes execution waves, estimates touch-sets, and still drops the model column", async () => {
       for (const dir of skillDirs) {
         const planning = await readFile(path.resolve(dir, "references/planning.md"), "utf8");
-        assert.match(planning, /no wave|without a wave|no wave computation/i);
+        assert.match(planning, /Wave 0/i);
+        assert.match(planning, /Wave K/i);
         assert.match(planning, /touch-set/i);
+        assert.match(planning, /likely-overlapping/i);
         assert.match(planning, /no model column/i);
-        assert.match(planning, /non-goal/i);
       }
     });
 
-    it("planning.md builds a criterion-level step plan per ticket with a budget and a split rule", async () => {
+    it("planning.md estimates touch-sets as an advisory hint and flags cross-cutting overlap, with no step-plan/context-budget language", async () => {
       for (const dir of skillDirs) {
         const planning = await readFile(path.resolve(dir, "references/planning.md"), "utf8");
-        assert.match(planning, /step plan/i);
-        assert.match(planning, /one acceptance criterion per sub-step|one criterion per sub-step/i);
-        assert.match(planning, /one-sub-step chain|single criterion is a one-sub-step/i);
-        assert.match(planning, /context budget/i);
-        assert.match(planning, /~?13k/);
-        assert.match(planning, /32k/);
-        assert.match(planning, /split(s|ting)? (it )?finer|split finer/i);
-        assert.match(planning, /over-split|bias/i);
-        assert.match(planning, /file scope/i);
-        assert.match(planning, /probe C/);
+        assert.match(planning, /advisory/i);
+        assert.match(planning, /likely-overlapping — consider serializing/);
+        assert.match(planning, /router/i);
+        assert.match(planning, /DI container/i);
+        assert.match(planning, /migrations/i);
+        assert.match(planning, /package\.json/);
+        assert.match(planning, /CI config/i);
+        assert.doesNotMatch(planning, /step plan/i);
+        assert.doesNotMatch(planning, /sub-step/i);
+        assert.doesNotMatch(planning, /context budget/i);
       }
     });
 
-    it("planning.md predicts each ticket's path and handles --no-fallback", async () => {
+    it("planning.md no longer predicts each ticket's path", async () => {
       for (const dir of skillDirs) {
         const planning = await readFile(path.resolve(dir, "references/planning.md"), "utf8");
-        assert.match(planning, /predict.*path|path.*predict/i);
-        assert.match(planning, /`?local`?/);
-        assert.match(planning, /subagent-fallback/);
-        assert.match(planning, /TICKET_TOO_LARGE_FOR_CONTEXT/);
-        assert.match(planning, /--no-fallback/);
+        assert.doesNotMatch(planning, /predict(s|ing)?\s+each ticket/i);
+        assert.doesNotMatch(planning, /subagent-fallback/i);
+        assert.doesNotMatch(planning, /TICKET_TOO_LARGE_FOR_CONTEXT/);
       }
     });
 
@@ -269,10 +283,25 @@ describe("opencode-implement skill contract", () => {
         assert.match(body, /nam(e|ed) (it )?back|confirm/i);
       }
     });
+
+    it("SKILL.md's Stage 0 section summarizes the wave table, touch-set estimate, overlap flags, and concurrency cap", async () => {
+      for (const body of await bothSkillBodies()) {
+        const stage0 = body.match(/##\s*Stage 0[\s\S]*?(?=\n## )/i)[0];
+        assert.match(stage0, /wave/i);
+        assert.match(stage0, /touch-set/i);
+        assert.match(stage0, /overlap/i);
+        assert.match(stage0, /concurrency cap/i);
+        assert.match(stage0, /MAX_TICKET_ATTEMPTS/);
+        assert.match(stage0, /MAX_OPENCODE_RETRIES/);
+        assert.doesNotMatch(stage0, /step plan/i);
+        assert.doesNotMatch(stage0, /sub-step/i);
+        assert.doesNotMatch(stage0, /predicted path/i);
+      }
+    });
   });
 
   describe("Stage 1 — the opencode worker contract", () => {
-    it("SKILL.md has a Stage 1 section with a preflight and a smoke test", async () => {
+    it("SKILL.md has a Stage 1 section with a preflight and no smoke test or Ollama check", async () => {
       for (const body of await bothSkillBodies()) {
         const stage1 = body.match(/##\s*Stage 1[\s\S]*?(?=\n## )/i);
         assert.ok(stage1, "Stage 1 section present");
@@ -282,10 +311,12 @@ describe("opencode-implement skill contract", () => {
         assert.match(s, /stash/i);
         assert.match(s, /opencode-implement\/<feature-slug>/);
         assert.match(s, /\.gitignore/);
-        assert.match(s, /smoke test/i);
         assert.match(s, /serial/i);
+        assert.match(s, /concurrency cap/i);
         assert.match(s, /references\/worker-contract\.md/);
         assert.match(s, /references\/prompt-scaffold\.md/);
+        assert.doesNotMatch(s, /smoke test/i, "no smoke test — dropped along with the retired local-model path");
+        assert.doesNotMatch(s, /ollama/i, "no Ollama-reachability check");
       }
     });
 
@@ -303,7 +334,71 @@ describe("opencode-implement skill contract", () => {
       }
     });
 
-    it("worker-contract.md defines the three timeouts and the macOS timeout workaround", async () => {
+    it("worker-contract.md specifies the whole-ticket invocation with a pinned model flag", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/worker-contract.md"), "utf8");
+        // Canonical flag order from acceptance criteria
+        assert.match(
+          c,
+          /opencode run --format json --model <[^>]+> --dir <[^>]+> --dangerously-skip-permissions/,
+          "invocation must include --model <pinned-model> --dir <worktree> in the canonical flag order",
+        );
+        // Must NOT reference sub-step paths like prompts/NN/K.md
+        assert.doesNotMatch(c, /prompts\/\d+\/\d+/, "must not reference sub-step prompt paths");
+        // Must reference the whole-ticket prompt path
+        assert.match(c, /prompts\/\d+\.md|prompts\/<NN>\.md/, "must reference whole-ticket prompt path");
+      }
+    });
+
+    it("worker-contract.md specifies model-resolution-and-pin: resolve once before wave 0, capture and pin to every worker", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/worker-contract.md"), "utf8");
+        // Resolution once, before wave 0
+        assert.match(c, /resolv\w+\s+\w+\s+(?:once|model)\b|once[\s\S]{0,30}resolv/i, "must state model is resolved once");
+        assert.match(c, /before\s+wave\s+0|before\s+any\s+worker/i, "must state resolution happens before wave 0");
+        // Read back via opencode models or first event stream
+        assert.match(
+          c,
+          /opencode models|step_start[\s\S]{0,60}resolved|first[\s\S]{0,30}event[\s\S]{0,30}resolv/i,
+          "must name the mechanism to read back the resolved model",
+        );
+        // Pinned
+        assert.match(c, /pinned|pin/i, "must state the model is pinned");
+        // Every worker receives it
+        assert.match(
+          c,
+          /every\s+(?:subsequent\s+)?worker|every\s+(?:parallel\s+)?worker|every\s+worker/i,
+          "must state every worker receives the pinned model",
+        );
+        // As explicit --model flag
+        assert.match(
+          c,
+          /explicit\s+--model|--model.*explicit|captured\s+value.*--model|--model.*captured/i,
+          "must state the captured value is passed as an explicit --model flag",
+        );
+        // Recorded in status.md and Plan
+        assert.match(c, /status\.md/i, "must state the resolved model is recorded in status.md");
+        assert.match(c, /Plan/i, "must state the resolved model is recorded in the Plan");
+      }
+    });
+
+    it("worker-contract.md states the two model-resolution paths: user-passed --model or opencode resolves its own", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/worker-contract.md"), "utf8");
+        assert.match(
+          c,
+          /user\s+passed\s+--model|--model\s+at\s+invocation|invocation.*--model/i,
+          "must describe the user-passed --model path",
+        );
+        assert.match(
+          c,
+          /no\s+--model\s+flag|without\s+--model|omit\s+--model|no\s+`--model`/i,
+          "must describe the no-flag path where opencode resolves its own model",
+        );
+      }
+    });
+
+    it("worker-contract.md defines the three timeouts as provisional with no old numeric defaults or probe C reference", async () => {
       for (const dir of skillDirs) {
         const c = await readFile(path.resolve(dir, "references/worker-contract.md"), "utf8");
         assert.match(c, /FIRST_EVENT_TIMEOUT/);
@@ -312,7 +407,20 @@ describe("opencode-implement skill contract", () => {
         assert.match(c, /timeout` is not on macOS|no `timeout`|background/i);
         assert.match(c, /kill/i);
         assert.match(c, /provisional/i);
-        assert.match(c, /probe C/);
+        // Must NOT reference "probe C" (old local-model calibration label)
+        assert.doesNotMatch(c, /probe C\b/, "must not reference probe C (old local-model calibration)");
+        // Must reference a fresh calibration probe against the hosted model
+        assert.match(
+          c,
+          /calibrat\w+\s+probe|fresh\s+calibrat|calibrat\w+.*hosted|hosted.*calibrat/i,
+          "must state timeouts need fresh calibration against the resolved hosted model",
+        );
+        // Must NOT carry old local-model numeric defaults written as provisional (6m, 8m, 45m)
+        assert.doesNotMatch(
+          c,
+          /provisional\s+6m|provisional\s+8m|provisional\s+45m|\(provisional\s+\d/,
+          "must not carry old numeric timeout defaults from the local-model probe",
+        );
       }
     });
 
@@ -325,45 +433,95 @@ describe("opencode-implement skill contract", () => {
         assert.match(c, /step_finish/);
         assert.match(c, /part\.reason:\s*"stop"|reason.*stop/i);
         assert.match(c, /error/);
-        assert.match(c, /tokens\.total/);
-        assert.match(c, /cost.*0|`0` local/i);
         assert.match(c, /opencode`?\s+failure/i);
         assert.match(c, /verification failure/i);
         assert.match(c, /distinct/i);
       }
     });
 
-    it("worker-contract.md carries state by a fresh session + progress note, never -s resume", async () => {
+    it("worker-contract.md specifies two distinct retry rules: verification failure resumes session; opencode-process failure redispatches fresh", async () => {
       for (const dir of skillDirs) {
         const c = await readFile(path.resolve(dir, "references/worker-contract.md"), "utf8");
-        assert.match(c, /fresh\s+`?opencode run`?/i);
-        assert.match(c, /-s\s+`?<session>`?|session\s+resume/i);
-        assert.match(c, /replays[\s\S]{0,30}transcript/i);
-        assert.match(c, /progress note/i);
-        assert.match(c, /MAX_OPENCODE_RETRIES\s*=\s*3/);
+        // Must describe two rules
+        assert.match(c, /two\s+(?:distinct\s+)?rules?|two\s+retry|distinct\s+rules?/i, "must describe two distinct retry rules");
+
+        // Rule 1: verification failure → resume same session via opencode run -s <session>
+        assert.match(
+          c,
+          /verification\s+failure[\s\S]{0,400}opencode run -s|opencode run -s[\s\S]{0,400}verification\s+failure/i,
+          "must specify that verification failure uses opencode run -s <session>",
+        );
+        assert.match(c, /MAX_TICKET_ATTEMPTS\s*=\s*3/, "must bound verification-failure retries");
+        assert.match(
+          c,
+          /specific\s+failure|failure\s+as\s+the\s+next\s+turn|next\s+turn/i,
+          "must state the specific failure is carried as the next turn",
+        );
+
+        // Rule 2: opencode-process failure → fresh dispatch, never a session resume
+        assert.match(
+          c,
+          /opencode.{0,30}(?:process\s+)?failure[\s\S]{0,300}fresh\s+dispatch|fresh\s+dispatch[\s\S]{0,300}opencode.{0,30}(?:process\s+)?failure/i,
+          "must specify that opencode-process failure uses fresh dispatch",
+        );
+        assert.match(c, /MAX_OPENCODE_RETRIES\s*=\s*3/, "must bound opencode-process retries");
+        assert.match(
+          c,
+          /never\s+(?:a\s+)?(?:session\s+)?resume|crash[\s\S]{0,200}no\s+(?:session|sessionID)|no\s+sessionID|killed before[\s\S]{0,60}sessionID/i,
+          "must state that an opencode-process failure never resumes a session",
+        );
+
+        // The old single-rule patterns must be gone
+        assert.doesNotMatch(c, /progress note/i, "must not carry the old progress-note retry pattern");
+        assert.doesNotMatch(
+          c,
+          /replays[\s\S]{0,30}transcript/i,
+          "must not carry the old 32k-window replay rationale",
+        );
       }
     });
 
-    it("worker-contract.md specifies the preflight smoke test with exclusive model access", async () => {
+    it("worker-contract.md specifies that multiple opencode run processes may be in flight concurrently, one per parallel worker", async () => {
       for (const dir of skillDirs) {
         const c = await readFile(path.resolve(dir, "references/worker-contract.md"), "utf8");
-        assert.match(c, /smoke test/i);
-        assert.match(c, /nothing else using the local model/i);
-        assert.match(c, /bash/i);
-        assert.match(c, /edit/i);
-        assert.match(c, /restart Ollama|free up/i);
+        assert.match(
+          c,
+          /multiple\s+`?opencode run`?\s+processes?|concurrent[\s\S]{0,100}opencode run|opencode run[\s\S]{0,100}concurrent/i,
+          "must state that multiple opencode run processes may be in flight at once",
+        );
+        assert.match(
+          c,
+          /one\s+per\s+(?:parallel\s+)?worker|each\s+(?:parallel\s+)?worker[\s\S]{0,100}--dir/i,
+          "must state each parallel worker has its own --dir <worktree>",
+        );
+        assert.match(
+          c,
+          /(?:background-PID|background\s+PID)[\s\S]{0,300}per\s+worker|per\s+worker[\s\S]{0,300}(?:background-PID|background\s+PID)/i,
+          "must state the background-PID timeout watcher is applied per worker, not per run",
+        );
       }
     });
 
-    it("prompt-scaffold.md is per-sub-step, self-contained, and test-first", async () => {
+    it("worker-contract.md drops the Ollama-specific smoke-test caveat and the 'nothing else using the local model' requirement", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/worker-contract.md"), "utf8");
+        assert.doesNotMatch(c, /nothing else using the local model/i, "must drop the local-model exclusivity caveat");
+        assert.doesNotMatch(c, /restart Ollama/i, "must drop the Ollama restart message");
+      }
+    });
+
+    it("prompt-scaffold.md is a whole-ticket scaffold, self-contained, and test-first", async () => {
       for (const dir of skillDirs) {
         const c = await readFile(path.resolve(dir, "references/prompt-scaffold.md"), "utf8");
-        assert.match(c, /sub-step/i);
         assert.match(c, /Working directory/i);
-        assert.match(c, /acceptance criterion/i);
-        assert.match(c, /Progress note/i);
+        assert.match(c, /What to build/i);
+        assert.match(c, /Acceptance criteria/i);
+        assert.match(c, /every one/i);
+        assert.match(c, /Context you need/i);
+        assert.match(c, /Parent spec/i);
+        assert.match(c, /ADRs?/i);
+        assert.match(c, /Domain glossary/i);
         assert.match(c, /Test seam/i);
-        assert.match(c, /Files in scope/i);
         assert.match(c, /red.*green.*refactor|failing test/is);
         assert.match(c, /package install/i);
         assert.match(c, /push[\s\S]{0,40}pull\s+request/i);
@@ -371,42 +529,35 @@ describe("opencode-implement skill contract", () => {
         assert.match(c, /literal text|reach for no slash/i);
         assert.match(c, /Red output/);
         assert.match(c, /Green output/);
+        assert.match(c, /Files changed/i);
         assert.match(c, /Test .*criterion/i);
+        // Whole-ticket, not per-sub-step
+        assert.match(c, /prompts\/<?NN>?\.md|prompts\/\d+\.md/, "one prompt file per ticket");
+        assert.doesNotMatch(c, /Progress note/i, "the progress-note section is removed");
+        assert.doesNotMatch(c, /sub-step/i, "no sub-step framing remains");
+        assert.doesNotMatch(c, /Files in scope/i, "no per-sub-step file-scope section remains");
+        assert.doesNotMatch(c, /prompts\/\d+\/\d+/, "must not reference sub-step nested prompt paths");
       }
     });
   });
 
   describe("Stage 1 — chain, verification, integration", () => {
-    it("SKILL.md Stage 1 drives decomposition.md and worktree-integration.md", async () => {
+    it("SKILL.md Stage 1 dispatches the whole ticket and drives worktree-integration.md", async () => {
       for (const body of await bothSkillBodies()) {
         const s = body.match(/##\s*Stage 1[\s\S]*?(?=\n## )/i)[0];
-        assert.match(s, /references\/decomposition\.md/);
+        assert.match(s, /whole[\s\S]{0,20}in one worker call/i);
+        assert.doesNotMatch(s, /decomposition\.md/);
+        assert.match(s, /references\/worker-contract\.md/);
         assert.match(s, /references\/worktree-integration\.md/);
-        assert.match(s, /checkpoint check/i);
-        assert.match(s, /re-split/i);
+        assert.match(s, /resolve[\s\S]{0,20}pin/i);
         assert.match(s, /verification gate/i);
         assert.match(s, /reproduce[\s\S]{0,30}red/i);
         assert.match(s, /MAX_TICKET_ATTEMPTS\s*=\s*3/);
         assert.match(s, /squash-merge/i);
         assert.match(s, /one commit/i);
         assert.match(s, /INTEGRATION_DESIGN_CONFLICT/);
-      }
-    });
-
-    it("decomposition.md runs the sub-step loop with progress notes and a checkpoint check", async () => {
-      for (const dir of skillDirs) {
-        const c = await readFile(path.resolve(dir, "references/decomposition.md"), "utf8");
-        assert.match(c, /progress note/i);
-        assert.match(c, /commits? on the worker branch/i);
-        assert.match(c, /checkpoint check/i);
-        assert.match(c, /typechecks?|compiles?/i);
-        assert.match(c, /red\/green|red.*green/i);
-        assert.match(c, /re-split/i);
-        assert.match(c, /overflow/i);
-        assert.match(c, /truncated edit/i);
-        assert.match(c, /status\.md/);
-        assert.match(c, /not counted against `?MAX_TICKET_ATTEMPTS`?|not[\s\S]{0,20}MAX_TICKET_ATTEMPTS/i);
-        assert.match(c, /TICKET_TOO_LARGE_FOR_CONTEXT/);
+        assert.doesNotMatch(s, /checkpoint check/i, "no per-sub-step checkpoint check — decomposition is gone");
+        assert.doesNotMatch(s, /re-split/i, "no runtime re-split — decomposition is gone");
       }
     });
 
@@ -430,8 +581,94 @@ describe("opencode-implement skill contract", () => {
         assert.match(c, /checkbox/i);
         assert.match(c, /mechanical conflict/i);
         assert.match(c, /INTEGRATION_DESIGN_CONFLICT/);
-        assert.match(c, /no\s+separate\s+integration\s+gate/i);
+        assert.match(c, /full suite/i);
         assert.match(c, /worktree remove/i);
+      }
+    });
+
+    it("worktree-integration.md's preflight drops the Ollama check and the smoke test", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/worktree-integration.md"), "utf8");
+        const preflight = c.match(/##\s*Preflight[\s\S]*?(?=\n## )/i);
+        assert.ok(preflight, "Preflight section present");
+        assert.match(preflight[0], /opencode`?\s+on\s+`?PATH/i);
+        assert.match(preflight[0], /opencode models/);
+        assert.match(preflight[0], /pinned model|resolved model/i);
+        assert.doesNotMatch(preflight[0], /ollama/i, "no Ollama-reachability check");
+        assert.doesNotMatch(preflight[0], /smoke test/i, "no local-specific smoke test");
+      }
+    });
+
+    it("worktree-integration.md specifies serial-vs-parallel dispatch within a wave, the concurrency cap, the queue, and the possibly-stalled flag", async () => {
+      for (const dir of skillDirs) {
+        const raw = await readFile(path.resolve(dir, "references/worktree-integration.md"), "utf8");
+        const c = raw.replace(/\s+/g, " "); // tolerate markdown line-wrap between words
+        assert.match(c, /[Ss]erial tickets?/);
+        assert.match(c, /dependency edge/i);
+        assert.match(c, /flagged pair|likely-overlapping/i);
+        assert.match(c, /one worktree slot at a time/i);
+        assert.match(c, /background/i);
+        assert.match(c, /one background worker per (?:independent )?ticket/i);
+        assert.match(c, /concurrency cap/i);
+        assert.match(c, /default\s*4/);
+        assert.match(c, /queue/i);
+        assert.match(c, /start(s)? as slots free/i);
+        assert.match(c, /possibly stalled/i);
+        assert.match(c, /10 minutes|configurable interval/i);
+        assert.match(c, /without blocking (its |the )?wave-mates/i);
+        assert.match(c, /own log file|its own log/i);
+      }
+    });
+
+    it("worktree-integration.md specifies per-ticket integration, not gated on the whole wave", async () => {
+      for (const dir of skillDirs) {
+        const raw = await readFile(path.resolve(dir, "references/worktree-integration.md"), "utf8");
+        const c = raw.replace(/\s+/g, " "); // tolerate markdown line-wrap between words
+        assert.match(c, /per-ticket integration|per ticket, not gated on the whole wave/i);
+        assert.match(
+          c,
+          /as soon as it (?:passes|clears|is ready).{0,200}verification/i,
+          "a ticket integrates as soon as it passes verification",
+        );
+        assert.match(
+          c,
+          /independent of (?:whether )?its wave-mates|whether or not its wave-mates|does not (?:hold up|block) its wave-mates/i,
+          "integration for one ticket does not wait on its wave-mates",
+        );
+        assert.match(
+          c,
+          /escalat\w+ to (?:the )?fallback.{0,300}integrates? the same way|fallback tier.{0,300}integrates? the same way/i,
+          "an escalated ticket still integrates the same way once fallback-verified",
+        );
+        assert.match(
+          c,
+          /cut from whatever (?:integration )?`?HEAD`? exists/i,
+          "the fallback-verified ticket's integration is cut from whatever HEAD exists by then",
+        );
+      }
+    });
+
+    it("worktree-integration.md specifies the wave boundary gates only the start of the next wave", async () => {
+      for (const dir of skillDirs) {
+        const raw = await readFile(path.resolve(dir, "references/worktree-integration.md"), "utf8");
+        const c = raw.replace(/\s+/g, " "); // tolerate markdown line-wrap between words
+        assert.match(c, /wave boundary/i);
+        assert.match(
+          c,
+          /next wave.{0,120}(?:does not start|waits?|start(s)? only)|(?:does not start|waits?).{0,120}next wave/i,
+          "the next wave does not start until the current wave is fully resolved",
+        );
+        assert.match(
+          c,
+          /every ticket in (?:the current|that) wave[\s\S]{0,80}terminal state/i,
+          "every ticket in the current wave must reach a terminal state first",
+        );
+        assert.match(c, /integrated,? or `?BLOCKED`?/i, "terminal state means integrated or BLOCKED");
+        assert.match(
+          c,
+          /never gates? (?:any )?individual ticket'?s? own integration|does not gate (?:any )?individual ticket'?s? own integration/i,
+          "the wave boundary never gates an individual ticket's own integration",
+        );
       }
     });
 
@@ -499,10 +736,95 @@ describe("opencode-implement skill contract", () => {
         assert.match(c, /tokens\.fallback/);
       }
     });
+
+    it("fallback.md's opening rationale is reframed around a capability ceiling, dropping the local-model-is-weak framing", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/fallback.md"), "utf8");
+        assert.doesNotMatch(c, /27B/i, "must drop the '27B local model' framing");
+        assert.doesNotMatch(c, /weak and slow/i, "must drop the 'weak and slow' framing");
+        assert.doesNotMatch(c, /\blocal model\b/i, "must drop 'local model' framing entirely");
+        assert.doesNotMatch(c, /decomposition\.md/, "must not link to the removed decomposition.md");
+        assert.match(c, /capability ceiling/i, "must state the capability-ceiling rationale");
+        assert.match(
+          c,
+          /structurally different executor/i,
+          "must name a structurally different executor as the reason to escalate",
+        );
+        assert.match(
+          c,
+          /third failed attempt|three failed attempts/i,
+          "must state a third failed attempt is the signal to escalate, not a fourth attempt on the same model",
+        );
+        assert.match(c, /fourth attempt/i, "must contrast with a fourth attempt on the same model");
+      }
+    });
+
+    it("fallback.md keeps TICKET_TOO_LARGE_FOR_CONTEXT as a rare runtime edge case with no context-budget/decomposition language", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/fallback.md"), "utf8");
+        assert.match(c, /TICKET_TOO_LARGE_FOR_CONTEXT/);
+        assert.match(c, /rare/i, "must frame the trigger as rare");
+        assert.match(c, /runtime/i, "must frame the trigger as a runtime edge case, not a planning-time prediction");
+        assert.doesNotMatch(c, /context budget/i, "must not carry the retired context-budget language");
+        assert.doesNotMatch(c, /split fine enough/i, "must not carry the retired decomposition language");
+      }
+    });
+
+    it("fallback.md renames the suppression alias to --opencode-only, keeps --no-fallback primary, and documents --strict-local as a deprecated alias", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/fallback.md"), "utf8");
+        assert.match(c, /--no-fallback/);
+        assert.match(c, /--opencode-only/);
+        assert.match(c, /--strict-local/);
+        assert.match(
+          c,
+          /--strict-local[^\n]{0,100}deprecated|deprecated[^\n]{0,100}--strict-local/i,
+          "must document --strict-local as a deprecated alias",
+        );
+      }
+    });
+
+    it("fallback.md's cost-and-privacy section discloses tokens.main for the main path alongside tokens.fallback", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/fallback.md"), "utf8");
+        assert.match(c, /tokens\.main/, "must name tokens.main for the main path's real spend");
+        assert.match(c, /tokens\.fallback/);
+        assert.match(
+          c,
+          /only path[^\n]{0,80}(?:leaves|left) the machine|only[^\n]{0,80}spend[^\n]{0,80}leaves the machine/i,
+          "must still note the fallback path is the only one whose spend leaves the machine",
+        );
+      }
+    });
+
+    it("SKILL.md documents --no-fallback as the primary suppression flag, with --opencode-only as its current alias and --strict-local as a deprecated alias", async () => {
+      for (const file of skillFiles) {
+        const raw = await readFile(file, "utf8");
+        const content = raw.replace(/\s+/g, " "); // tolerate markdown line-wrap between words
+        assert.match(content, /--no-fallback/);
+        assert.match(content, /--opencode-only/);
+        assert.match(content, /--strict-local/);
+        assert.match(
+          content,
+          /--no-fallback[\s\S]{0,80}primary|primary[\s\S]{0,80}--no-fallback/i,
+          "SKILL.md must present --no-fallback as the primary suppression flag",
+        );
+        assert.match(
+          content,
+          /--opencode-only[\s\S]{0,120}(?:current alias|is its alias)|(?:current alias|is its alias)[\s\S]{0,120}--opencode-only/i,
+          "SKILL.md must document --opencode-only as the current alias of --no-fallback",
+        );
+        assert.match(
+          content,
+          /--strict-local[\s\S]{0,120}deprecated|deprecated[\s\S]{0,120}--strict-local/i,
+          "SKILL.md must document --strict-local as a deprecated alias",
+        );
+      }
+    });
   });
 
   describe("state, resume, and handoff", () => {
-    it("a BLOCKED ticket halts only its dependency branch and the report names the fallout", async () => {
+    it("a BLOCKED ticket halts only its dependency branch, and the report names the blocked ticket, the fallout, and the available partial path", async () => {
       for (const dir of skillDirs) {
         const d = await readFile(path.resolve(dir, "references/status-and-resume.md"), "utf8");
         assert.match(d, /halts? only (its|the) (own )?dependency branch/i);
@@ -510,58 +832,135 @@ describe("opencode-implement skill contract", () => {
         assert.match(d, /downstream tickets?[\s\S]{0,20}not started|not started/i);
         assert.match(d, /partial path/i);
         assert.match(d, /`?\/opencode-implement continue`?/);
+        // BLOCKED conditions unchanged in kind
         assert.match(d, /TICKET_VERIFICATION_FAILED/);
+        assert.match(d, /TICKET_TOO_LARGE_FOR_CONTEXT/);
         assert.match(d, /INTEGRATION_DESIGN_CONFLICT/);
+        // Per-ticket integration precedent: a BLOCKED ticket does not hold up
+        // its wave-mates or the whole wave — everything that already passed
+        // integrates regardless of the block.
+        assert.match(
+          d,
+          /everything that passed[\s\S]{0,80}integrated|already integrated stays integrated/i,
+          "must state everything that already passed is integrated, per-ticket, not held for the whole wave",
+        );
+        // Independent later waves are named as an available path, not auto-started
+        assert.match(
+          d,
+          /independent (?:later )?(?:tickets?|waves?)[\s\S]{0,120}(?:not started automatically|available partial path)/i,
+          "must state independent later waves are reported as an available partial path, not auto-started",
+        );
+        // Halt report contents, itemized
+        const haltReport = d.match(/###\s*Halt report[\s\S]*?(?=\n##)/i);
+        assert.ok(haltReport, "Halt report subsection present");
+        assert.match(haltReport[0], /each `?BLOCKED`? ticket/i);
+        assert.match(haltReport[0], /reason/i);
+        assert.match(haltReport[0], /downstream tickets?/i);
+        assert.match(haltReport[0], /independent tickets?\/?waves?|independent tickets? and waves?/i);
+        assert.match(haltReport[0], /\/opencode-implement continue/);
       }
     });
 
-    it("status.md persists the per-ticket fields, the integration ref, and per-path totals", async () => {
+    it("status.md holds the wave table, the pinned resolved model, the new per-ticket fields, and cumulative usage split by path", async () => {
       for (const dir of skillDirs) {
         const d = await readFile(path.resolve(dir, "references/status-and-resume.md"), "utf8");
         assert.match(d, /status\.md/);
-        for (const field of ["status", "path", "sub_step", "session_ids", "subagent_id", "attempts", "opencode_retries", "worker_branch", "commit"]) {
+        // Wave table: wave, tickets, serial/parallel disposition
+        assert.match(d, /wave table/i);
+        assert.match(d, /serial/i);
+        assert.match(d, /parallel/i);
+        assert.match(d, /disposition/i);
+        // Pinned resolved model
+        assert.match(d, /pinned resolved model|resolved.{0,10}pinned model|pinned model/i);
+        // New per-ticket fields
+        for (const field of ["status", "session_id", "attempts", "opencode_retries", "worker_branch", "commit", "usage"]) {
           assert.match(d, new RegExp(field.replace(/_/g, "[_ ]")), `status.md records ${field}`);
         }
+        // Old per-sub-step shape must be gone from the LIVE per-ticket field
+        // list (a one-time contrast naming the retired fields, the same way
+        // the acceptance criteria themselves do, is fine — it must not be
+        // part of what status.md actually records going forward).
+        const perTicketBullet = d.match(/- per ticket:[\s\S]*?(?=\n- the \*\*integration branch ref)/i);
+        assert.ok(perTicketBullet, "a 'per ticket:' bullet describing the live fields is present");
+        assert.doesNotMatch(perTicketBullet[0], /\bsub_step\b/i, "must drop the old sub_step field from the live shape");
+        assert.doesNotMatch(perTicketBullet[0], /\bsession_ids\b/i, "must drop the old plural session_ids[] field from the live shape");
+        assert.doesNotMatch(perTicketBullet[0], /\bsubagent_id\b/i, "must drop the old subagent_id field from the live shape");
+        assert.doesNotMatch(perTicketBullet[0], /tokens:\s*\{\s*local/i, "must drop the old tokens:{local, fallback} shape from the live per-ticket field");
+        // Integration branch ref
         assert.match(d, /integration branch ref/i);
-        assert.match(d, /per-path token totals|cumulative per-path/i);
+        // Cumulative usage split by path
+        assert.match(d, /tokens\.main/);
+        assert.match(d, /tokens\.fallback/);
+        assert.match(d, /cumulative usage|cumulative[\s\S]{0,20}per path/i);
         assert.match(d, /no per-turn state-header/i);
       }
     });
 
-    it("continue reconciles reality, discards half-built tickets, and rewinds on drift", async () => {
+    it("continue confirms git refs and worker branch/worktree existence, discards and re-dispatches mid-run tickets from clean HEAD, re-verifies integrated tickets, and rewinds on drift", async () => {
       for (const dir of skillDirs) {
         const d = await readFile(path.resolve(dir, "references/status-and-resume.md"), "utf8");
-        assert.match(d, /Reality reconciliation/i);
+        assert.match(d, /reconcile[\s\S]{0,20}(?:it )?against reality|reality reconciliation/i);
         assert.match(d, /Git refs?/i);
+        assert.match(
+          d,
+          /worker branch[\s\S]{0,60}worktree[\s\S]{0,30}(?:still )?exists?/i,
+          "must confirm each recorded worker branch and worktree still exists",
+        );
         assert.match(d, /half-built|mid-run/i);
         assert.match(d, /discard[\s\S]{0,30}worktree/i);
         assert.match(d, /re-dispatch[\s\S]{0,40}clean/i);
+        assert.match(d, /re-run its verification|re-verif/i, "must re-verify tickets recorded as integrated");
         assert.match(d, /last still-verifying commit/i);
         assert.match(d, /reset the integration branch/i);
         assert.match(d, /discarded commits/i);
+        assert.match(
+          d,
+          /discarded commits[\s\S]{0,120}top of the report|top of the report[\s\S]{0,120}discarded commits/i,
+          "must list the discarded commits at the top of the report",
+        );
+        assert.match(d, /re-present the Plan/i);
+        assert.match(d, /resume[\s\S]{0,30}(?:from )?the frontier|frontier/i);
       }
     });
 
-    it("status and list are read-only", async () => {
+    it("status and list are read-only; status reports the wave table, blockers, per-path usage, pinned model, and stalled workers; list is unchanged", async () => {
       for (const dir of skillDirs) {
         const d = await readFile(path.resolve(dir, "references/status-and-resume.md"), "utf8");
         assert.match(d, /read-only/i);
         assert.match(d, /`?\/opencode-implement status`?/);
         assert.match(d, /`?\/opencode-implement list`?/);
+        const statusSection = d.match(/##\s*`?\/opencode-implement status[\s\S]*?(?=\n## )/i);
+        assert.ok(statusSection, "status/list section present");
+        const s = statusSection[0];
+        const sFlat = s.replace(/\s+/g, " "); // tolerate markdown line-wrap between words
+        assert.match(s, /wave table/i);
+        assert.match(s, /status[\s\S]{0,20}blockers|blockers/i);
+        assert.match(s, /cumulative usage per path|tokens\.main[\s\S]{0,40}tokens\.fallback/i);
+        assert.match(s, /pinned[\s\S]{0,10}model|resolved model/i);
+        assert.match(s, /possibly stalled/i);
+        assert.match(
+          sFlat,
+          /slug, integration branch, tickets done\s*\/\s*total|slug.{0,20}integration branch.{0,20}tickets/i,
+          "list must report one line per run: slug, integration branch, tickets done/total",
+        );
+        assert.match(s, /running,?\s*blocked,?\s*(?:or\s*)?complete/i);
       }
     });
 
-    it("the completion handoff names the branch and the review commands and never pushes", async () => {
+    it("the completion handoff names the branch, the pinned model, both per-path token totals, and the review commands, and never pushes", async () => {
       for (const body of await bothSkillBodies()) {
         const stop = body.match(/##\s*Stop[\s\S]*?(?=\n## |$)/i);
         assert.ok(stop, "Stop/Handoff section present");
         const s = stop[0];
         assert.match(s, /integration branch|opencode-implement\/<feature-slug>/i);
         assert.match(s, /one commit\s+per ticket|one-commit-per-ticket/i);
-        assert.match(s, /per-path token usage/i);
+        assert.match(s, /resolved model/i);
+        assert.match(s, /tokens\.main/);
+        assert.match(s, /tokens\.fallback/);
         assert.match(s, /\/code-review/);
         assert.match(s, /\/scrutinize/);
         assert.match(s, /push|pull request/i);
+        assert.doesNotMatch(s, /cost:?\s*0|zero-cost/i, "no 'cost: 0' framing for the main path");
       }
     });
 
