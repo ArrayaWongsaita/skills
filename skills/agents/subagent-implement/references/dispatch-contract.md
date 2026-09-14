@@ -29,23 +29,8 @@ Agent(
 | `model` | passed only when the run set `--model`; otherwise omitted so the worker inherits the orchestrator's model and the skill stays portable across harnesses |
 
 The worker's working directory is its worktree, already on the worker branch
-`subagent-implement/<feature-slug>/<NN>` — see the confirmed-behavior note
-below on what commit it's actually cut from. Every path in the prompt is
-absolute.
-
-**Confirmed (not "cut from integration HEAD" as originally assumed):** the
-worktree's git base is a **fixed commit for the whole environment**, not the
-orchestrator's current HEAD at dispatch time — observed identically across
-two separate dispatches, hours apart, with the orchestrator's own checkout on
-a different branch/commit each time. A later ticket's worktree does **not**
-by default contain an earlier ticket's tracked-file changes. Every worker
-prompt after the first ticket must therefore open with an explicit sync
-step — merge (or cherry-pick) the current integration branch's tip into the
-worktree before doing anything else — rather than assuming the checkout
-already reflects prior tickets' work. Untracked `.scratch/<feature-slug>/`
-content is unaffected by this: it is present in every worktree regardless of
-the git base, so spec/CONTEXT/ADR/ticket files are always reachable by
-absolute path.
+`subagent-implement/<feature-slug>/<NN>` cut from integration `HEAD`. Every path
+in the prompt is absolute.
 
 ## Resolving the worker agent
 
@@ -110,7 +95,6 @@ references rather than the workflow:
 |---|---|
 | a non-fork subagent dispatched in the background re-invokes the orchestrator on completion | dispatch one trivial worker, observe the re-invocation |
 | `isolation: "worktree"` keeps a worktree that has commits, and its path + branch are recoverable by the orchestrator | dispatch a worker that commits, then locate the worktree and branch from the orchestrator |
-| ~~the worktree is cut from the orchestrator's current HEAD at dispatch~~ | **CONFIRMED FALSE.** Two dispatches, different orchestrator checkouts, both landed on the same fixed base commit. See the confirmed-behavior note above — every prompt past ticket 1 needs its own sync-onto-integration-tip step. |
 | `SendMessage` resumes a backgrounded worker with its context intact | resume one worker with a follow-up, confirm it still has the ticket context |
 | the final report carries token usage | inspect one completed worker's result; if present, roll it into `status.md` as a bonus |
 | `Explore` reads deeply enough to summarise a test diff | run one verifier; if its reading is too shallow, switch the verifier to `general-purpose` instructed to write nothing |

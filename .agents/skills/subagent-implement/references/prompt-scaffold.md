@@ -17,25 +17,6 @@ absolute paths everywhere, every input quoted inline, the method spelled out.
 It is already checked out to the branch subagent-implement/<feature-slug>/<NN>.
 Every relative path below is relative to this directory; paths outside it are absolute.
 
-<Omit this step only for ticket 1 of a run. For every later ticket, the
-worktree's git base is NOT guaranteed to include prior tickets' work — confirmed
-fixed to an environment-level base commit, not the orchestrator's current HEAD.
-Require the worker to sync first:>
-
-Before anything else, confirm what you're actually sitting on and sync onto the
-current integration tip if you're behind it:
-
-```bash
-git log --oneline -1
-git merge <integration-branch-or-tip-commit> --no-edit
-git log --oneline -3   # confirm <integration-tip> is now in your history
-```
-
-If that merge does not fast-forward cleanly, stop and report the conflict rather
-than resolving it yourself — a conflict this early means the plan's assumptions
-about what this worktree starts from are wrong, which is the orchestrator's
-problem to fix, not yours.
-
 ## What to build
 
 <the ticket's "What to build" paragraph, verbatim>
