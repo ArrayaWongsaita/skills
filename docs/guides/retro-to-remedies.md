@@ -76,7 +76,8 @@ Stage 0 ทำหน้าที่รวบรวมหลักฐานทั
 - **Implementer reports หรือ logs** (`reports/<NN>.md`, `logs/<NN>.json`, `logs/<NN>.jsonl`): ข้อผิดพลาดในการ verify (verification failures) พร้อมสาเหตุ
 - **`design-review.md`**: ทุกรอบที่ไม่ได้รับคำตัดสิน `SHIP` พร้อมระบุประเภท `REWORK`
 - **Git history**: ประวัติ commit บน integration branch ได้แก่ `fix(review):` commits และ reverts นับตั้งแต่ `review_point` หรือ merge-base กับ `main`
-- **Session transcript**: อ่านเฉพาะเมื่อระบุ `--transcript` หรือเมื่อไม่พบ directory `.scratch/<feature-slug>/` (ซึ่งจะถามยืนยันกับผู้ใช้ก่อนอ่าน)
+- **Session transcript**: อ่านเฉพาะเมื่อระบุ `--transcript` หรือเมื่อไม่พบ directory `.scratch/<feature-slug>/` (ซึ่งจะถามยืนยันกับผู้ใช้ก่อนอ่าน) โดยในโหมด `--transcript` ผู้ใช้สามารถควบคุมค่าใช้จ่าย (cost) ได้เอง ระบบจะค้นหา session ภายใต้ `~/.claude/projects/<project>/` (หรือถามหา path นอก Claude Code) ที่กล่าวถึง slug พร้อมแสดงวันเวลาและขนาด (date and size) เพื่อให้ผู้ใช้เลือก (user pick) และมอบหมายให้ subagent แบบอ่านอย่างเดียวเพียงตัวเดียวอ่าน session ที่เลือก โดยส่งกลับเฉพาะ Misses พร้อม session id และข้อความยกมาตรงตัว (quote) ครอบคลุมสัญญาณ 4 ด้าน: การค้นหาไฟล์ที่ล่าช้า (slow searches for files), คำสั่ง tool ที่ล้มเหลวซ้ำๆ (tool calls that failed repeatedly), ข้อมูลที่ agent ขาดไป (information the agent lacked), และการใช้ tool ที่สิ้นเปลือง (expensive tool use)
+
 
 หากพบว่ามี expected sources ใดที่ขาดหายไป (เช่น Run ที่ผ่าน upstream `/implement` ไม่มี `status.md`) Stage 0 จะบันทึกและแสดงรายชื่อไฟล์ที่ขาดหายไปไว้ในส่วนเปิดของรายงาน และทำงานต่อไปด้วยข้อมูลเท่าที่มีอยู่ เกณฑ์เสร็จสิ้นของ Stage 0 คือ: แหล่งข้อมูลที่มีอยู่ทั้งหมดถูกอ่าน และ Misses ทุกตัวระบุพิกัดที่มา (location: file, id/line/SHA) พร้อมข้อความยกมาตรงตัว (verbatim quote)
 

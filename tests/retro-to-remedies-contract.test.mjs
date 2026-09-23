@@ -817,7 +817,97 @@ describe("retro-to-remedies skill contract", () => {
       assert.match(guideDoc, /skills-lock\.json/);
     });
   });
+
+  describe("ticket 08 — Transcript mode", () => {
+    it("references/transcript-mode.md defines session discovery by slug with date and size shown, and the user's pick", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/transcript-mode.md"), "utf8");
+        // discovery under ~/.claude/projects/<project>/ in Claude Code
+        assert.match(c, /~\/\.claude\/projects\/<project>\//);
+        // mentions slug
+        assert.match(c, /slug/i);
+        // date and size
+        assert.match(c, /date/i);
+        assert.match(c, /size/i);
+        // user's pick
+        assert.match(c, /user.*(pick|choose)|pick which|let the user pick/i);
+      }
+    });
+
+    it("references/transcript-mode.md defines single read-only subagent and Miss-only return with quotes", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/transcript-mode.md"), "utf8");
+        assert.match(c, /single read-only subagent|one read-only subagent/i);
+        assert.match(c, /Miss(es)?(-|\s+)only|returns? Misses only/i);
+        assert.match(c, /quote/i);
+      }
+    });
+
+    it("references/transcript-mode.md defines the four Miss signals", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/transcript-mode.md"), "utf8");
+        // 1. slow searches for files
+        assert.match(c, /slow searches for files/i);
+        // 2. tool calls that failed repeatedly
+        assert.match(c, /tool calls that failed repeatedly/i);
+        // 3. information the agent lacked
+        assert.match(c, /information the agent lacked/i);
+        // 4. expensive tool use
+        assert.match(c, /expensive tool use/i);
+      }
+    });
+
+    it("references/transcript-mode.md defines the path question outside Claude Code", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/transcript-mode.md"), "utf8");
+        assert.match(c, /outside Claude Code.*ask.*transcript path|outside Claude Code,?\s*(the Retro\s*)?asks? for the transcript path/i);
+      }
+    });
+
+    it("SKILL.md's Stage 0 reads transcripts only with --transcript, or after user agrees when no .scratch/<feature-slug>/", async () => {
+      for (const body of await bothSkillBodies()) {
+        const stage0Match = body.match(/###?\s*Stage 0[\s\S]*?(?=###?\s*Stage 1|$)/i);
+        assert.ok(stage0Match, "Stage 0 section must be present");
+        const stage0Text = stage0Match[0];
+        assert.match(stage0Text, /transcript/i);
+        assert.match(stage0Text, /--transcript/);
+        assert.match(stage0Text, /no `?\.scratch\/<feature-slug>\/`?|no `?\.scratch\/\*`?/i);
+        assert.match(stage0Text, /read-only subagent/i);
+        assert.match(stage0Text, /Misses only/i);
+      }
+    });
+
+    it("references/transcript-mode.md and miss-sources.md specify that transcript Misses carry session id and quote", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/transcript-mode.md"), "utf8");
+        assert.match(c, /session id/i);
+        assert.match(c, /quote/i);
+
+        const ms = await readFile(path.resolve(dir, "references/miss-sources.md"), "utf8");
+        assert.match(ms, /session id/i);
+      }
+    });
+
+    it("both guides describe --transcript and its cost", async () => {
+      const skillDoc = await readFile(path.resolve("docs/skills/agents/retro-to-remedies.md"), "utf8");
+      assert.match(skillDoc, /--transcript/);
+      assert.match(skillDoc, /cost/i);
+      assert.match(skillDoc, /slow searches for files/i);
+      assert.match(skillDoc, /tool calls that failed repeatedly/i);
+      assert.match(skillDoc, /information the agent lacked/i);
+      assert.match(skillDoc, /expensive tool use/i);
+
+      const guideDoc = await readFile(path.resolve("docs/guides/retro-to-remedies.md"), "utf8");
+      assert.match(guideDoc, /--transcript/);
+      assert.match(guideDoc, /cost/i);
+      assert.match(guideDoc, /slow searches for files/i);
+      assert.match(guideDoc, /tool calls that failed repeatedly/i);
+      assert.match(guideDoc, /information the agent lacked/i);
+      assert.match(guideDoc, /expensive tool use/i);
+    });
+  });
 });
+
 
 
 

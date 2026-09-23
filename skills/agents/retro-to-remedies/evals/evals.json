@@ -465,9 +465,60 @@
         "Pushes no code and creates no pull request"
       ],
       "files": []
+    },
+    {
+      "id": 37,
+      "name": "--transcript lists matching sessions and waits for a pick",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model --transcript",
+      "expected_output": "Scans ~/.claude/projects/<project>/ for sessions mentioning opencode-implement-hosted-model, lists matching sessions with date and size, and pauses for the user's pick.",
+      "expectations": [
+        "Lists matching sessions found in the harness transcript directory with date and size",
+        "Waits for the user to pick which sessions to read before proceeding",
+        "Reads no unselected transcripts"
+      ],
+      "files": []
+    },
+    {
+      "id": 38,
+      "name": "without the flag no transcript is read",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model",
+      "expected_output": "Without the --transcript flag and with existing .scratch/ directory, no transcript is read.",
+      "expectations": [
+        "Observes that --transcript was not passed",
+        "Reads run-state primary sources from .scratch/opencode-implement-hosted-model",
+        "Avoids reading any session transcripts"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/review-status.md"
+      ]
+    },
+    {
+      "id": 39,
+      "name": "outside Claude Code the path is asked for",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model --transcript",
+      "expected_output": "Outside Claude Code where the harness transcript directory is not known, the Retro asks for the transcript path.",
+      "expectations": [
+        "Identifies that the harness is not Claude Code or the transcript directory is not standard",
+        "Asks the user for the transcript path directly",
+        "Proceeds with the user-supplied transcript path"
+      ],
+      "files": []
+    },
+    {
+      "id": 40,
+      "name": "subagent's return holds Misses only",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model --transcript",
+      "expected_output": "The single read-only subagent reads the picked sessions and its return holds Misses only, each with session id and verbatim quote.",
+      "expectations": [
+        "Delegates transcript reading to a single read-only subagent",
+        "Ensures the subagent's return holds Misses only with no full transcript content in primary context",
+        "Includes session id and verbatim quote for every transcript Miss covering slow searches, repeated failures, missing info, or expensive tool use"
+      ],
+      "files": []
     }
   ]
 }
+
 
 
 

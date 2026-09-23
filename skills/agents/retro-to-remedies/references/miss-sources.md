@@ -35,7 +35,7 @@ The Retro reads each run-state file by meaning across different implementer layo
 - **Review fixes and reverts**: Every `fix(review):` commit and revert commit on the branch since `review_point` (from `review-status.md`), or since the merge-base with `main` when `review_point` is absent.
 
 ### 6. Session Transcripts (Transcript Mode)
-- Read only when explicitly requested via `--transcript` or when no `.scratch/<feature-slug>/` exists (see below). Captures repeated tool failures, long file searches, and missing information with quotes.
+- Read only when explicitly requested via `--transcript` or when no `.scratch/<feature-slug>/` exists (see below). Captures repeated tool failures, slow searches for files, missing information, and expensive tool use. Every transcript Miss carries its session id and a verbatim quote.
 
 ## Missing Expected Sources
 

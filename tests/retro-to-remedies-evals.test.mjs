@@ -327,8 +327,38 @@ describe("retro-to-remedies eval suite contract", () => {
         "case for issue request opening one issue and nothing more",
       );
     });
+
+    it("covers the branches listed in ticket 08 (--transcript lists matching sessions and waits for pick, without flag no transcript read, outside Claude Code path asked, subagent return holds Misses only)", async () => {
+      const { evals } = await evalsJson();
+      const hay = (re) => evals.some((e) => re.test(e.name) || re.test(e.expected_output));
+
+      // --transcript lists matching sessions and waits for a pick
+      assert.ok(
+        hay(/--transcript.*lists matching sessions and waits for a pick|--transcript.*(lists|waits for a pick)/i),
+        "case for --transcript listing matching sessions and waiting for a pick",
+      );
+
+      // without the flag no transcript is read
+      assert.ok(
+        hay(/without (the )?flag no transcript is read|no transcript is read without (the )?flag|without --transcript/i),
+        "case for without the flag no transcript is read",
+      );
+
+      // outside Claude Code the path is asked for
+      assert.ok(
+        hay(/outside Claude Code (the )?path is asked for|outside Claude Code.*path/i),
+        "case for outside Claude Code the path is asked for",
+      );
+
+      // the subagent's return holds Misses only
+      assert.ok(
+        hay(/subagent('s)? return holds Misses only|read-only subagent.*Misses only/i),
+        "case for subagent's return holds Misses only",
+      );
+    });
   });
 });
+
 
 
 

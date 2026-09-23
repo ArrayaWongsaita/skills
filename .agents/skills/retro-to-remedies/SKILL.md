@@ -40,7 +40,7 @@ Gather and read every Primary source present for the Run under `.scratch/<featur
 
 Extract each Miss with its concrete location (file plus id, line, or commit SHA) and a verbatim quote. For details on what constitutes a Miss across each source, consult [references/miss-sources.md](references/miss-sources.md).
 
-Record all expected sources that are missing, and list them for the report's opening section. When a Run has no `.scratch/<feature-slug>/` directory at all, ask the user for explicit confirmation before reading the current session's transcript. When `--transcript` is passed, list matching sessions and extract quotes through a read-only subagent.
+Record all expected sources that are missing, and list them for the report's opening section. Read transcripts only when explicitly requested via `--transcript`, or after the user agrees when no `.scratch/<feature-slug>/` directory exists. When `--transcript` is passed, list matching sessions with dates and sizes, let the user pick which to read, and delegate extraction to a single read-only subagent that returns Misses only with verbatim quotes.
 
 Detailed guidance:
 - Primary sources and extraction rules: [references/miss-sources.md](references/miss-sources.md)
