@@ -91,3 +91,50 @@ recommended answer:
 
 The Stage 0 pause summary lists the catalog changes: entries added, corrected,
 and removed; areas surveyed; bootstrap and pointer, when they happened.
+
+## Stage 1 — Reuse Plan
+
+Write `### Reuse Plan` under the spec's Implementation Decisions. Name every
+module by its bare symbol — greppable, and free of file paths, keeping
+`to-spec`'s rule. Each reusable module the spec touches lands in exactly one
+category:
+
+- **Use as-is** — `symbol` → the user stories that use it.
+- **Extend** — `symbol`, the interface change, whether existing callers change →
+  stories.
+- **Create shared** — `symbol`, its interface (signature, invariants, error
+  modes), the named consumers, and a use-when. The interface covers every
+  consumer's need, so the owner ticket builds it once and no consumer writes a
+  variant.
+- **Create candidate** — `symbol`, a feature-agnostic interface, the plausible
+  second use, and a use-when.
+- **Promote** — a catalog candidate's `symbol` and its new consumer; Stage 3
+  turns it into a prefactor ticket.
+- **Kept separate on purpose** — the look-alike pair and why they change for
+  different reasons.
+
+### The create-shared bar
+
+A new module is **create shared** only when one of these holds:
+
+- two or more user stories in this spec consume it;
+- one existing caller plus one story in this spec consume it;
+- the user confirmed in Stage 0 that a named upcoming feature will consume it.
+
+Every other reusable-looking module is a **create candidate** — designed for
+extraction: built inside the feature with an interface free of the feature's own
+types, catalogued as a candidate once its ticket is integrated, and promoted by
+the later feature that brings the second consumer.
+
+### Example
+
+```markdown
+### Reuse Plan
+
+- **Use as-is:** `formatCurrency` → stories 3, 7
+- **Extend:** `DataTable` — add `selectable` and `onSelectionChange`; existing callers unchanged → stories 2, 4
+- **Create shared:** `buildReportRows(report, filters): Row[]` — pure; rows in display order; throws `EmptyReportError` for a report with no line items — consumers: story 2 (Excel), story 5 (CSV) — use for: turning a report into export rows
+- **Create candidate:** `downloadBlob(blob, filename)` — plausible second use: any file download — use for: triggering a browser download
+- **Promote:** none
+- **Kept separate on purpose:** import vs export validation — import guards untrusted files, export guards our own data; they change for different reasons
+```

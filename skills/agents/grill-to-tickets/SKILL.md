@@ -107,12 +107,21 @@ Decisions, Out of Scope, Further Notes). Sketch the test seams and confirm them
 with the user. Stage 0 already settled the decisions — synthesize them and keep
 the interview closed.
 
+Implementation Decisions includes a `### Reuse Plan`: every reusable module the
+spec touches, by symbol, as use as-is, extend, create shared, create candidate,
+promote, or kept separate on purpose — with the interface and named consumers of
+each new shared module. Categories, the create-shared bar, and an example:
+[reuse-pass.md](references/reuse-pass.md) — Stage 1.
+
 ## Stage 2 — Design Review Gate
 
 Run `scrutinize` inline against `spec.md`, then normalize its closing verdict to
 exactly one of its own four tokens — `SHIP`, `FIX_THEN_SHIP`, `REWORK`, `REJECT`
 — with no paraphrasing. Keep one stable report at
 `.scratch/<feature-slug>/design-review.md`, updating its cycle section each pass.
+Every cycle also applies the **reuse lens**: `scrutinize` checks the Reuse Plan
+against `docs/reuse-catalog.md` for duplicated, unowned, and speculative shared
+modules.
 
 Route the verdict:
 
@@ -134,8 +143,8 @@ spec-level and decision-level paths stay visibly distinguished.
 The gate is bounded to six cycles. A stall — the same blocking finding surviving
 two consecutive cycles with no new or resolved findings — stops the loop early;
 so does cycle 6 closing without `SHIP`, and a fresh budget then needs explicit
-human authorization. Full routing table, stall detection, cycle accounting, and
-gate report format live in
+human authorization. Full routing table, the reuse lens, stall detection, cycle
+accounting, and gate report format live in
 [design-review-gate.md](references/design-review-gate.md).
 
 ## Stage 3 — Tickets

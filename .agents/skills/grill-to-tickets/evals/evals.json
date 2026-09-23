@@ -144,6 +144,45 @@
         "Waits for the user's answer instead of deciding the reuse choice itself"
       ],
       "files": []
+    },
+    {
+      "id": 12,
+      "name": "reuse lens catches a duplicated catalogued module",
+      "prompt": "$grill-to-tickets continue invoice-pdf. Gate cycle 1: the spec's Reuse Plan lists create shared `formatInvoiceAmount(amount, currency)`, but docs/reuse-catalog.md already lists `formatCurrency` — `src/lib/money.ts` — use for: every price display.",
+      "expected_output": "The reuse lens records reuse-duplicate-formatInvoiceAmount. Normalize to FIX_THEN_SHIP, make the minimal spec edit — replace the create-shared entry with use as-is `formatCurrency` and drop the new module — consume one cycle, and re-review within Stage 2.",
+      "expectations": [
+        "Records the finding with the stable id reuse-duplicate-formatInvoiceAmount",
+        "Normalizes the verdict to FIX_THEN_SHIP",
+        "Edits the Reuse Plan in spec.md to use formatCurrency instead of creating a new module",
+        "Consumes one cycle and re-reviews without leaving Stage 2"
+      ],
+      "files": []
+    },
+    {
+      "id": 13,
+      "name": "reuse lens downgrades a speculative shared module to a candidate",
+      "prompt": "/grill-to-tickets continue team-invites. Gate cycle 2: the Reuse Plan lists create shared `parseInviteToken(token)` with a single consumer, story 4, and nobody confirmed any upcoming feature that would use it.",
+      "expected_output": "The reuse lens records reuse-speculative-parseInviteToken: a create-shared entry below the create-shared bar (one consumer, no confirmed upcoming consumer). Normalize to FIX_THEN_SHIP and downgrade the entry to create candidate with a feature-agnostic interface and its plausible second use; consume one cycle and re-review.",
+      "expectations": [
+        "Records the finding with the stable id reuse-speculative-parseInviteToken",
+        "Applies the create-shared bar: one consumer and no user-confirmed upcoming feature",
+        "Downgrades the entry to create candidate rather than deleting it",
+        "Normalizes to FIX_THEN_SHIP and stays in Stage 2"
+      ],
+      "files": []
+    },
+    {
+      "id": 14,
+      "name": "undecided extend-vs-new is decision-level REWORK",
+      "prompt": "$grill-to-tickets continue audit-log-view. Gate cycle 1: the spec extends `DataTable` with virtualized scrolling for 100k-row audit logs, but Stage 0 never settled whether to extend DataTable — used by 14 existing screens — or build a separate virtualized table. The survey only recorded that DataTable exists and has no virtualization.",
+      "expected_output": "The reuse lens records reuse-undecided-DataTable. A fresh writer holding the Stage 0 transcript could not resolve extend-versus-new without asking, so it is decision-level REWORK: return to Stage 0, put that one question to the user with a recommended answer, then re-run to-spec and re-review, carrying the cycle counter over.",
+      "expectations": [
+        "Records the finding with the stable id reuse-undecided-DataTable",
+        "Diagnoses decision-level REWORK with reasoning that the trade-off was never decided",
+        "Returns to Stage 0 for that single question and asks it with a recommended answer",
+        "Carries the cycle counter over the transition"
+      ],
+      "files": []
     }
   ]
 }

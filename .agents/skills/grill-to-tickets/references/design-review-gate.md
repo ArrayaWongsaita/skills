@@ -101,3 +101,22 @@ mechanically re-reviewing.
 exhaustion with the unresolved findings and the per-cycle history. A fresh
 six-cycle budget requires explicit human authorization and a materially different
 approach — never start cycle 7 automatically.
+
+## Reuse lens
+
+Every cycle, `scrutinize` reviews `spec.md` with its Reuse Plan and the project's
+`docs/reuse-catalog.md` in context, and its mandatory "use something that
+already exists" pass is pointed at both. Reuse findings carry stable ids so the
+stall rule can see a repeat:
+
+| finding id | condition | route |
+| --- | --- | --- |
+| `reuse-duplicate-<symbol>` | the spec creates something the catalog already has | `FIX_THEN_SHIP` — change it to use or extend the catalogued module |
+| `reuse-unowned-<shape>` | logic two or more stories need, with no create-shared entry | `FIX_THEN_SHIP` — add a create-shared entry with its interface and consumers |
+| `reuse-speculative-<symbol>` | a create-shared entry below the create-shared bar | `FIX_THEN_SHIP` — downgrade it to create candidate |
+| `reuse-plan-missing` | the spec has no Reuse Plan although the survey settled the facts | `REWORK`, spec-level — re-run `to-spec` with the finding |
+| `reuse-undecided-<symbol>` | extend-vs-new, or share-vs-separate, is a genuine trade-off nobody decided | `REWORK`, decision-level — return to Stage 0 for that one question |
+
+The create-shared bar and the Reuse Plan categories live in
+[reuse-pass.md](reuse-pass.md). Budget, stall detection, and the verdict
+vocabulary apply to reuse findings unchanged.

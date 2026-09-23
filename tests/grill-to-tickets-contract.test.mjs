@@ -132,6 +132,39 @@ describe("grill-to-tickets composite skill contract", () => {
     }
   });
 
+  it("writes a Reuse Plan in the spec and reviews it through the gate's reuse lens", async () => {
+    for (const file of skillFiles) {
+      const content = await readFile(file, "utf8");
+      assert.match(content, /Stage 1[\s\S]*### Reuse Plan[\s\S]*Stage 2/, "Stage 1 writes the Reuse Plan");
+      assert.match(content, /Stage 2[\s\S]*reuse lens/i, "Stage 2 applies the reuse lens");
+    }
+    for (const dir of skillDirs) {
+      const pass = await readFile(path.resolve(dir, "references/reuse-pass.md"), "utf8");
+      for (const category of [
+        "Use as-is",
+        "Extend",
+        "Create shared",
+        "Create candidate",
+        "Promote",
+        "Kept separate on purpose",
+      ]) {
+        assert.match(pass, new RegExp(`\\*\\*${category}\\*\\*`), `Reuse Plan category ${category}`);
+      }
+      assert.match(pass, /create-shared bar/i);
+      assert.match(pass, /two or more user stories/);
+      assert.match(pass, /confirmed in Stage 0 that a named upcoming feature/);
+      assert.match(pass, /designed for\s+extraction/i);
+
+      const gate = await readFile(path.resolve(dir, "references/design-review-gate.md"), "utf8");
+      assert.match(gate, /## Reuse lens/);
+      for (const id of ["reuse-duplicate-", "reuse-unowned-", "reuse-speculative-", "reuse-undecided-"]) {
+        assert.match(gate, new RegExp(id), `gate carries finding id ${id}`);
+      }
+      assert.match(gate, /reuse-duplicate-[^\n]*FIX_THEN_SHIP/);
+      assert.match(gate, /reuse-undecided-[^\n]*decision-level/);
+    }
+  });
+
   it("normalizes every scrutinize verdict without paraphrasing", async () => {
     for (const file of skillFiles) {
       const content = await readFile(file, "utf8");
