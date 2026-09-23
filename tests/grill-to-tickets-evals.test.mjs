@@ -9,7 +9,7 @@ import path from "node:path";
 // exercised by a human through skill-creator's benchmark mode; `trigger-evals.json`
 // only guards that the description does not read as model-invocable (the skill is
 // `disable-model-invocation`, so real trigger tuning is moot). This contract
-// covers what scripts/validate-skills.mjs cannot: the `.agents/` mirror, the
+// covers what scripts/validate-skills.mjs cannot: the
 // one-case-per-routing-branch requirement, one case per planning safeguard and
 // per output-quality dimension, and cycle-budget drift between the skill prose
 // and the evals. Benchmark the suite with skill-creator against a snapshot of
@@ -23,11 +23,7 @@ async function readJson(filePath) {
   return JSON.parse(await readFile(filePath, "utf8"));
 }
 
-const evalDirs = [
-  "skills/agents/grill-to-tickets/evals",
-  ".agents/skills/grill-to-tickets/evals",
-];
-const canonicalDir = evalDirs[0];
+const canonicalDir = "skills/agents/grill-to-tickets/evals";
 const skillDir = path.resolve(canonicalDir, "..");
 
 const evalsJson = () => readJson(path.resolve(canonicalDir, "evals.json"));
@@ -37,22 +33,9 @@ const NUMBER_WORDS = { two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eig
 const spell = (n) => Object.keys(NUMBER_WORDS).find((w) => NUMBER_WORDS[w] === n);
 
 describe("grill-to-tickets eval suite contract", () => {
-  it("ships trigger-evals.json and evals.json in the canonical and installed copies", async () => {
-    for (const dir of evalDirs) {
-      await fileExists(path.resolve(dir, "trigger-evals.json"));
-      await fileExists(path.resolve(dir, "evals.json"));
-    }
-  });
-
-  it("keeps every eval file byte-identical across the skill copies", async () => {
-    for (const name of ["trigger-evals.json", "evals.json"]) {
-      const contents = await Promise.all(
-        evalDirs.map((dir) => readFile(path.resolve(dir, name), "utf8")),
-      );
-      for (const other of contents.slice(1)) {
-        assert.equal(other, contents[0], `${name} copies must match ${canonicalDir}`);
-      }
-    }
+  it("ships trigger-evals.json and evals.json", async () => {
+    await fileExists(path.resolve(canonicalDir, "trigger-evals.json"));
+    await fileExists(path.resolve(canonicalDir, "evals.json"));
   });
 
   describe("trigger-evals.json", () => {
@@ -130,6 +113,7 @@ describe("grill-to-tickets eval suite contract", () => {
         { label: "preflight: missing stage skill", match: /preflight stops/i },
         { label: "preflight: global install", match: /preflight uses a globally installed/i },
         { label: "local tracker", match: /local files replace/i },
+        { label: "git-ignored scratch", match: /local exclude/i },
       ];
       for (const safeguard of safeguards) {
         assert.ok(

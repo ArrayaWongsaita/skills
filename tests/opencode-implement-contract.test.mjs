@@ -39,11 +39,10 @@ function localSkillLinks(markdown) {
 }
 
 const canonicalDir = "skills/agents/opencode-implement";
-const mirrorDir = ".agents/skills/opencode-implement";
-const skillDirs = [canonicalDir, mirrorDir];
+const skillDirs = [canonicalDir];
 const skillFiles = skillDirs.map((dir) => path.resolve(dir, "SKILL.md"));
 
-async function bothSkillBodies() {
+async function skillBodies() {
   return Promise.all(
     skillFiles.map(async (file) => (await readFile(file, "utf8")).replace(/^---\n[\s\S]*?\n---\n/, "")),
   );
@@ -51,7 +50,7 @@ async function bothSkillBodies() {
 
 describe("opencode-implement skill contract", () => {
   describe("scaffold and trigger policy", () => {
-    it("exists in the canonical and mirror locations with valid frontmatter", async () => {
+    it("has valid frontmatter", async () => {
       for (const file of skillFiles) {
         await fileExists(file);
         const meta = parseFrontmatter(await readFile(file, "utf8"));
@@ -69,13 +68,6 @@ describe("opencode-implement skill contract", () => {
       for (const beat of [/ticket/i, /opencode/i, /hosted/i, /wave|parallel/i, /verif/i, /fall ?back/i, /integrat/i, /review/i]) {
         assert.match(meta.description, beat);
       }
-    });
-
-    it("keeps the canonical and mirror SKILL.md byte-identical", async () => {
-      const [canonical, mirror] = await Promise.all(
-        skillFiles.map((file) => readFile(file, "utf8")),
-      );
-      assert.equal(canonical, mirror);
     });
 
     it("documents the invocation surface, the sub-commands, and the run options", async () => {
@@ -98,7 +90,7 @@ describe("opencode-implement skill contract", () => {
     });
 
     it("frames the skill as a hosted-model, wave/parallel skill, with no local/Ollama/zero-cost/private/slow-background language", async () => {
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         assert.match(body, /hosted/i);
         assert.match(body, /wave/i);
         assert.match(body, /parallel/i);
@@ -120,13 +112,13 @@ describe("opencode-implement skill contract", () => {
     });
 
     it("steers positively — no 'Never' or 'Do not' in the instruction body", async () => {
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         assert.doesNotMatch(body, /\bNever\b/i, "prompt the positive instead of 'Never'");
         assert.doesNotMatch(body, /\bDo not\b/i, "prompt the positive instead of 'Do not'");
       }
     });
 
-    it("ships Codex metadata that blocks implicit invocation in both copies", async () => {
+    it("ships Codex metadata that blocks implicit invocation", async () => {
       for (const dir of skillDirs) {
         const yaml = await readFile(path.resolve(dir, "agents/openai.yaml"), "utf8");
         assert.match(yaml, /display_name:/);
@@ -153,7 +145,7 @@ describe("opencode-implement skill contract", () => {
       }
     });
 
-    it("ships trigger-evals.json with positive and negative cases in both copies", async () => {
+    it("ships trigger-evals.json with positive and negative cases", async () => {
       for (const dir of skillDirs) {
         const triggers = JSON.parse(
           await readFile(path.resolve(dir, "evals/trigger-evals.json"), "utf8"),
@@ -184,7 +176,7 @@ describe("opencode-implement skill contract", () => {
       }
     });
 
-    it("ships exactly the declared reference set in both copies, and SKILL.md links each", async () => {
+    it("ships exactly the declared reference set, and SKILL.md links each", async () => {
       for (const dir of skillDirs) {
         const entries = (await readdir(path.resolve(dir, "references"))).sort();
         assert.deepEqual(entries, [...SKILL_REFERENCES].sort());
@@ -197,14 +189,6 @@ describe("opencode-implement skill contract", () => {
       }
     });
 
-    it("keeps every reference file byte-identical across the skill copies", async () => {
-      for (const ref of SKILL_REFERENCES) {
-        const [canonical, mirror] = await Promise.all(
-          skillDirs.map((dir) => readFile(path.resolve(dir, `references/${ref}`), "utf8")),
-        );
-        assert.equal(canonical, mirror, `references/${ref} copies must match`);
-      }
-    });
   });
 
   describe("Stage 0 — Plan (read-only)", () => {
@@ -217,7 +201,7 @@ describe("opencode-implement skill contract", () => {
     });
 
     it("Stage 0 pauses for explicit approval and mutates nothing outside .scratch", async () => {
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         const stage0 = body.match(/##\s*Stage 0[\s\S]*?(?=\n## )/i);
         assert.ok(stage0, "Stage 0 section present");
         assert.match(stage0[0], /approv/i);
@@ -278,14 +262,14 @@ describe("opencode-implement skill contract", () => {
     });
 
     it("resolves the target from an explicit dir, a slug, or the most recent issues dir", async () => {
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         assert.match(body, /most recent(ly modified)?\s+`?\.scratch\/\*\/issues\/`?/i);
         assert.match(body, /nam(e|ed) (it )?back|confirm/i);
       }
     });
 
     it("SKILL.md's Stage 0 section summarizes the wave table, touch-set estimate, overlap flags, and concurrency cap", async () => {
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         const stage0 = body.match(/##\s*Stage 0[\s\S]*?(?=\n## )/i)[0];
         assert.match(stage0, /wave/i);
         assert.match(stage0, /touch-set/i);
@@ -302,7 +286,7 @@ describe("opencode-implement skill contract", () => {
 
   describe("Stage 1 — the opencode worker contract", () => {
     it("SKILL.md has a Stage 1 section with a preflight and no smoke test or Ollama check", async () => {
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         const stage1 = body.match(/##\s*Stage 1[\s\S]*?(?=\n## )/i);
         assert.ok(stage1, "Stage 1 section present");
         const s = stage1[0];
@@ -543,7 +527,7 @@ describe("opencode-implement skill contract", () => {
 
   describe("Stage 1 — chain, verification, integration", () => {
     it("SKILL.md Stage 1 dispatches the whole ticket and drives worktree-integration.md", async () => {
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         const s = body.match(/##\s*Stage 1[\s\S]*?(?=\n## )/i)[0];
         assert.match(s, /whole[\s\S]{0,20}in one worker call/i);
         assert.doesNotMatch(s, /decomposition\.md/);
@@ -673,7 +657,7 @@ describe("opencode-implement skill contract", () => {
     });
 
     it("keeps the orchestrator out of ticket implementation", async () => {
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         assert.match(body, /orchestrator dispatches every ticket/i);
         assert.match(body, /mechanical merge conflict|mechanical conflict/i);
         assert.match(body, /BLOCKED/);
@@ -683,7 +667,7 @@ describe("opencode-implement skill contract", () => {
 
   describe("Stage 1 — automatic subagent fallback", () => {
     it("SKILL.md Stage 1 has an automatic fallback subsection with no approval pause", async () => {
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         const s = body.match(/##\s*Stage 1[\s\S]*?(?=\n## )/i)[0];
         assert.match(s, /references\/fallback\.md/);
         assert.match(s, /automatic fallback|automatically fall|fallback to a native subagent/i);
@@ -948,7 +932,7 @@ describe("opencode-implement skill contract", () => {
     });
 
     it("the completion handoff names the branch, the pinned model, both per-path token totals, and the review commands, and never pushes", async () => {
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         const stop = body.match(/##\s*Stop[\s\S]*?(?=\n## |$)/i);
         assert.ok(stop, "Stop/Handoff section present");
         const s = stop[0];
@@ -965,7 +949,7 @@ describe("opencode-implement skill contract", () => {
     });
 
     it("SKILL.md has a State section and drives status-and-resume.md", async () => {
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         assert.match(body, /##\s*State, failure, and resume/i);
         assert.match(body, /references\/status-and-resume\.md/);
       }
@@ -1025,11 +1009,28 @@ describe("opencode-implement skill contract", () => {
         assert.match(section, /Coverage dates stay/);
         assert.match(section, /no catalog file, skip/i);
       }
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         assert.match(body, /\*\*Reuse:\*\*/);
         assert.match(body, /docs\/reuse-catalog\.md/);
         assert.match(body, /catalog's only writer while wave-mates only read it/);
       }
+    });
+  });
+
+  describe("local-only tickets", () => {
+    it("ticks the ticket file on disk when .scratch/ is git-ignored and inside the commit when it is tracked", async () => {
+      for (const rel of ["SKILL.md", "references/worktree-integration.md"]) {
+        const content = await readFile(path.resolve(canonicalDir, rel), "utf8");
+        assert.match(content, /on\s+disk/i, `${rel} states the on-disk tick`);
+        assert.match(content, /git-ignored/, `${rel} names the git-ignored case`);
+        assert.match(content, /tracked/, `${rel} names the tracked case`);
+      }
+    });
+
+    it("re-opens invalidated ticket files when a rewind resets the integration branch", async () => {
+      const content = await readFile(path.resolve(canonicalDir, "references/status-and-resume.md"), "utf8");
+      assert.match(content, /re-open each invalidated ticket file/);
+      assert.match(content, /un-tick/);
     });
   });
 });

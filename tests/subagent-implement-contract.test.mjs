@@ -38,11 +38,10 @@ function localSkillLinks(markdown) {
 }
 
 const canonicalDir = "skills/agents/subagent-implement";
-const mirrorDir = ".agents/skills/subagent-implement";
-const skillDirs = [canonicalDir, mirrorDir];
+const skillDirs = [canonicalDir];
 const skillFiles = skillDirs.map((dir) => path.resolve(dir, "SKILL.md"));
 
-async function bothSkillBodies() {
+async function skillBodies() {
   return Promise.all(
     skillFiles.map(async (file) => (await readFile(file, "utf8")).replace(/^---\n[\s\S]*?\n---\n/, "")),
   );
@@ -56,7 +55,7 @@ async function joinDocs(dir, ...refs) {
 
 describe("subagent-implement skill contract", () => {
   describe("scaffold and trigger policy", () => {
-    it("exists in the canonical and mirror locations with valid frontmatter", async () => {
+    it("has valid frontmatter", async () => {
       for (const file of skillFiles) {
         await fileExists(file);
         const meta = parseFrontmatter(await readFile(file, "utf8"));
@@ -76,22 +75,6 @@ describe("subagent-implement skill contract", () => {
       }
     });
 
-    it("keeps the canonical and mirror SKILL.md byte-identical", async () => {
-      const [canonical, mirror] = await Promise.all(
-        skillFiles.map((file) => readFile(file, "utf8")),
-      );
-      assert.equal(canonical, mirror);
-    });
-
-    it("keeps every reference file byte-identical across the skill copies", async () => {
-      for (const ref of SKILL_REFERENCES) {
-        const [canonical, mirror] = await Promise.all(
-          skillDirs.map((dir) => readFile(path.resolve(dir, `references/${ref}`), "utf8")),
-        );
-        assert.equal(canonical, mirror, `references/${ref} copies must match`);
-      }
-    });
-
     it("documents the invocation surface and the sub-commands", async () => {
       for (const file of skillFiles) {
         const content = await readFile(file, "utf8");
@@ -107,13 +90,13 @@ describe("subagent-implement skill contract", () => {
     });
 
     it("steers positively — no 'Never' or 'Do not' in the instruction body", async () => {
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         assert.doesNotMatch(body, /\bNever\b/i, "prompt the positive instead of 'Never'");
         assert.doesNotMatch(body, /\bDo not\b/i, "prompt the positive instead of 'Do not'");
       }
     });
 
-    it("ships Codex metadata that blocks implicit invocation in both copies", async () => {
+    it("ships Codex metadata that blocks implicit invocation", async () => {
       for (const dir of skillDirs) {
         const yaml = await readFile(path.resolve(dir, "agents/openai.yaml"), "utf8");
         assert.match(yaml, /display_name:/);
@@ -171,7 +154,7 @@ describe("subagent-implement skill contract", () => {
     });
 
     it("Stage 0 pauses for explicit approval and mutates nothing outside .scratch", async () => {
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         const stage0 = body.match(/##\s*Stage 0[\s\S]*?(?=\n## )/i);
         assert.ok(stage0, "Stage 0 section present");
         assert.match(stage0[0], /approv/i);
@@ -205,7 +188,7 @@ describe("subagent-implement skill contract", () => {
     });
 
     it("resolves the target from an explicit dir, a slug, or the most recent issues dir", async () => {
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         assert.match(body, /most recent(ly modified)?\s+`?\.scratch\/\*\/issues\/`?/i);
         assert.match(body, /nam(e|ed) (it )?back|confirm/i);
       }
@@ -247,7 +230,7 @@ describe("subagent-implement skill contract", () => {
     });
 
     it("the verification gate uses a fresh Explore verifier that renders no verdict", async () => {
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         const gate = body.match(/###\s*Verification gate[\s\S]*?(?=\n###?\s)/i);
         assert.ok(gate, "Verification gate section present");
         const g = gate[0];
@@ -285,7 +268,7 @@ describe("subagent-implement skill contract", () => {
     });
 
     it("keeps the orchestrator out of ticket implementation and its own steps text-only", async () => {
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         assert.match(body, /orchestrator dispatches every ticket/i);
         assert.match(body, /mechanical merge conflict|mechanical conflict/i);
         assert.match(body, /text-only/i);
@@ -322,7 +305,7 @@ describe("subagent-implement skill contract", () => {
         assert.match(section, /Coverage dates stay/);
         assert.match(section, /no catalog file, skip/i);
       }
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         assert.match(body, /\*\*Reuse:\*\*/);
         assert.match(body, /docs\/reuse-catalog\.md/);
         assert.match(body, /update the Reuse\s+Catalog from text/);
@@ -379,7 +362,7 @@ describe("subagent-implement skill contract", () => {
     });
 
     it("the completion handoff names the branch and the review commands and never pushes", async () => {
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         const stop = body.match(/##\s*Stop[\s\S]*?(?=\n## |$)/i);
         assert.ok(stop, "Stop/Handoff section present");
         const s = stop[0];
@@ -405,6 +388,23 @@ describe("subagent-implement skill contract", () => {
       assert.match(adr, /standalone/i);
       assert.match(adr, /own(s)? (its )?(own )?(copy|machinery)/i);
       assert.match(adr, /portable/i);
+    });
+  });
+
+  describe("local-only tickets", () => {
+    it("ticks the ticket file on disk when .scratch/ is git-ignored and inside the commit when it is tracked", async () => {
+      for (const rel of ["SKILL.md", "references/verification-and-integration.md"]) {
+        const content = await readFile(path.resolve(canonicalDir, rel), "utf8");
+        assert.match(content, /on\s+disk/i, `${rel} states the on-disk tick`);
+        assert.match(content, /git-ignored/, `${rel} names the git-ignored case`);
+        assert.match(content, /tracked/, `${rel} names the tracked case`);
+      }
+    });
+
+    it("re-opens invalidated ticket files when a rewind resets the integration branch", async () => {
+      const content = await readFile(path.resolve(canonicalDir, "references/status-and-resume.md"), "utf8");
+      assert.match(content, /re-open each invalidated ticket file/);
+      assert.match(content, /un-tick/);
     });
   });
 });

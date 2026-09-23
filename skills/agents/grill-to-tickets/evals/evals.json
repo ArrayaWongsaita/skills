@@ -5,13 +5,13 @@
       "id": 1,
       "name": "first-pass SHIP straight through the stages",
       "prompt": "/grill-to-tickets Add a \"copy shareable link\" button to the report detail page that copies the report's existing public URL to the clipboard and shows a confirmation toast. One component, no API or schema change, acceptance behavior is explicit, and no open decisions remain — treat the Stage 0 frontier as empty and already confirmed.",
-      "expected_output": "With the Stage 0 frontier already empty and confirmed, pass straight through: synthesize spec.md with to-spec (Stage 1), run scrutinize once in a fresh reviewer subagent (Stage 2), normalize its closing line to SHIP, and advance to Stage 3 to-tickets. Publish tickets under .scratch/<feature-slug>/issues/ and print the handoff: commit the planning artifacts, /clear, then /subagent-implement .scratch/<feature-slug>/.",
+      "expected_output": "With the Stage 0 frontier already empty and confirmed, pass straight through: synthesize spec.md with to-spec (Stage 1), run scrutinize once in a fresh reviewer subagent (Stage 2), normalize its closing line to SHIP, and advance to Stage 3 to-tickets. Publish tickets under .scratch/<feature-slug>/issues/ and print the handoff: .scratch/ needs no commit, commit any docs/reuse-catalog.md change, /clear, then /subagent-implement .scratch/<feature-slug>/.",
       "expectations": [
         "Confirms the empty Stage 0 frontier, then moves through Stage 1 -> Stage 2 -> Stage 3 in order",
         "Runs scrutinize exactly once and records cycle 1 with verdict SHIP in a single .scratch/<feature-slug>/design-review.md file",
         "Normalizes the scrutinize verdict to the token SHIP with no paraphrasing",
         "Does not enter FIX_THEN_SHIP, REWORK, or a backward transition to Stage 0",
-        "Prints the commit, /clear, then /subagent-implement .scratch/<feature-slug>/ handoff, never invokes an implementer, and dispatches a subagent only for the Stage 2 review"
+        "Prints the handoff — .scratch/ needs no commit, commit any catalog change, /clear, then /subagent-implement .scratch/<feature-slug>/ — never invokes an implementer, and dispatches a subagent only for the Stage 2 review"
       ],
       "files": []
     },
@@ -392,6 +392,20 @@
         "Publishes nothing to an issue tracker and applies no label",
         "Does not tell the user to run /setup-matt-pocock-skills",
         "Continues Stage 1 (test seams) without pausing for tracker setup"
+      ],
+      "files": []
+    },
+    {
+      "id": 31,
+      "name": "a repo that does not ignore .scratch gets a local exclude, not a commit",
+      "prompt": "/grill-to-tickets Add saved filters to the orders list page. The repository is a git repo whose .gitignore does not mention .scratch/, and it has no .scratch/ directory yet.",
+      "expected_output": "Before the first write, `git check-ignore -q .scratch/` exits non-zero, so the skill appends `.scratch/` to the file `git rev-parse --git-path info/exclude` prints, tells the user, and edits no tracked file. It creates .scratch/<feature-slug>/ afterwards. The handoff asks for no commit of .scratch/, so the implementers meet a clean working tree.",
+      "expectations": [
+        "Runs git check-ignore -q .scratch/ before writing anything under .scratch/",
+        "Appends .scratch/ to the local git exclude file rather than editing .gitignore",
+        "Tells the user it added the local exclude",
+        "Edits no tracked file and makes no commit",
+        "Prints a handoff that does not ask to commit .scratch/"
       ],
       "files": []
     }

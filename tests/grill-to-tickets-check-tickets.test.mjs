@@ -191,11 +191,4 @@ describe("check-tickets", () => {
     }
   });
 
-  it("ships byte-identical in the canonical and installed skill copies", async () => {
-    const [canonical, mirror] = await Promise.all([
-      readFile(script, "utf8"),
-      readFile(path.resolve(".agents/skills/grill-to-tickets/scripts/check-tickets.mjs"), "utf8"),
-    ]);
-    assert.equal(mirror, canonical);
-  });
 });

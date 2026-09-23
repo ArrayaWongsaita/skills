@@ -23,10 +23,9 @@ function parseFrontmatter(markdown) {
 
 describe("Engineering Workflow Control Plane Contract", () => {
   const skillPath = path.resolve("skills/agents/engineering-workflow/SKILL.md");
-  const localSkillPath = path.resolve(".agents/skills/engineering-workflow/SKILL.md");
 
-  it("exists and defines valid YAML frontmatter in both locations", async () => {
-    for (const file of [skillPath, localSkillPath]) {
+  it("exists and defines valid YAML frontmatter", async () => {
+    for (const file of [skillPath]) {
       await fileExists(file);
       const content = await readFile(file, "utf8");
       const meta = parseFrontmatter(content);
@@ -37,8 +36,8 @@ describe("Engineering Workflow Control Plane Contract", () => {
     }
   });
 
-  it("incorporates all core leading words in both locations", async () => {
-    for (const file of [skillPath, localSkillPath]) {
+  it("incorporates all core leading words", async () => {
+    for (const file of [skillPath]) {
       const content = await readFile(file, "utf8");
 
       assert.match(content, /Smart Zone/i, "Must incorporate Smart Zone");
@@ -48,8 +47,8 @@ describe("Engineering Workflow Control Plane Contract", () => {
     }
   });
 
-  it("eliminates negative steering (Do not / Never) from the skill instruction body in both locations", async () => {
-    for (const file of [skillPath, localSkillPath]) {
+  it("eliminates negative steering (Do not / Never) from the skill instruction body", async () => {
+    for (const file of [skillPath]) {
       const content = await readFile(file, "utf8");
       const body = content.replace(/^---\n[\s\S]*?\n---\n/, "");
 
@@ -58,8 +57,8 @@ describe("Engineering Workflow Control Plane Contract", () => {
     }
   });
 
-  it("links to progressive disclosure reference files in both locations", async () => {
-    for (const file of [skillPath, localSkillPath]) {
+  it("links to progressive disclosure reference files", async () => {
+    for (const file of [skillPath]) {
       const content = await readFile(file, "utf8");
 
       assert.match(content, /references\/routing\.md/);

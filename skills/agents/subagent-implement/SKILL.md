@@ -177,8 +177,9 @@ check.
 Follow
 [references/verification-and-integration.md](references/verification-and-integration.md):
 squash-merge the verified worker branch onto the integration branch as exactly
-one commit named for the ticket, ticking that ticket file's acceptance checkboxes
-and setting its `Status:`. The same commit carries the ticket's Reuse Catalog
+one commit named for the ticket, then tick that ticket file's acceptance checkboxes
+and set its `Status:` — on disk when `.scratch/` is git-ignored, inside the same
+commit when the ticket file is tracked. The commit carries the ticket's Reuse Catalog
 entries: for each `create-shared`, `create-candidate`, `extend`, or `promote` in
 its Reuse line, the orchestrator greps the symbol in the worker's changed files
 for its path, takes the use-when from the spec's Reuse Plan, and writes the

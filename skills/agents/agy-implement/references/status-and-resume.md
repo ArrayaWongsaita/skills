@@ -69,6 +69,8 @@ Before trusting `status.md`, reconcile it against reality:
    - reset the integration branch to the last still-good commit (the last commit
      whose ticket still verifies)
    - discard the worktrees for the invalidated tickets
+   - re-open each invalidated ticket file — a tracked one comes back with the
+     reset; on a git-ignored one, un-tick its checkboxes and reset its `Status:`
    - list the **discarded commits** at the top of the report, so the blast
      radius is visible
    - re-dispatch from that point

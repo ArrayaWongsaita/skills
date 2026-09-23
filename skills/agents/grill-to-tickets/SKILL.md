@@ -27,7 +27,7 @@ Stage 2: Design Review Gate   scrutinize (fresh reviewer) → design-review.md  
    ▼
 Stage 3: Tickets      to-tickets                  → issues/NN-<slug>.md
    ▼
-Stop: handoff message (commit, /clear, /subagent-implement <dir>)
+Stop: handoff message (commit catalog changes, /clear, /subagent-implement <dir>)
 ```
 
 ## Invocation
@@ -103,6 +103,12 @@ idea (lowercase alphanumeric with hyphens).
 ├── design-review.md    # one stable design-review report, updated per cycle
 └── issues/             # tracer-bullet vertical tickets (NN-<slug>.md)
 ```
+
+`.scratch/` is local working state and stays out of git, so the tickets need no
+commit and the implementers find a clean working tree. In a git repository,
+before the first write, run `git check-ignore -q .scratch/`; when it exits
+non-zero, append `.scratch/` to the file `git rev-parse --git-path info/exclude`
+prints — a local exclude that changes no tracked file — and tell the user you did.
 
 One project-level artifact lives outside that directory and outlasts the
 feature: the **Reuse Catalog** at `docs/reuse-catalog.md`, plus a one-line
@@ -247,9 +253,9 @@ Print a handoff message and stop:
 Tickets published to .scratch/<feature-slug>/issues/. Planning is done; this skill
 hands off here.
 
-Commit .scratch/<feature-slug>/ and any change to docs/reuse-catalog.md or the
-AGENTS.md / CLAUDE.md pointer first — the implementers start only from a clean
-working tree.
+.scratch/ is local and git-ignored, so the tickets need no commit. Commit any
+change to docs/reuse-catalog.md or the AGENTS.md / CLAUDE.md pointer first — the
+implementers start only from a clean working tree.
 
 To keep peak reasoning for implementation, reset context:
 /clear

@@ -134,7 +134,7 @@ Stop: Handoff message (commit ไฟล์วางแผน, /clear แล้�
 5. **Stop — Handoff (ส่งมอบงาน):**
    - แสดงข้อความสรุปและแนะนำขั้นตอนสำหรับเซสชันถัดไป:
      ```text
-     # 1. commit .scratch/<feature-slug>/ และ docs/reuse-catalog.md (implementer เริ่มได้เฉพาะ working tree ที่สะอาด)
+     # 1. commit เฉพาะ docs/reuse-catalog.md / pointer ใน AGENTS.md ที่เปลี่ยน (implementer เริ่มได้เฉพาะ working tree ที่สะอาด; .scratch/ อยู่ในเครื่องและถูก git ignore จึงไม่ต้อง commit)
      /clear
      /subagent-implement .scratch/<feature-slug>/
      # หรือ /agy-implement หรือ /opencode-implement ด้วย argument เดียวกัน

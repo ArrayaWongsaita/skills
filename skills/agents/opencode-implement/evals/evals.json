@@ -170,7 +170,7 @@
       "id": 15,
       "name": "a one-criterion ticket runs end to end and lands as one commit",
       "prompt": "/opencode-implement .scratch/e2e-demo/ — a single ticket 01 (Blocked by: None) with one acceptance criterion. The Plan is approved. The opencode worker builds the whole ticket in one dispatch, writes a failing test, makes it pass, and returns a well-formed red/green report.",
-      "expected_output": "The orchestrator runs the verification gate (reproduce red at the pre-ticket HEAD with only the test file, confirm coverage and non-vacuity, run green + typecheck), and squash-merges the worker branch onto opencode-implement/e2e-demo as one commit named for the ticket that also ticks its checkboxes, with the full suite run on that result. The worktree is removed once that ticket's own integration gate is green.",
+      "expected_output": "The orchestrator runs the verification gate (reproduce red at the pre-ticket HEAD with only the test file, confirm coverage and non-vacuity, run green + typecheck), and squash-merges the worker branch onto opencode-implement/e2e-demo as one commit named for the ticket, then ticks its checkboxes (on disk when the ticket file is git-ignored, inside the commit when it is tracked), with the full suite run on that result. The worktree is removed once that ticket's own integration gate is green.",
       "expectations": [
         "Runs the full verification gate once, after the worker's single whole-ticket dispatch",
         "Reproduces the red state itself at the pre-ticket integration HEAD",

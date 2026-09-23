@@ -163,8 +163,9 @@ verification attempts.
 
 Follow [references/worktree-integration.md](references/worktree-integration.md):
 squash-merge each verified worker branch into the integration branch as one
-commit in ascending ticket-number order (ticking that ticket's checkboxes and
-setting its `Status:`), resolve a mechanical conflict and surface a
+commit in ascending ticket-number order (then ticking that ticket's checkboxes and
+setting its `Status:` — on disk when `.scratch/` is git-ignored, inside the commit
+when the ticket file is tracked), resolve a mechanical conflict and surface a
 design-encoding one, then run the full typecheck and test suite on the
 integrated result before advancing. Each ticket's squash commit also carries
 its Reuse Catalog entries: for each `create-shared`, `create-candidate`,

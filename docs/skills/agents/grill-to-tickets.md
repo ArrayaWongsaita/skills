@@ -39,7 +39,7 @@ npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 2. **Stage 1 — Spec**: รัน `to-spec` สังเคราะห์ `decisions.md`, glossary และ ADR เป็น `spec.md` โดยไม่สัมภาษณ์ซ้ำ ทุกการตัดสินใจใน log ต้องอยู่ใน spec พร้อม **Reuse Plan** ที่ระบุว่าแต่ละ module จะใช้ของเดิม ขยาย สร้างเป็น shared (ต้องมีผู้ใช้ตั้งแต่ 2 ราย) สร้างเป็น candidate promote หรือแยกไว้โดยตั้งใจ
 3. **Stage 2 — Design Review Gate**: แต่ละรอบส่ง `scrutinize` ไปรันใน subagent ตัวใหม่ที่เห็นแค่ไฟล์และไม่แก้ไฟล์ใด ๆ (อ่าน spec แบบเดียวกับ implementer) แล้ว context หลัก normalize verdict เป็น `SHIP` / `FIX_THEN_SHIP` / `REWORK` / `REJECT` (`FIX_THEN_SHIP` แก้แล้วต้องไล่แก้ทุกประโยคใน spec ที่พูดเรื่องเดียวกันให้ตรงกัน) เก็บรายงานไว้ไฟล์เดียว `design-review.md` อัปเดตทุกรอบ และตรวจ **reuse lens** ทุกรอบ (ของที่ซ้ำกับ catalog, logic ที่ไม่มีเจ้าของ, shared ที่เผื่ออนาคตเกินไป)
 4. **Stage 3 — Tickets**: เมื่อได้ `SHIP` รัน `to-tickets` เขียน ticket ลง `.scratch/<feature-slug>/issues/` shared module ใหม่แต่ละตัวมี ticket เจ้าของใบเดียวและ ticket ที่ใช้ต้องรอ ticket เจ้าของ ทุก ticket มีบรรทัด `**Reuse:**` (`use` / `extend` / `create-shared` / `create-candidate` / `promote`) ซึ่งไม่ใช่ acceptance criterion และมีบรรทัด `**Stories:**` บอกเลข user story ที่ ticket นั้นส่งมอบ ก่อน quiz ต้องรัน `scripts/check-tickets.mjs` ให้ผ่าน (ทุก story มี ticket, Blocked by ชี้ ticket ที่มีจริงและเลขต่ำกว่า, Reuse ถูกที่และใช้คำกริยาถูก, create-shared/promote มีเจ้าของใบเดียวที่ block ผู้ใช้รายอื่น) แล้วแสดงตาราง story coverage ใน quiz
-5. **Stop**: บอกให้ commit ไฟล์วางแผนและ `docs/reuse-catalog.md` แล้วพิมพ์ `/clear` ตามด้วย `/subagent-implement .scratch/<feature-slug>/` (หรือ `/agy-implement` / `/opencode-implement`) ไม่เรียก implementer เอง
+5. **Stop**: บอกว่า `.scratch/` อยู่ในเครื่องและถูก git ignore (ก่อนเขียนไฟล์แรก skill จะเช็ก `git check-ignore` และเพิ่ม `.scratch/` ลง `.git/info/exclude` ให้ถ้ายังไม่ถูก ignore) จึงไม่ต้อง commit ให้ commit เฉพาะ `docs/reuse-catalog.md` ที่เปลี่ยน แล้วพิมพ์ `/clear` ตามด้วย `/subagent-implement .scratch/<feature-slug>/` (หรือ `/agy-implement` / `/opencode-implement`) ไม่เรียก implementer เอง
 
 `REWORK` แบบ spec-level รัน `to-spec` ใหม่และอยู่ใน Stage 2 ส่วน decision-level กลับไป Stage 0 เพื่อ grill
 การตัดสินใจนั้นใหม่ โดย cycle counter ไม่ถูก reset
@@ -138,7 +138,8 @@ bundled `scripts/check-tickets.mjs` must pass: every story has a ticket, every
 blocker exists with a lower number, the Reuse field sits after Blocked by with
 the fixed verbs, and every create-shared or promote symbol has one ticket that
 blocks its other users; the quiz shows its story-coverage table. Then the skill
-prints a handoff (commit the planning files, `/clear`, then
+prints a handoff (`.scratch/` is local and git-ignored, so only a changed
+`docs/reuse-catalog.md` needs a commit; then `/clear`, then
 `/subagent-implement .scratch/<feature-slug>/` or its `agy` / `opencode`
 siblings) and stops.
 

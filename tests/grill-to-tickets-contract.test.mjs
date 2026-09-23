@@ -29,11 +29,10 @@ function localSkillLinks(markdown) {
 
 describe("grill-to-tickets composite skill contract", () => {
   const canonicalDir = "skills/agents/grill-to-tickets";
-  const mirrorDir = ".agents/skills/grill-to-tickets";
-  const skillDirs = [canonicalDir, mirrorDir];
+  const skillDirs = [canonicalDir];
   const skillFiles = skillDirs.map((dir) => path.resolve(dir, "SKILL.md"));
 
-  it("exists in the canonical and installed locations with valid frontmatter", async () => {
+  it("has valid frontmatter", async () => {
     for (const file of skillFiles) {
       await fileExists(file);
       const meta = parseFrontmatter(await readFile(file, "utf8"));
@@ -44,13 +43,6 @@ describe("grill-to-tickets composite skill contract", () => {
       );
       assert.equal(meta["disable-model-invocation"], "true");
     }
-  });
-
-  it("keeps the canonical and installed copies byte-identical", async () => {
-    const [canonical, mirror] = await Promise.all(
-      skillFiles.map((file) => readFile(file, "utf8")),
-    );
-    assert.equal(canonical, mirror);
   });
 
   it("inline-executes the five child skills and hands the tickets to a later implementer run", async () => {
@@ -296,18 +288,30 @@ describe("grill-to-tickets composite skill contract", () => {
     }
   });
 
-  it("prints the commit, /clear, then directory-implementer handoff", async () => {
+  it("keeps .scratch/ out of git: ensures a local exclude and asks for no commit of it", async () => {
+    for (const file of skillFiles) {
+      const content = await readFile(file, "utf8");
+      const storage = content.slice(content.indexOf("## Feature-Scoped Storage"), content.indexOf("## Stage 0"));
+      assert.match(storage, /git check-ignore -q \.scratch\//);
+      assert.match(storage, /git rev-parse --git-path info\/exclude/);
+      assert.match(storage, /changes no tracked file/);
+      const handoff = content.slice(content.indexOf("## Stop — Handoff"), content.indexOf("## Constraints"));
+      assert.doesNotMatch(handoff, /Commit \.scratch\//, "the handoff must not ask to commit .scratch/");
+    }
+  });
+
+  it("prints the catalog commit, /clear, then directory-implementer handoff", async () => {
     for (const file of skillFiles) {
       const content = await readFile(file, "utf8");
       const handoff = content.slice(content.indexOf("## Stop — Handoff"));
-      assert.match(handoff, /Commit \.scratch\/<feature-slug>\/[\s\S]*docs\/reuse-catalog\.md[\s\S]*clean\s+working tree/);
+      assert.match(handoff, /\.scratch\/ is local and git-ignored[\s\S]*Commit any\s+change to docs\/reuse-catalog\.md[\s\S]*clean\s+working tree/);
       assert.match(handoff, /\/clear/);
       assert.match(handoff, /\/subagent-implement \.scratch\/<feature-slug>\//);
       assert.match(handoff, /\/agy-implement[\s\S]{0,40}\/opencode-implement/);
       assert.ok(
         handoff.indexOf("Commit") < handoff.indexOf("/clear") &&
           handoff.indexOf("/clear") < handoff.indexOf("/subagent-implement"),
-        "commit, then /clear, then the implementer",
+        "catalog commit, then /clear, then the implementer",
       );
     }
   });

@@ -242,8 +242,10 @@ failed its full attempt budget.
 ### Integration (orchestrator, per ticket, not gated on the whole wave)
 
 Squash-merge the verified worker branch onto `opencode-implement/<feature-slug>`
-as exactly one commit in ascending ticket-number order, ticking the ticket file's
-checkboxes and setting its `Status:`, **as soon as that ticket clears** —
+as exactly one commit in ascending ticket-number order, then ticking the ticket
+file's checkboxes and setting its `Status:` (on disk when `.scratch/` is
+git-ignored, inside the commit when the ticket file is tracked), **as soon as
+that ticket clears** —
 independent of whether its wave-mates are done. A mechanical conflict the
 orchestrator resolves; a design-encoding conflict halts with
 `BLOCKED (INTEGRATION_DESIGN_CONFLICT)` and is surfaced. Run the full typecheck

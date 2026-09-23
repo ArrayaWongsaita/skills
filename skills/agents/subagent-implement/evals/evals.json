@@ -248,11 +248,11 @@
       "id": 20,
       "name": "a verified ticket is squash-merged as one commit in dependency order",
       "prompt": "/subagent-implement .scratch/merge-demo/ with an approved Plan. Ticket 01 passes the orchestrator's judgment.",
-      "expected_output": "The orchestrator squash-merges subagent-implement/merge-demo/01 onto the integration branch as exactly one commit named for the ticket, in ascending ticket-number order. The same commit ticks ticket 01's acceptance checkboxes and sets its Status to done. The worker's own commit count on its branch does not matter.",
+      "expected_output": "The orchestrator squash-merges subagent-implement/merge-demo/01 onto the integration branch as exactly one commit named for the ticket, in ascending ticket-number order. The orchestrator then ticks ticket 01's acceptance checkboxes and sets its Status to done — on disk when the ticket file is git-ignored, inside the same commit when it is tracked. The worker's own commit count on its branch does not matter.",
       "expectations": [
         "Squash-merges the worker branch as exactly one commit",
         "Names the commit for the ticket and merges in ascending ticket-number order",
-        "Ticks the ticket's acceptance checkboxes and sets its Status in the same commit",
+        "Ticks the ticket's acceptance checkboxes and sets its Status — on disk for a git-ignored ticket file, in the same commit for a tracked one",
         "Treats one commit per ticket as an integration property, not a worker rule"
       ],
       "files": []

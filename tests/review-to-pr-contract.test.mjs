@@ -38,11 +38,10 @@ function localSkillLinks(markdown) {
 }
 
 const canonicalDir = "skills/agents/review-to-pr";
-const mirrorDir = ".agents/skills/review-to-pr";
-const skillDirs = [canonicalDir, mirrorDir];
+const skillDirs = [canonicalDir];
 const skillFiles = skillDirs.map((dir) => path.resolve(dir, "SKILL.md"));
 
-async function bothSkillBodies() {
+async function skillBodies() {
   return Promise.all(
     skillFiles.map(async (file) => (await readFile(file, "utf8")).replace(/^---\n[\s\S]*?\n---\n/, "")),
   );
@@ -64,7 +63,7 @@ function stageSection(body, n) {
 
 describe("review-to-pr skill contract", () => {
   describe("ticket 01 — scaffold, invocation surface, and trigger policy", () => {
-    it("exists in the canonical and mirror locations with valid frontmatter", async () => {
+    it("has valid frontmatter", async () => {
       for (const file of skillFiles) {
         await fileExists(file);
         const meta = parseFrontmatter(await readFile(file, "utf8"));
@@ -84,31 +83,6 @@ describe("review-to-pr skill contract", () => {
       }
     });
 
-    it("keeps the canonical and mirror SKILL.md byte-identical", async () => {
-      const [canonical, mirror] = await Promise.all(
-        skillFiles.map((file) => readFile(file, "utf8")),
-      );
-      assert.equal(canonical, mirror);
-    });
-
-    it("keeps every reference file byte-identical across the skill copies", async () => {
-      for (const ref of SKILL_REFERENCES) {
-        const [canonical, mirror] = await Promise.all(
-          skillDirs.map((dir) => readFile(path.resolve(dir, `references/${ref}`), "utf8")),
-        );
-        assert.equal(canonical, mirror, `references/${ref} copies must match`);
-      }
-    });
-
-    it("keeps every eval file byte-identical across the skill copies", async () => {
-      for (const name of ["evals.json", "trigger-evals.json"]) {
-        const [canonical, mirror] = await Promise.all(
-          skillDirs.map((dir) => readFile(path.resolve(dir, `evals/${name}`), "utf8")),
-        );
-        assert.equal(canonical, mirror, `evals/${name} copies must match`);
-      }
-    });
-
     it("documents the invocation surface and the sub-commands", async () => {
       for (const file of skillFiles) {
         const content = await readFile(file, "utf8");
@@ -123,7 +97,7 @@ describe("review-to-pr skill contract", () => {
     });
 
     it("carries no list sub-command in v1 (deferred follow-up)", async () => {
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         assert.doesNotMatch(body, /\/review-to-pr list\b/);
       }
     });
@@ -137,19 +111,19 @@ describe("review-to-pr skill contract", () => {
     });
 
     it("states a run starts only on explicit human invocation", async () => {
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         assert.match(body, /explicit human invocation/i);
       }
     });
 
     it("steers positively — no 'Never' or 'Do not' in the instruction body", async () => {
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         assert.doesNotMatch(body, /\bNever\b/i, "prompt the positive instead of 'Never'");
         assert.doesNotMatch(body, /\bDo not\b/i, "prompt the positive instead of 'Do not'");
       }
     });
 
-    it("ships Codex metadata that blocks implicit invocation in both copies", async () => {
+    it("ships Codex metadata that blocks implicit invocation", async () => {
       for (const dir of skillDirs) {
         const yaml = await readFile(path.resolve(dir, "agents/openai.yaml"), "utf8");
         assert.match(yaml, /display_name:/);
@@ -225,7 +199,7 @@ describe("review-to-pr skill contract", () => {
         assert.match(content, /##\s*Stage 0[^\n]*review point/i);
         assert.match(content, /references\/review-point\.md/);
       }
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         const s = stageSection(body, 0);
         assert.ok(s, "Stage 0 section present");
         assert.match(s, /read-only/i);
@@ -319,7 +293,7 @@ describe("review-to-pr skill contract", () => {
         assert.match(content, /##\s*Stage 1/i);
         assert.match(content, /references\/review-loop\.md/);
       }
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         const s = stageSection(body, 1);
         assert.ok(s, "Stage 1 section present");
         assert.match(s, /code-review/i);
@@ -389,7 +363,7 @@ describe("review-to-pr skill contract", () => {
         assert.match(content, /##\s*Stage 2/i);
         assert.match(content, /references\/fix-dispatch\.md/);
       }
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         const s = stageSection(body, 2);
         assert.ok(s, "Stage 2 section present");
         assert.match(s, /cluster/i);
@@ -485,7 +459,7 @@ describe("review-to-pr skill contract", () => {
         assert.match(content, /##\s*Stage 3/i);
         assert.match(content, /references\/scrutiny-gate\.md/);
       }
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         const s = stageSection(body, 3);
         assert.ok(s, "Stage 3 section present");
         assert.match(s, /cross-cutting|risky/i);
@@ -560,7 +534,7 @@ describe("review-to-pr skill contract", () => {
 
   describe("ticket 06 — Stages 4-5, state, resume, and the full eval suite", () => {
     it("SKILL.md has a Stage 4 section: fresh verifier, whole typecheck and whole suite, red is a blocker", async () => {
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         const s = stageSection(body, 4);
         assert.ok(s, "Stage 4 section present");
         assert.match(s, /fresh\s+`?Explore`?\s+verifier/i);
@@ -574,7 +548,7 @@ describe("review-to-pr skill contract", () => {
     });
 
     it("SKILL.md has a Stage 5 handoff section that performs no PR step", async () => {
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         const s = stageSection(body, 5);
         assert.ok(s, "Stage 5 section present");
         assert.match(s, /integration branch/i);
@@ -588,7 +562,7 @@ describe("review-to-pr skill contract", () => {
         assert.match(s, /no PR step|no `?\/pr-to-dev`?/i);
       }
       // the run must not instruct an actual push / gh / pr-to-dev call
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         assert.doesNotMatch(body, /run `?\/pr-to-dev`?|execute `?gh pr|`git push` origin/i);
       }
     });
@@ -645,14 +619,6 @@ describe("review-to-pr skill contract", () => {
         assert.deepEqual(entries, [...SKILL_REFERENCES].sort());
       }
     });
-
-    it("the .scratch design-review record exists with the Gate 2 verdict", async () => {
-      const dr = await readFile(path.resolve(".scratch/review-to-pr/design-review.md"), "utf8");
-      assert.match(dr, /cycle/i);
-      assert.match(dr, /FIX_THEN_SHIP|fix-then-ship/i);
-      assert.match(dr, /blockingFindings|blocking findings/i);
-      assert.match(dr, /route/i);
-    });
   });
 
   describe("Reuse Catalog", () => {
@@ -665,7 +631,7 @@ describe("review-to-pr skill contract", () => {
         assert.match(c, /`code-review`\s+itself stays unchanged/);
         assert.match(c, /Reuse Catalog finding[\s\S]{0,120}blocker when it has a\s+concrete consequence/);
       }
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         assert.match(body, /Standards axis also reviews against it as a documented standard/);
       }
     });

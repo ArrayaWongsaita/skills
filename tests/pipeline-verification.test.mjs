@@ -35,27 +35,11 @@ async function assertMarkdownLinksExist(baseDir, markdown, sourceFile, { require
 }
 
 describe("Orchestration Pipeline End-to-End Verification", () => {
-  const grillWithDocsPath = path.resolve(".agents/skills/grill-with-docs/SKILL.md");
   const engWorkflowPath = path.resolve("skills/agents/engineering-workflow/SKILL.md");
-  const localEngWorkflowPath = path.resolve(".agents/skills/engineering-workflow/SKILL.md");
-  const scratchFeatureRoot = path.resolve(".scratch/skill-orchestrator-redesign");
 
   describe("File links and markdown references integrity", () => {
-    it("every skill upstream grill-with-docs calls exists in .agents/skills/", async () => {
-      const content = await readFile(grillWithDocsPath, "utf8");
-
-      for (const skill of ["grilling", "domain-modeling"]) {
-        assert.match(content, new RegExp(`"${skill}"`), `grill-with-docs must call ${skill}`);
-        const skillFile = path.resolve(`.agents/skills/${skill}/SKILL.md`);
-        await assert.doesNotReject(
-          fileExists(skillFile),
-          `Child skill ${skill} must exist at .agents/skills/${skill}/SKILL.md`
-        );
-      }
-    });
-
     it("all markdown links in engineering-workflow references point to existing files", async () => {
-      for (const basePath of [engWorkflowPath, localEngWorkflowPath]) {
+      for (const basePath of [engWorkflowPath]) {
         await fileExists(basePath);
         const content = await readFile(basePath, "utf8");
         const dir = path.dirname(basePath);
@@ -64,10 +48,7 @@ describe("Orchestration Pipeline End-to-End Verification", () => {
     });
 
     it("all reference docs in engineering-workflow/references/ exist and contain valid cross-links", async () => {
-      const refDirs = [
-        path.resolve("skills/agents/engineering-workflow/references"),
-        path.resolve(".agents/skills/engineering-workflow/references"),
-      ];
+      const refDirs = [path.resolve("skills/agents/engineering-workflow/references")];
 
       for (const refDir of refDirs) {
         const entries = await readdir(refDir);
@@ -79,76 +60,6 @@ describe("Orchestration Pipeline End-to-End Verification", () => {
           const content = await readFile(fullPath, "utf8");
           await assertMarkdownLinksExist(refDir, content, fullPath, { requireLinks: false });
         }
-      }
-    });
-  });
-
-  describe("Artifact tree specification validation", () => {
-    it(".scratch/<feature-slug>/ contains all required architecture artifacts", async () => {
-      await fileExists(scratchFeatureRoot);
-      const entries = await readdir(scratchFeatureRoot);
-
-      assert.ok(entries.includes("CONTEXT.md"), "CONTEXT.md must exist in feature root");
-      assert.ok(entries.includes("adr"), "adr directory must exist in feature root");
-      assert.ok(entries.includes("spec.md"), "spec.md must exist in feature root");
-      assert.ok(entries.includes("issues"), "issues directory must exist in feature root");
-    });
-
-    it("CONTEXT.md satisfies domain glossary schema", async () => {
-      const contextFile = path.join(scratchFeatureRoot, "CONTEXT.md");
-      const content = await readFile(contextFile, "utf8");
-
-      assert.match(content, /^# Domain Glossary/m);
-      assert.match(content, /## Language/i);
-      assert.match(content, /\*\*Full-Lifecycle Orchestrator\*\*:/);
-      assert.match(content, /\*\*Smart Zone\*\*:/);
-      assert.match(content, /\*\*Phase Boundary\*\*:/);
-      assert.match(content, /\*\*Inline Execution\*\*:/);
-      assert.match(content, /_Avoid_:/);
-    });
-
-    it("adr/ directory contains properly formatted ADRs", async () => {
-      const adrDir = path.join(scratchFeatureRoot, "adr");
-      const files = await readdir(adrDir);
-      const adrFiles = files.filter((f) => /^\d{4}-.+\.md$/.test(f));
-
-      assert.ok(adrFiles.length >= 1, "At least one ADR must exist matching NNNN-<slug>.md");
-      for (const adr of adrFiles) {
-        const content = await readFile(path.join(adrDir, adr), "utf8");
-        assert.match(content, /^# \d{4}:/m, "ADR must start with # NNNN: Title");
-        assert.match(content, /## Status/i, "ADR must contain ## Status");
-        assert.match(content, /## Context/i, "ADR must contain ## Context");
-        assert.match(content, /## Decision/i, "ADR must contain ## Decision");
-        assert.match(content, /## Consequences/i, "ADR must contain ## Consequences");
-      }
-    });
-
-    it("spec.md satisfies feature specification schema", async () => {
-      const specFile = path.join(scratchFeatureRoot, "spec.md");
-      const content = await readFile(specFile, "utf8");
-
-      assert.match(content, /^# Spec:/m, "spec.md must start with # Spec:");
-      assert.match(content, /## Problem Statement/i);
-      assert.match(content, /## Solution/i);
-      assert.match(content, /## User Stories/i);
-      assert.match(content, /## Implementation Decisions/i);
-      assert.match(content, /## Testing Decisions/i);
-      assert.match(content, /## Out of Scope/i);
-    });
-
-    it("issues/ directory contains properly structured tracer-bullet tickets", async () => {
-      const issuesDir = path.join(scratchFeatureRoot, "issues");
-      const files = await readdir(issuesDir);
-      const ticketFiles = files.filter((f) => /^\d{2}-.+\.md$/.test(f)).sort();
-
-      assert.ok(ticketFiles.length >= 3, "Expected at least 3 tickets in issues/");
-      for (const ticket of ticketFiles) {
-        const content = await readFile(path.join(issuesDir, ticket), "utf8");
-        assert.match(content, /^# \d{2}:/m, "Ticket must start with # NN: Title");
-        assert.match(content, /\*\*What to build:\*\*/);
-        assert.match(content, /\*\*Blocked by:\*\*/);
-        assert.match(content, /\*\*Status:\*\*/);
-        assert.match(content, /- \[[ x]\]/, "Ticket must contain acceptance criteria checklist");
       }
     });
   });

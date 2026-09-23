@@ -115,6 +115,8 @@ integration model:
    hand-edited the tree, or a later change broke it:
    - reset the integration branch to the **last still-verifying commit**
    - discard the worktrees for the invalidated tickets
+   - re-open each invalidated ticket file — a tracked one comes back with the
+     reset; on a git-ignored one, un-tick its checkboxes and reset its `Status:`
    - list the **discarded commits** at the top of the report, so the blast
      radius is visible
    - re-dispatch from that point

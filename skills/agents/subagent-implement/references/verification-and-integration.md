@@ -83,8 +83,10 @@ worktree kept.
    git commit -m "<NN>: <ticket title>"
    ```
 
-   The same commit ticks that ticket file's acceptance checkboxes, sets its
-   `Status:` to done, and carries the ticket's Reuse Catalog update (below).
+   The orchestrator ticks that ticket file's acceptance checkboxes and sets its
+   `Status:` to done. `.scratch/` is normally git-ignored, so those edits land on
+   disk only; a tracked ticket file is staged into the same commit. That commit
+   carries the ticket's Reuse Catalog update (below).
    "One commit per ticket" is a property of this merge, not a worker rule —
    workers commit freely on their own branch.
 2. **Conflict routing.** A **mechanical conflict** (import ordering, adjacent
