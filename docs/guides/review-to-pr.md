@@ -14,7 +14,7 @@ Skill นี้จะนำ Branch ดังกล่าวมาผ่านก
 
 ### จุดประสงค์หลักและคุณสมบัติเด่น
 1. **รีวิวแบบ 2 แกนคู่ขนาน (Two-axis Code Review):**
-   - **Standards axis:** ตรวจสอบตามมาตรฐานโค้ดของ Repository และ Code Smells พื้นฐาน
+   - **Standards axis:** ตรวจสอบตามมาตรฐานโค้ดของ Repository และ Code Smells พื้นฐาน รวมถึง `docs/reuse-catalog.md` ถ้ามี (จับโค้ดที่ซ้ำกับ module ที่มีอยู่แล้วนอก diff ซึ่ง smell "Duplicated Code" ปกติมองไม่เห็น)
    - **Spec axis:** ตรวจสอบความตรงตามข้อกำหนด (Acceptance Criteria จาก `spec.md`) และป้องกันการเขียนโค้ดเกินขอบเขต (Scope Creep)
 2. **จัดกลุ่ม Blockers และแก้เป็น Commit ที่ชัดเจน:**
    - นำประเด็นที่เป็นข้อบกพร่องสำคัญ (Blockers) มาจัดกลุ่ม (Clustering)
@@ -112,6 +112,7 @@ Stage 5: Handoff                 สรุปรายงาน, แสดง co
 2. **Stage 1 — Two-axis Code-review (รีวิว 2 แกน):**
    - สั่งรัน `code-review` แสดงผลแกน Standards และ Spec เคียงข้างกัน
    - คัดกรองข้อบกพร่อง: ถ้าขัดมาตรฐานที่มีผลเสียชัดเจน หรือโค้ดไม่ตรง Spec จะจัดเป็น **Blocker** นำไปแก้ใน Stage 2
+   - โค้ดที่ซ้ำกับ module ใน Reuse Catalog (เช่น ตัว format เงินตัวที่สองข้าง `formatCurrency`) หรือไม่ทำตาม Rule ของ catalog เป็น Blocker เมื่อมีผลเสียจริง เช่น สอง implementation ที่อาจทำงานไม่ตรงกันในอนาคต
 3. **Stage 2 — Fix the Blockers (แก้ไขข้อบกพร่อง):**
    - รวมกลุ่ม Blocker ที่เกี่ยวข้องกัน
    - ถ้าแก้หลายไฟล์หรือต้องแก้เทสต์ จะส่งให้ Worker Subagent ใน Worktree จัดการ; ถ้าแก้จุดเดียวง่ายๆ จะแก้แบบ Inline

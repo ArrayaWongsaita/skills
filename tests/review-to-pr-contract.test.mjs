@@ -654,4 +654,20 @@ describe("review-to-pr skill contract", () => {
       assert.match(dr, /route/i);
     });
   });
+
+  describe("Reuse Catalog", () => {
+    it("the Standards axis reviews against docs/reuse-catalog.md as a documented standard", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/review-loop.md"), "utf8");
+        assert.match(c, /When the repository has\s+`docs\/reuse-catalog\.md`, name it among the standards sources/);
+        assert.match(c, /duplicates a catalogued one[\s\S]{0,120}documented-standard violation/);
+        assert.match(c, /cite the\s+catalog line/);
+        assert.match(c, /`code-review`\s+itself stays unchanged/);
+        assert.match(c, /Reuse Catalog finding[\s\S]{0,120}blocker when it has a\s+concrete consequence/);
+      }
+      for (const body of await bothSkillBodies()) {
+        assert.match(body, /Standards axis also reviews against it as a documented standard/);
+      }
+    });
+  });
 });

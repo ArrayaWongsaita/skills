@@ -49,7 +49,9 @@ review point, `/review-to-pr <slug>` เพื่อระบุ feature directo
    source, เขียน `review-status.md`, หยุดรอ approve
 2. **Stage 1 — code-review สองแกน**: รัน `code-review` inline เทียบ review point,
    normalize finding เป็น blocking / non-blocking, blocker → Stage 2, ไม่มี → Stage 3
-   (budget สามรอบ, หยุดก่อนถ้ารอบไหนไม่ขยับ)
+   (budget สามรอบ, หยุดก่อนถ้ารอบไหนไม่ขยับ) ถ้า repo มี `docs/reuse-catalog.md`
+   แกน Standards จะใช้เป็นมาตรฐานด้วย โค้ดที่ซ้ำกับ module ใน catalog หรือไม่ทำตาม
+   Rule ของ catalog จะถูกรายงานพร้อมอ้างบรรทัดใน catalog
 3. **Stage 2 — แก้ blocker**: จับเป็น cluster, cluster ที่ต้องแตะ test หรือหลายไฟล์ →
    worker + verifier subagent, cluster ไฟล์เดียวไม่แตะ test → แก้ inline, ลง
    `fix(review):` commit หนึ่งอันต่อ cluster แล้วกลับ Stage 1
@@ -73,7 +75,7 @@ sub-command: `continue` resume พร้อม Reality reconciliation, `status` 
 
 - `references/review-point.md` — preflight, resolve review point, resolve slug +
   spec source, `review-status.md` เริ่มต้น, การ pause
-- `references/review-loop.md` — การเรียก `code-review` inline สองแกน, การ normalize
+- `references/review-loop.md` — การเรียก `code-review` inline สองแกน (รวม Reuse Catalog เป็นมาตรฐานของแกน Standards), การ normalize
   blocking / non-blocking, findings ledger, budget สามรอบ, การหยุดแบบ no-progress
 - `references/fix-dispatch.md` — clustering, กติกา dispatch-vs-inline, contract
   worker + verifier ที่ copy จาก `subagent-implement`, `MAX_FIX_ATTEMPTS = 3`,
@@ -145,7 +147,9 @@ override the review point, `/review-to-pr <slug>` to name the feature directory)
 2. **Stage 1 — Two-axis code-review**: run `code-review` inline against the
    review point, normalize each finding to blocking or non-blocking, route
    blockers to Stage 2 and a clean review to Stage 3 (three-cycle budget, early
-   stop on a no-progress cycle).
+   stop on a no-progress cycle). When the repository has `docs/reuse-catalog.md`,
+   the Standards axis reviews against it too, so a new module duplicating a
+   catalogued one, or code bypassing a catalog Rule, is a cited violation.
 3. **Stage 2 — Fix the blockers**: cluster the blockers; a cluster that needs a
    test or touches several files goes to a worker + verifier subagent, a
    one-file no-test cluster is applied inline; land one `fix(review):` commit per
@@ -174,8 +178,9 @@ read-only.
 
 - `references/review-point.md` — the preflight, review-point resolution, feature
   slug and spec-source resolution, the initial `review-status.md`, and the pause
-- `references/review-loop.md` — the inline two-axis `code-review` call, blocking
-  vs non-blocking normalization, the findings ledger, the three-cycle budget, and
+- `references/review-loop.md` — the inline two-axis `code-review` call
+  (including the Reuse Catalog as a Standards-axis source), blocking vs
+  non-blocking normalization, the findings ledger, the three-cycle budget, and
   the no-progress early stop
 - `references/fix-dispatch.md` — clustering, the dispatch-vs-inline rule, the
   worker + verifier contract copied from `subagent-implement`,

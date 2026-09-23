@@ -11,7 +11,13 @@ to the pinned `review_point` — `git diff <review-point>...HEAD` (three-dot). I
 runs two axes as **parallel sub-agents**:
 
 - **Standards axis** — the repo's documented coding standards plus the Fowler
-  smell baseline `code-review` carries.
+  smell baseline `code-review` carries. When the repository has
+  `docs/reuse-catalog.md`, name it among the standards sources handed to this
+  axis, with the brief: *a new module that duplicates a catalogued one, or code
+  that bypasses a catalog Rule, is a documented-standard violation — cite the
+  catalog line.* This reaches duplication outside the diff, which the baseline's
+  Duplicated Code smell (hunks within the change) cannot see. `code-review`
+  itself stays unchanged; the catalog is input, like any standards file.
 - **Spec axis** — the acceptance criteria in the `spec_source` from Stage 0
   (`spec.md` + `issues/`, or the commit messages in degraded mode), and scope
   creep.
@@ -34,6 +40,12 @@ A finding is a **blocker** when the evidence shows one of:
   silently;
 - a **documented-standard violation with a concrete consequence** — cite the
   standard (file + rule) and name what breaks.
+
+A Reuse Catalog finding follows the same rule: it is a blocker when it has a
+concrete consequence — two implementations of one job that can now diverge (a
+second currency formatter beside `formatCurrency`), or a Rule's guarantee lost
+(an HTTP call that skips `apiClient`'s auth and retry) — and non-blocking when
+the overlap is cosmetic.
 
 A finding is **non-blocking** when it is a style preference, or a baseline smell
 with no concrete consequence. Non-blocking findings are **carried in the report,
