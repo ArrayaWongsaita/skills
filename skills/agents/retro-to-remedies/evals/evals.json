@@ -66,6 +66,49 @@
       "files": [
         "evals/fixtures/opencode-implement-hosted-model/review-status.md"
       ]
+    },
+    {
+      "id": 6,
+      "name": "fixture run yields eight misses of Further Notes with locations and quotes",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model",
+      "expected_output": "The fixture Run yields the eight Misses of the spec's Further Notes table with their locations and verbatim quotes:\n1. worktree cut from a fixed base (status.md:12, harness note)\n2. worker branch ref collides with integration branch (status.md:14, gotcha)\n3. ticket 02 dispatched without isolation (status.md:16, incident)\n4. std-1: commit edited another skill's files against ADR 0007 §3 (review-status.md:42-46, blocker)\n5. std-2: one rule restated four times (review-status.md:47-49, carried)\n6. std-3: reference cites feature's own ticket numbers (review-status.md:50-52, carried)\n7. std-4: one command shown twice (review-status.md:53-55, carried)\n8. std-5: flag named by alias only (review-status.md:56-57, carried)",
+      "expectations": [
+        "Reads all primary sources from evals/fixtures/opencode-implement-hosted-model/",
+        "Extracts exactly the eight Misses defined in Further Notes with source locations and verbatim quotes",
+        "Edits none of the primary source files"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/review-status.md",
+        "evals/fixtures/opencode-implement-hosted-model/status.md",
+        "evals/fixtures/opencode-implement-hosted-model/reports/03.md",
+        "evals/fixtures/opencode-implement-hosted-model/design-review.md"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "run with no status.md proceeds and names it missing",
+      "prompt": "/retro-to-remedies upstream-feature",
+      "expected_output": "Proceeds with the available primary sources when status.md is missing, and names status.md as missing in the opening section of the Retro report.",
+      "expectations": [
+        "Identifies that status.md does not exist under .scratch/upstream-feature/",
+        "Records status.md as a missing expected source in the report's opening section",
+        "Continues reading remaining primary sources (such as review-status.md and git history) without failing"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/review-status.md"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "no .scratch asks before reading session transcript",
+      "prompt": "/retro-to-remedies adhoc-feature",
+      "expected_output": "Detects that no .scratch/adhoc-feature/ directory exists, and asks the user for explicit confirmation before reading the current session's transcript.",
+      "expectations": [
+        "Discovers that .scratch/adhoc-feature/ does not exist",
+        "Pauses and asks the user whether to read the current session's transcript before attempting any transcript read",
+        "Avoids silent multi-megabyte transcript reading without user consent"
+      ],
+      "files": []
     }
   ]
 }

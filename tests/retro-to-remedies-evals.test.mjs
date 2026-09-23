@@ -118,5 +118,28 @@ describe("retro-to-remedies eval suite contract", () => {
         "case for protected-branch refusal",
       );
     });
+
+    it("covers the branches listed in ticket 02 (fixture 8 misses, missing status.md, no .scratch asks before transcript)", async () => {
+      const { evals } = await evalsJson();
+      const hay = (re) => evals.some((e) => re.test(e.name) || re.test(e.expected_output));
+
+      // fixture Run yields eight Misses of Further Notes table with locations
+      assert.ok(
+        hay(/fixture.*eight misses|fixture.*8 misses|eight misses.*fixture|fixture.*further notes/i),
+        "case for fixture Run yielding eight Misses with locations",
+      );
+
+      // Run with no status.md proceeds and names it missing
+      assert.ok(
+        hay(/missing status\.md|no status\.md.*proceeds|no status\.md.*names it missing/i),
+        "case for Run with no status.md proceeding and naming it missing",
+      );
+
+      // no .scratch/<feature-slug>/ asks before reading transcript
+      assert.ok(
+        hay(/no \.scratch.*asks before reading.*transcript|no \.scratch.*asks.*transcript/i),
+        "case for no .scratch/<feature-slug>/ asking before reading transcript",
+      );
+    });
   });
 });

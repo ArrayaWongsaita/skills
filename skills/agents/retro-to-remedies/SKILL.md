@@ -34,12 +34,20 @@ Run exclusively from a working feature or integration branch. When currently on 
 
 ### Stage 0 — Collect (read-only)
 
-Inspect the working tree branch guardrail. Read the project's durable `docs/retro-log.md` when present, following up on any pending items. Gather all primary sources recorded under `.scratch/<feature-slug>/` (`review-status.md`, implementer `status.md`, per-ticket reports, and `design-review.md`) alongside git commits since the review point or merge-base with `main`. When `--transcript` is passed, list matching sessions and extract quotes through a read-only subagent. Ensure every recorded Miss carries a concrete source location and verbatim quote.
+Inspect the working tree branch guardrail. Read the project's durable `docs/retro-log.md` when present, following up on any pending items.
+
+Gather and read every Primary source present for the Run under `.scratch/<feature-slug>/` (`review-status.md`, implementer `status.md`, per-ticket reports or logs, and `design-review.md`) alongside git history on the integration branch since `review_point` (from `review-status.md`) or the merge-base with `main`. Read each run-state file by meaning across implementer formats, and edit none of them.
+
+Extract each Miss with its concrete location (file plus id, line, or commit SHA) and a verbatim quote. For details on what constitutes a Miss across each source, consult [references/miss-sources.md](references/miss-sources.md).
+
+Record all expected sources that are missing, and list them for the report's opening section. When a Run has no `.scratch/<feature-slug>/` directory at all, ask the user for explicit confirmation before reading the current session's transcript. When `--transcript` is passed, list matching sessions and extract quotes through a read-only subagent.
 
 Detailed guidance:
 - Primary sources and extraction rules: [references/miss-sources.md](references/miss-sources.md)
 - Transcript discovery and selection: [references/transcript-mode.md](references/transcript-mode.md)
 - Resuming or starting fresh: [references/resume.md](references/resume.md)
+
+Completion criterion: every present source read, and every Miss has a location and quote.
 
 ### Stage 1 — Classify and report
 

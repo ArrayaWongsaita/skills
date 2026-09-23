@@ -59,3 +59,27 @@ $retro-to-remedies
 ### กฎความปลอดภัยของ Branch
 
 Skill นี้ปฏิเสธการทำงานบน branch `main`, `master`, หรือ `dev` โดยเด็ดขาด หากพบว่าอยู่บน branch ดังกล่าว จะหยุดการทำงานทันทีโดยไม่อ่านไฟล์ใดๆ และแนะนำชื่อ branch ที่ควรสร้างให้ผู้ใช้
+
+---
+
+## 4. ขั้นตอนการทำงานและ Primary Sources ที่อ่าน (Stages)
+
+### Stage 0 — Collect (read-only)
+
+Stage 0 ทำหน้าที่รวบรวมหลักฐานทั้งหมดจาก Run โดย **อ่านอย่างเดียว (read-only) และไม่แก้ไขไฟล์ run-state ใดๆ ทั้งสิ้น**:
+- **`review-status.md`**: อ่าน blocking findings ทั้งหมด, carried findings (status `open` และ non-blocking), findings ที่ `unfixable` หรือ `stalled`, และ budget รอบรีวิวที่เกิน 1 cycle
+- **Implementer `status.md`**: ตั๋วที่ต้อง retry (attempts > 1), ตั๋วที่ติด `BLOCKED`, และบทเรียนทั้งหมดใน notes (harness notes, gotchas, incidents)
+- **Implementer reports หรือ logs** (`reports/<NN>.md`, `logs/<NN>.json`, `logs/<NN>.jsonl`): ข้อผิดพลาดในการ verify (verification failures) พร้อมสาเหตุ
+- **`design-review.md`**: ทุกรอบที่ไม่ได้รับคำตัดสิน `SHIP` พร้อมระบุประเภท `REWORK`
+- **Git history**: ประวัติ commit บน integration branch ได้แก่ `fix(review):` commits และ reverts นับตั้งแต่ `review_point` หรือ merge-base กับ `main`
+- **Session transcript**: อ่านเฉพาะเมื่อระบุ `--transcript` หรือเมื่อไม่พบ directory `.scratch/<feature-slug>/` (ซึ่งจะถามยืนยันกับผู้ใช้ก่อนอ่าน)
+
+หากพบว่ามี expected sources ใดที่ขาดหายไป (เช่น Run ที่ผ่าน upstream `/implement` ไม่มี `status.md`) Stage 0 จะบันทึกและแสดงรายชื่อไฟล์ที่ขาดหายไปไว้ในส่วนเปิดของรายงาน และทำงานต่อไปด้วยข้อมูลเท่าที่มีอยู่ เกณฑ์เสร็จสิ้นของ Stage 0 คือ: แหล่งข้อมูลที่มีอยู่ทั้งหมดถูกอ่าน และ Misses ทุกตัวระบุพิกัดที่มา (location: file, id/line/SHA) พร้อมข้อความยกมาตรงตัว (verbatim quote)
+
+### Stage 1 — Classify and report
+
+นำ Misses มาจัดกลุ่มตามสาเหตุ ตรวจสอบการเกิดซ้ำกับ `docs/retro-log.md` และจำแนกเป็น 6 มาตรการ (Check, Standard, Pointer, Skill fix, Prune, Access) จัดลำดับและเขียนรายงานลง `.scratch/<feature-slug>/retro.md` จากนั้นหยุดพักรอคำตอบ (`apply`, `hand off`, `decline`, `defer`) จากผู้ใช้
+
+### Stage 2 — Apply and hand off
+
+commit การเปลี่ยนแปลง Text remedies แต่ละข้อที่อนุมัติลงบน branch (`chore(retro): <remedy>`) บันทึกประวัติลง `docs/retro-log.md` ตรวจสอบ suite ทั้งหมด และแสดง prompt สำหรับ Code remedies ส่งมอบก่อนรัน `/pr-to-dev`

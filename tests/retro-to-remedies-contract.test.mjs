@@ -238,4 +238,115 @@ describe("retro-to-remedies skill contract", () => {
       assert.match(glossary, /\|\s*Retro Log\s*\|/);
     });
   });
+
+  describe("ticket 02 — Stage 0, collect Misses", () => {
+    it("references/miss-sources.md lists, per source, what counts as a Miss", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/miss-sources.md"), "utf8");
+
+        // review-status.md
+        assert.match(c, /review-status\.md/);
+        assert.match(c, /blocking finding/i);
+        assert.match(c, /carried finding/i);
+        assert.match(c, /open/i);
+        assert.match(c, /non-blocking/i);
+        assert.match(c, /unfixable/i);
+        assert.match(c, /stalled/i);
+        assert.match(c, /budget/i);
+
+        // implementer status.md
+        assert.match(c, /status\.md/);
+        assert.match(c, /more than one attempt|retry|attempts/i);
+        assert.match(c, /BLOCKED/);
+        assert.match(c, /lesson/i);
+        assert.match(c, /notes/i);
+
+        // implementer reports or logs
+        assert.match(c, /reports\/<NN>\.md|reports\/\*|reports/);
+        assert.match(c, /logs\/<NN>\.json|logs\/\*|logs/);
+        assert.match(c, /verification failure/i);
+        assert.match(c, /reason/i);
+
+        // design-review.md
+        assert.match(c, /design-review\.md/);
+        assert.match(c, /SHIP/);
+        assert.match(c, /REWORK/);
+
+        // git
+        assert.match(c, /git\b/i);
+        assert.match(c, /fix\(review\):/);
+        assert.match(c, /revert/i);
+        assert.match(c, /review_point/);
+        assert.match(c, /merge-base.*main|merge-base with `?main`?/i);
+      }
+    });
+
+    it("states that every Miss carries its location (file plus id, line, or SHA) and a verbatim quote, and run-state files are read, never edited", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/miss-sources.md"), "utf8");
+        assert.match(c, /location/i);
+        assert.match(c, /file/i);
+        assert.match(c, /id/i);
+        assert.match(c, /line/i);
+        assert.match(c, /sha/i);
+        assert.match(c, /verbatim quote/i);
+        assert.match(c, /read/i);
+        assert.match(c, /never edit|never edited|edits? none|read-only/i);
+      }
+    });
+
+    it("SKILL.md's ## Stage 0 section drives the reference and ends on its completion criterion", async () => {
+      for (const file of skillFiles) {
+        const content = await readFile(file, "utf8");
+        assert.match(content, /##\s*Stage 0/i);
+        assert.match(content, /references\/miss-sources\.md/);
+      }
+      for (const body of await bothSkillBodies()) {
+        const stage0Match = body.match(/###?\s*Stage 0[\s\S]*?(?=###?\s*Stage 1|$)/i);
+        assert.ok(stage0Match, "Stage 0 section must be present");
+        const stage0Text = stage0Match[0];
+        assert.match(stage0Text, /completion/i);
+        assert.match(stage0Text, /every present source read|every Primary source present has been read/i);
+        assert.match(stage0Text, /location/i);
+        assert.match(stage0Text, /quote/i);
+      }
+    });
+
+    it("lists missing expected sources for report's opening section and asks before reading transcript when no .scratch/<feature-slug>/", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/miss-sources.md"), "utf8");
+        assert.match(c, /missing expected sources|missing sources/i);
+        assert.match(c, /report.*opening|opening section/i);
+        assert.match(c, /no `?\.scratch(\/<feature-slug>\/)?`?/i);
+        assert.match(c, /ask/i);
+        assert.match(c, /transcript/i);
+      }
+      for (const body of await bothSkillBodies()) {
+        const stage0Match = body.match(/###?\s*Stage 0[\s\S]*?(?=###?\s*Stage 1|$)/i);
+        assert.ok(stage0Match);
+        const stage0Text = stage0Match[0];
+        assert.match(stage0Text, /missing/i);
+        assert.match(stage0Text, /ask/i);
+        assert.match(stage0Text, /transcript/i);
+      }
+    });
+
+    it("both guides describe what Stage 0 reads", async () => {
+      const skillDoc = await readFile(path.resolve("docs/skills/agents/retro-to-remedies.md"), "utf8");
+      assert.match(skillDoc, /Stage 0/i);
+      assert.match(skillDoc, /review-status\.md/);
+      assert.match(skillDoc, /status\.md/);
+      assert.match(skillDoc, /reports|logs/);
+      assert.match(skillDoc, /design-review\.md/);
+      assert.match(skillDoc, /git/i);
+
+      const guideDoc = await readFile(path.resolve("docs/guides/retro-to-remedies.md"), "utf8");
+      assert.match(guideDoc, /Stage 0/i);
+      assert.match(guideDoc, /review-status\.md/);
+      assert.match(guideDoc, /status\.md/);
+      assert.match(guideDoc, /reports|logs/);
+      assert.match(guideDoc, /design-review\.md/);
+      assert.match(guideDoc, /git/i);
+    });
+  });
 });
