@@ -484,4 +484,42 @@ describe("agy-implement skill contract", () => {
       }
     });
   });
+
+  describe("Reuse Catalog", () => {
+    it("the worker prompt carries the Reuse line, a read-only catalog pointer, and the Reuse Plan rule", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/prompt-scaffold.md"), "utf8");
+        assert.match(c, /- Reuse: <the ticket's Reuse line, verbatim>/);
+        assert.match(c, /- Reuse Catalog: <abs path to docs\/reuse-catalog\.md> — read-only for you/);
+        assert.match(c, /only when the target repository has\s+`docs\/reuse-catalog\.md`/);
+        assert.match(c, /any verb other than `use`[\s\S]{0,120}Reuse\s+Plan/);
+        assert.match(c, /gets `none`/);
+      }
+    });
+
+    it("the integration gate writes catalog entries serially inside each ticket's squash commit", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/worktree-integration.md"), "utf8");
+        const section = c.slice(c.indexOf("## Reuse Catalog update"));
+        assert.ok(c.includes("## Reuse Catalog update"), "catalog update section present");
+        assert.match(section, /`git merge --squash` and `git commit`/);
+        assert.match(section, /ascending ticket-number order/);
+        assert.match(section, /workers only read the catalog/);
+        for (const verb of ["create-shared", "create-candidate", "extend", "promote"]) {
+          assert.match(section, new RegExp(`\`${verb}\``), `handles ${verb}`);
+        }
+        assert.match(section, /Grep the bare symbol/);
+        assert.match(section, /Reuse Plan entry/);
+        assert.match(section, /not found in changed files/);
+        assert.match(section, /reads no code/);
+        assert.match(section, /Coverage dates stay/);
+        assert.match(section, /no catalog file, skip/i);
+      }
+      for (const body of await bothSkillBodies()) {
+        assert.match(body, /\*\*Reuse:\*\*/);
+        assert.match(body, /docs\/reuse-catalog\.md/);
+        assert.match(body, /catalog's only writer while parallel wave-mates only read/);
+      }
+    });
+  });
 });

@@ -45,7 +45,10 @@ npx skills add ArrayaWongsaita/skills --skill agy-implement
 2. **Stage 1 — Execute**: ต่อ wave — dispatch `agy` worker หนึ่งตัวต่อ ticket (serial ใน
    tree, parallel ใน `git worktree`), orchestrator รัน verification gate เอง (reproduce
    red, รัน green, typecheck, ตรวจ test diff), แล้ว integration gate ต่อ wave (squash-merge
-   ตามลำดับเลข ticket, รัน suite เต็ม)
+   ตามลำดับเลข ticket, รัน suite เต็ม) **Reuse Catalog:** prompt ของ worker มีบรรทัด
+   `**Reuse:**` ของ ticket และตัวชี้ `docs/reuse-catalog.md` แบบอ่านอย่างเดียว (ถ้ามี)
+   orchestrator เขียนรายการลง catalog ใน commit ของแต่ละ ticket ทีละตัวตามลำดับ
+   worker ที่รัน parallel จึงแค่อ่าน ไม่มีทางชนกัน
 3. **Stop — Handoff**: พิมพ์ชื่อ integration branch, สรุป token ต่อ provider และคำสั่ง
    `/code-review` + `/scrutinize` ที่ต้องรันต่อใน context ใหม่ ไม่ push ไม่เปิด PR
 
@@ -61,8 +64,8 @@ sub-command: `continue` resume พร้อม Reality reconciliation, `status` 
 
 - `references/planning.md` — parse ticket, สร้าง/ตรวจ DAG, คำนวณ wave, touch-set hint, เลือก seam
 - `references/agy-contract.md` — flag ของ `agy`, result envelope, การจัดการ failure/timeout
-- `references/prompt-scaffold.md` — template prompt worker ต่อ ticket พร้อม red-green-refactor เต็ม
-- `references/worktree-integration.md` — preflight, วงจร worktree, การ dispatch แบบ serial/parallel, integration gate
+- `references/prompt-scaffold.md` — template prompt worker ต่อ ticket พร้อม red-green-refactor เต็ม และบรรทัด Reuse / Reuse Catalog
+- `references/worktree-integration.md` — preflight, วงจร worktree, การ dispatch แบบ serial/parallel, integration gate, การอัปเดต Reuse Catalog
 - `references/status-and-resume.md` — halt report, `status.md`, Reality reconciliation, rewind
 - `evals/evals.json` — เคสพฤติกรรม หนึ่งเคสต่อ decision branch, รูปแบบ benchmark ของ `skill-creator`
 - `evals/trigger-evals.json` — กันไม่ให้ description อ่านเหมือน model-invocable
@@ -115,7 +118,11 @@ modified `.scratch/*/issues/` directory).
    in the tree, parallel in `git worktree`s), run the orchestrator's verification
    gate on every result (reproduce red, run green, typecheck, inspect the test
    diff), then the per-wave integration gate (squash-merge in ticket-number
-   order, full suite).
+   order, full suite). **Reuse Catalog:** each worker prompt carries the
+   ticket's `**Reuse:**` line and, when present, a read-only pointer to
+   `docs/reuse-catalog.md`; the orchestrator writes catalog entries inside each
+   ticket's squash commit, one ticket at a time, so parallel wave-mates only
+   read the catalog.
 3. **Stop — Handoff**: print the integration branch name, per-provider token
    usage, and the exact `/code-review` and `/scrutinize` commands to run next in
    a fresh context. It never pushes or opens a PR.
@@ -137,9 +144,9 @@ are read-only.
 - `references/agy-contract.md` — the `agy` invocation flags, the result envelope,
   and failure/timeout handling
 - `references/prompt-scaffold.md` — the per-ticket worker prompt template with the
-  full red-green-refactor protocol inline
+  full red-green-refactor protocol inline, plus the Reuse and Reuse Catalog lines
 - `references/worktree-integration.md` — preflight, worktree lifecycle, serial
-  and parallel dispatch, and the integration gate
+  and parallel dispatch, the integration gate, and the Reuse Catalog update
 - `references/status-and-resume.md` — the halt report, `status.md` fields,
   Reality reconciliation, and the resume rewind
 - `evals/evals.json` — behavioral cases, one per decision branch, in

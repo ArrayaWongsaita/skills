@@ -8,21 +8,21 @@ serial integration — so parallel wave-mates never write the catalog.
 
 **Blocked by:** 04
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `references/prompt-scaffold.md` carries the same two "Context you need"
+- [x] `references/prompt-scaffold.md` carries the same two "Context you need"
       lines and the Reuse Plan section rule as `subagent-implement`, worded
       identically where the skills share structure.
-- [ ] `references/worktree-integration.md` integration gate adds the catalog
+- [x] `references/worktree-integration.md` integration gate adds the catalog
       update inside each ticket's squash commit, in ascending ticket-number order,
       with the same derive-from-text rules, not-found handling (noted in the
       status file), and no-catalog skip.
-- [ ] `SKILL.md` points to both.
-- [ ] `evals/evals.json` gains cases: parallel wave with two tickets reading the
+- [x] `SKILL.md` points to both.
+- [x] `evals/evals.json` gains cases: parallel wave with two tickets reading the
       catalog → only the orchestrator writes it, one entry per ticket commit;
       create-shared owner in wave 0 and its consumer in wave 1 → consumer's prompt
       carries `use`; no catalog → no catalog step.
-- [ ] `tests/agy-implement-contract.test.mjs` asserts the scaffold lines and the
+- [x] `tests/agy-implement-contract.test.mjs` asserts the scaffold lines and the
       integration-gate catalog update.
-- [ ] Both `agy-implement` human guides describe the catalog behaviour.
-- [ ] `npm run validate` and `npm test` pass.
+- [x] Both `agy-implement` human guides describe the catalog behaviour.
+- [x] `npm run validate` and `npm test` pass.

@@ -74,6 +74,8 @@ Stop: Handoff (ส่งมอบ integration branch พร้อมสรุป
    - สั่งรัน `agy` worker ในโหมด Headless พร้อมส่ง Prompt แบบ Test-first
    - Orchestrator ตรวจสอบผลงานด้วยตัวเองอย่างเข้มงวด
    - นำงานที่ผ่านมารวมเข้า Integration Branch ทีละ Commit
+   - **Reuse Catalog:** prompt ของ worker มีบรรทัด `**Reuse:**` ของ ticket แบบคำต่อคำ และถ้า project มี `docs/reuse-catalog.md` จะมีตัวชี้แบบอ่านอย่างเดียวให้ค้นก่อนสร้าง helper ที่ไม่อยู่ในแผน ticket ที่มี `create-shared` / `create-candidate` / `extend` / `promote` จะได้ Reuse Plan ของ spec ไปด้วย
+   - ตอน integrate orchestrator เขียนรายการลง catalog ใน commit ของแต่ละ ticket ทีละตัวตามลำดับเลข ticket (path จาก grep, use-when จาก Reuse Plan) worker ที่รัน parallel ใน wave เดียวกันแค่อ่าน catalog จึงไม่ชนกัน
 3. **Stop — Handoff (ส่งมอบงาน):**
    - รายงานสรุปชื่อ Branch และตารางสรุปปริมาณ Token ที่ใช้ไปในแต่ละ Provider
    - แนะนำคำสั่งสำหรับการรีวิวในเซสชันใหม่:
