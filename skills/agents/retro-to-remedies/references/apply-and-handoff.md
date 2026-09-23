@@ -21,7 +21,7 @@ Apply each approved Text remedy (`apply`) directly at its assigned destination:
 
 Each applied Remedy is committed individually on the current working branch (the integration branch):
 
-1. Apply the exact text change for the single Remedy at its destination.
+1. Apply the exact text change for the single Remedy at its destination, and write its `applied` entry into `docs/retro-log.md` (creating the file with its self-describing header comment on the first Retro). An applied Remedy's entry is written in the same commit as its change.
 2. Create a dedicated commit on the working branch with the exact subject format:
    ```text
    chore(retro): <remedy>
@@ -31,6 +31,14 @@ Each applied Remedy is committed individually on the current working branch (the
 4. Record the SHA; each commit's SHA is written into the Retro report (`.scratch/<feature-slug>/retro.md`) alongside the Remedy entry.
 
 Three applied Remedies make three commits. Keep each applied Remedy in its own distinct commit; avoid combining multiple Remedies into a single commit or squashing them into feature commits.
+
+## Final Log Commit Rule
+
+Record every other Outcome (`handed-off`, `declined`, `deferred`) in `docs/retro-log.md` and commit it in one final commit on the working branch with the exact subject format:
+```text
+chore(retro): log <feature-slug>
+```
+This guarantees that the Retro Log is complete even when no Remedies were applied in the Run.
 
 ## Check Scripts Rule
 

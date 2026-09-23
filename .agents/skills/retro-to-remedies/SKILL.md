@@ -69,7 +69,7 @@ Detailed guidance:
 
 Upon receiving human approval, apply each approved Text remedy at its assigned destination: a Standard into `CODING_STANDARDS.md` (created with a short header when absent) or into the Reuse Catalog's Rules for a reuse convention; a Pointer into `AGENTS.md`, else `CLAUDE.md`, else a new `AGENTS.md`; a Prune removed from the project instruction file holding it. Follow [references/apply-and-handoff.md](references/apply-and-handoff.md).
 
-Create an individual `chore(retro): <remedy>` commit on the current working branch for each applied Remedy, recording its commit SHA in the Retro report. After all commits are made, run each of the project's `validate`, `check`, `lint`, and `test` scripts that exists, once. A red result stops before the handoff and names the failing command and the Retro commit it follows.
+Create an individual `chore(retro): <remedy>` commit on the current working branch for each applied Remedy (committing both the change and its Retro Log entry in the same commit), recording its commit SHA in the Retro report. Record every other Outcome (`handed-off`, `declined`, `deferred`) in `docs/retro-log.md` and commit it as `chore(retro): log <feature-slug>`. After all commits are made, run each of the project's `validate`, `check`, `lint`, and `test` scripts that exists, once. A red result stops before the handoff and names the failing command and the Retro commit it follows.
 
 Detailed guidance:
 - Commit sequencing, verification, and handoff: [references/apply-and-handoff.md](references/apply-and-handoff.md)

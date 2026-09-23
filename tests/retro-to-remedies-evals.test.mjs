@@ -228,7 +228,37 @@ describe("retro-to-remedies eval suite contract", () => {
         "case for Code remedy answered hand off appears only as a prompt",
       );
     });
+
+    it("covers the branches listed in ticket 05 (first Retro creates file with header, applied Remedy in its own commit, Run with only declined and deferred still produces log commit, two Runs on different slugs produce distinct ids)", async () => {
+      const { evals } = await evalsJson();
+      const hay = (re) => evals.some((e) => re.test(e.name) || re.test(e.expected_output));
+
+      // a first Retro creates the file with its header
+      assert.ok(
+        hay(/first Retro creates (the )?file with (its )?header|creates.*retro-log\.md.*header/i),
+        "case for first Retro creates file with its header",
+      );
+
+      // an applied Remedy's entry lands in its own commit
+      assert.ok(
+        hay(/applied Remedy('s)? entry lands in (its )?own commit|applied Remedy('s)? entry.*same commit/i),
+        "case for applied Remedy's entry lands in its own commit",
+      );
+
+      // a Run with only declined and deferred Remedies still produces the log commit
+      assert.ok(
+        hay(/Run with only declined and deferred.*log commit|declined and deferred.*chore\(retro\):\s*log/i),
+        "case for Run with only declined and deferred Remedies still produces log commit",
+      );
+
+      // two Runs on different slugs produce distinct ids
+      assert.ok(
+        hay(/two Runs on different slugs produce distinct ids|distinct ids.*different slugs|two Runs.*distinct ids/i),
+        "case for two Runs on different slugs produce distinct ids",
+      );
+    });
   });
 });
+
 
 

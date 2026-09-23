@@ -102,7 +102,25 @@ Stage 1 ทำหน้าที่นำ Misses ทั้งหมดมาป�
   - **Standard**: บันทึกลง `CODING_STANDARDS.md` (หากยังไม่มีไฟล์ จะสร้างขึ้นมาใหม่พร้อม short header) หรือลงในหมวด Rules ของ Reuse Catalog หากเป็น reuse convention
   - **Pointer**: บันทึกบรรทัดนำทางลงใน `AGENTS.md` (หากไม่มีให้ลง `CLAUDE.md`, หากไม่มีทั้งคู่ให้สร้าง `AGENTS.md` ใหม่)
   - **Prune**: ลบบรรทัดคำสั่งที่ล้าสมัยออกจาก instruction file ที่ถืออยู่ (`AGENTS.md`, `CLAUDE.md`, `CODING_STANDARDS.md`, หรือ Reuse Catalog)
-- **กฎ 1 Commit ต่อ 1 Remedy**: commit การเปลี่ยนแปลง Text remedies แต่ละข้อที่อนุมัติลงบน working branch แยกจากกันเป็น `chore(retro): <remedy>` (สามรายการที่อนุมัติจะได้ 3 commits) พร้อมบันทึก SHA ของแต่ละ commit กลับลงในรายงาน Retro report
+- **กฎ 1 Commit ต่อ 1 Remedy และการบันทึก Retro Log**: commit การเปลี่ยนแปลง Text remedies แต่ละข้อที่อนุมัติลงบน working branch แยกจากกันเป็น `chore(retro): <remedy>` (สามรายการที่อนุมัติจะได้ 3 commits) พร้อมกับ entry ของ Remedy นั้นใน `docs/retro-log.md` ใน commit เดียวกัน และบันทึก SHA ของแต่ละ commit กลับลงในรายงาน Retro report ส่วนผลลัพธ์อื่นๆ ทั้งหมดจะถูก commit ใน commit สุดท้าย `chore(retro): log <feature-slug>`
 - **รัน Check Scripts หนึ่งรอบ**: รัน script ตรวจสอบที่มีอยู่ในโปรเจกต์ (`validate`, `check`, `lint`, `test`) อย่างละหนึ่งรอบ หากมีคำสั่งใดล้มเหลว (ผลเป็นสีแดง) จะหยุดทำงานทันทีก่อนเข้าสู่ handoff พร้อมระบุชื่อคำสั่งที่ล้มเหลวและ commit ที่ตามหลัง
 - **การส่งมอบ (Handoff)**: แสดง ready-to-run prompt สำหรับ Code remedies (เช่น `/grill-to-tickets` สำหรับ Check, Skill fix, Access) ที่ตอบรับด้วย `hand off` (รายการเหล่านี้จะไม่ถูก apply หรือ commit ในรอบนี้) จากนั้นพิมพ์ `/pr-to-dev` เป็นขั้นตอนถัดไป โดยการรันจะไม่ทำการ `git push`, ไม่เปิด pull request, และเปิด GitHub issue เฉพาะเมื่อผู้ใช้ร้องขออย่างชัดเจนเท่านั้น
+
+---
+
+## 5. การบันทึกผลอย่างถาวรใน Retro Log (`docs/retro-log.md`)
+
+ทุกๆ Run ของ Retro จะทิ้งบันทึกถาวรไว้ใน `docs/retro-log.md` ประจำโปรเจกต์ ซึ่งมีคุณสมบัติดังนี้:
+- **สร้างขึ้นในการรัน Retro ครั้งแรก**: หากยังไม่มีไฟล์ Retro แรกจะสร้าง `docs/retro-log.md` พร้อม self-describing header comment เพื่ออธิบาย entry format, สถานะของ Outcome, และ id rule
+- **อ่านโดย Retro เท่านั้น**: เฉพาะ Retro เท่านั้นที่อ่านไฟล์นี้เพื่อตรวจสอบ recurrence และหลีกเลี่ยงการเสนอ Remedy ที่เคยถูกปฏิเสธซ้ำ ดังนั้นจึงไม่มีการเพิ่ม Pointer ชี้ไปยัง Retro Log ใน `AGENTS.md` หรือ `CLAUDE.md` เพื่อไม่ให้เปลือง context ของ agent ในการทำงานทั่วไป
+- **Id Rule**: แต่ละ Remedy จะได้รับ id ในรูปแบบ `R-<feature-slug>-<NN>` โดยกำหนดหมายเลขลำดับภายใน Run ที่เสนอ Remedy นั้นเป็นครั้งแรก และ id นี้จะไม่เปลี่ยนแปลงตลอดไป ทำให้ parallel feature branches ไม่มีวันสร้าง id ซ้ำกัน
+- **สถานะ Outcomes ทั้ง 4**:
+  - `applied`: มาตรการถูกนำไปปรับใช้แล้วจริง (ไม่ว่าจะโดย Retro ทำทันที หรือได้รับการยืนยันว่าเสร็จสิ้นหลังจาก hand off)
+  - `handed-off`: มาตรการประเภท Code remedy ได้รับการส่งมอบเป็น prompt แล้ว แต่ยังไม่ได้รับการยืนยันว่าเสร็จสิ้น
+  - `declined`: ผู้ใช้ปฏิเสธมาตรการแก้ไข
+  - `deferred`: ผู้ใช้เลื่อนการตัดสินใจออกไปก่อน
+- **กฎการ Commit (Two Commit Rules)**:
+  1. Remedy ที่ถูก `applied` จะถูกบันทึก entry ลงใน `docs/retro-log.md` ภายใน commit เดียวกันกับการเปลี่ยนแปลงไฟล์ของ Remedy นั้นเป็น `chore(retro): <remedy>`
+  2. ผลลัพธ์อื่นๆ ทั้งหมด (`handed-off`, `declined`, `deferred`) จะถูกบันทึกลงใน commit สุดท้ายเพียงหนึ่ง commit คือ `chore(retro): log <feature-slug>` เพื่อให้ log บันทึกผลลัพธ์ครบถ้วนแม้จะไม่มี Remedy ใดถูก apply ในรอบนั้นก็ตาม
+
 

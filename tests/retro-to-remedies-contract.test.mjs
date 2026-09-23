@@ -607,6 +607,88 @@ describe("retro-to-remedies skill contract", () => {
       assert.match(guideDoc, /\/pr-to-dev/);
     });
   });
+
+  describe("ticket 05 — Retro Log", () => {
+    it("defines the self-describing header comment and that only a Retro reads the file", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/retro-log.md"), "utf8");
+        // header comment
+        assert.match(c, /header comment/i);
+        assert.match(c, /entry format/i);
+        assert.match(c, /Outcome states/i);
+        assert.match(c, /id rule/i);
+        // only a Retro reads the file; no Pointer to Retro Log in AGENTS.md / CLAUDE.md
+        assert.match(c, /only a Retro reads the file|only the Retro reads/i);
+        assert.match(c, /no Pointer.*(AGENTS\.md|CLAUDE\.md)|no Pointer to (the )?Retro Log/i);
+      }
+    });
+
+    it("defines the block format from the spec: id · kind · outcome, Remedy:, Misses: lines, and History: lines", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/retro-log.md"), "utf8");
+        assert.match(c, /###\s*<id>\s*·\s*<kind>\s*·\s*<outcome>/);
+        assert.match(c, /Remedy:/);
+        assert.match(c, /Misses:/);
+        assert.match(c, /slug\s*·\s*source#location\s*·\s*date\s*·\s*"quote"/i);
+        assert.match(c, /History:/);
+      }
+    });
+
+    it("defines the id rule: R-<feature-slug>-<NN>, numbered within the Run, and never change", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/retro-log.md"), "utf8");
+        assert.match(c, /R-<feature-slug>-<NN>/);
+        assert.match(c, /numbered within the Run/i);
+        assert.match(c, /never change/i);
+      }
+    });
+
+    it("defines the four Outcomes and history updating rule", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/retro-log.md"), "utf8");
+        // four outcomes
+        assert.match(c, /\bapplied\b/);
+        assert.match(c, /\bhanded-off\b/);
+        assert.match(c, /\bdeclined\b/);
+        assert.match(c, /\bdeferred\b/);
+        // definition of applied
+        assert.match(c, /applied[\s\S]*?(change is in place|confirmed done)/i);
+        // heading and history update
+        assert.match(c, /appends a History line/i);
+        assert.match(c, /updates the heading/i);
+      }
+    });
+
+    it("defines the two commit rules: applied Remedy in its own commit, other Outcomes in chore(retro): log <feature-slug>", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/retro-log.md"), "utf8");
+        assert.match(c, /applied.*(same commit as its change|own commit)/i);
+        assert.match(c, /chore\(retro\):\s*log\s*<feature-slug>/);
+        assert.match(c, /handed-off.*declined.*deferred|every other Outcome/i);
+      }
+    });
+
+    it("both guides describe the Retro Log", async () => {
+      const skillDoc = await readFile(path.resolve("docs/skills/agents/retro-to-remedies.md"), "utf8");
+      assert.match(skillDoc, /docs\/retro-log\.md/);
+      assert.match(skillDoc, /R-<feature-slug>-<NN>/);
+      assert.match(skillDoc, /applied/);
+      assert.match(skillDoc, /handed-off/);
+      assert.match(skillDoc, /declined/);
+      assert.match(skillDoc, /deferred/);
+      assert.match(skillDoc, /chore\(retro\):\s*log\s*<feature-slug>/);
+
+      const guideDoc = await readFile(path.resolve("docs/guides/retro-to-remedies.md"), "utf8");
+      assert.match(guideDoc, /docs\/retro-log\.md/);
+      assert.match(guideDoc, /R-<feature-slug>-<NN>/);
+      assert.match(guideDoc, /applied/);
+      assert.match(guideDoc, /handed-off/);
+      assert.match(guideDoc, /declined/);
+      assert.match(guideDoc, /deferred/);
+      assert.match(guideDoc, /chore\(retro\):\s*log\s*<feature-slug>/);
+    });
+  });
 });
+
 
 

@@ -295,8 +295,57 @@
       "files": [
         "evals/fixtures/opencode-implement-hosted-model/review-status.md"
       ]
+    },
+    {
+      "id": 23,
+      "name": "a first Retro creates the file with its header",
+      "prompt": "/retro-to-remedies initial-run",
+      "expected_output": "A first Retro creates docs/retro-log.md with its self-describing header comment defining entry format, Outcome states, and id rule.",
+      "expectations": [
+        "Detects that docs/retro-log.md does not yet exist",
+        "Creates docs/retro-log.md starting with the self-describing header comment",
+        "Appends the initial Remedy entries below the header"
+      ],
+      "files": []
+    },
+    {
+      "id": 24,
+      "name": "an applied Remedy's entry lands in its own commit",
+      "prompt": "/retro-to-remedies feature-with-applied",
+      "expected_output": "An applied Remedy's entry lands in its own commit together with the remedy change on the working branch as chore(retro): <remedy>.",
+      "expectations": [
+        "Applies the text remedy at its destination",
+        "Updates docs/retro-log.md with the applied Outcome in the same commit",
+        "Creates chore(retro): <remedy> containing both the change and its log entry"
+      ],
+      "files": []
+    },
+    {
+      "id": 25,
+      "name": "a Run with only declined and deferred Remedies still produces the log commit",
+      "prompt": "/retro-to-remedies no-apply-run",
+      "expected_output": "A Run with only declined and deferred Remedies still produces the final log commit chore(retro): log <feature-slug>.",
+      "expectations": [
+        "Applies no text remedies to environment files",
+        "Updates docs/retro-log.md with declined and deferred Outcomes",
+        "Creates one final chore(retro): log <feature-slug> commit so the log remains complete"
+      ],
+      "files": []
+    },
+    {
+      "id": 26,
+      "name": "two Runs on different slugs produce distinct ids",
+      "prompt": "/retro-to-remedies feature-beta",
+      "expected_output": "Two Runs on different slugs produce distinct ids formatted as R-<feature-slug>-<NN> scoped by the proposing Run.",
+      "expectations": [
+        "Assigns IDs formatted as R-<feature-slug>-<NN>",
+        "Numbers IDs sequentially within the proposing Run",
+        "Ensures two Runs on different feature slugs never collide on the same Remedy id"
+      ],
+      "files": []
     }
   ]
 }
+
 
 
