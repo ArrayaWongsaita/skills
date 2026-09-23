@@ -506,5 +506,107 @@ describe("retro-to-remedies skill contract", () => {
       assert.match(guideDoc, /retro\.md/);
     });
   });
+
+  describe("ticket 04 — Stage 2, apply Text remedies and hand off", () => {
+    it("references/apply-and-handoff.md applies each destination (Standard, Pointer, Prune)", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/apply-and-handoff.md"), "utf8");
+
+        // Standard into CODING_STANDARDS.md (created with short header when absent)
+        assert.match(c, /CODING_STANDARDS\.md/);
+        assert.match(c, /short header/i);
+        assert.match(c, /created.*absent|when absent.*created|absent.*created/i);
+
+        // Standard for reuse convention into Reuse Catalog's Rules
+        assert.match(c, /reuse convention/i);
+        assert.match(c, /Reuse Catalog.*Rule|Rules.*Reuse Catalog/i);
+
+        // Pointer into AGENTS.md, else CLAUDE.md, else a new AGENTS.md
+        assert.match(c, /Pointer/i);
+        assert.match(c, /AGENTS\.md/);
+        assert.match(c, /CLAUDE\.md/);
+        assert.match(c, /AGENTS\.md.*else.*CLAUDE\.md.*else.*new.*AGENTS\.md|AGENTS\.md,?\s+else\s+CLAUDE\.md,?\s+else\s+a\s+new\s+AGENTS\.md/i);
+
+        // Prune removed from the project instruction file holding it
+        assert.match(c, /Prune/i);
+        assert.match(c, /removed from the project instruction file holding it/i);
+      }
+    });
+
+    it("specifies one chore(retro): <remedy> commit per applied Remedy on the working branch and writes SHA into report", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/apply-and-handoff.md"), "utf8");
+        assert.match(c, /chore\(retro\):\s*<remedy>/);
+        assert.match(c, /working branch|integration branch|current branch/i);
+        assert.match(c, /one.*commit|each applied remed(y|ies).*commit/i);
+        assert.match(c, /SHA.*(is )?(written|recorded).*report|(written|recorded).*SHA.*report|report.*SHA/i);
+      }
+    });
+
+    it("runs existing check scripts once and stops on red naming the failing command and preceding Retro commit", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/apply-and-handoff.md"), "utf8");
+        assert.match(c, /validate/);
+        assert.match(c, /check/);
+        assert.match(c, /lint/);
+        assert.match(c, /test/);
+        assert.match(c, /once/i);
+        assert.match(c, /red.*stop.*before.*handoff|red.*stops.*handoff/i);
+        assert.match(c, /names? the failing command/i);
+        assert.match(c, /Retro commit it follows/i);
+      }
+    });
+
+    it("prints Code remedy prompts then /pr-to-dev, never pushes or opens PR, issue only on explicit request", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/apply-and-handoff.md"), "utf8");
+        assert.match(c, /Code remed(y|ies).*prompt/i);
+        assert.match(c, /\/pr-to-dev/);
+        assert.match(c, /pushes nothing|no push|never push/i);
+        assert.match(c, /opens no pull request|no PR/i);
+        assert.match(c, /GitHub issue only on an explicit request|issue only on.*explicit request/i);
+      }
+    });
+
+    it("SKILL.md's ## Stage 2 and ## Handoff sections drive the reference and end on their completion criteria", async () => {
+      for (const file of skillFiles) {
+        const content = await readFile(file, "utf8");
+        assert.match(content, /##\s*Stage 2/i);
+        assert.match(content, /##\s*Handoff/i);
+        assert.match(content, /references\/apply-and-handoff\.md/);
+      }
+      for (const body of await bothSkillBodies()) {
+        const stage2Match = body.match(/###?\s*Stage 2[\s\S]*?(?=###?\s*Handoff|$)/i);
+        assert.ok(stage2Match, "Stage 2 section must be present");
+        const stage2Text = stage2Match[0];
+        assert.match(stage2Text, /completion criterion|completion/i);
+        assert.match(stage2Text, /applied Text remed(y|ies).*commit/i);
+
+        const handoffMatch = body.match(/###?\s*Handoff[\s\S]*?$/i);
+        assert.ok(handoffMatch, "Handoff section must be present");
+        const handoffText = handoffMatch[0];
+        assert.match(handoffText, /completion criterion|completion/i);
+        assert.match(handoffText, /Code remed(y|ies).*prompt/i);
+        assert.match(handoffText, /\/pr-to-dev/);
+      }
+    });
+
+    it("both guides describe what gets committed and what gets handed off", async () => {
+      const skillDoc = await readFile(path.resolve("docs/skills/agents/retro-to-remedies.md"), "utf8");
+      assert.match(skillDoc, /Stage 2/i);
+      assert.match(skillDoc, /chore\(retro\):\s*<remedy>/);
+      assert.match(skillDoc, /CODING_STANDARDS\.md/);
+      assert.match(skillDoc, /AGENTS\.md/);
+      assert.match(skillDoc, /\/pr-to-dev/);
+
+      const guideDoc = await readFile(path.resolve("docs/guides/retro-to-remedies.md"), "utf8");
+      assert.match(guideDoc, /Stage 2/i);
+      assert.match(guideDoc, /chore\(retro\):\s*<remedy>/);
+      assert.match(guideDoc, /CODING_STANDARDS\.md/);
+      assert.match(guideDoc, /AGENTS\.md/);
+      assert.match(guideDoc, /\/pr-to-dev/);
+    });
+  });
 });
+
 

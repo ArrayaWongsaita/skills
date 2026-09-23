@@ -97,4 +97,12 @@ Stage 1 ทำหน้าที่นำ Misses ทั้งหมดมาป�
 
 ### Stage 2 — Apply and hand off
 
-commit การเปลี่ยนแปลง Text remedies แต่ละข้อที่อนุมัติลงบน branch (`chore(retro): <remedy>`) บันทึกประวัติลง `docs/retro-log.md` ตรวจสอบ suite ทั้งหมด และแสดง prompt สำหรับ Code remedies ส่งมอบก่อนรัน `/pr-to-dev`
+เมื่อผู้ใช้เลือกคำตอบในรายงาน Retro report เรียบร้อยแล้ว Stage 2 จะดำเนินการดังนี้:
+- **การนำ Text remedies ไปปรับใช้ตามปลายทาง**:
+  - **Standard**: บันทึกลง `CODING_STANDARDS.md` (หากยังไม่มีไฟล์ จะสร้างขึ้นมาใหม่พร้อม short header) หรือลงในหมวด Rules ของ Reuse Catalog หากเป็น reuse convention
+  - **Pointer**: บันทึกบรรทัดนำทางลงใน `AGENTS.md` (หากไม่มีให้ลง `CLAUDE.md`, หากไม่มีทั้งคู่ให้สร้าง `AGENTS.md` ใหม่)
+  - **Prune**: ลบบรรทัดคำสั่งที่ล้าสมัยออกจาก instruction file ที่ถืออยู่ (`AGENTS.md`, `CLAUDE.md`, `CODING_STANDARDS.md`, หรือ Reuse Catalog)
+- **กฎ 1 Commit ต่อ 1 Remedy**: commit การเปลี่ยนแปลง Text remedies แต่ละข้อที่อนุมัติลงบน working branch แยกจากกันเป็น `chore(retro): <remedy>` (สามรายการที่อนุมัติจะได้ 3 commits) พร้อมบันทึก SHA ของแต่ละ commit กลับลงในรายงาน Retro report
+- **รัน Check Scripts หนึ่งรอบ**: รัน script ตรวจสอบที่มีอยู่ในโปรเจกต์ (`validate`, `check`, `lint`, `test`) อย่างละหนึ่งรอบ หากมีคำสั่งใดล้มเหลว (ผลเป็นสีแดง) จะหยุดทำงานทันทีก่อนเข้าสู่ handoff พร้อมระบุชื่อคำสั่งที่ล้มเหลวและ commit ที่ตามหลัง
+- **การส่งมอบ (Handoff)**: แสดง ready-to-run prompt สำหรับ Code remedies (เช่น `/grill-to-tickets` สำหรับ Check, Skill fix, Access) ที่ตอบรับด้วย `hand off` (รายการเหล่านี้จะไม่ถูก apply หรือ commit ในรอบนี้) จากนั้นพิมพ์ `/pr-to-dev` เป็นขั้นตอนถัดไป โดยการรันจะไม่ทำการ `git push`, ไม่เปิด pull request, และเปิด GitHub issue เฉพาะเมื่อผู้ใช้ร้องขออย่างชัดเจนเท่านั้น
+

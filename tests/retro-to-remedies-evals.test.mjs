@@ -193,6 +193,42 @@ describe("retro-to-remedies eval suite contract", () => {
         "case for apply refused on a Code remedy",
       );
     });
+
+    it("covers the branches listed in ticket 04 (applied Standard creates CODING_STANDARDS.md, Pointer creates AGENTS.md, three applied make three commits, red test stops handoff, Code remedy prompt only)", async () => {
+      const { evals } = await evalsJson();
+      const hay = (re) => evals.some((e) => re.test(e.name) || re.test(e.expected_output));
+
+      // an applied Standard in a project without CODING_STANDARDS.md creates it
+      assert.ok(
+        hay(/applied Standard.*without CODING_STANDARDS\.md creates it|applied Standard.*creates.*CODING_STANDARDS\.md/i),
+        "case for applied Standard in project without CODING_STANDARDS.md creates it",
+      );
+
+      // a Pointer in a project with neither instruction file creates AGENTS.md
+      assert.ok(
+        hay(/Pointer.*neither instruction file creates AGENTS\.md|Pointer.*creates.*AGENTS\.md/i),
+        "case for Pointer in project with neither instruction file creates AGENTS.md",
+      );
+
+      // three applied Remedies make three commits
+      assert.ok(
+        hay(/three applied Remedies make three commits|three applied.*three commits/i),
+        "case for three applied Remedies make three commits",
+      );
+
+      // a red test stops the handoff
+      assert.ok(
+        hay(/red `?test`? stops the handoff|red test.*stops.*handoff/i),
+        "case for red test stops the handoff",
+      );
+
+      // a Code remedy answered hand off appears only as a prompt
+      assert.ok(
+        hay(/Code remedy answered `?hand off`? appears only as a prompt|Code remedy.*hand off.*only as a prompt/i),
+        "case for Code remedy answered hand off appears only as a prompt",
+      );
+    });
   });
 });
+
 

@@ -65,10 +65,21 @@ Detailed guidance:
 - Skill fix ownership and routing: [references/skill-fix-routing.md](references/skill-fix-routing.md)
 
 
-### Stage 2 — Apply and hand off
+### Stage 2 — Apply
 
-Upon receiving human approval, apply each approved Text remedy directly to the environment. Create a separate `chore(retro): <remedy>` commit on the current branch for each applied change alongside its updated log entry. Record all remaining outcomes in `docs/retro-log.md` with a concluding `chore(retro): log <feature-slug>` commit. Execute the project's test and validation commands once to verify environment integrity. Conclude by displaying ready-to-run prompts for all Code remedies, followed by `/pr-to-dev`.
+Upon receiving human approval, apply each approved Text remedy at its assigned destination: a Standard into `CODING_STANDARDS.md` (created with a short header when absent) or into the Reuse Catalog's Rules for a reuse convention; a Pointer into `AGENTS.md`, else `CLAUDE.md`, else a new `AGENTS.md`; a Prune removed from the project instruction file holding it. Follow [references/apply-and-handoff.md](references/apply-and-handoff.md).
+
+Create an individual `chore(retro): <remedy>` commit on the current working branch for each applied Remedy, recording its commit SHA in the Retro report. After all commits are made, run each of the project's `validate`, `check`, `lint`, and `test` scripts that exists, once. A red result stops before the handoff and names the failing command and the Retro commit it follows.
 
 Detailed guidance:
 - Commit sequencing, verification, and handoff: [references/apply-and-handoff.md](references/apply-and-handoff.md)
 - Log schema and outcome tracking: [references/retro-log.md](references/retro-log.md)
+
+Completion criterion: every applied Text remedy is committed in its own `chore(retro): <remedy>` commit on the current working branch with its SHA recorded in the Retro report, and existing check scripts pass.
+
+### Handoff
+
+Present the handoff following [references/apply-and-handoff.md](references/apply-and-handoff.md). Print each Code remedy's ready-to-run prompt (such as `/grill-to-tickets`), followed by `/pr-to-dev`. A Code remedy answered `hand off` appears only as a prompt. The run pushes nothing to any remote branch, opens no pull request, and opens a GitHub issue only on an explicit human request.
+
+Completion criterion: every Code remedy prompt is printed in order, followed by `/pr-to-dev`, with no git push or pull request created.
+

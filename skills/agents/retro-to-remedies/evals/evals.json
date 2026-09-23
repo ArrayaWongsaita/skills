@@ -233,7 +233,70 @@
       "files": [
         "evals/fixtures/opencode-implement-hosted-model/review-status.md"
       ]
+    },
+    {
+      "id": 18,
+      "name": "applied Standard in a project without CODING_STANDARDS.md creates it",
+      "prompt": "/retro-to-remedies missing-standards-project",
+      "expected_output": "An applied Standard in a project without CODING_STANDARDS.md creates it with a short header and appends the standard rule.",
+      "expectations": [
+        "Detects absence of CODING_STANDARDS.md",
+        "Creates CODING_STANDARDS.md with a short header",
+        "Applies the Standard remedy into the new file"
+      ],
+      "files": []
+    },
+    {
+      "id": 19,
+      "name": "a Pointer in a project with neither instruction file creates AGENTS.md",
+      "prompt": "/retro-to-remedies no-instructions-project",
+      "expected_output": "A Pointer in a project with neither AGENTS.md nor CLAUDE.md creates AGENTS.md with the navigation pointer.",
+      "expectations": [
+        "Checks for existing AGENTS.md, else CLAUDE.md",
+        "Creates a new AGENTS.md when neither file exists",
+        "Inserts the Pointer navigation line into the created file"
+      ],
+      "files": []
+    },
+    {
+      "id": 20,
+      "name": "three applied Remedies make three commits",
+      "prompt": "/retro-to-remedies multi-remedy-run",
+      "expected_output": "Three applied Remedies make three commits as chore(retro): <remedy> on the working branch with their SHAs recorded in the report.",
+      "expectations": [
+        "Applies each chosen Text remedy in sequence",
+        "Creates one chore(retro): <remedy> commit per applied remedy",
+        "Writes each resulting commit SHA into the Retro report"
+      ],
+      "files": []
+    },
+    {
+      "id": 21,
+      "name": "a red test stops the handoff",
+      "prompt": "/retro-to-remedies failing-tests-run",
+      "expected_output": "A red test stops the handoff and names the failing command and the Retro commit it follows.",
+      "expectations": [
+        "Runs existing check scripts (validate, check, lint, test) once after commits",
+        "Detects failing test command",
+        "Halts execution before printing the handoff, naming the failing test command and preceding Retro commit"
+      ],
+      "files": []
+    },
+    {
+      "id": 22,
+      "name": "a Code remedy answered hand off appears only as a prompt",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model",
+      "expected_output": "A Code remedy answered hand off appears only as a prompt in the handoff and is not committed or applied.",
+      "expectations": [
+        "Recognizes Code remedy with user choice hand off",
+        "Applies no file changes or commits for the Code remedy",
+        "Prints the /grill-to-tickets prompt in the handoff before /pr-to-dev"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/review-status.md"
+      ]
     }
   ]
 }
+
 
