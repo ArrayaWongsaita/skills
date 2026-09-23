@@ -509,6 +509,31 @@
         "Leaves the loop's routing unchanged"
       ],
       "files": []
+    },
+    {
+      "id": 41,
+      "name": "the clean handoff prints /retro-to-remedies on the line before /pr-to-dev",
+      "prompt": "/review-to-pr .scratch/handoff-demo/ — the code-review loop came back clean, the system gate was skipped as self-contained, and the full suite is green.",
+      "expected_output": "Stage 5 prints the handoff and ends with the two next commands in a fresh context: /retro-to-remedies on the line before /pr-to-dev. The run performs no PR step — no git push, no gh, no /pr-to-dev.",
+      "expectations": [
+        "Prints /retro-to-remedies on the line before /pr-to-dev",
+        "Keeps the run free of any PR step",
+        "Leaves both commands for the user to run by hand"
+      ],
+      "files": []
+    },
+    {
+      "id": 42,
+      "name": "the halt / partial report prints /retro-to-remedies after /review-to-pr continue",
+      "prompt": "/review-to-pr — the system scrutinize gate closed with a reject verdict and the run stopped for a human decision. review-status.md records stage 3.",
+      "expected_output": "The run prints the partial report instead of the clean handoff: the reject reason, the stage reached, the cycles spent, the fix(review): commits that did land, and the /review-to-pr continue command followed by /retro-to-remedies — finishing the Run stays the primary path.",
+      "expectations": [
+        "Prints the partial report rather than the clean handoff",
+        "Prints the /review-to-pr continue command first",
+        "Prints /retro-to-remedies after the /review-to-pr continue command",
+        "Performs no PR step"
+      ],
+      "files": []
     }
   ]
 }

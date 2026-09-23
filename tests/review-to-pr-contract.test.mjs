@@ -635,6 +635,35 @@ describe("review-to-pr skill contract", () => {
       }
     });
 
+    it("asserts the handoff order (/retro-to-remedies before /pr-to-dev) and the partial-report order (after /review-to-pr continue)", async () => {
+      for (const body of await bothSkillBodies()) {
+        const s = stageSection(body, 5);
+        assert.ok(s, "Stage 5 section present");
+        assert.match(
+          s,
+          /\/retro-to-remedies\s*\n\s*\/pr-to-dev/,
+          "Stage 5 handoff block prints /retro-to-remedies on the line before /pr-to-dev",
+        );
+      }
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/status-and-resume.md"), "utf8");
+        const partial = c.match(/### Halt \/ partial report[\s\S]*?(?=\n## )/)?.[0];
+        assert.ok(partial, "Halt / partial report section present");
+        assert.match(
+          partial,
+          /`\/review-to-pr continue`[\s\S]*?`\/retro-to-remedies`/,
+          "partial report lists /retro-to-remedies after /review-to-pr continue",
+        );
+      }
+    });
+
+    it("names the retro step in both human guides", async () => {
+      for (const guidePath of ["docs/guides/review-to-pr.md", "docs/skills/agents/review-to-pr.md"]) {
+        const guide = await readFile(path.resolve(guidePath), "utf8");
+        assert.match(guide, /\/retro-to-remedies/, `${guidePath} names the retro step`);
+      }
+    });
+
     it("the guide and the reference set stay in agreement", async () => {
       const guide = await readFile(path.resolve("docs/skills/agents/review-to-pr.md"), "utf8");
       for (const ref of SKILL_REFERENCES) {

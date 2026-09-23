@@ -33,7 +33,8 @@ Print the handoff and stop. It names:
 - the **green-suite confirmation** — the `HEAD` SHA the full suite passed on;
 - the **`fix(review):` commits added**, sha + summary, in fix order;
 - any **non-blocking findings carried, not fixed**;
-- the **`/pr-to-dev` command** to run next in a fresh context.
+- the **`/retro-to-remedies` command**, then the **`/pr-to-dev` command**, to run
+  next in a fresh context.
 
 The run performs **no PR step** — no `git push`, no `gh`, no `/pr-to-dev`. Opening
 the PR is the next command, run by hand. This is the same terminal stance
@@ -49,7 +50,9 @@ clean handoff:
 - the **stage reached** and why it stopped;
 - the **cycles spent** — `code_cycles` / 3 and `scrutinize_cycles` / 6;
 - the **`fix(review):` commits** that did land;
-- the **`/review-to-pr continue`** command.
+- the **`/review-to-pr continue`** command;
+- the **`/retro-to-remedies`** command after it — finishing the Run stays the
+  primary path.
 
 Nothing is force-pushed, reset, or discarded on a halt.
 
