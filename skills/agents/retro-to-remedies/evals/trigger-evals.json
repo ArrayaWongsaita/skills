@@ -1,0 +1,38 @@
+[
+  {
+    "query": "/retro-to-remedies",
+    "should_trigger": true
+  },
+  {
+    "query": "/retro-to-remedies opencode-implement-hosted-model",
+    "should_trigger": true
+  },
+  {
+    "query": "/retro-to-remedies --transcript",
+    "should_trigger": true
+  },
+  {
+    "query": "/retro-to-remedies --fresh",
+    "should_trigger": true
+  },
+  {
+    "query": "Please run $retro-to-remedies on the current feature branch",
+    "should_trigger": true
+  },
+  {
+    "query": "Review the code changes on this branch against repository standards",
+    "should_trigger": false
+  },
+  {
+    "query": "Conduct a team retrospective meeting about developer velocity",
+    "should_trigger": false
+  },
+  {
+    "query": "Open a pull request to dev for the current feature branch",
+    "should_trigger": false
+  },
+  {
+    "query": "Implement the next ticket in the queue using subagent-implement",
+    "should_trigger": false
+  }
+]

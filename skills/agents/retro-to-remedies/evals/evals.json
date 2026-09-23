@@ -1,0 +1,71 @@
+{
+  "skill_name": "retro-to-remedies",
+  "evals": [
+    {
+      "id": 1,
+      "name": "explicit invocation only does not start itself",
+      "prompt": "Run /retro-to-remedies to inspect the completed feature run",
+      "expected_output": "The skill starts only upon explicit human invocation and never starts itself implicitly.",
+      "expectations": [
+        "The skill requires an explicit invocation via /retro-to-remedies or $retro-to-remedies",
+        "It does not start itself or trigger automatically from background events"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/review-status.md"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "target slug from argument",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model",
+      "expected_output": "Resolves the target feature slug directly from the command argument opencode-implement-hosted-model.",
+      "expectations": [
+        "Uses the explicit argument opencode-implement-hosted-model as the feature slug",
+        "Locates primary sources in .scratch/opencode-implement-hosted-model"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/review-status.md"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "target slug from integration branch stem",
+      "prompt": "/retro-to-remedies",
+      "expected_output": "Resolves the target feature slug from the current integration branch stem when no argument is given.",
+      "expectations": [
+        "Inspects current git branch subagent-implement/opencode-implement-hosted-model",
+        "Extracts feature slug opencode-implement-hosted-model from the branch stem"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/review-status.md"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "target slug from most recently modified scratch directory confirmed",
+      "prompt": "/retro-to-remedies",
+      "expected_output": "Finds the most recently modified .scratch/ directory and names it back to the human for confirmation.",
+      "expectations": [
+        "Identifies the latest modified directory under .scratch/",
+        "Names the candidate slug back to the user for explicit confirmation before reading sources"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/review-status.md"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "refusal on protected branch main master or dev",
+      "prompt": "/retro-to-remedies",
+      "expected_output": "Refuses on protected branch main, master, or dev before any read and names a branch to create.",
+      "expectations": [
+        "Detects protected branch main, master, or dev",
+        "Halts immediately before reading any primary source or log",
+        "Names a new working branch for the user to create"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/review-status.md"
+      ]
+    }
+  ]
+}
