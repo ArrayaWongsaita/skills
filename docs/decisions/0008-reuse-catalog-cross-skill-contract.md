@@ -55,7 +55,8 @@ file changes):
 ### Trade-offs / ข้อแลกเปลี่ยน
 
 - The contract's wording lives in five skills and can drift; the contract tests
-  of each skill assert its part.
+  of each skill assert its part, and `tests/implementer-reuse-drift.test.mjs`
+  fails when the blocks the three implementers share stop matching word for word.
 - `grill-to-tickets` now writes one project file outside `.scratch/`.
 
 ## Rejected alternatives / ทางเลือกที่ไม่เลือก
