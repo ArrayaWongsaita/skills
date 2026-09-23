@@ -35,7 +35,7 @@ npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 
 1. **Stage 0 — Grill**: เริ่มด้วย **Reuse survey** อ่าน `docs/reuse-catalog.md` ของ project ตรวจว่าทุกรายการยังมีอยู่จริง แล้วสำรวจเฉพาะส่วนที่ยังไม่เคยสำรวจหรือไฟล์ที่เปลี่ยนหลังวันที่ใน Coverage (ถ้ายังไม่มี catalog จะสร้างให้พร้อมเพิ่มบรรทัดชี้ใน `AGENTS.md`) ทางเลือกเรื่อง reuse เช่น ขยายของเดิมหรือสร้างใหม่ จะกลายเป็นคำถามให้คุณตัดสิน จากนั้นสัมภาษณ์แบบ design tree พร้อมทำ domain modeling เขียน `CONTEXT.md` / `adr/` ทันทีที่ term นิ่ง บันทึกทุกคำถามและคำตอบลง **Decision Log** (`decisions.md`) ก่อนถามรอบถัดไป แล้วหยุดขอ confirmation เมื่อ frontier ว่าง
 2. **Stage 1 — Spec**: รัน `to-spec` สังเคราะห์ `decisions.md`, glossary และ ADR เป็น `spec.md` โดยไม่สัมภาษณ์ซ้ำ ทุกการตัดสินใจใน log ต้องอยู่ใน spec พร้อม **Reuse Plan** ที่ระบุว่าแต่ละ module จะใช้ของเดิม ขยาย สร้างเป็น shared (ต้องมีผู้ใช้ตั้งแต่ 2 ราย) สร้างเป็น candidate promote หรือแยกไว้โดยตั้งใจ
-3. **Stage 2 — Design Review Gate**: แต่ละรอบส่ง `scrutinize` ไปรันใน subagent ตัวใหม่ที่เห็นแค่ไฟล์และไม่แก้ไฟล์ใด ๆ (อ่าน spec แบบเดียวกับ implementer) แล้ว context หลัก normalize verdict เป็น `SHIP` / `FIX_THEN_SHIP` / `REWORK` / `REJECT` เก็บรายงานไว้ไฟล์เดียว `design-review.md` อัปเดตทุกรอบ และตรวจ **reuse lens** ทุกรอบ (ของที่ซ้ำกับ catalog, logic ที่ไม่มีเจ้าของ, shared ที่เผื่ออนาคตเกินไป)
+3. **Stage 2 — Design Review Gate**: แต่ละรอบส่ง `scrutinize` ไปรันใน subagent ตัวใหม่ที่เห็นแค่ไฟล์และไม่แก้ไฟล์ใด ๆ (อ่าน spec แบบเดียวกับ implementer) แล้ว context หลัก normalize verdict เป็น `SHIP` / `FIX_THEN_SHIP` / `REWORK` / `REJECT` (`FIX_THEN_SHIP` แก้แล้วต้องไล่แก้ทุกประโยคใน spec ที่พูดเรื่องเดียวกันให้ตรงกัน) เก็บรายงานไว้ไฟล์เดียว `design-review.md` อัปเดตทุกรอบ และตรวจ **reuse lens** ทุกรอบ (ของที่ซ้ำกับ catalog, logic ที่ไม่มีเจ้าของ, shared ที่เผื่ออนาคตเกินไป)
 4. **Stage 3 — Tickets**: เมื่อได้ `SHIP` รัน `to-tickets` เขียน ticket ลง `.scratch/<feature-slug>/issues/` shared module ใหม่แต่ละตัวมี ticket เจ้าของใบเดียวและ ticket ที่ใช้ต้องรอ ticket เจ้าของ ทุก ticket มีบรรทัด `**Reuse:**` (`use` / `extend` / `create-shared` / `create-candidate` / `promote`) ซึ่งไม่ใช่ acceptance criterion
 5. **Stop**: บอกให้ commit ไฟล์วางแผนและ `docs/reuse-catalog.md` แล้วพิมพ์ `/clear` ตามด้วย `/subagent-implement .scratch/<feature-slug>/` (หรือ `/agy-implement` / `/opencode-implement`) ไม่เรียก implementer เอง
 
@@ -109,10 +109,11 @@ on purpose — and every gate cycle applies a reuse lens that flags duplicated,
 unowned, and speculative shared modules. Each Design Review Gate cycle dispatches
 `scrutinize` to a fresh, read-only reviewer subagent that sees the files and not
 the interview, so it reads the spec the way the implementer will (ADR 0010); the
-main thread normalizes each verdict into `SHIP`, `FIX_THEN_SHIP`, `REWORK`, or `REJECT`, keeps
-one stable `design-review.md` report, and bounds itself to six cycles with early
+main thread normalizes each verdict into `SHIP`, `FIX_THEN_SHIP`, `REWORK`, or
+`REJECT`, keeps one stable `design-review.md` report, and bounds itself to six cycles with early
 stops for stalls and a required human authorization on budget exhaustion. A
-spec-level `REWORK` re-runs `to-spec` without leaving the gate; a decision-level
+`FIX_THEN_SHIP` fix is followed by a sweep that aligns every other passage of the
+spec restating the same fact. A spec-level `REWORK` re-runs `to-spec` without leaving the gate; a decision-level
 `REWORK` returns to Stage 0 to re-grill, and the cycle counter carries over. On
 `SHIP`, tickets are published — each new shared module with exactly one owner
 ticket that its other consumers are blocked by, and every ticket with a

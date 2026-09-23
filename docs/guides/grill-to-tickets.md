@@ -110,7 +110,7 @@ Stop: Handoff message (commit ไฟล์วางแผน, /clear แล้�
    - แต่ละรอบส่ง `scrutinize` ไปรันใน **subagent ตัวใหม่** ที่เห็นแค่ไฟล์ (`spec.md`, `decisions.md`, `CONTEXT.md`, `adr/`, reuse catalog และ repo) ไม่เห็นบทสนทนา จึงอ่าน spec แบบเดียวกับที่ implementer จะอ่าน และไม่แก้ไฟล์ใด ๆ ส่วน context หลักเป็นคน normalize verdict แก้ spec และนับ cycle (เหตุผลอยู่ใน ADR 0010)
    - สรุปผลการตรวจ `spec.md` เป็น 1 ใน 4 ผลลัพธ์:
      - `SHIP`: ผ่านเกณฑ์ ➔ ไปยัง Stage 3
-     - `FIX_THEN_SHIP`: มีจุดต้องแก้ไขเล็กน้อย ➔ ปรับแก้ใน `spec.md` แล้วตรวจซ้ำ
+     - `FIX_THEN_SHIP`: มีจุดต้องแก้ไขเล็กน้อย ➔ ปรับแก้ใน `spec.md` แล้วค้นทั้ง spec หาทุกประโยคที่พูดเรื่องเดียวกัน (story, implementation decision, Reuse Plan, further notes) แก้ให้ตรงกันจนค้นคำเดิมไม่เจอ แล้วจึงตรวจซ้ำ
      - `REWORK`: ร่าง spec ไม่ชัดเจน (Spec-level) ให้แก้ spec หรือมีประเด็นที่ยังไม่ได้ตัดสินใจ (Decision-level) ให้กลับไปสัมภาษณ์ใหม่ใน Stage 0
      - `REJECT`: สถาปัตยกรรมหรือทิศทางไม่ผ่าน ➔ หยุดทำงานเพื่อให้มนุษย์ตัดสินใจ
    - ทุกรอบตรวจ **reuse lens** ด้วย: spec สร้างของที่ catalog มีอยู่แล้ว, logic ที่หลาย story ใช้แต่ไม่มีเจ้าของ, หรือ shared ที่มีผู้ใช้ไม่ถึงเกณฑ์ ➔ `FIX_THEN_SHIP` ส่วนทางเลือกขยาย-หรือ-สร้างใหม่ที่ยังไม่มีใครตัดสิน ➔ `REWORK` แบบ decision-level

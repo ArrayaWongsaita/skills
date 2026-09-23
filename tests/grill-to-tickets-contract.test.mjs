@@ -213,6 +213,21 @@ describe("grill-to-tickets composite skill contract", () => {
     await fileExists(path.resolve("docs/decisions/0010-grill-to-tickets-fresh-context-design-review.md"));
   });
 
+  it("sweeps every restatement of a fact that FIX_THEN_SHIP corrects", async () => {
+    for (const file of skillFiles) {
+      const content = await readFile(file, "utf8");
+      assert.match(content, /\*\*`FIX_THEN_SHIP`\*\*[^\n]*\n[^\n]*sweep the spec so every passage restating the same fact/);
+    }
+    for (const dir of skillDirs) {
+      const gate = await readFile(path.resolve(dir, "references/design-review-gate.md"), "utf8");
+      const fix = gate.slice(gate.indexOf("### `FIX_THEN_SHIP`"), gate.indexOf("### `REWORK` — spec-level"));
+      assert.match(fix, /\*\*sweep\*\* the spec/);
+      assert.match(fix, /done when a search for the old wording finds\s+nothing/);
+      assert.match(fix, /`specEdits`/);
+      assert.match(gate, /^- `specEdits` — /m, "each cycle records its spec edits");
+    }
+  });
+
   it("normalizes every scrutinize verdict without paraphrasing", async () => {
     for (const file of skillFiles) {
       const content = await readFile(file, "utf8");

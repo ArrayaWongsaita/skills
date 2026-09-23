@@ -147,6 +147,7 @@ Route the verdict:
 
 - **`SHIP`** → close the gate, advance to Stage 3.
 - **`FIX_THEN_SHIP`** → apply the minimal verified fix directly to `spec.md`,
+  sweep the spec so every passage restating the same fact agrees with it,
   consume one cycle, re-review, stay in Stage 2.
 - **`REWORK`, spec-level** (the finding is about how the spec is written) →
   re-run `to-spec` with the finding as added context, consume one cycle,

@@ -263,6 +263,20 @@
         "Fills resolvedFindings / newFindings / repeatedFindings from the returned ids"
       ],
       "files": []
+    },
+    {
+      "id": 21,
+      "name": "FIX_THEN_SHIP sweeps every restatement of the fixed fact",
+      "prompt": "$grill-to-tickets continue hosted-model-pin. Gate cycle 1 closes fix-then-ship: Implementation Decisions says the worker model is resolved once at dispatch and pinned for every retry, but the reviewer traced the retry path and the Stage 0 decision (decisions.md R2 Q1) says a retry re-resolves the model. Further Notes and user story 12 both repeat the pinned-for-every-retry wording.",
+      "expected_output": "Normalize to FIX_THEN_SHIP and correct Implementation Decisions to the logged decision. Then sweep spec.md for the fact's key terms (pinned, retry, resolve) and align user story 12 and the Further Notes passage too, until a search for the old wording finds nothing. Record all three locations in the cycle's specEdits, consume one cycle, and re-review.",
+      "expectations": [
+        "Normalizes the verdict to FIX_THEN_SHIP and fixes Implementation Decisions",
+        "Searches spec.md for every other statement of the pinned-for-every-retry fact",
+        "Aligns user story 12 and the Further Notes passage with the fix",
+        "Records every changed location in specEdits for cycle 1",
+        "Consumes one cycle and re-reviews within Stage 2"
+      ],
+      "files": []
     }
   ]
 }

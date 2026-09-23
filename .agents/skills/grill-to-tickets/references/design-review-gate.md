@@ -21,6 +21,8 @@ Record per cycle:
 - `blockingFindings` — stable identities so a repeated finding is detectable
 - `newFindings` / `resolvedFindings` / `repeatedFindings`
 - `route` — the stage this verdict sends control to
+- `specEdits` — every `spec.md` location changed this cycle: the fix, and each
+  restatement the sweep aligned
 - `validationCommands` — anything run to check the finding
 
 ## Reviewer
@@ -74,7 +76,16 @@ Close the gate. Advance to Stage 3 (`to-tickets`) against the reviewed `spec.md`
 A bounded correction that does not change the chosen design. Identify the violated
 invariant, verify the evidence, and make the smallest correct edit **directly to
 `spec.md`**. A recommendation like "use a distributed lock" is not an instruction
-to install Redis. Consume one cycle. Re-review. Control never leaves Stage 2.
+to install Redis.
+
+Then **sweep** the spec: a fact is often stated in more than one section — a
+story, an implementation decision, the Reuse Plan, a further note — and a fix to
+one leaves the others stating the old version. Search `spec.md` for the fact's
+key terms (the symbol, flag, value, or behaviour you changed) and bring every
+restatement in line. The sweep is done when a search for the old wording finds
+nothing. Record each location in `specEdits`.
+
+Consume one cycle. Re-review. Control never leaves Stage 2.
 
 ### `REWORK` — spec-level
 
