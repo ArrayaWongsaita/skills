@@ -4,4 +4,14 @@ node_modules/
 __pycache__/
 *.py[cod]
 skills-lock.json
+
+# Local planning notes (specs, ADRs, tickets) — see docs/decisions/0011
 .scratch/
+
+# Installed skill copies — skills/ is the source of truth (docs/decisions/0011)
+.agents/
+.claude/skills/
+
+# Local Claude Code state; .claude/settings.json and .claude/hooks/ stay tracked
+.claude/worktrees/
+.claude/settings.local.json
