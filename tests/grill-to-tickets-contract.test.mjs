@@ -355,6 +355,35 @@ describe("grill-to-tickets composite skill contract", () => {
     }
   });
 
+  it("preflights the five stage skills across install locations and keeps the tracker local", async () => {
+    for (const file of skillFiles) {
+      const content = await readFile(file, "utf8");
+      const preflight = content.slice(content.indexOf("## Preflight"), content.indexOf("## Feature-Scoped Storage"));
+      assert.ok(preflight.startsWith("## Preflight"), "SKILL.md has a Preflight section before storage");
+      const order = [
+        ".agents/skills/<skill>/SKILL.md",
+        ".claude/skills/<skill>/SKILL.md",
+        "~/.agents/skills/<skill>/SKILL.md",
+        "~/.claude/skills/<skill>/SKILL.md",
+      ].map((p) => preflight.indexOf(p));
+      assert.ok(order.every((i) => i !== -1), "all four locations are listed");
+      assert.deepEqual([...order].sort((a, b) => a - b), order, "project installs are searched before global ones");
+      assert.match(preflight, /stop before Stage 0/);
+      for (const [source, skill] of [
+        ["mattpocock/skills", "grilling"],
+        ["mattpocock/skills", "domain-modeling"],
+        ["mattpocock/skills", "to-spec"],
+        ["mattpocock/skills", "to-tickets"],
+        ["thananon/9arm-skills", "scrutinize"],
+      ]) {
+        assert.ok(preflight.includes(`npx skills add ${source} --skill ${skill}`), `install line for ${skill}`);
+      }
+      assert.match(content, /at the\s+path Preflight found/);
+      assert.match(content, /local files are the tracker/);
+      assert.match(content, /`\/setup-matt-pocock-skills`, write the local artifact instead/);
+    }
+  });
+
   it("forbids modifying upstream-tracked skills or the lock file", async () => {
     for (const file of skillFiles) {
       const content = await readFile(file, "utf8");

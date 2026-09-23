@@ -34,8 +34,9 @@ a fresh one every cycle, with read access to the repository, and brief it with:
 - **Paths:** `spec.md`, `decisions.md`, `CONTEXT.md`, and `adr/` under
   `.scratch/<feature-slug>/`; the root `CONTEXT.md` and `docs/adr/` when they
   exist; `docs/reuse-catalog.md`.
-- **Task:** run the `scrutinize` skill's workflow on `spec.md`, tracing its
-  claims through the real code, with the reuse lens below.
+- **Task:** run the `scrutinize` skill's workflow — its `SKILL.md` at the path
+  Preflight found — on `spec.md`, tracing its claims through the real code, with
+  the reuse lens below.
 - **Prior findings,** from cycle 2 on: the previous cycle's blocking findings,
   one line each with its id, to report as resolved or still present under the
   same id.

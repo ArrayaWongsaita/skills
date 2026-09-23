@@ -18,6 +18,8 @@
 npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 ```
 
+ต้องมี skill ย่อยทั้ง 5 ตัวด้วย ตอนเริ่ม **Preflight** จะหาใน `.agents/skills/`, `.claude/skills/`, `~/.agents/skills/` และ `~/.claude/skills/` ตามลำดับ ถ้าขาดตัวไหนจะหยุดและพิมพ์คำสั่ง `npx skills add ...` ของตัวที่ขาด ไม่ต้องตั้งค่า issue tracker เพราะไฟล์ใน `.scratch/` คือ tracker
+
 ### ควรใช้เมื่อไร
 
 - มี idea ใหม่และอยากได้ spec + ticket ที่ผ่าน design review ก่อนเริ่มเขียนโค้ด
@@ -75,6 +77,12 @@ Install with:
 ```bash
 npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 ```
+
+The five stage skills must be installed too. A **Preflight** looks for each in
+`.agents/skills/`, `.claude/skills/`, `~/.agents/skills/`, then
+`~/.claude/skills/`, and stops before Stage 0 with the `npx skills add` line of
+any that is missing. No issue tracker is needed: the files under `.scratch/` are
+the tracker.
 
 ### Use it when
 

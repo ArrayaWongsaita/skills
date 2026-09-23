@@ -14,8 +14,10 @@ reviewing the spec in a fresh context between them; a separate implementer run
 ticket directory up afterward.
 
 ```
+Preflight             locate the five stage skills (stop if one is missing)
+   ▼
 Stage 0: Grill        reuse survey + grilling + domain-modeling
-                      → CONTEXT.md, adr/, docs/reuse-catalog.md
+                      → decisions.md, CONTEXT.md, adr/, docs/reuse-catalog.md
    │ (pause: explicit confirmation, empty frontier)
    ▼
 Stage 1: Spec         to-spec                     → spec.md
@@ -44,9 +46,9 @@ human invocation before starting.
 
 ## Inline Execution
 
-Stages 0, 1, and 3 run **inline**: read each stage skill's instructions at
-`.agents/skills/<skill>/SKILL.md` and follow its workflow steps directly, in this
-one continuous context window. `to-spec` and `to-tickets` are
+Stages 0, 1, and 3 run **inline**: read each stage skill's `SKILL.md` at the
+path Preflight found and follow its workflow steps directly, in this one
+continuous context window. `to-spec` and `to-tickets` are
 `disable-model-invocation: true`, so inline is their only path; `grilling` and
 `domain-modeling` run inline too, keeping the interview, the spec, and the tickets
 on one reasoning thread, where the user is.
@@ -56,8 +58,36 @@ fact lookup in Stage 0, and the Stage 2 reviewer. The reviewer runs `scrutinize`
 in a fresh context so it reads the spec the way the implementer will — from files
 alone, without the interview's answers to fill its gaps.
 
+This skill's local files are the tracker. Where a stage skill publishes to an
+issue tracker, applies a triage label, or sends the user to
+`/setup-matt-pocock-skills`, write the local artifact instead: `to-spec`'s spec
+becomes `spec.md`, and `to-tickets` writes `issues/<NN>-<slug>.md` files marked
+`**Status:** ready-for-agent`.
+
 This skill owns its own copy of the Design Review Gate rules and runs fully
 standalone.
+
+## Preflight
+
+Before Stage 0, and before `continue` resumes a run, locate the `SKILL.md` of
+each stage skill — `grilling`, `domain-modeling`, `to-spec`, `scrutinize`,
+`to-tickets` — taking the first of these that exists:
+
+1. `.agents/skills/<skill>/SKILL.md`
+2. `.claude/skills/<skill>/SKILL.md`
+3. `~/.agents/skills/<skill>/SKILL.md`
+4. `~/.claude/skills/<skill>/SKILL.md`
+
+When any is missing, stop before Stage 0: name the missing skills and print the
+install line for each of them, then wait for the user.
+
+```text
+npx skills add mattpocock/skills --skill grilling
+npx skills add mattpocock/skills --skill domain-modeling
+npx skills add mattpocock/skills --skill to-spec
+npx skills add mattpocock/skills --skill to-tickets
+npx skills add thananon/9arm-skills --skill scrutinize
+```
 
 ## Feature-Scoped Storage
 

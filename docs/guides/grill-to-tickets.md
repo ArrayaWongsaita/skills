@@ -46,6 +46,8 @@ npx skills add mattpocock/skills --skill to-tickets
 npx skills add thananon/9arm-skills --skill scrutinize
 ```
 
+ตอนเริ่ม (และตอน `continue`) skill จะทำ **Preflight** หา `SKILL.md` ของ skill ย่อยทั้ง 5 ตัวตามลำดับ `.agents/skills/` → `.claude/skills/` → `~/.agents/skills/` → `~/.claude/skills/` จึงใช้ได้ทั้งแบบติดตั้งใน project และแบบ global (`-g`) ถ้าขาดตัวไหนจะหยุดก่อน Stage 0 และพิมพ์คำสั่งติดตั้งเฉพาะตัวที่ขาด
+
 ---
 
 ## 3. วิธีการใช้งานและขั้นตอนการทำงาน (Usage & Workflow)
@@ -157,5 +159,6 @@ Stop: Handoff message (commit ไฟล์วางแผน, /clear แล้�
 
 ## 5. ข้อควรระวังและคำแนะนำในการใช้งาน
 - **อย่าใช้เมื่อต้องการเขียนโค้ดทันที:** หากต้องการให้เขียนโค้ดเสร็จสรรพในรอบเดียว ควรใช้ `/engineering-workflow` แทน
-- **อย่าลืมติดตั้ง Skills ที่พึ่งพาให้ครบ:** หากขาด skill ใดใน 5 ตัวข้างต้น กระบวนการ inline ใน Stage นั้นๆ อาจสะดุดหรือไม่สมบูรณ์
+- **ติดตั้ง Skills ที่พึ่งพาให้ครบ:** หากขาด skill ใดใน 5 ตัวข้างต้น Preflight จะหยุดก่อนเริ่มสัมภาษณ์และบอกคำสั่งติดตั้งตัวที่ขาด
+- **ไม่ต้องตั้งค่า issue tracker:** ไฟล์ใน `.scratch/<feature-slug>/` คือ tracker ของ skill นี้ ขั้นที่ `to-spec` / `to-tickets` บอกให้ publish ไป tracker หรือให้รัน `/setup-matt-pocock-skills` จะถูกแทนด้วยการเขียนไฟล์ในเครื่อง
 - **รีเซ็ต Context หลังเสร็จสิ้น:** เมื่อได้ Tickets ครบแล้ว ให้พิมพ์ `/clear` ก่อนเริ่ม implement เพื่อให้สมองของ AI ทำงานได้อย่างเต็มประสิทธิภาพที่สุด

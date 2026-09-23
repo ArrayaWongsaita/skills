@@ -127,6 +127,9 @@ describe("grill-to-tickets eval suite contract", () => {
         { label: "reviewer id carry-over", match: /previous findings' ids/i },
         { label: "FIX_THEN_SHIP sweep", match: /sweeps every restatement/i },
         { label: "ticket checker", match: /ticket checker/i },
+        { label: "preflight: missing stage skill", match: /preflight stops/i },
+        { label: "preflight: global install", match: /preflight uses a globally installed/i },
+        { label: "local tracker", match: /local files replace/i },
       ];
       for (const safeguard of safeguards) {
         assert.ok(
