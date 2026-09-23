@@ -92,6 +92,58 @@
         "Does not advance to Stage 3 ticket breakdown without a SHIP verdict"
       ],
       "files": []
+    },
+    {
+      "id": 8,
+      "name": "reuse survey bootstraps a missing catalog with a pointer line",
+      "prompt": "/grill-to-tickets Add CSV export to the orders list page. The project has no docs/reuse-catalog.md yet; an AGENTS.md exists at the repository root.",
+      "expected_output": "In Stage 0, after grounding, run the Reuse survey: with no catalog, survey the areas the idea touches (the orders feature and the shared-code locations) through a read-only fact-lookup subagent, create docs/reuse-catalog.md from the template filled with entries for existing reusable modules and a Coverage line dated today per surveyed area, add one pointer line to AGENTS.md, and list these catalog changes in the Stage 0 pause summary.",
+      "expectations": [
+        "Runs the Reuse survey in Stage 0 before the first grilling round",
+        "Creates docs/reuse-catalog.md from the template, with entries only for code that exists",
+        "Writes a Coverage line dated today for every surveyed area",
+        "Adds exactly one pointer line to AGENTS.md",
+        "Lists the catalog changes in the Stage 0 pause summary"
+      ],
+      "files": []
+    },
+    {
+      "id": 9,
+      "name": "reuse survey drift check removes a stale entry",
+      "prompt": "$grill-to-tickets Add a refund button to the order detail page. docs/reuse-catalog.md lists `formatMoney` — `src/lib/money.ts`, but that file now exports only `formatCurrency`, and nothing in the repository defines formatMoney any more. src/lib/ is in Coverage, and money.ts changed after its Coverage date.",
+      "expected_output": "The drift check greps formatMoney in src/lib/money.ts, finds it absent there and anywhere else in the repository, and removes the entry. Because money.ts changed since the src/lib/ Coverage date, the gap survey re-reads it, adds an entry for formatCurrency, and moves the src/lib/ Coverage date to today. The Stage 0 summary reports the removal and the addition.",
+      "expectations": [
+        "Removes the formatMoney entry after confirming the symbol is gone from the repository",
+        "Re-reads money.ts because it changed after the Coverage date, and adds a formatCurrency entry",
+        "Moves the src/lib/ Coverage date to today",
+        "Reports both catalog changes in the Stage 0 summary"
+      ],
+      "files": []
+    },
+    {
+      "id": 10,
+      "name": "reuse survey re-reads only files changed in a covered area",
+      "prompt": "/grill-to-tickets Add a date-range filter to the reports page. docs/reuse-catalog.md has Coverage `src/features/reports/` — surveyed 2026-09-01, and since then only src/features/reports/use-report-query.ts has changed in that area. src/components/filters/ is not in Coverage.",
+      "expected_output": "Decide the gaps: for the covered src/features/reports/, re-read only use-report-query.ts (the one file the Coverage git log returns); survey all of the uncovered src/components/filters/. Leave the unchanged covered files unread. Write back entries for what was found and set both areas' Coverage dates to today.",
+      "expectations": [
+        "Uses the Coverage date to limit src/features/reports/ to the changed file",
+        "Surveys the whole of the uncovered src/components/filters/",
+        "Leaves covered, unchanged files unread",
+        "Sets the Coverage date of both surveyed areas to today"
+      ],
+      "files": []
+    },
+    {
+      "id": 11,
+      "name": "extend-vs-new reuse choice becomes a grilling question",
+      "prompt": "/grill-to-tickets Add row selection with bulk delete to the users table. docs/reuse-catalog.md lists `DataTable` — `src/components/ui/data-table.tsx` — use for: sortable, paginated tables. DataTable has no selection support today.",
+      "expected_output": "The survey establishes the fact (DataTable exists, lacks selection). Whether to extend DataTable with selection or build a separate selectable table is a real choice, so it joins the grilling frontier as a numbered question with a recommended answer (extend DataTable, keeping existing callers unchanged) and waits for the user's decision.",
+      "expectations": [
+        "Treats DataTable's existence and lack of selection as facts, not questions",
+        "Asks extend-versus-new as a numbered frontier question with a recommended answer",
+        "Waits for the user's answer instead of deciding the reuse choice itself"
+      ],
+      "files": []
     }
   ]
 }

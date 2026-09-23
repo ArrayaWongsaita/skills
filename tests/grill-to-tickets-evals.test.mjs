@@ -90,10 +90,29 @@ describe("grill-to-tickets eval suite contract", () => {
       { label: "budget exhaustion", match: /budget exhaustion|fresh .*budget|human authoriz/i },
     ];
 
-    it("declares skill_name grill-to-tickets and exactly 7 eval cases", async () => {
+    it("declares skill_name grill-to-tickets and at least one case per routing branch", async () => {
       const payload = await evalsJson();
       assert.equal(payload.skill_name, "grill-to-tickets");
-      assert.equal(payload.evals.length, 7, "one case per Design Review Gate routing branch");
+      assert.ok(
+        payload.evals.length >= routingBranches.length,
+        "at least one case per Design Review Gate routing branch, plus the reuse cases",
+      );
+    });
+
+    it("covers the Stage 0 Reuse survey: bootstrap, drift check, coverage, reuse choice", async () => {
+      const { evals } = await evalsJson();
+      const surveyCases = [
+        { label: "bootstrap", match: /bootstrap/i },
+        { label: "drift check", match: /drift/i },
+        { label: "coverage", match: /covered area|coverage/i },
+        { label: "reuse choice as a grilling question", match: /grilling question/i },
+      ];
+      for (const branch of surveyCases) {
+        assert.ok(
+          evals.some((e) => branch.match.test(e.name)),
+          `no eval case covers the Reuse survey ${branch.label}`,
+        );
+      }
     });
 
     it("drives every case through an explicit grill-to-tickets invocation", async () => {

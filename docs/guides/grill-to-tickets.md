@@ -66,10 +66,20 @@ Skill นี้ถูกตั้งค่าแบบ Explicit Invocation (ต�
 └── issues/             # รายการ tickets ที่พร้อมพัฒนา (NN-<slug>.md)
 ```
 
+มีไฟล์ระดับ project เพียงไฟล์เดียวที่อยู่นอก `.scratch/` และใช้ต่อข้ามฟีเจอร์ คือ **Reuse Catalog** `docs/reuse-catalog.md` (พร้อมบรรทัดชี้ไปหาใน `AGENTS.md` หรือ `CLAUDE.md`) ซึ่งเก็บรายการโค้ดที่ใช้ซ้ำได้ของ project เพื่อให้รอบถัดไปสำรวจเฉพาะส่วนที่เปลี่ยน:
+```text
+docs/reuse-catalog.md
+├── Where shared code lives   # shared code อยู่ที่ไหน
+├── Rules                     # กฎการใช้ เช่น "แสดงเงินด้วย formatCurrency"
+├── Shared                    # รายการใน shared layer: `symbol` — `path` — use for: ...
+├── Candidates                # โค้ดที่น่าจะ reuse ได้แต่ยังมีผู้ใช้รายเดียว
+└── Coverage                  # ส่วนที่สำรวจแล้ว และวันที่สำรวจล่าสุด
+```
+
 ### ขั้นตอนการทำงาน 4 ลำดับขั้น
 
 ```text
-Stage 0: Grill        grilling + domain-modeling  → CONTEXT.md, adr/
+Stage 0: Grill        reuse survey + grilling + domain-modeling  → CONTEXT.md, adr/, docs/reuse-catalog.md
    │ (หยุดรอการยืนยันจากผู้ใช้เมื่อคำถามหมด)
    ▼
 Stage 1: Spec         to-spec                     → spec.md
@@ -84,6 +94,8 @@ Stop: Handoff message (แนะนำคำสั่ง /clear และ /subag
 
 1. **Stage 0 — Grill (สัมภาษณ์และสร้างโมเดลโดเมน):**
    - สำรวจบริบทเดิมใน repo (`CONTEXT.md`, `docs/adr/`)
+   - **Reuse survey:** อ่าน `docs/reuse-catalog.md` ตรวจว่าทุกรายการยังมีอยู่จริง (drift check) แล้วสำรวจเฉพาะส่วนที่ไม่อยู่ใน Coverage และไฟล์ที่เปลี่ยนหลังวันที่ใน Coverage ผลที่เจอเขียนกลับลง catalog ถ้ายังไม่มี catalog จะสร้างจาก template พร้อมเพิ่มบรรทัดชี้ใน `AGENTS.md` (หรือ `CLAUDE.md`)
+   - ทางเลือกเรื่อง reuse ที่ต้องตัดสินจริง เช่น ขยายของเดิมหรือสร้างใหม่ จะถูกถามเป็นคำถามพร้อมคำตอบแนะนำ
    - สัมภาษณ์ถามตอบทีละประเด็นโดยมีตัวเลือกแนะนำ (ใช้ `grilling`)
    - บันทึกคำศัพท์ลง `CONTEXT.md` และบันทึกการตัดสินใจยากๆ ลง `adr/` ทันที (ใช้ `domain-modeling`)
    - เมื่อตัดสินใจครบแล้ว จะสรุปและหยุดรอคำยืนยันจากผู้ใช้ก่อนก้าวต่อไป

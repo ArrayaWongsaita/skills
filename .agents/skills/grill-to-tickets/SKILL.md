@@ -63,6 +63,12 @@ idea (lowercase alphanumeric with hyphens).
 └── issues/             # tracer-bullet vertical tickets (NN-<slug>.md)
 ```
 
+One project-level artifact lives outside that directory and outlasts the
+feature: the **Reuse Catalog** at `docs/reuse-catalog.md`, plus a one-line
+pointer to it in the project's `AGENTS.md` or `CLAUDE.md`. It indexes the
+project's reusable code so each run surveys only what changed since the last one
+— see [reuse-pass.md](references/reuse-pass.md).
+
 ## Stage 0 — Grill
 
 Run `grilling` and `domain-modeling` together as one discovery pass.
@@ -70,18 +76,27 @@ Run `grilling` and `domain-modeling` together as one discovery pass.
 1. **Ground in existing context.** Read the repository's root `CONTEXT.md` and
    `docs/adr/` if they exist, plus any relevant existing directory under
    `.scratch/`. Initialize `.scratch/<feature-slug>/`.
-2. **Relentless interview (inline `grilling`).** Map decisions as a design tree.
+2. **Reuse survey.** Read `docs/reuse-catalog.md`, drift-check every entry
+   against the code, and survey only the gaps — areas the idea touches that
+   Coverage lacks, and files changed in covered areas since their Coverage date.
+   The survey's subagent is a fact lookup; the stage itself stays on the main
+   thread. Write back what the survey found about existing code, bootstrap the
+   catalog when it is absent, and carry each genuine reuse choice into the
+   interview as a frontier question. Full procedure:
+   [reuse-pass.md](references/reuse-pass.md) — Stage 0.
+3. **Relentless interview (inline `grilling`).** Map decisions as a design tree.
    Work the tree in rounds across the frontier — every decision whose
    prerequisites are settled. Number each question and give a recommended answer.
    Find facts yourself through repository inspection and tool lookups; reserve
    questions for human decisions.
-3. **Active domain modeling (inline `domain-modeling`).** Challenge overloaded
+4. **Active domain modeling (inline `domain-modeling`).** Challenge overloaded
    terms, sharpen fuzzy language, and stress-test relationships with concrete
    scenarios. Write terms into `.scratch/<feature-slug>/CONTEXT.md` the moment
    they resolve; record hard-to-reverse choices as
    `.scratch/<feature-slug>/adr/NNNN-<slug>.md`. Write inline, as they resolve.
-4. **Pause.** When the decision frontier is empty, summarize the agreed glossary
-   and decisions and pause for explicit user confirmation before Stage 1.
+5. **Pause.** When the decision frontier is empty, summarize the agreed glossary,
+   the decisions, and the catalog changes, then pause for explicit user
+   confirmation before Stage 1.
 
 ## Stage 1 — Spec
 

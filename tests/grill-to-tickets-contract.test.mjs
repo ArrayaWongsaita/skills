@@ -103,6 +103,35 @@ describe("grill-to-tickets composite skill contract", () => {
     }
   });
 
+  it("runs a Stage 0 Reuse survey against the project's Reuse Catalog", async () => {
+    for (const file of skillFiles) {
+      const content = await readFile(file, "utf8");
+      assert.match(content, /Stage 0[\s\S]*Reuse survey[\s\S]*Relentless interview/, "survey runs before the interview");
+      assert.match(content, /docs\/reuse-catalog\.md/);
+      assert.match(content, /drift-check/i);
+      assert.match(content, /Coverage/);
+      assert.match(content, /\(references\/reuse-pass\.md\)/);
+      assert.match(content, /catalog changes/i, "the Stage 0 pause reports catalog changes");
+    }
+    for (const dir of skillDirs) {
+      const pass = await readFile(path.resolve(dir, "references/reuse-pass.md"), "utf8");
+      assert.match(pass, /exists now/i, "catalog lists only code that exists");
+      assert.match(pass, /drift-check/i);
+      assert.match(pass, /git log --since=<date> --first-parent --diff-merges=first-parent --name-only/);
+      assert.match(pass, /Explore-type subagent/);
+      assert.match(pass, /Bootstrap/);
+      assert.match(pass, /AGENTS\.md[\s\S]{0,80}CLAUDE\.md/, "pointer goes to AGENTS.md, else CLAUDE.md");
+      assert.match(pass, /numbered question with a\s+recommended answer/);
+
+      const template = await readFile(path.resolve(dir, "references/reuse-catalog-template.md"), "utf8");
+      assert.match(template, /every line describes code that exists now/i);
+      assert.match(template, /- `symbol` — `path\/to\/file` — use for:/);
+      for (const heading of ["Where shared code lives", "Rules", "Shared", "Candidates", "Coverage"]) {
+        assert.match(template, new RegExp(`^## ${heading}$`, "m"), `template has ## ${heading}`);
+      }
+    }
+  });
+
   it("normalizes every scrutinize verdict without paraphrasing", async () => {
     for (const file of skillFiles) {
       const content = await readFile(file, "utf8");

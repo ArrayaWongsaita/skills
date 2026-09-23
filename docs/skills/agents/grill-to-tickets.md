@@ -33,7 +33,7 @@ npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 
 เรียก `/grill-to-tickets <idea>` หรือ `$grill-to-tickets <idea>` จากนั้น:
 
-1. **Stage 0 — Grill**: สัมภาษณ์แบบ design tree พร้อมทำ domain modeling เขียน `CONTEXT.md` / `adr/` ทันทีที่ term นิ่ง แล้วหยุดขอ confirmation เมื่อ frontier ว่าง
+1. **Stage 0 — Grill**: เริ่มด้วย **Reuse survey** อ่าน `docs/reuse-catalog.md` ของ project ตรวจว่าทุกรายการยังมีอยู่จริง แล้วสำรวจเฉพาะส่วนที่ยังไม่เคยสำรวจหรือไฟล์ที่เปลี่ยนหลังวันที่ใน Coverage (ถ้ายังไม่มี catalog จะสร้างให้พร้อมเพิ่มบรรทัดชี้ใน `AGENTS.md`) ทางเลือกเรื่อง reuse เช่น ขยายของเดิมหรือสร้างใหม่ จะกลายเป็นคำถามให้คุณตัดสิน จากนั้นสัมภาษณ์แบบ design tree พร้อมทำ domain modeling เขียน `CONTEXT.md` / `adr/` ทันทีที่ term นิ่ง แล้วหยุดขอ confirmation เมื่อ frontier ว่าง
 2. **Stage 1 — Spec**: รัน `to-spec` สังเคราะห์บทสนทนาเป็น `spec.md` โดยไม่สัมภาษณ์ซ้ำ
 3. **Stage 2 — Design Review Gate**: รัน `scrutinize` แล้ว normalize verdict เป็น `SHIP` / `FIX_THEN_SHIP` / `REWORK` / `REJECT` เก็บรายงานไว้ไฟล์เดียว `design-review.md` อัปเดตทุกรอบ
 4. **Stage 3 — Tickets**: เมื่อได้ `SHIP` รัน `to-tickets` เขียน ticket ลง `.scratch/<feature-slug>/issues/`
@@ -51,7 +51,9 @@ npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 ### ไฟล์ที่เกี่ยวข้อง
 
 - `references/design-review-gate.md` — source เดียวของ routing table เต็ม, cycle accounting, stall detection, gate report format (SKILL.md Stage 2 เก็บแค่สรุปสั้น ๆ ต่อ verdict แล้วชี้มาที่นี่)
-- `evals/evals.json` — 7 เคสพฤติกรรม หนึ่งเคสต่อ routing branch ของ Design Review Gate ในรูปแบบ benchmark ของ `skill-creator` รันแบบ on-demand ไม่ได้อยู่ใน CI
+- `references/reuse-pass.md` — กฎ reuse ของแต่ละ stage เริ่มจาก Reuse survey ใน Stage 0 (drift check, Coverage, bootstrap, pointer)
+- `references/reuse-catalog-template.md` — template ของ `docs/reuse-catalog.md` ที่ใช้สร้างครั้งแรก header ของไฟล์อธิบายวิธีดูแลตัวเอง
+- `evals/evals.json` — เคสพฤติกรรม อย่างน้อยหนึ่งเคสต่อ routing branch ของ Design Review Gate และเคสของ Reuse survey ในรูปแบบ benchmark ของ `skill-creator` รันแบบ on-demand ไม่ได้อยู่ใน CI
 - `evals/trigger-evals.json` — กันไม่ให้ description ของ skill อ่านเหมือนเป็น model-invocable (skill นี้เป็น `disable-model-invocation`)
 
 ## English / ภาษาอังกฤษ
@@ -88,8 +90,13 @@ npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 ### Main workflow
 
 Invoke `/grill-to-tickets <idea>` or `$grill-to-tickets <idea>`. The skill runs
-four stages — Grill, Spec, Design Review Gate, Tickets — writing every artifact
-under `.scratch/<feature-slug>/`. The Design Review Gate normalizes each
+four stages — Grill, Spec, Design Review Gate, Tickets — writing every feature
+artifact under `.scratch/<feature-slug>/`. Stage 0 opens with a Reuse survey
+against the project's Reuse Catalog (`docs/reuse-catalog.md`): it drift-checks
+every entry, surveys only uncovered areas and files changed since their Coverage
+date, bootstraps the catalog (with a pointer line in `AGENTS.md` or
+`CLAUDE.md`) when it is missing, and turns genuine reuse choices into grilling
+questions. The Design Review Gate normalizes each
 `scrutinize` verdict into `SHIP`, `FIX_THEN_SHIP`, `REWORK`, or `REJECT`, keeps
 one stable `design-review.md` report, and bounds itself to six cycles with early
 stops for stalls and a required human authorization on budget exhaustion. A
@@ -109,7 +116,12 @@ handoff and stops.
 - `references/design-review-gate.md` — the single source for the full routing
   table, cycle accounting, stall detection, and the per-cycle gate report format;
   SKILL.md Stage 2 keeps only a brief per-verdict summary and points here
-- `evals/evals.json` — seven behavioral cases, one per Design Review Gate routing
-  branch, in `skill-creator`'s benchmark format; run on demand, not in CI
+- `references/reuse-pass.md` — the reuse rules per stage, starting with the
+  Stage 0 Reuse survey (drift check, Coverage, bootstrap, pointer)
+- `references/reuse-catalog-template.md` — the bootstrap template for
+  `docs/reuse-catalog.md`, whose header makes the file self-describing
+- `evals/evals.json` — behavioral cases, at least one per Design Review Gate
+  routing branch plus the Reuse survey cases, in `skill-creator`'s benchmark
+  format; run on demand, not in CI
 - `evals/trigger-evals.json` — guards that the skill's description does not read
   as model-invocable (the skill is `disable-model-invocation`)
