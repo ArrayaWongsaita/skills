@@ -2,8 +2,7 @@
 
 The bounded review loop in Stage 2. `scrutinize` evaluates the published `spec.md`
 and returns a verdict; this gate normalizes it, routes it, and decides whether
-ticket breakdown may begin. This skill owns these rules outright — it does not
-share them with `grill-with-docs`.
+ticket breakdown may begin. This skill owns these rules outright.
 
 ## Stable report
 

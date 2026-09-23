@@ -26,7 +26,7 @@ npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 
 ### ไม่ควรใช้เมื่อไร
 
-- ถ้าต้องการให้ทำถึงขั้น implement และ review โค้ดด้วย ใช้ `/grill-with-docs` หรือ `/engineering-workflow`
+- ถ้าต้องการให้ทำถึงขั้น implement และ review โค้ดใน run เดียว ใช้ `/engineering-workflow` (หรือทำต่อจาก ticket ด้วย `/subagent-implement` แล้วตามด้วย `/review-to-pr`)
 - ถ้าต้องการแค่ discipline เดียว เรียก `/grilling`, `/to-spec`, `/scrutinize` หรือ `/to-tickets` ตรง ๆ
 
 ### วิธีทำงานหลัก
@@ -82,8 +82,9 @@ npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 
 ### Do not use it when
 
-- You want the run to continue into implementation and code review — use
-  `/grill-with-docs` or `/engineering-workflow`.
+- You want one run to continue into implementation and code review — use
+  `/engineering-workflow` (or continue from the tickets with
+  `/subagent-implement`, then `/review-to-pr`).
 - You only need one discipline — call `/grilling`, `/to-spec`, `/scrutinize`, or
   `/to-tickets` directly.
 

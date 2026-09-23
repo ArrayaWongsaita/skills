@@ -35,32 +35,17 @@ async function assertMarkdownLinksExist(baseDir, markdown, sourceFile, { require
 }
 
 describe("Orchestration Pipeline End-to-End Verification", () => {
-  const orchestratorSkillPath = path.resolve(".agents/skills/grill-with-docs/SKILL.md");
+  const grillWithDocsPath = path.resolve(".agents/skills/grill-with-docs/SKILL.md");
   const engWorkflowPath = path.resolve("skills/agents/engineering-workflow/SKILL.md");
   const localEngWorkflowPath = path.resolve(".agents/skills/engineering-workflow/SKILL.md");
   const scratchFeatureRoot = path.resolve(".scratch/skill-orchestrator-redesign");
 
   describe("File links and markdown references integrity", () => {
-    it("all markdown links in grill-with-docs point to valid existing files", async () => {
-      await fileExists(orchestratorSkillPath);
-      const content = await readFile(orchestratorSkillPath, "utf8");
-      const dir = path.dirname(orchestratorSkillPath);
-      await assertMarkdownLinksExist(dir, content, "grill-with-docs/SKILL.md");
-    });
+    it("every skill upstream grill-with-docs calls exists in .agents/skills/", async () => {
+      const content = await readFile(grillWithDocsPath, "utf8");
 
-    it("all child skills referenced by grill-with-docs exist in .agents/skills/", async () => {
-      const childSkills = [
-        "grilling",
-        "domain-modeling",
-        "to-spec",
-        "scrutinize",
-        "to-tickets",
-        "tdd",
-        "code-review",
-        "pr-to-dev",
-      ];
-
-      for (const skill of childSkills) {
+      for (const skill of ["grilling", "domain-modeling"]) {
+        assert.match(content, new RegExp(`"${skill}"`), `grill-with-docs must call ${skill}`);
         const skillFile = path.resolve(`.agents/skills/${skill}/SKILL.md`);
         await assert.doesNotReject(
           fileExists(skillFile),
@@ -95,59 +80,6 @@ describe("Orchestration Pipeline End-to-End Verification", () => {
           await assertMarkdownLinksExist(refDir, content, fullPath, { requireLinks: false });
         }
       }
-    });
-  });
-
-  describe("Simulated stage transitions from /grill-with-docs through /implement", () => {
-    it("simulates full lifecycle phase transitions, gate confirmations, and Smart Zone resets", async () => {
-      const content = await readFile(orchestratorSkillPath, "utf8");
-
-      // Phase 1: Discovery & Domain Modeling
-      assert.match(content, /## Phase 1:\s*Discovery & Domain Modeling/i);
-      assert.match(content, /grilling/);
-      assert.match(content, /domain-modeling/);
-      assert.match(content, /CONTEXT\.md/);
-      assert.match(content, /adr\//);
-      assert.match(content, /Gate 1:\s*Post-Discovery Confirmation/i);
-      assert.match(content, /explicit user confirmation/i);
-
-      // Phase 2: Specification & Design Gate
-      assert.match(content, /## Phase 2:\s*Specification & Design/i);
-      assert.match(content, /to-spec/);
-      assert.match(content, /spec\.md/);
-      assert.match(content, /scrutinize/);
-      assert.match(content, /Pass/);
-      assert.match(content, /Minor Correction/);
-      assert.match(content, /Rework/);
-      assert.match(content, /Reject/);
-      assert.match(content, /6-cycle/);
-      assert.match(content, /Gate 2:\s*Post-Spec/i);
-
-      // Phase 3: Vertical Ticket Breakdown
-      assert.match(content, /## Phase 3:\s*Vertical Ticket Breakdown/i);
-      assert.match(content, /to-tickets/);
-      assert.match(content, /tracer-bullet/);
-      assert.match(content, /Blocked by/);
-      assert.match(content, /Gate 3:\s*Post-Tickets Confirmation/i);
-
-      // Phase 4: Context Boundary
-      assert.match(content, /## Phase 4:\s*Context Boundary/i);
-      assert.match(content, /\/clear/);
-      assert.match(content, /\/implement \.scratch\/<feature-slug>\/issues\/01-/);
-      assert.match(content, /Smart Zone/);
-
-      // Phase 5: Test-Driven Implementation Loop
-      assert.match(content, /## Phase 5:\s*Test-Driven Implementation Loop/i);
-      assert.match(content, /tdd/);
-      assert.match(content, /code-review/);
-      assert.match(content, /Standards/);
-      assert.match(content, /Spec/);
-      assert.match(content, /Gate 4:\s*Post-Ticket Implementation Confirmation/i);
-
-      // Phase 6: System Review & Wrap-Up
-      assert.match(content, /## Phase 6:\s*System Review/i);
-      assert.match(content, /scrutinize/);
-      assert.match(content, /pr-to-dev/);
     });
   });
 
