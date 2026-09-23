@@ -83,9 +83,10 @@ worktree kept.
    git commit -m "<NN>: <ticket title>"
    ```
 
-   The same commit ticks that ticket file's acceptance checkboxes and sets its
-   `Status:` to done. "One commit per ticket" is a property of this merge, not a
-   worker rule — workers commit freely on their own branch.
+   The same commit ticks that ticket file's acceptance checkboxes, sets its
+   `Status:` to done, and carries the ticket's Reuse Catalog update (below).
+   "One commit per ticket" is a property of this merge, not a worker rule —
+   workers commit freely on their own branch.
 2. **Conflict routing.** A **mechanical conflict** (import ordering, adjacent
    edits, a moved block) the orchestrator resolves itself on the main thread. A
    conflict that **encodes a design decision** — which module owns a shared
@@ -94,6 +95,32 @@ worktree kept.
    orchestrator choosing silently.
 3. **Cleanup and advance.** Remove the worker's worktree and move to the next
    frontier ticket.
+
+## Reuse Catalog update — inside the ticket's squash commit
+
+When the target repository has `docs/reuse-catalog.md` and the ticket's
+`**Reuse:**` line carries `create-shared`, `create-candidate`, `extend`, or
+`promote`, the orchestrator updates the catalog between `git merge --squash` and
+`git commit`, so the entries land in the ticket's own commit. For each such
+verb:
+
+1. **Path.** Grep the bare symbol in the implementation files the worker
+   reported as changed. Not found → write no entry, and note
+   `catalog: <symbol> not found in changed files` under the ticket in
+   `status.md`; the catalog lists only code that exists.
+2. **Use-when.** Take it from the spec's Reuse Plan entry for that symbol.
+3. **Write** the entry in the format the catalog's header states:
+   - `create-shared` → add it under Shared, in the category that fits;
+   - `create-candidate` → add it under Candidates with `· from: <feature-slug>`;
+   - `promote` → move its entry from Candidates to Shared, with its new path;
+   - `extend` → update the existing entry's use-when when the Reuse Plan changed
+     it, or add the entry when the module was not yet catalogued.
+
+The symbol comes from the ticket, the path from a grep, the use-when from the
+spec — the orchestrator reads no code, so this step stays text-only. It is the
+catalog's only writer during a run; workers read it. Coverage dates stay as they
+are, because only a Reuse survey moves them. With no catalog file, skip this
+section.
 
 ## Why v1 has no separate integration gate
 

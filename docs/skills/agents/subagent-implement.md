@@ -59,6 +59,12 @@ main agent)
    subagent (worktree แยก, prompt test-first), verifier subagent ตัวใหม่
    (reproduce red, green, typecheck, full suite), orchestrator ตัดสินจากสอง
    report (กลวงไหม? ครอบคลุม criteria ไหม?) แล้ว squash-merge หนึ่ง commit ต่อ ticket
+   **Reuse Catalog:** prompt ของ worker มีบรรทัด `**Reuse:**` ของ ticket และ (ถ้า
+   project มี `docs/reuse-catalog.md`) ตัวชี้แบบอ่านอย่างเดียวให้ค้นก่อนสร้าง helper
+   ที่ไม่ได้วางแผนไว้ ticket ที่มี `create-shared` / `create-candidate` / `extend` /
+   `promote` จะได้ส่วน Reuse Plan ของ spec ด้วย และ orchestrator เขียนรายการลง
+   catalog ใน commit ของ ticket นั้นเอง (path จากการ grep, use-when จาก Reuse Plan
+   ไม่ต้องอ่านโค้ด) ถ้า project ไม่มี catalog ขั้นนี้ถูกข้าม
 3. **Stop — Handoff**: พิมพ์ชื่อ integration branch, ยืนยันหนึ่ง commit ต่อ ticket
    และคำสั่ง `/code-review` + `/scrutinize` ที่ต้องรันต่อใน context ใหม่ ไม่ push
    ไม่เปิด PR
@@ -76,8 +82,8 @@ sub-command: `continue` resume พร้อม Reality reconciliation, `status` 
 
 - `references/planning.md` — parse ticket, สร้าง/ตรวจ DAG, dependency order, เลือก seam, match agent
 - `references/dispatch-contract.md` — การ dispatch subagent, resolve agent + model, final report, retry budget, ข้อที่ต้องยืนยันตอนใช้จริง
-- `references/prompt-scaffold.md` — template prompt worker ต่อ ticket พร้อม red-green-refactor เต็ม
-- `references/verification-and-integration.md` — preflight, สัญญาของ verifier, orchestrator judgment, squash-merge, conflict routing
+- `references/prompt-scaffold.md` — template prompt worker ต่อ ticket พร้อม red-green-refactor เต็ม และบรรทัด Reuse / Reuse Catalog
+- `references/verification-and-integration.md` — preflight, สัญญาของ verifier, orchestrator judgment, squash-merge, conflict routing, การอัปเดต Reuse Catalog ใน commit ของ ticket
 - `references/status-and-resume.md` — halt report, `status.md`, Reality reconciliation, rewind
 - `evals/evals.json` — เคสพฤติกรรม หนึ่งเคสต่อ decision branch, รูปแบบ benchmark ของ `skill-creator`
 - `evals/trigger-evals.json` — กันไม่ให้ description อ่านเหมือน model-invocable
@@ -141,7 +147,14 @@ pins the worker subagent type for the run; `--model <id>` is a raw pass-through
    worker subagent (isolated worktree, test-first prompt), a fresh verifier
    subagent (reproduce red, green, typecheck, full suite), the orchestrator's
    judgment from the two reports (vacuous? covers the criteria?), then a
-   squash-merge of one commit per ticket.
+   squash-merge of one commit per ticket. **Reuse Catalog:** each worker prompt
+   carries the ticket's `**Reuse:**` line and, when the project has
+   `docs/reuse-catalog.md`, a read-only pointer to search before creating an
+   unplanned helper; a line with `create-shared`, `create-candidate`, `extend`,
+   or `promote` also names the spec's Reuse Plan. The orchestrator writes those
+   modules' catalog entries in the ticket's own commit — path from a grep,
+   use-when from the Reuse Plan, no code read — and skips all of it when the
+   project has no catalog.
 3. **Stop — Handoff**: print the integration branch name, confirm one commit per
    ticket, and hand over the exact `/code-review` and `/scrutinize` commands for
    a fresh context. It never pushes or opens a PR.
@@ -164,9 +177,11 @@ Sub-commands: `continue` resumes with Reality reconciliation; `status` and
   and model resolution, the final-report shape, the retry budget, and the
   assumptions to confirm on first use
 - `references/prompt-scaffold.md` — the per-ticket worker prompt template with
-  the full red-green-refactor protocol inline
+  the full red-green-refactor protocol inline, plus the Reuse and Reuse Catalog
+  lines
 - `references/verification-and-integration.md` — preflight, the verifier subagent
-  contract, the orchestrator's judgment, the squash-merge, and conflict routing
+  contract, the orchestrator's judgment, the squash-merge, conflict routing, and
+  the Reuse Catalog update inside each ticket's commit
 - `references/status-and-resume.md` — the halt report, `status.md` fields,
   Reality reconciliation, and the resume rewind
 - `evals/evals.json` — behavioral cases, one per decision branch, in

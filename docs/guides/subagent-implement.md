@@ -108,6 +108,8 @@ Stop: Handoff (ส่งมอบ integration branch พร้อมคำสั
    - **Verifier Subagent (Explore agent):** สวมบทบาทผู้ตรวจสอบอิสระ ดึงเฉพาะไฟล์เทสต์ไปรันเพื่อยืนยันว่า Red จริง จากนั้นตรวจผล Green, Typecheck และ Full Suite ทั้งหมด คืนหลักฐานเชิงประจักษ์โดยไม่ตัดสินความ
    - **Orchestrator Judgment & Integration:** Main Agent ประเมินรายงาน (เทสต์กลวงหรือไม่? ครอบคลุม acceptance criteria ไหม?) หากผ่านจะทำ squash-merge 1 commit เข้าสู่ integration branch
    - หากเทสต์ไม่ผ่าน มีสิทธิ์ลองแก้ซ้ำได้สูงสุด 3 ครั้ง (`MAX_TICKET_ATTEMPTS = 3`)
+   - **Reuse Catalog:** prompt ของ worker มีบรรทัด `**Reuse:**` ของ ticket แบบคำต่อคำ และถ้า project มี `docs/reuse-catalog.md` จะมีตัวชี้แบบอ่านอย่างเดียว ให้ worker ค้นก่อนสร้าง helper, component, hook หรือ test factory ที่ไม่อยู่ในแผน ถ้าบรรทัด Reuse มี `create-shared` / `create-candidate` / `extend` / `promote` worker จะได้ส่วน Reuse Plan ของ spec ไปด้วย เพื่อสร้าง interface ตามที่ตกลงไว้สำหรับผู้ใช้ทุกราย
+   - ตอน squash-merge orchestrator เขียนรายการลง catalog ใน commit ของ ticket นั้นเลย (grep หา path ในไฟล์ที่ worker แก้, ใช้ use-when จาก Reuse Plan, ไม่อ่านโค้ด) ถ้าหา symbol ไม่เจอจะไม่เขียน และบันทึกไว้ใน `status.md` ถ้า project ไม่มี catalog ขั้นนี้ถูกข้ามทั้งหมด
 3. **Stop — Handoff (ส่งมอบงาน):**
    - แสดงข้อความสรุปชื่อ Integration Branch พร้อมคำสั่งสำหรับขั้นตอน Review ต่อไปในเซสชันใหม่:
      ```text
