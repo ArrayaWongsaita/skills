@@ -67,6 +67,10 @@ Skill นี้ปฏิเสธการทำงานบน branch `main`, `
 ### Stage 0 — Collect (read-only)
 
 Stage 0 ทำหน้าที่รวบรวมหลักฐานทั้งหมดจาก Run โดย **อ่านอย่างเดียว (read-only) และไม่แก้ไขไฟล์ run-state ใดๆ ทั้งสิ้น**:
+- **`docs/retro-log.md` (เมื่อมีไฟล์อยู่)**: อ่านก่อนการอ่าน Primary sources เพื่อติดตามผล (follow-up) สำหรับแต่ละ Remedy ที่ยังอยู่ในสถานะ `handed-off` หนึ่งครั้ง:
+  - `done` → `applied` (ผู้ใช้ยืนยันว่าการเปลี่ยนแปลงถูกนำไปปรับใช้ใน Environment เรียบร้อยแล้ว)
+  - `still pending` → คงสถานะ `handed-off` (ยังคงรอดำเนินการอยู่)
+  - `drop` → `declined` (ตัดสินใจไม่ทำต่อ)
 - **`review-status.md`**: อ่าน blocking findings ทั้งหมด, carried findings (status `open` และ non-blocking), findings ที่ `unfixable` หรือ `stalled`, และ budget รอบรีวิวที่เกิน 1 cycle
 - **Implementer `status.md`**: ตั๋วที่ต้อง retry (attempts > 1), ตั๋วที่ติด `BLOCKED`, และบทเรียนทั้งหมดใน notes (harness notes, gotchas, incidents)
 - **Implementer reports หรือ logs** (`reports/<NN>.md`, `logs/<NN>.json`, `logs/<NN>.jsonl`): ข้อผิดพลาดในการ verify (verification failures) พร้อมสาเหตุ
@@ -79,6 +83,14 @@ Stage 0 ทำหน้าที่รวบรวมหลักฐานทั
 ### Stage 1 — Classify and report
 
 Stage 1 ทำหน้าที่นำ Misses ทั้งหมดมาประมวลผลเป็นมาตรการปรับปรุงสภาพแวดล้อม (Environment Remedies):
+- **จับคู่กับ Retro Log ก่อนการจำแนก (Matching Against the Log)**:
+  - **Same-Occurrence Rule**: Miss ที่ระบุ slug และ location อยู่แล้วใน log ถือเป็นเหตุการณ์เดิม (same occurrence) ไม่นับเป็น recurrence เช่น การรัน Retro ซ้ำใน Run เดิมหลังจากบันทึก log ไปแล้ว จะไม่นับ Misses เดิมเป็นการเกิดซ้ำ
+  - **Recurrence**: การเกิดซ้ำ คือ Miss ที่มาจาก Run อื่น หรือเกิดขึ้นหลังจาก commit ของ Remedy ใน Run เดียวกัน
+  - **Failed Remedy Escalation**: หาก Miss ที่เกิดซ้ำตรงกับ Remedy ที่เคย `applied` แล้ว จะถือเป็น Failed Remedy และยกระดับไปสู่ชนิดที่เข้มงวดขึ้น:
+    - Standard → Check สำหรับกฎที่เป็น mechanical
+    - Pointer → ปรับถ้อยคำให้ชัดเจนขึ้น (sharper wording) แล้ว inline เนื้อหา
+    - Check หรือ Skill fix → เสนอ follow-up ชนิดเดิมที่อ้างอิงการเกิดซ้ำ
+  - **The Declined Rule**: Remedy ที่เคยถูก `declined` จะถูกเสนอขึ้นมาใหม่ก็ต่อเมื่อ Miss นั้นเกิดซ้ำขึ้นมาอีกครั้งหลังจากการ decline เท่านั้น โดยจะแสดงทั้งสองเหตุการณ์ (both occurrences: เหตุการณ์เดิมและเหตุการณ์ใหม่ที่เกิดซ้ำ) เป็นหลักฐาน หากไม่มีการเกิดซ้ำใหม่หลังจากการ decline จะไม่ถูกเสนอขึ้นมาอีก
 - **รวมสาเหตุและตัดข้อเสนอที่ไม่มีหลักฐาน (Evidence Bar)**: รวม Misses ที่แชร์สาเหตุเดียวกันเข้าด้วยกันเป็นหนึ่ง Remedy และตัดข้อเสนอใดๆ ที่ไม่มีข้อความยกมาตรงตัว (verbatim quote) และตำแหน่งพิกัด (location) ออกจากรายงานโดยสิ้นเชิง
 - **กฎการจำแนกตามลำดับ (Ordered Rule)**: จำแนกประเภท Remedy ตามกฎ 6 ข้อตามลำดับ:
   1. หากการทำตามคำสั่งของ skill ตรงตัวทำให้เกิด Miss เพราะคำสั่งผิดหรือล้าสมัย → **Skill fix** (แต่หาก agent เบี่ยงเบนจากคำสั่งที่ถูกต้อง จะตกไปยังกฎข้อถัดไปเพื่อสร้าง Check)
@@ -87,7 +99,7 @@ Stage 1 ทำหน้าที่นำ Misses ทั้งหมดมาป�
   4. ใช้ความพยายามในการค้นหาเอกสาร/ไฟล์ → **Pointer** ใน `AGENTS.md`
   5. ขาดแคลนข้อมูลที่เข้าถึงไม่ได้ (เช่น logs, permission) → **Access**
   6. คำสั่งในโปรเจกต์หมดอายุหรือไม่ส่งผล → **Prune** (จำกัดเฉพาะ `AGENTS.md`, `CLAUDE.md`, `CODING_STANDARDS.md` และ Reuse Catalog)
-- **การจัดลำดับตามต้นทุนและความถี่ (Cost Ranking)**: เรียงลำดับจาก Failed Remedy → Recurring Remedy → ต้นทุนสูง (review blocker, BLOCKED ticket, failed verification, รอบที่ไม่ได้ SHIP) → ข้อเสนออื่นๆ
+- **การจัดลำดับตามความสำคัญ (Ranking Order)**: เรียงลำดับความสำคัญโดยนำ Failed Remedy ขึ้นก่อน → ตามด้วย Recurring Remedy → ตามด้วยต้นทุนสูง (review blocker, BLOCKED ticket, failed verification, รอบที่ไม่ได้ SHIP) → ข้อเสนออื่นๆ
 - **Carried findings และ Open bugs**: นำ Carried findings จาก `review-status.md` ทุกข้อมาจับคู่กับ Remedy หรือ proposed decline (ไม่ปล่อยให้ค้างโดยไร้คำตอบ) และแยก defect ของโค้ดฟีเจอร์เป็น Open bugs สำหรับ `/diagnosing-bugs` เท่านั้น (ไม่ถือเป็น Remedy)
 - **โครงสร้างรายงานและคำตอบ 4 แบบ**: เขียนรายงานลง `.scratch/<feature-slug>/retro.md` เรียงตาม 6 ส่วน (sources read/missing, handed-off follow-ups, project Remedies, Skill fixes, Carried findings, Open bugs) จากนั้นหยุดพัก (pause) รอให้ผู้ใช้ตอบคำถาม 4 ตัวเลือก:
   - `apply`: อนุมัติให้นำ Text remedies (Standard, Pointer, Prune) ไปแก้ไขและ commit ลง branch
@@ -122,5 +134,8 @@ Stage 1 ทำหน้าที่นำ Misses ทั้งหมดมาป�
 - **กฎการ Commit (Two Commit Rules)**:
   1. Remedy ที่ถูก `applied` จะถูกบันทึก entry ลงใน `docs/retro-log.md` ภายใน commit เดียวกันกับการเปลี่ยนแปลงไฟล์ของ Remedy นั้นเป็น `chore(retro): <remedy>`
   2. ผลลัพธ์อื่นๆ ทั้งหมด (`handed-off`, `declined`, `deferred`) จะถูกบันทึกลงใน commit สุดท้ายเพียงหนึ่ง commit คือ `chore(retro): log <feature-slug>` เพื่อให้ log บันทึกผลลัพธ์ครบถ้วนแม้จะไม่มี Remedy ใดถูก apply ในรอบนั้นก็ตาม
+- **การเรียนรู้ข้าม Run (Cross-Run Learning)**:
+  - ใน Stage 0 มีการถามติดตามผลของ `handed-off` Remedies (done → `applied`, still pending → `handed-off`, drop → `declined`)
+  - ใน Stage 1 มีการจับคู่กับ log: ตรวจสอบ same-occurrence, ตรวจจับ recurrence (ซึ่งทำให้ `applied` กลายเป็น Failed Remedy และยกระดับมาตรการ), และเคารพการ decline โดยจะเสนอใหม่เฉพาะเมื่อมี Miss เกิดซ้ำหลังการ decline พร้อมแสดงทั้งสองเหตุการณ์
 
 

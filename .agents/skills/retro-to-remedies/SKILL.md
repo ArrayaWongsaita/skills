@@ -34,7 +34,7 @@ Run exclusively from a working feature or integration branch. When currently on 
 
 ### Stage 0 — Collect (read-only)
 
-Inspect the working tree branch guardrail. Read the project's durable `docs/retro-log.md` when present, following up on any pending items.
+Inspect the working tree branch guardrail. Read the project's durable `docs/retro-log.md` when present. For each Remedy still `handed-off`, ask the user once: done (Outcome becomes `applied`), still pending (stays `handed-off`), or drop (Outcome becomes `declined`). Complete these follow-ups before reading Primary sources.
 
 Gather and read every Primary source present for the Run under `.scratch/<feature-slug>/` (`review-status.md`, implementer `status.md`, per-ticket reports or logs, and `design-review.md`) alongside git history on the integration branch since `review_point` (from `review-status.md`) or the merge-base with `main`. Read each run-state file by meaning across implementer formats, and edit none of them.
 
@@ -51,7 +51,9 @@ Completion criterion: every present source read, and every Miss has a location a
 
 ### Stage 1 — Classify and report
 
-Group related misses by root cause and reconcile them against prior entries in `docs/retro-log.md`. Classify each miss deterministically into one of six Remedy kinds following the ordered rule: Skill fix, Check, Standard, Pointer, Access, or Prune. Drop any candidate without evidence. Map every Carried finding to a Remedy or proposed decline, and route feature defects to `/diagnosing-bugs` as Open bugs. Rank remedies by cost and recurrence. Consult [references/classification.md](references/classification.md) for detailed classification rules, destinations, and ranking.
+Group related misses by root cause. Match each Remedy against the Retro Log before classifying: recognise same-occurrence Misses already listed in the log, identify recurrences from another Run or after an applied Remedy's commit (escalating an `applied` Remedy to a Failed Remedy), and ensure a `declined` Remedy returns only with a recurrence after the decline, showing both occurrences.
+
+Classify each miss deterministically into one of six Remedy kinds following the ordered rule: Skill fix, Check, Standard, Pointer, Access, or Prune. Drop any candidate without evidence. Map every Carried finding to a Remedy or proposed decline, and route feature defects to `/diagnosing-bugs` as Open bugs. Rank remedies: Failed Remedy first, then recurring, then the cost ranking (blocker, `BLOCKED`, failed verification, no `SHIP`), then others. Consult [references/classification.md](references/classification.md) for detailed classification rules, destinations, and ranking.
 
 Write the structured Retro report to `.scratch/<feature-slug>/retro.md` containing the required sections in order, with exact text changes for Text remedies and `/grill-to-tickets` prompts for Code remedies, as detailed in [references/retro-report.md](references/retro-report.md). Route Skill fixes between local repositories and upstream feedback based on [references/skill-fix-routing.md](references/skill-fix-routing.md).
 

@@ -38,17 +38,17 @@ Prune is limited strictly to project instruction files (`AGENTS.md`, `CLAUDE.md`
 - **Evidence Bar**: Every Remedy must cite at least one located, quoted Primary source (file plus id, line, or commit SHA, and verbatim quote). Any proposal without evidence is dropped.
 - **Merge Same-Cause Misses**: Merge Misses that share a cause into one Remedy. List causes, not symptoms.
 
-## Cost Ranking
+## Ranking Order
 
-Remedies are ranked in the following priority order:
-1. Failed Remedy (escalated from a prior applied Remedy whose Miss recurred)
-2. Recurring Remedy (matched in `docs/retro-log.md`)
-3. Costly Misses:
+Remedies are ranked in priority order: Failed Remedy first, then recurring, then the cost ranking (costly misses), then the rest:
+1. **Failed Remedy**: Escalated from a prior applied Remedy whose Miss recurred.
+2. **Recurring Remedy**: A Remedy matching prior entries in `docs/retro-log.md`.
+3. **Costly Misses** (the cost ranking):
    - Review blockers (`blocker`)
    - Implementer blocked tickets (`BLOCKED`)
    - Implementer failed verification attempts
    - Design review cycles that ended without `SHIP`
-4. The rest of the Remedies
+4. **The rest of the Remedies**
 
 ## Carried Findings and Open Bugs
 

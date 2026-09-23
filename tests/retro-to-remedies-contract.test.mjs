@@ -688,6 +688,85 @@ describe("retro-to-remedies skill contract", () => {
       assert.match(guideDoc, /chore\(retro\):\s*log\s*<feature-slug>/);
     });
   });
+
+  describe("ticket 06 — Retro Log — read at Stages 0–1", () => {
+    it("references/retro-log.md specifies the handed-off follow-up and its three answers mapped to Outcomes", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/retro-log.md"), "utf8");
+        // handed-off follow-up
+        assert.match(c, /handed-off/i);
+        // done -> applied
+        assert.match(c, /done[*\s]*(→|->|to|:\s*)[*\s]*`?applied`?/i);
+        // still pending -> stays handed-off
+        assert.match(c, /still pending[*\s]*(→|->|to|:\s*)[*\s]*(stays\s*)?`?handed-off`?/i);
+        // drop -> declined
+        assert.match(c, /drop[*\s]*(→|->|to|:\s*)[*\s]*`?declined`?/i);
+      }
+    });
+
+    it("references/retro-log.md specifies the same-occurrence rule and recurrence definition", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/retro-log.md"), "utf8");
+        // same-occurrence: a Miss whose slug and location the log already lists is the same occurrence, never a recurrence
+        assert.match(c, /same occurrence.*never a recurrence|same occurrence/i);
+        assert.match(c, /slug and location.*already lists|already lists.*slug and location/i);
+        // recurrence: Miss from another Run, or from the same Run after the Remedy's commit
+        assert.match(c, /recurrence.*(from another Run|after the Remedy's commit)/i);
+      }
+    });
+
+    it("references/retro-log.md specifies Failed Remedy escalation and the declined rule", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/retro-log.md"), "utf8");
+        // Failed Remedy escalation:
+        // Standard -> Check where mechanical
+        assert.match(c, /Standard[*\s]*(→|->|to)[*\s]*Check\s*(where\s*(the\s*rule\s*is\s*)?mechanical)?/i);
+        // Pointer -> sharper wording, then inlined material
+        assert.match(c, /Pointer[*\s]*(→|->|to)[*\s]*sharper wording,?\s*then inlined material/i);
+        // Check or Skill fix -> follow-up of the same kind citing the recurrence
+        assert.match(c, /(Check or Skill fix|Skill fix or Check)[*\s]*(→|->|to)[*\s]*(a\s*)?follow-up of the same kind citing the recurrence/i);
+
+        // declined rule:
+        // a declined Remedy returns only with a recurrence after the decline, showing both occurrences
+        assert.match(c, /declined.*(returns|proposed again).*only with a recurrence after the decline.*both occurrences/i);
+      }
+    });
+
+    it("references/classification.md ranks Failed Remedy, then recurring, then the cost ranking", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/classification.md"), "utf8");
+        assert.match(c, /Failed Remedy.*recurring.*(costly|cost ranking)/is);
+      }
+    });
+
+    it("SKILL.md's Stage 0 asks follow-ups before reading sources, and Stage 1 matches against log before classifying", async () => {
+      for (const body of await bothSkillBodies()) {
+        const stage0Match = body.match(/###?\s*Stage 0[\s\S]*?(?=###?\s*Stage 1|$)/i);
+        assert.ok(stage0Match, "Stage 0 section must be present");
+        const stage0Text = stage0Match[0];
+        // asks follow-ups before reading sources
+        assert.match(stage0Text, /ask.*handed-off.*(done|still pending|drop)[\s\S]*?read.*Primary source|follow-up[\s\S]*?Primary source/i);
+
+        const stage1Match = body.match(/###?\s*Stage 1[\s\S]*?(?=###?\s*Stage 2|$)/i);
+        assert.ok(stage1Match, "Stage 1 section must be present");
+        const stage1Text = stage1Match[0];
+        // matches against log before classifying
+        assert.match(stage1Text, /match.*(against|with).*Retro Log[\s\S]*?classif/i);
+      }
+    });
+
+    it("both guides describe how recurrence and declines work", async () => {
+      const skillDoc = await readFile(path.resolve("docs/skills/agents/retro-to-remedies.md"), "utf8");
+      assert.match(skillDoc, /recurrence|recurring/i);
+      assert.match(skillDoc, /Failed Remedy/i);
+      assert.match(skillDoc, /decline/i);
+
+      const guideDoc = await readFile(path.resolve("docs/guides/retro-to-remedies.md"), "utf8");
+      assert.match(guideDoc, /recurrence|recurring/i);
+      assert.match(guideDoc, /Failed Remedy/i);
+      assert.match(guideDoc, /decline/i);
+    });
+  });
 });
 
 

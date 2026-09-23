@@ -343,6 +343,66 @@
         "Ensures two Runs on different feature slugs never collide on the same Remedy id"
       ],
       "files": []
+    },
+    {
+      "id": 27,
+      "name": "re-running on the fixture Run after its Retro counts nothing as recurrence",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model",
+      "expected_output": "Re-running on the fixture Run after its Retro counts nothing as recurrence because Misses already listed by slug and location in docs/retro-log.md are treated as the same occurrence.",
+      "expectations": [
+        "Reads existing entries in docs/retro-log.md for opencode-implement-hosted-model",
+        "Matches the fixture Misses by slug and location to the existing entries",
+        "Recognises each Miss as the same occurrence and counts nothing as recurrence"
+      ],
+      "files": []
+    },
+    {
+      "id": 28,
+      "name": "a Standard applied in one Run whose Miss appears in another becomes a Failed Remedy proposed as a Check",
+      "prompt": "/retro-to-remedies feature-zeta",
+      "expected_output": "A Standard applied in one Run whose Miss appears in another becomes a Failed Remedy proposed as a Check, escalating to a deterministic check.",
+      "expectations": [
+        "Matches a Miss in feature-zeta to an applied Standard from an earlier Run in docs/retro-log.md",
+        "Identifies the recurrence of an applied Remedy as a Failed Remedy",
+        "Escalates the Remedy from Standard to Check where the rule is mechanical"
+      ],
+      "files": []
+    },
+    {
+      "id": 29,
+      "name": "a declined Remedy whose Miss recurs is proposed with both occurrences",
+      "prompt": "/retro-to-remedies feature-theta",
+      "expected_output": "A declined Remedy whose Miss recurs is proposed with both occurrences, showing the original occurrence and the new recurrence after the decline.",
+      "expectations": [
+        "Matches the Miss to a previously declined Remedy in docs/retro-log.md",
+        "Verifies that the Miss recurred after the Remedy was declined",
+        "Proposes the Remedy again in the Retro report displaying both occurrences as evidence"
+      ],
+      "files": []
+    },
+    {
+      "id": 30,
+      "name": "a declined Remedy without a new occurrence is not proposed",
+      "prompt": "/retro-to-remedies feature-iota",
+      "expected_output": "A declined Remedy without a new occurrence is not proposed again in the Retro report.",
+      "expectations": [
+        "Reads previously declined Remedies from docs/retro-log.md",
+        "Confirms no new recurrence of the declined Miss exists in the Run",
+        "Excludes the declined Remedy from the proposed Remedies in the Retro report"
+      ],
+      "files": []
+    },
+    {
+      "id": 31,
+      "name": "a handed-off Remedy answered \"done\" becomes applied",
+      "prompt": "/retro-to-remedies feature-kappa",
+      "expected_output": "A handed-off Remedy answered \"done\" becomes applied, updating the Retro Log Outcome from handed-off to applied.",
+      "expectations": [
+        "Reads docs/retro-log.md and finds a Remedy still in handed-off state",
+        "Asks the user once whether the Remedy is done, still pending, or drop before reading sources",
+        "Updates the Outcome to applied upon the user answering done"
+      ],
+      "files": []
     }
   ]
 }

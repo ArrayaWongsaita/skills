@@ -257,6 +257,41 @@ describe("retro-to-remedies eval suite contract", () => {
         "case for two Runs on different slugs produce distinct ids",
       );
     });
+
+    it("covers the branches listed in ticket 06 (re-run on fixture counts nothing as recurrence, Standard becomes Failed Remedy Check, declined recurs proposed with both occurrences, declined without recurrence not proposed, handed-off done becomes applied)", async () => {
+      const { evals } = await evalsJson();
+      const hay = (re) => evals.some((e) => re.test(e.name) || re.test(e.expected_output));
+
+      // re-running on the fixture Run after its Retro counts nothing as recurrence
+      assert.ok(
+        hay(/re-running on (the )?fixture Run after its Retro counts nothing as recurrence|fixture.*nothing as recurrence/i),
+        "case for re-running on fixture Run after its Retro counts nothing as recurrence",
+      );
+
+      // a Standard applied in one Run whose Miss appears in another becomes a Failed Remedy proposed as a Check
+      assert.ok(
+        hay(/Standard applied in one Run whose Miss appears in another becomes a Failed Remedy proposed as a Check|Standard applied.*Failed Remedy.*Check/i),
+        "case for Standard applied in one Run becoming Failed Remedy Check",
+      );
+
+      // a declined Remedy whose Miss recurs is proposed with both occurrences
+      assert.ok(
+        hay(/declined Remedy whose Miss recurs is proposed with both occurrences|declined Remedy.*recur.*both occurrences/i),
+        "case for declined Remedy whose Miss recurs is proposed with both occurrences",
+      );
+
+      // a declined Remedy without a new occurrence is not proposed
+      assert.ok(
+        hay(/declined Remedy without a new occurrence is not proposed|declined.*without (a )?new occurrence.*not proposed/i),
+        "case for declined Remedy without a new occurrence is not proposed",
+      );
+
+      // a handed-off Remedy answered "done" becomes applied
+      assert.ok(
+        hay(/handed-off Remedy answered ["']?done["']? becomes `?applied`?|handed-off.*done.*applied/i),
+        "case for handed-off Remedy answered done becomes applied",
+      );
+    });
   });
 });
 

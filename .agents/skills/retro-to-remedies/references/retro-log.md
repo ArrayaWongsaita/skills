@@ -113,3 +113,38 @@ Stage 2 enforces two distinct commit rules when recording Remedies into `docs/re
    chore(retro): log <feature-slug>
    ```
    This ensures that the Retro Log is complete and accurate even when nothing was applied in the Run.
+
+## Reading the Retro Log (Stages 0–1)
+
+Retros learn from each other by reading `docs/retro-log.md` across Stages 0 and 1.
+
+### Stage 0: Handed-Off Follow-Up
+
+When `docs/retro-log.md` is present, Stage 0 reads it before reading Primary sources. For each Remedy still in the `handed-off` state, the Retro asks the user once:
+- **done** → `applied`: the user confirms the Code remedy was implemented and is now in place in the Environment.
+- **still pending** → stays `handed-off`: the prompt remains open and pending implementation.
+- **drop** → `declined`: the user decides not to pursue the Remedy.
+
+### Stage 1: Matching Against the Log
+
+In Stage 1, before classifying Misses, the Retro matches candidate Remedies against `docs/retro-log.md` by the rule broken or lesson recorded:
+
+1. **Same-Occurrence Rule**:
+   A Miss whose slug and location the log already lists is the same occurrence, never a recurrence. When re-running a Retro on a Run whose Misses are already in the log, those Misses count as known occurrences and produce no new recurrence.
+
+2. **Recurrence**:
+   A recurrence is a Miss from another Run, or from the same Run after the Remedy's commit. When a Miss matches an existing Remedy in the log:
+   - A recurrence of an `applied` Remedy makes it a **Failed Remedy**.
+   - A recurrence of any other Remedy marks it as **recurring**.
+   - For any recurrence, a new Miss line is appended under `Misses:` in the log.
+
+3. **Failed Remedy Escalation**:
+   An applied Remedy whose rule failed to hold escalates to a stronger Remedy kind:
+   - **Standard** → **Check** where the rule is mechanical.
+   - **Pointer** → sharper wording, then inlined material.
+   - **Check or Skill fix** → a follow-up of the same kind citing the recurrence.
+
+4. **The Declined Rule**:
+   A `declined` Remedy returns only with a recurrence after the decline, showing both occurrences (the original occurrence and the new recurrence after the decline). Without a new occurrence after the decline, a declined Remedy is not proposed again.
+
+
