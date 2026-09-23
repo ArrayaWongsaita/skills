@@ -34,7 +34,9 @@ Run exclusively from a working feature or integration branch. When currently on 
 
 ### Stage 0 — Collect (read-only)
 
-Inspect the working tree branch guardrail. Read the project's durable `docs/retro-log.md` when present. For each Remedy still `handed-off`, ask the user once: done (Outcome becomes `applied`), still pending (stays `handed-off`), or drop (Outcome becomes `declined`). Complete these follow-ups before reading Primary sources.
+Inspect the working tree branch guardrail. Check for an unfinished Retro report first (`.scratch/<feature-slug>/retro.md`) and follow [references/resume.md](references/resume.md) (resuming at the pause when choices remain unanswered, resuming at Stage 2 when answers exist but applied Remedies lack commit SHAs while skipping Remedies with a recorded SHA, or replacing the report when `--fresh` is specified).
+
+Read the project's durable `docs/retro-log.md` when present. For each Remedy still `handed-off`, ask the user once: done (Outcome becomes `applied`), still pending (stays `handed-off`), or drop (Outcome becomes `declined`). Complete these follow-ups before reading Primary sources.
 
 Gather and read every Primary source present for the Run under `.scratch/<feature-slug>/` (`review-status.md`, implementer `status.md`, per-ticket reports or logs, and `design-review.md`) alongside git history on the integration branch since `review_point` (from `review-status.md`) or the merge-base with `main`. Read each run-state file by meaning across implementer formats, and edit none of them.
 

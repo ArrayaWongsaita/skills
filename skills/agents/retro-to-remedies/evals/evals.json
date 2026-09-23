@@ -515,6 +515,44 @@
         "Includes session id and verbatim quote for every transcript Miss covering slow searches, repeated failures, missing info, or expensive tool use"
       ],
       "files": []
+    },
+    {
+      "id": 41,
+      "name": "report with no answers resumes at the pause without re-reading sources",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model",
+      "expected_output": "An existing report with unanswered Choice: lines resumes at the pause without re-reading primary sources.",
+      "expectations": [
+        "Finds existing report at .scratch/opencode-implement-hosted-model/retro.md with unanswered Choice: lines",
+        "Resumes execution directly at the Stage 1 decision pause using the existing report",
+        "Avoids re-reading primary sources or re-running classification"
+      ],
+      "files": []
+    },
+    {
+      "id": 42,
+      "name": "report with two of three applied Remedies committed resumes at Stage 2 and commits only the third",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model",
+      "expected_output": "A report with two of three applied Remedies committed resumes at Stage 2 and commits only the third, skipping already committed Remedies.",
+      "expectations": [
+        "Finds answered Choice: lines where two applied Remedies already carry commit SHAs and a third does not",
+        "Resumes directly at Stage 2",
+        "Skips the two Remedies with recorded commit SHAs and commits only the third uncommitted Remedy"
+      ],
+      "files": []
+    },
+    {
+      "id": 43,
+      "name": "--fresh rebuilds the report from the sources",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model --fresh",
+      "expected_output": "Passing --fresh discards the unfinished report and rebuilds the report from the sources.",
+      "expectations": [
+        "Discards the existing report at .scratch/opencode-implement-hosted-model/retro.md",
+        "Re-reads primary sources from .scratch/opencode-implement-hosted-model and the branch git history",
+        "Re-runs Stage 0 collection and Stage 1 classification to replace the report"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/review-status.md"
+      ]
     }
   ]
 }

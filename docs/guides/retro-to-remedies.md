@@ -67,6 +67,10 @@ Skill นี้ปฏิเสธการทำงานบน branch `main`, `
 ### Stage 0 — Collect (read-only)
 
 Stage 0 ทำหน้าที่รวบรวมหลักฐานทั้งหมดจาก Run โดย **อ่านอย่างเดียว (read-only) และไม่แก้ไขไฟล์ run-state ใดๆ ทั้งสิ้น**:
+- **การตรวจสอบรายงานเดิมและการเริ่มใหม่ (Resuming and `--fresh`)**: ตรวจสอบรายงาน `.scratch/<feature-slug>/retro.md` ก่อนเสมอ:
+  - หากมีตัวเลือกที่ยังไม่ได้รับคำตอบ (unanswered `Choice:`) จะ resume กลับมาที่จุด pause หลัง Stage 1 โดยไม่อ่าน Primary sources ซ้ำ
+  - หากได้รับคำตอบแล้วแต่ยัง commit ไม่ครบ จะ resume เข้าสู่ Stage 2 โดยตรงและข้ามทุก Remedy ที่มี commit SHA บันทึกไว้แล้ว (skip Remedies with recorded SHA) เพื่อ commit เฉพาะส่วนที่เหลือ
+  - หากระบุ `--fresh` จะยกเลิกรายงานเดิมและเริ่มการวิเคราะห์ใหม่ทั้งหมดตั้งแต่ต้น
 - **`docs/retro-log.md` (เมื่อมีไฟล์อยู่)**: อ่านก่อนการอ่าน Primary sources เพื่อติดตามผล (follow-up) สำหรับแต่ละ Remedy ที่ยังอยู่ในสถานะ `handed-off` หนึ่งครั้ง:
   - `done` → `applied` (ผู้ใช้ยืนยันว่าการเปลี่ยนแปลงถูกนำไปปรับใช้ใน Environment เรียบร้อยแล้ว)
   - `still pending` → คงสถานะ `handed-off` (ยังคงรอดำเนินการอยู่)
@@ -119,6 +123,7 @@ Stage 1 ทำหน้าที่นำ Misses ทั้งหมดมาป�
 ### Stage 2 — Apply and hand off
 
 เมื่อผู้ใช้เลือกคำตอบในรายงาน Retro report เรียบร้อยแล้ว Stage 2 จะดำเนินการดังนี้:
+- **การทำงานต่อและการข้ามรายการ (Resuming and Skip Rule)**: หากเป็นการ resume ใน Stage 2 จะข้าม Remedy ที่มี commit SHA บันทึกไว้แล้ว และทำการ commit เฉพาะ Remedy ที่ยังไม่ได้ commit เท่านั้น
 - **การนำ Text remedies ไปปรับใช้ตามปลายทาง**:
   - **Standard**: บันทึกลง `CODING_STANDARDS.md` (หากยังไม่มีไฟล์ จะสร้างขึ้นมาใหม่พร้อม short header) หรือลงในหมวด Rules ของ Reuse Catalog หากเป็น reuse convention
   - **Pointer**: บันทึกบรรทัดนำทางลงใน `AGENTS.md` (หากไม่มีให้ลง `CLAUDE.md`, หากไม่มีทั้งคู่ให้สร้าง `AGENTS.md` ใหม่)

@@ -356,6 +356,29 @@ describe("retro-to-remedies eval suite contract", () => {
         "case for subagent's return holds Misses only",
       );
     });
+
+    it("covers the branches listed in ticket 09 (report with no answers resumes at pause without re-reading sources, report with two of three applied Remedies committed resumes at Stage 2 committing only the third, --fresh rebuilds report from sources)", async () => {
+      const { evals } = await evalsJson();
+      const hay = (re) => evals.some((e) => re.test(e.name) || re.test(e.expected_output));
+
+      // a report with no answers resumes at the pause without re-reading sources
+      assert.ok(
+        hay(/report with no answers resumes at (the )?pause without re-reading sources|no answers resumes at (the )?pause/i),
+        "case for report with no answers resumes at the pause without re-reading sources",
+      );
+
+      // a report with two of three applied Remedies committed resumes at Stage 2 and commits only the third
+      assert.ok(
+        hay(/report with two of three applied Remedies committed resumes at Stage 2 and commits only the third|two of three applied.*commits only the third/i),
+        "case for report with two of three applied Remedies committed resumes at Stage 2 and commits only the third",
+      );
+
+      // --fresh rebuilds the report from the sources
+      assert.ok(
+        hay(/--fresh rebuilds (the )?report from (the )?sources|--fresh rebuilds.*report/i),
+        "case for --fresh rebuilds the report from the sources",
+      );
+    });
   });
 });
 

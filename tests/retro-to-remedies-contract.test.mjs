@@ -906,6 +906,54 @@ describe("retro-to-remedies skill contract", () => {
       assert.match(guideDoc, /expensive tool use/i);
     });
   });
+
+  describe("ticket 09 — Resume and --fresh", () => {
+    it("references/resume.md defines the two resume points, the skip rule for Remedies with a recorded SHA, and --fresh replacing the report", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/resume.md"), "utf8");
+
+        // two resume points:
+        // 1. unanswered choices -> the pause
+        assert.match(c, /unanswered\s+(`?Choice:`?|choices?).*(pause|Stage 1)/i);
+        // 2. answered but unapplied -> Stage 2
+        assert.match(c, /answered.*unapplied.*Stage 2|unapplied.*Stage 2/i);
+
+        // skip rule for Remedies with a recorded SHA
+        assert.match(c, /skip.*(Remed(y|ies)|every Remedy).*recorded SHA|Remed(y|ies) with a recorded SHA (are )?skipped/i);
+
+        // --fresh replacing the report
+        assert.match(c, /--fresh.*(replaces?|discard.*start over|replacing the report)/i);
+      }
+    });
+
+    it("SKILL.md's Stage 0 checks for an unfinished Retro report first and follows references/resume.md", async () => {
+      for (const body of await bothSkillBodies()) {
+        const stage0Match = body.match(/###?\s*Stage 0[\s\S]*?(?=###?\s*Stage 1|$)/i);
+        assert.ok(stage0Match, "Stage 0 section must be present");
+        const stage0Text = stage0Match[0];
+
+        // checks for an unfinished Retro report first
+        assert.match(stage0Text, /check.*unfinished Retro report first|check for an unfinished Retro report/i);
+        assert.match(stage0Text, /references\/resume\.md/);
+      }
+    });
+
+    it("both guides describe resuming and --fresh", async () => {
+      const skillDoc = await readFile(path.resolve("docs/skills/agents/retro-to-remedies.md"), "utf8");
+      assert.match(skillDoc, /resume|resuming/i);
+      assert.match(skillDoc, /--fresh/);
+      assert.match(skillDoc, /unanswered.*(Choice|pause)/i);
+      assert.match(skillDoc, /Stage 2/);
+      assert.match(skillDoc, /SHA/);
+
+      const guideDoc = await readFile(path.resolve("docs/guides/retro-to-remedies.md"), "utf8");
+      assert.match(guideDoc, /resume|resuming/i);
+      assert.match(guideDoc, /--fresh/);
+      assert.match(guideDoc, /unanswered.*(Choice|pause)/i);
+      assert.match(guideDoc, /Stage 2/);
+      assert.match(guideDoc, /SHA/);
+    });
+  });
 });
 
 
