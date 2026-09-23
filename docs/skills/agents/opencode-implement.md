@@ -67,7 +67,10 @@ npx skills add ArrayaWongsaita/skills --skill opencode-implement
    green, typecheck, coverage), auto fallback ไป native subagent ถ้า model ที่
    resolve ไว้ทำไม่ได้ (ไม่มี approval pause), แล้ว squash-merge หนึ่ง commit ต่อ
    ticket ทันทีที่ ticket นั้นผ่าน — ไม่ต้องรอ wave-mate; wave ถัดไปเริ่มก็ต่อเมื่อ
-   ทุก ticket ใน wave ปัจจุบันถึงสถานะสุดท้ายแล้วเท่านั้น
+   ทุก ticket ใน wave ปัจจุบันถึงสถานะสุดท้ายแล้วเท่านั้น **Reuse Catalog:** prompt
+   ของ worker (และ fallback subagent) มีบรรทัด `**Reuse:**` ของ ticket และตัวชี้
+   `docs/reuse-catalog.md` แบบอ่านอย่างเดียว (ถ้ามี) orchestrator เขียนรายการลง
+   catalog ใน commit ของแต่ละ ticket ทีละตัว worker จึงแค่อ่าน
 3. **Stop — Handoff**: พิมพ์ชื่อ integration branch, ชื่อ model ที่ resolve/pin ไว้,
    สรุป token ทั้งสองทาง (`tokens.main` = spend จริงบน main path,
    `tokens.fallback` = ticket ที่ fallback พร้อมโค้ดที่ออกจากเครื่อง) และคำสั่ง
@@ -94,9 +97,9 @@ sub-command: `continue` resume พร้อม Reality reconciliation, `status` 
 
 - `references/planning.md` — parse ticket, สร้าง/ตรวจ DAG, คำนวณ wave, touch-set hint และ overlap flag, เลือก seam
 - `references/worker-contract.md` — model resolution-and-pin, flag ของ `opencode run`, การ parse event stream, timeout/stall, สอง retry rule
-- `references/prompt-scaffold.md` — template prompt worker ต่อ ticket ทั้งใบพร้อม red-green-refactor เต็ม
+- `references/prompt-scaffold.md` — template prompt worker ต่อ ticket ทั้งใบพร้อม red-green-refactor เต็ม และบรรทัด Reuse / Reuse Catalog
 - `references/fallback.md` — trigger ของ fallback, การ dispatch subagent, `--opencode-only`
-- `references/worktree-integration.md` — preflight, การ dispatch แบบ serial/parallel ใน wave, verification gate, per-ticket integration
+- `references/worktree-integration.md` — preflight, การ dispatch แบบ serial/parallel ใน wave, verification gate, per-ticket integration, การอัปเดต Reuse Catalog
 - `references/status-and-resume.md` — wave table, halt report, `status.md`, Reality reconciliation, rewind
 - `evals/evals.json` — เคสพฤติกรรม หนึ่งเคสต่อ decision branch, รูปแบบ benchmark ของ `skill-creator`
 - `evals/trigger-evals.json` — กันไม่ให้ description อ่านเหมือน model-invocable
@@ -170,7 +173,11 @@ recently modified `.scratch/*/issues/` directory).
    automatically to a native subagent for any ticket the resolved model
    cannot deliver, and squash-merge one commit per ticket as soon as it
    clears — independent of its wave-mates. The next wave starts only once
-   every ticket in the current one reaches a terminal state.
+   every ticket in the current one reaches a terminal state. **Reuse Catalog:**
+   the worker prompt — and the fallback subagent's, which is the same scaffold —
+   carries the ticket's `**Reuse:**` line and, when present, a read-only pointer
+   to `docs/reuse-catalog.md`; the orchestrator writes catalog entries inside
+   each ticket's squash commit, one ticket at a time, so workers only read it.
 3. **Stop — Handoff**: print the integration branch name, the resolved and
    pinned model, per-path token usage (`tokens.main` — real spend against the
    resolved model; `tokens.fallback` — each fallback ticket named with its
@@ -206,11 +213,13 @@ Sub-commands: `continue` resumes with Reality reconciliation; `status` and
   run` invocation, event-stream parsing, timeouts and stall detection, and the
   two retry rules
 - `references/prompt-scaffold.md` — the whole-ticket worker prompt template
-  with the full red-green-refactor protocol inline
+  with the full red-green-refactor protocol inline, plus the Reuse and Reuse
+  Catalog lines
 - `references/fallback.md` — the fallback triggers, the subagent dispatch, and
   `--opencode-only`
 - `references/worktree-integration.md` — preflight, serial/parallel dispatch
-  within a wave, the verification gate, and per-ticket integration
+  within a wave, the verification gate, per-ticket integration, and the Reuse
+  Catalog update
 - `references/status-and-resume.md` — the wave table, the halt report,
   `status.md` fields, Reality reconciliation, and the resume rewind
 - `evals/evals.json` — behavioral cases, one per decision branch, in

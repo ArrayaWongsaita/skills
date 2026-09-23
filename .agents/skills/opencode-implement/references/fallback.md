@@ -53,6 +53,10 @@ Agent(
   **whole ticket**: all acceptance criteria, no progress note, no "sub-step of
   M". A subagent has a different context and toolset from the resolved model,
   so there is no decomposition.
+- Because it is the same template, the fallback subagent receives the ticket's
+  Reuse line, the read-only Reuse Catalog line, and — for a verb other than
+  `use` — the spec's Reuse Plan exactly as the main-path worker did; nothing
+  about reuse changes on escalation.
 - The worker branch is cut from integration `HEAD` and the subagent commits on
   it, the same as a main-path worker branch.
 

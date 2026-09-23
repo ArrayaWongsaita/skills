@@ -17,7 +17,10 @@
    - หากโมเดลที่เลือกทำงานใดไม่สำเร็จ หรือพบข้อจำกัดทางเทคนิค ระบบจะ **สลับส่งต่อ Ticket นั้นไปให้ Native Subagent ของ Harness ช่วยทำให้โดยอัตโนมัติ** โดยไม่ต้องหยุดถามผู้ใช้ซ้ำ
 3. **รวมโค้ดทันทีราย Ticket (Per-Ticket Integration):**
    - ทันทีที่ Ticket ใดผ่านการตรวจสอบ จะถูก Squash-merge 1 Commit เข้า Integration Branch ทันที ไม่ต้องรอให้เพื่อนใน Wave เดียวกันเสร็จหมด
-4. **รายงาน Token แยกเส้นทางชัดเจน:**
+4. **ใช้โค้ดเดิมซ้ำผ่าน Reuse Catalog:**
+   - prompt ของ worker และ fallback subagent มีบรรทัด `**Reuse:**` ของ ticket แบบคำต่อคำ และถ้า project มี `docs/reuse-catalog.md` จะมีตัวชี้แบบอ่านอย่างเดียวให้ค้นก่อนสร้าง helper ที่ไม่อยู่ในแผน
+   - ตอน integrate orchestrator เขียนรายการของ module ที่ ticket สร้าง / ขยาย / promote ลง catalog ใน commit ของ ticket นั้นเอง ทีละ ticket (path จาก grep, use-when จาก Reuse Plan) ถ้าไม่มี catalog ขั้นนี้ถูกข้าม
+5. **รายงาน Token แยกเส้นทางชัดเจน:**
    - แสดงสรุป Token ที่ใช้บนเส้นทางหลัก (`tokens.main`) และเส้นทางสำรอง (`tokens.fallback`) อย่างโปร่งใส
 
 ---

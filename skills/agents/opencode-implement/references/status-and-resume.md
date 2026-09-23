@@ -66,7 +66,8 @@ or → `BLOCKED`). It holds:
   `attempts` (verification-failure retries against whichever path currently
   holds the ticket), `opencode_retries` (`opencode`-process-failure retries
   on the main path), `worker_branch`, `commit`, and `usage` (that ticket's
-  token usage on whichever path built it)
+  token usage on whichever path built it); plus a `catalog` note when a Reuse
+  Catalog entry was skipped because its symbol was not in the changed files
 - the **integration branch ref** (name and current commit)
 - **cumulative usage split by path** — `tokens.main` (the `opencode` path,
   real spend against the resolved model) and `tokens.fallback` (the native

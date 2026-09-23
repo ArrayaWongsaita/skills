@@ -191,7 +191,12 @@ Cut the ticket's worktree `.scratch/<slug>/worktrees/<NN>` and worker branch
 `opencode-implement/<slug>/<NN>` from integration `HEAD`. Write the
 self-contained whole-ticket prompt to `.scratch/<slug>/prompts/<NN>.md`, and
 dispatch one `opencode run` worker for the whole ticket, test-first — no
-per-criterion chain, no sub-step dispatch.
+per-criterion chain, no sub-step dispatch. The prompt carries the ticket's
+`**Reuse:**` line verbatim and, when the project has a Reuse Catalog
+(`docs/reuse-catalog.md`), a read-only pointer to it for any helper the ticket
+did not plan; a Reuse line with any verb other than `use` also names the spec's
+Reuse Plan among the worker's sections. The fallback subagent gets the same
+prompt.
 
 An `opencode`-process failure (crash, timeout, stall kill, or malformed
 envelope) re-dispatches a fresh worker on the same pinned model, from the same
@@ -242,7 +247,14 @@ checkboxes and setting its `Status:`, **as soon as that ticket clears** —
 independent of whether its wave-mates are done. A mechanical conflict the
 orchestrator resolves; a design-encoding conflict halts with
 `BLOCKED (INTEGRATION_DESIGN_CONFLICT)` and is surfaced. Run the full typecheck
-and suite on the integrated result, then `git worktree remove` and advance.
+and suite on the integrated result, then `git worktree remove` and advance. The
+same commit carries the ticket's Reuse Catalog entries: for each
+`create-shared`, `create-candidate`, `extend`, or `promote` in its Reuse line,
+the orchestrator greps the symbol in the worker's changed files for its path,
+takes the use-when from the spec's Reuse Plan, and writes the entry — serially,
+so the orchestrator is the catalog's only writer while wave-mates only read it;
+no entry for a symbol that is not there; nothing at all when the project has no
+catalog.
 
 A ticket that escalates to fallback integrates the same way once
 fallback-verified, cut from whatever `HEAD` exists by then — it does not hold

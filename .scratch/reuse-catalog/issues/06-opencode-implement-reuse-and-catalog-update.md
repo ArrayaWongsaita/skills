@@ -8,22 +8,22 @@ each ticket's squash commit as it integrates.
 
 **Blocked by:** 04
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `references/prompt-scaffold.md` carries the same two "Context you need"
+- [x] `references/prompt-scaffold.md` carries the same two "Context you need"
       lines and the Reuse Plan section rule, worded identically where the skills
       share structure.
-- [ ] `references/fallback.md` confirms the fallback subagent receives the same
+- [x] `references/fallback.md` confirms the fallback subagent receives the same
       scaffold, so the Reuse lines reach it with no separate change.
-- [ ] `references/worktree-integration.md` per-ticket integration adds the
+- [x] `references/worktree-integration.md` per-ticket integration adds the
       catalog update inside the ticket's squash commit, with the same
       derive-from-text rules, not-found handling, and no-catalog skip — including
       a ticket integrating after fallback escalation.
-- [ ] `SKILL.md` points to both.
-- [ ] `evals/evals.json` gains cases: ticket integrated via the fallback tier →
+- [x] `SKILL.md` points to both.
+- [x] `evals/evals.json` gains cases: ticket integrated via the fallback tier →
       catalog entry still written; per-ticket integration of two wave-mates →
       entries written serially, no conflict; no catalog → no catalog step.
-- [ ] `tests/opencode-implement-contract.test.mjs` asserts the scaffold lines,
+- [x] `tests/opencode-implement-contract.test.mjs` asserts the scaffold lines,
       the fallback inheritance, and the integration catalog update.
-- [ ] Both `opencode-implement` human guides describe the catalog behaviour.
-- [ ] `npm run validate` and `npm test` pass.
+- [x] Both `opencode-implement` human guides describe the catalog behaviour.
+- [x] `npm run validate` and `npm test` pass.

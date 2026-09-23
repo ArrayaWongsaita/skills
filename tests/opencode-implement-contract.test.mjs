@@ -987,4 +987,49 @@ describe("opencode-implement skill contract", () => {
       assert.match(adr, /own(s)? (its )?(own )?(copy|machinery)/i);
     });
   });
+
+  describe("Reuse Catalog", () => {
+    it("the whole-ticket prompt carries the Reuse line, a read-only catalog pointer, and the Reuse Plan rule", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/prompt-scaffold.md"), "utf8");
+        assert.match(c, /- Reuse: <the ticket's Reuse line, verbatim>/);
+        assert.match(c, /- Reuse Catalog: <abs path to docs\/reuse-catalog\.md> — read-only for you/);
+        assert.match(c, /only when the target repository has\s+`docs\/reuse-catalog\.md`/);
+        assert.match(c, /any verb other than `use`[\s\S]{0,120}Reuse\s+Plan/);
+        assert.match(c, /gets `none`/);
+      }
+    });
+
+    it("the fallback subagent inherits the Reuse lines through the same scaffold", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/fallback.md"), "utf8");
+        assert.match(c, /same template[\s\S]{0,80}Reuse line/);
+        assert.match(c, /nothing\s+about reuse changes on escalation/);
+      }
+    });
+
+    it("per-ticket integration writes catalog entries serially inside each ticket's squash commit", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/worktree-integration.md"), "utf8");
+        assert.ok(c.includes("## Reuse Catalog update"), "catalog update section present");
+        const section = c.slice(c.indexOf("## Reuse Catalog update"));
+        assert.match(section, /`git merge --squash` and `git commit`/);
+        assert.match(section, /fallback subagent/);
+        assert.match(section, /workers only\s+read the catalog/);
+        for (const verb of ["create-shared", "create-candidate", "extend", "promote"]) {
+          assert.match(section, new RegExp(`\`${verb}\``), `handles ${verb}`);
+        }
+        assert.match(section, /Grep the bare symbol/);
+        assert.match(section, /not found in changed files/);
+        assert.match(section, /reads no code/);
+        assert.match(section, /Coverage dates stay/);
+        assert.match(section, /no catalog file, skip/i);
+      }
+      for (const body of await bothSkillBodies()) {
+        assert.match(body, /\*\*Reuse:\*\*/);
+        assert.match(body, /docs\/reuse-catalog\.md/);
+        assert.match(body, /catalog's only writer while wave-mates only read it/);
+      }
+    });
+  });
 });

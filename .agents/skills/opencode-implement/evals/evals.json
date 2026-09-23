@@ -503,6 +503,42 @@
         "Mutates no file while listing"
       ],
       "files": []
+    },
+    {
+      "id": 44,
+      "name": "fallback-built ticket still writes its catalog entry",
+      "prompt": "/opencode-implement .scratch/report-export/ — ticket 02 (Reuse line: create-shared `buildReportRows`) exhausted its main-path budget and escalated; the fallback subagent built it and its result passed verification. The project has docs/reuse-catalog.md.",
+      "expected_output": "The fallback subagent's prompt was the same whole-ticket scaffold, so it carried the Reuse line, the read-only Reuse Catalog line, and the Reuse Plan section. When ticket 02 integrates, the orchestrator greps buildReportRows in the fallback's changed files and writes the Shared entry inside ticket 02's squash commit, exactly as for a main-path ticket.",
+      "expectations": [
+        "Gives the fallback subagent the same Reuse and Reuse Catalog lines",
+        "Writes the catalog entry inside ticket 02's own squash commit after fallback verification",
+        "Derives the path from a grep of the fallback's changed files"
+      ],
+      "files": []
+    },
+    {
+      "id": 45,
+      "name": "wave-mates integrating per ticket write catalog entries serially",
+      "prompt": "$opencode-implement .scratch/report-export/ — wave 1 runs tickets 03 and 04 in parallel; 04 clears verification first. Ticket 03's Reuse line is create-candidate `downloadBlob`; ticket 04's is create-shared `exportFilename`.",
+      "expected_output": "Each ticket integrates as soon as it clears: 04's squash commit adds the exportFilename Shared entry first, then 03's adds the downloadBlob Candidates entry. The writes happen one at a time on the main thread, so they never conflict; neither worker writes the catalog.",
+      "expectations": [
+        "Integrates each ticket as it clears, writing its entry in its own commit",
+        "Serializes catalog writes on the main thread",
+        "Leaves the catalog read-only for both workers"
+      ],
+      "files": []
+    },
+    {
+      "id": 46,
+      "name": "no catalog means no catalog step for main path or fallback",
+      "prompt": "/opencode-implement .scratch/legacy-app/ in a project with no docs/reuse-catalog.md.",
+      "expected_output": "Main-path and fallback prompts carry the ticket's Reuse line (or `none`) and no Reuse Catalog line; integration performs no catalog step.",
+      "expectations": [
+        "Omits the Reuse Catalog line from main-path and fallback prompts",
+        "Writes `none` for a ticket without a Reuse field",
+        "Performs no catalog step at integration"
+      ],
+      "files": []
     }
   ]
 }
