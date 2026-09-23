@@ -41,6 +41,8 @@ decision, including the small ones neither of them takes.
   survey fact that settled itself belongs in the catalog, not here.
 - A decision-level `REWORK` appends its round under the heading
   `## Round N — re-grill for <finding id> (gate cycle K)`.
+- The blind-spot pass writes its table, stated assumptions included, under
+  `## Blind-spot pass`; its format lives in `blind-spot-pass.md`.
 
 ## When to write
 

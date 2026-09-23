@@ -109,8 +109,14 @@ Run `grilling` and `domain-modeling` together as one discovery pass.
    scenarios. Write terms into `.scratch/<feature-slug>/CONTEXT.md` the moment
    they resolve; record hard-to-reverse choices as
    `.scratch/<feature-slug>/adr/NNNN-<slug>.md`. Write inline, as they resolve.
-5. **Pause.** When the decision frontier is empty, summarize the agreed glossary,
-   the decisions, and the catalog changes, then pause for explicit user
+5. **Blind-spot pass.** When the frontier is empty, mark each category of
+   [blind-spot-pass.md](references/blind-spot-pass.md) `clear`, `partial`,
+   `missing`, or `n/a`. Gaps that would change the spec become one final round
+   of at most five questions; the rest become stated assumptions. New decisions
+   return to the frontier until it is empty again.
+6. **Pause.** When the frontier is empty and the blind-spot pass is done,
+   summarize the agreed glossary, the decisions, the blind-spot table with its
+   assumptions, and the catalog changes, then pause for explicit user
    confirmation before Stage 1.
 
 ## Stage 1 — Spec
@@ -121,8 +127,8 @@ directly into `.scratch/<feature-slug>/spec.md` using the standard sections
 Decisions, Out of Scope, Further Notes). Sketch the test seams and confirm them
 with the user. Stage 0 already settled the decisions — synthesize them and keep
 the interview closed. The spec is done when every decision in the log appears in
-it: as a story, an implementation or testing decision, an out-of-scope line, or
-a further note.
+it — as a story, an implementation or testing decision, an out-of-scope line, or
+a further note — and every blind-spot assumption appears in Further Notes.
 
 Implementation Decisions includes a `### Reuse Plan`: every reusable module the
 spec touches, by symbol, as use as-is, extend, create shared, create candidate,

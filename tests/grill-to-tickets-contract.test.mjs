@@ -189,6 +189,38 @@ describe("grill-to-tickets composite skill contract", () => {
     }
   });
 
+  it("runs a blind-spot pass over fixed categories before the Stage 0 pause", async () => {
+    for (const file of skillFiles) {
+      const content = await readFile(file, "utf8");
+      assert.match(content, /\*\*Blind-spot pass\.\*\*[\s\S]*\*\*Pause\.\*\*/, "the pass runs before the pause");
+      assert.match(content, /\(references\/blind-spot-pass\.md\)/);
+      assert.match(content, /blind-spot assumption appears in Further Notes/);
+    }
+    for (const dir of skillDirs) {
+      const pass = await readFile(path.resolve(dir, "references/blind-spot-pass.md"), "utf8");
+      for (const category of [
+        "Scope and behaviour",
+        "Domain and data",
+        "Interaction and flow",
+        "Quality attributes",
+        "Integrations",
+        "Edge cases and failure",
+        "Constraints and trade-offs",
+        "Terminology",
+        "Completion signals",
+      ]) {
+        assert.match(pass, new RegExp(`^\\| ${category} \\|`, "m"), `category ${category}`);
+      }
+      for (const mark of ["`clear`", "`partial`", "`missing`", "`n/a`"]) {
+        assert.ok(pass.includes(mark), `mark ${mark}`);
+      }
+      assert.match(pass, /at most five questions/);
+      assert.match(pass, /stated assumption/);
+      assert.match(pass, /## Blind-spot pass/);
+      assert.match(pass, /done when every category carries a mark/);
+    }
+  });
+
   it("dispatches each Stage 2 review to a fresh, read-only reviewer", async () => {
     for (const file of skillFiles) {
       const content = await readFile(file, "utf8");

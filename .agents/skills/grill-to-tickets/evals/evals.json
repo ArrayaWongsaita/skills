@@ -277,6 +277,20 @@
         "Consumes one cycle and re-reviews within Stage 2"
       ],
       "files": []
+    },
+    {
+      "id": 22,
+      "name": "blind-spot pass raises a missing category before the pause",
+      "prompt": "/grill-to-tickets continue member-export. The frontier just emptied. decisions.md settles who may export (admins), the columns, and CSV as the format. Nothing in the log, CONTEXT.md, or adr/ covers organisations with tens of thousands of members, what the admin sees when an export fails, or whether the export is audited. The feature is a web page with no external service.",
+      "expected_output": "Before pausing, run the blind-spot pass: mark all nine categories. Quality attributes (scale of large exports; auditing) and Edge cases and failure (failed export) are missing and would change the spec, so they become one final round of at most five questions with recommended answers, logged in decisions.md. Integrations is n/a with a reason. Gaps that would not change the spec become stated assumptions. Write the table under ## Blind-spot pass, then pause with a summary that shows the table and its assumptions.",
+      "expectations": [
+        "Marks all nine blind-spot categories before pausing",
+        "Asks about large-export scale and the failed-export behaviour in one final round of at most five questions, each with a recommended answer",
+        "Marks Integrations n/a with a one-line reason",
+        "Records gaps that would not change the spec as stated assumptions",
+        "Writes the table under ## Blind-spot pass in decisions.md and shows it, with the assumptions, in the pause summary"
+      ],
+      "files": []
     }
   ]
 }

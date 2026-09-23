@@ -101,7 +101,8 @@ Stop: Handoff message (commit ไฟล์วางแผน, /clear แล้�
    - สัมภาษณ์ถามตอบทีละประเด็นโดยมีตัวเลือกแนะนำ (ใช้ `grilling`)
    - ทุกรอบคำถามถูกบันทึกลง `decisions.md` ตอนถาม และบันทึกคำตอบก่อนถามรอบถัดไป เพื่อให้การตัดสินใจไม่หายเมื่อ context ถูก compact หรือ `/clear`
    - บันทึกคำศัพท์ลง `CONTEXT.md` และบันทึกการตัดสินใจยากๆ ลง `adr/` ทันที (ใช้ `domain-modeling`)
-   - เมื่อตัดสินใจครบแล้ว จะสรุปและหยุดรอคำยืนยันจากผู้ใช้ก่อนก้าวต่อไป
+   - **Blind-spot pass:** เมื่อไม่เหลือคำถามใน frontier จะไล่เช็ค 9 หมวดที่การสัมภาษณ์อาจไม่เคยแตะ (scope, data, flow, quality attributes เช่น performance/security, integrations, edge cases, constraints, terminology, completion signals) ให้คะแนนแต่ละหมวดเป็น `clear` / `partial` / `missing` / `n/a` ช่องว่างที่จะเปลี่ยน spec ได้กลายเป็นคำถามรอบสุดท้ายไม่เกิน 5 ข้อ ที่เหลือเขียนเป็นสมมติฐานให้เห็นชัด (ดัดแปลงจาก `/clarify` ของ GitHub Spec Kit)
+   - เมื่อตัดสินใจครบแล้ว จะสรุปคำศัพท์ การตัดสินใจ ตาราง blind-spot พร้อมสมมติฐาน และการเปลี่ยนแปลงของ catalog แล้วหยุดรอคำยืนยันจากผู้ใช้ก่อนก้าวต่อไป
 2. **Stage 1 — Spec (จัดทำเอกสารข้อกำหนด):**
    - รวบรวมผลการตัดสินใจจาก `decisions.md`, `CONTEXT.md` และ `adr/` มาเขียนเป็น `spec.md` ตามหัวข้อมาตรฐาน พร้อมกำหนด Test Seams (รอยต่อสำหรับทดสอบ) ทุกการตัดสินใจใน log ต้องปรากฏใน spec
    - ใต้ Implementation Decisions มี **Reuse Plan** บอกว่าแต่ละ module จะ ใช้ของเดิม / ขยายของเดิม / สร้างเป็น shared (พร้อม interface และผู้ใช้ที่ระบุชื่อ) / สร้างเป็น candidate / promote candidate / แยกไว้โดยตั้งใจ
