@@ -5,13 +5,13 @@
       "id": 1,
       "name": "first-pass SHIP straight through the stages",
       "prompt": "/grill-to-tickets Add a \"copy shareable link\" button to the report detail page that copies the report's existing public URL to the clipboard and shows a confirmation toast. One component, no API or schema change, acceptance behavior is explicit, and no open decisions remain — treat the Stage 0 frontier as empty and already confirmed.",
-      "expected_output": "With the Stage 0 frontier already empty and confirmed, pass straight through: synthesize spec.md with to-spec (Stage 1), run scrutinize once (Stage 2), normalize its closing line to SHIP, and advance to Stage 3 to-tickets. Publish tickets under .scratch/<feature-slug>/issues/ and print the handoff: commit the planning artifacts, /clear, then /subagent-implement .scratch/<feature-slug>/.",
+      "expected_output": "With the Stage 0 frontier already empty and confirmed, pass straight through: synthesize spec.md with to-spec (Stage 1), run scrutinize once in a fresh reviewer subagent (Stage 2), normalize its closing line to SHIP, and advance to Stage 3 to-tickets. Publish tickets under .scratch/<feature-slug>/issues/ and print the handoff: commit the planning artifacts, /clear, then /subagent-implement .scratch/<feature-slug>/.",
       "expectations": [
         "Confirms the empty Stage 0 frontier, then moves through Stage 1 -> Stage 2 -> Stage 3 in order",
         "Runs scrutinize exactly once and records cycle 1 with verdict SHIP in a single .scratch/<feature-slug>/design-review.md file",
         "Normalizes the scrutinize verdict to the token SHIP with no paraphrasing",
         "Does not enter FIX_THEN_SHIP, REWORK, or a backward transition to Stage 0",
-        "Prints the commit, /clear, then /subagent-implement .scratch/<feature-slug>/ handoff, never invokes an implementer, and runs no stage in a subagent"
+        "Prints the commit, /clear, then /subagent-implement .scratch/<feature-slug>/ handoff, never invokes an implementer, and dispatches a subagent only for the Stage 2 review"
       ],
       "files": []
     },
@@ -234,6 +234,33 @@
         "Re-posts exactly round 3's two open questions",
         "Asks no question already decided in rounds 1 or 2",
         "Starts neither Stage 1 nor a fresh interview"
+      ],
+      "files": []
+    },
+    {
+      "id": 19,
+      "name": "Stage 2 review runs in a fresh subagent from files alone",
+      "prompt": "$grill-to-tickets continue invoice-pdf. decisions.md State: 'stage: 1 — Spec', 'waiting on: nothing'. spec.md is written and the user has confirmed the test seams, so the Design Review Gate opens at cycle 1.",
+      "expected_output": "Dispatch a new subagent for cycle 1, briefed with paths only — spec.md, decisions.md, CONTEXT.md, and adr/ under .scratch/invoice-pdf/, the root CONTEXT.md and docs/adr/ if present, and docs/reuse-catalog.md — to run scrutinize's workflow on spec.md with the reuse lens, return every finding with an id and severity plus scrutinize's closing line, and edit no file. The main thread then normalizes the verdict, routes it, and writes cycle 1 with reviewer: subagent into design-review.md.",
+      "expectations": [
+        "Dispatches the review to a new subagent rather than running scrutinize in the main context",
+        "Briefs the reviewer with file paths, not a summary of the interview",
+        "Keeps the reviewer read-only: it returns findings and the closing line and edits no file",
+        "Normalizes the verdict and routes it on the main thread",
+        "Records reviewer: subagent for cycle 1 in design-review.md"
+      ],
+      "files": []
+    },
+    {
+      "id": 20,
+      "name": "second-cycle reviewer brief carries the previous findings' ids",
+      "prompt": "/grill-to-tickets continue wishlist-sync. Gate cycle 1 closed FIX_THEN_SHIP with blocking findings seam-vague-persistence and reuse-unowned-wishlist-merge; both fixes are applied to spec.md. Start cycle 2.",
+      "expected_output": "Dispatch a new subagent for cycle 2 (not the cycle-1 reviewer). Its brief adds the two previous blocking findings, one line each with its id, and asks the reviewer to report each as resolved or still present under the same id. From the returned ids the main thread fills resolvedFindings, newFindings, and repeatedFindings for cycle 2, which the stall rule reads.",
+      "expectations": [
+        "Uses a new reviewer subagent for cycle 2",
+        "Lists seam-vague-persistence and reuse-unowned-wishlist-merge with their ids in the brief",
+        "Asks the reviewer to reuse those ids for the same findings",
+        "Fills resolvedFindings / newFindings / repeatedFindings from the returned ids"
       ],
       "files": []
     }

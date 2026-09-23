@@ -1,8 +1,9 @@
 # Design Review Gate
 
-The bounded review loop in Stage 2. `scrutinize` evaluates the published `spec.md`
-and returns a verdict; this gate normalizes it, routes it, and decides whether
-ticket breakdown may begin. This skill owns these rules outright.
+The bounded review loop in Stage 2. A fresh reviewer runs `scrutinize` against
+the published `spec.md` and returns a verdict; this gate normalizes it, routes
+it, and decides whether ticket breakdown may begin. This skill owns these rules
+outright.
 
 ## Stable report
 
@@ -12,6 +13,7 @@ updates it in place; never write a new file per retry.
 Record per cycle:
 
 - `cycle` — 1-based cycle number
+- `reviewer` — `subagent`, or `inline` when the harness offered no subagent
 - `reviewedSpecRef` — a fingerprint (hash or git blob) of the `spec.md` reviewed
 - `verdict` — one of `SHIP`, `FIX_THEN_SHIP`, `REWORK`, `REJECT`
 - `reworkKind` — `spec-level` or `decision-level`, only when `verdict` is `REWORK`
@@ -20,6 +22,32 @@ Record per cycle:
 - `newFindings` / `resolvedFindings` / `repeatedFindings`
 - `route` — the stage this verdict sends control to
 - `validationCommands` — anything run to check the finding
+
+## Reviewer
+
+Each cycle's review runs in a new subagent, so it reads the spec the way the
+implementer will: from files, with none of the interview in its context. Dispatch
+a fresh one every cycle, with read access to the repository, and brief it with:
+
+- **Paths:** `spec.md`, `decisions.md`, `CONTEXT.md`, and `adr/` under
+  `.scratch/<feature-slug>/`; the root `CONTEXT.md` and `docs/adr/` when they
+  exist; `docs/reuse-catalog.md`.
+- **Task:** run the `scrutinize` skill's workflow on `spec.md`, tracing its
+  claims through the real code, with the reuse lens below.
+- **Prior findings,** from cycle 2 on: the previous cycle's blocking findings,
+  one line each with its id, to report as resolved or still present under the
+  same id.
+- **Return:** every finding with an id — a listed id when it is the same
+  finding, a new kebab-case id otherwise — its severity, and `scrutinize`'s
+  closing line. The reviewer reads and reports; it edits no file.
+
+The main thread owns everything after the return: verdict normalization, the
+`REWORK` diagnosis, spec edits, cycle accounting, stall detection, and this
+report. A finding that `decisions.md` already settles is spec-level — the spec
+must state what the log decided.
+
+When the harness offers no subagent, run the review inline and record
+`reviewer: inline` for that cycle, so the weaker review stays visible.
 
 ## Verdict vocabulary
 
@@ -103,8 +131,8 @@ approach — never start cycle 7 automatically.
 
 ## Reuse lens
 
-Every cycle, `scrutinize` reviews `spec.md` with its Reuse Plan and the project's
-`docs/reuse-catalog.md` in context, and its mandatory "use something that
+Every cycle, the reviewer reads `spec.md` with its Reuse Plan and the project's
+`docs/reuse-catalog.md`, and `scrutinize`'s mandatory "use something that
 already exists" pass is pointed at both. Reuse findings carry stable ids so the
 stall rule can see a repeat:
 

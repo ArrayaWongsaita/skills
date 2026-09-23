@@ -189,6 +189,30 @@ describe("grill-to-tickets composite skill contract", () => {
     }
   });
 
+  it("dispatches each Stage 2 review to a fresh, read-only reviewer", async () => {
+    for (const file of skillFiles) {
+      const content = await readFile(file, "utf8");
+      const stage2 = content.slice(content.indexOf("## Stage 2"), content.indexOf("## Stage 3"));
+      assert.match(stage2, /fresh reviewer subagent/);
+      assert.match(stage2, /edits nothing/);
+      assert.match(stage2, /\(references\/design-review-gate\.md\) — Reviewer/);
+      assert.match(content, /Stages 0, 1, and 3 run \*\*inline\*\*/);
+      assert.match(content, /Two steps dispatch a subagent/);
+    }
+    for (const dir of skillDirs) {
+      const gate = await readFile(path.resolve(dir, "references/design-review-gate.md"), "utf8");
+      const reviewer = gate.slice(gate.indexOf("## Reviewer"), gate.indexOf("## Verdict vocabulary"));
+      assert.ok(reviewer.startsWith("## Reviewer"), "the gate reference has a Reviewer section");
+      for (const brief of ["**Paths:**", "**Task:**", "**Prior findings,**", "**Return:**"]) {
+        assert.ok(reviewer.includes(brief), `the reviewer brief names ${brief}`);
+      }
+      assert.match(reviewer, /edits no file/);
+      assert.match(reviewer, /`reviewer: inline`/, "the inline fallback is recorded");
+      assert.match(gate, /^- `reviewer` — /m, "each cycle records its reviewer");
+    }
+    await fileExists(path.resolve("docs/decisions/0010-grill-to-tickets-fresh-context-design-review.md"));
+  });
+
   it("normalizes every scrutinize verdict without paraphrasing", async () => {
     for (const file of skillFiles) {
       const content = await readFile(file, "utf8");

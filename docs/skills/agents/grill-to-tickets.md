@@ -9,8 +9,8 @@
 ### มีไว้ทำอะไร
 
 พา idea เดียวจากการสัมภาษณ์แบบ relentless ไปจนถึง ticket ที่พร้อมให้ agent หยิบทำ แล้ว **หยุด**
-โดยรัน `grilling`, `domain-modeling`, `to-spec`, `scrutinize` และ `to-tickets` แบบ inline
-ต่อเนื่องใน context เดียว ไม่ลงมือ implement และไม่แตะ `grill-with-docs` หรือ skill ของ Matt Pocock
+โดยรัน `grilling`, `domain-modeling`, `to-spec` และ `to-tickets` แบบ inline
+ต่อเนื่องใน context เดียว ส่วน `scrutinize` รีวิว spec ใน subagent ตัวใหม่ ไม่ลงมือ implement และไม่แตะ `grill-with-docs` หรือ skill ของ Matt Pocock
 
 ติดตั้ง:
 
@@ -35,7 +35,7 @@ npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 
 1. **Stage 0 — Grill**: เริ่มด้วย **Reuse survey** อ่าน `docs/reuse-catalog.md` ของ project ตรวจว่าทุกรายการยังมีอยู่จริง แล้วสำรวจเฉพาะส่วนที่ยังไม่เคยสำรวจหรือไฟล์ที่เปลี่ยนหลังวันที่ใน Coverage (ถ้ายังไม่มี catalog จะสร้างให้พร้อมเพิ่มบรรทัดชี้ใน `AGENTS.md`) ทางเลือกเรื่อง reuse เช่น ขยายของเดิมหรือสร้างใหม่ จะกลายเป็นคำถามให้คุณตัดสิน จากนั้นสัมภาษณ์แบบ design tree พร้อมทำ domain modeling เขียน `CONTEXT.md` / `adr/` ทันทีที่ term นิ่ง บันทึกทุกคำถามและคำตอบลง **Decision Log** (`decisions.md`) ก่อนถามรอบถัดไป แล้วหยุดขอ confirmation เมื่อ frontier ว่าง
 2. **Stage 1 — Spec**: รัน `to-spec` สังเคราะห์ `decisions.md`, glossary และ ADR เป็น `spec.md` โดยไม่สัมภาษณ์ซ้ำ ทุกการตัดสินใจใน log ต้องอยู่ใน spec พร้อม **Reuse Plan** ที่ระบุว่าแต่ละ module จะใช้ของเดิม ขยาย สร้างเป็น shared (ต้องมีผู้ใช้ตั้งแต่ 2 ราย) สร้างเป็น candidate promote หรือแยกไว้โดยตั้งใจ
-3. **Stage 2 — Design Review Gate**: รัน `scrutinize` แล้ว normalize verdict เป็น `SHIP` / `FIX_THEN_SHIP` / `REWORK` / `REJECT` เก็บรายงานไว้ไฟล์เดียว `design-review.md` อัปเดตทุกรอบ และตรวจ **reuse lens** ทุกรอบ (ของที่ซ้ำกับ catalog, logic ที่ไม่มีเจ้าของ, shared ที่เผื่ออนาคตเกินไป)
+3. **Stage 2 — Design Review Gate**: แต่ละรอบส่ง `scrutinize` ไปรันใน subagent ตัวใหม่ที่เห็นแค่ไฟล์และไม่แก้ไฟล์ใด ๆ (อ่าน spec แบบเดียวกับ implementer) แล้ว context หลัก normalize verdict เป็น `SHIP` / `FIX_THEN_SHIP` / `REWORK` / `REJECT` เก็บรายงานไว้ไฟล์เดียว `design-review.md` อัปเดตทุกรอบ และตรวจ **reuse lens** ทุกรอบ (ของที่ซ้ำกับ catalog, logic ที่ไม่มีเจ้าของ, shared ที่เผื่ออนาคตเกินไป)
 4. **Stage 3 — Tickets**: เมื่อได้ `SHIP` รัน `to-tickets` เขียน ticket ลง `.scratch/<feature-slug>/issues/` shared module ใหม่แต่ละตัวมี ticket เจ้าของใบเดียวและ ticket ที่ใช้ต้องรอ ticket เจ้าของ ทุก ticket มีบรรทัด `**Reuse:**` (`use` / `extend` / `create-shared` / `create-candidate` / `promote`) ซึ่งไม่ใช่ acceptance criterion
 5. **Stop**: บอกให้ commit ไฟล์วางแผนและ `docs/reuse-catalog.md` แล้วพิมพ์ `/clear` ตามด้วย `/subagent-implement .scratch/<feature-slug>/` (หรือ `/agy-implement` / `/opencode-implement`) ไม่เรียก implementer เอง
 
@@ -63,7 +63,8 @@ npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 
 Carry one idea from a relentless discovery interview through to published,
 ticket-ready work, then stop. It inline-executes `grilling`, `domain-modeling`,
-`to-spec`, `scrutinize`, and `to-tickets` in a single continuous context window.
+`to-spec`, and `to-tickets` in a single continuous context window, and runs
+`scrutinize` in a fresh reviewer subagent.
 It never implements, and it never touches `grill-with-docs` or any Matt
 Pocock-sourced skill.
 
@@ -105,8 +106,10 @@ resumed run and Stage 1 read decisions from a file rather than from recall.
 Stage 1 writes the spec from that log, and a Reuse Plan into it — use as-is, extend, create
 shared (two or more real consumers), create candidate, promote, or kept separate
 on purpose — and every gate cycle applies a reuse lens that flags duplicated,
-unowned, and speculative shared modules. The Design Review Gate normalizes each
-`scrutinize` verdict into `SHIP`, `FIX_THEN_SHIP`, `REWORK`, or `REJECT`, keeps
+unowned, and speculative shared modules. Each Design Review Gate cycle dispatches
+`scrutinize` to a fresh, read-only reviewer subagent that sees the files and not
+the interview, so it reads the spec the way the implementer will (ADR 0010); the
+main thread normalizes each verdict into `SHIP`, `FIX_THEN_SHIP`, `REWORK`, or `REJECT`, keeps
 one stable `design-review.md` report, and bounds itself to six cycles with early
 stops for stalls and a required human authorization on budget exhaustion. A
 spec-level `REWORK` re-runs `to-spec` without leaving the gate; a decision-level

@@ -8,9 +8,10 @@ disable-model-invocation: true
 
 Carry a single idea from a relentless interview through to published, ticket-ready
 work, then stop at the handoff. This skill inline-executes `grilling`,
-`domain-modeling`, `to-spec`, `scrutinize`, and `to-tickets` in sequence; a
-separate implementer run (`/subagent-implement`, `/agy-implement`, or
-`/opencode-implement`) picks the ticket directory up afterward.
+`domain-modeling`, `to-spec`, and `to-tickets` in sequence, with `scrutinize`
+reviewing the spec in a fresh context between them; a separate implementer run
+(`/subagent-implement`, `/agy-implement`, or `/opencode-implement`) picks the
+ticket directory up afterward.
 
 ```
 Stage 0: Grill        reuse survey + grilling + domain-modeling
@@ -19,7 +20,7 @@ Stage 0: Grill        reuse survey + grilling + domain-modeling
    ▼
 Stage 1: Spec         to-spec                     → spec.md
    ▼
-Stage 2: Design Review Gate   scrutinize          → design-review.md   (bounded loop)
+Stage 2: Design Review Gate   scrutinize (fresh reviewer) → design-review.md   (bounded loop)
    │ (SHIP)
    ▼
 Stage 3: Tickets      to-tickets                  → issues/NN-<slug>.md
@@ -43,13 +44,17 @@ human invocation before starting.
 
 ## Inline Execution
 
-Every stage skill runs **inline**: read its instructions at
+Stages 0, 1, and 3 run **inline**: read each stage skill's instructions at
 `.agents/skills/<skill>/SKILL.md` and follow its workflow steps directly, in this
 one continuous context window. `to-spec` and `to-tickets` are
-`disable-model-invocation: true`, so inline is their only path; the rest run
-inline too, keeping the whole interview-to-tickets pass on one unbroken reasoning
-thread. Keep every stage on the main thread — stopping at tickets exists precisely
-to hand a fresh context window to a later implementer run.
+`disable-model-invocation: true`, so inline is their only path; `grilling` and
+`domain-modeling` run inline too, keeping the interview, the spec, and the tickets
+on one reasoning thread, where the user is.
+
+Two steps dispatch a subagent, and neither makes a decision: the Reuse survey's
+fact lookup in Stage 0, and the Stage 2 reviewer. The reviewer runs `scrutinize`
+in a fresh context so it reads the spec the way the implementer will — from files
+alone, without the interview's answers to fill its gaps.
 
 This skill owns its own copy of the Design Review Gate rules and runs fully
 standalone.
@@ -127,11 +132,14 @@ each new shared module. Categories, the create-shared bar, and an example:
 
 ## Stage 2 — Design Review Gate
 
-Run `scrutinize` inline against `spec.md`, then normalize its closing verdict to
-exactly one of its own four tokens — `SHIP`, `FIX_THEN_SHIP`, `REWORK`, `REJECT`
+Each cycle, dispatch a fresh reviewer subagent that runs `scrutinize` against
+`spec.md` from files alone and edits nothing — its brief is in
+[design-review-gate.md](references/design-review-gate.md) — Reviewer. The main
+thread keeps the rest: normalize the reviewer's closing verdict to exactly one of
+`scrutinize`'s own four tokens — `SHIP`, `FIX_THEN_SHIP`, `REWORK`, `REJECT`
 — with no paraphrasing. Keep one stable report at
 `.scratch/<feature-slug>/design-review.md`, updating its cycle section each pass.
-Every cycle also applies the **reuse lens**: `scrutinize` checks the Reuse Plan
+Every cycle also applies the **reuse lens**: the reviewer checks the Reuse Plan
 against `docs/reuse-catalog.md` for duplicated, unowned, and speculative shared
 modules.
 
