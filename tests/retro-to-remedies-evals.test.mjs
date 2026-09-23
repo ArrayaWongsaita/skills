@@ -292,6 +292,41 @@ describe("retro-to-remedies eval suite contract", () => {
         "case for handed-off Remedy answered done becomes applied",
       );
     });
+
+    it("covers the branches listed in ticket 07 (fixture subagent-implement fixes routed as own-library prompts, mattpocock Upstream feedback, globally installed own skill, no lock entry project-local, issue request opens one issue and nothing more)", async () => {
+      const { evals } = await evalsJson();
+      const hay = (re) => evals.some((e) => re.test(e.name) || re.test(e.expected_output));
+
+      // the fixture Run's subagent-implement fixes routed as own-library prompts for this repository
+      assert.ok(
+        hay(/subagent-implement fixes routed as own-library prompts for this repository|subagent-implement.*own-library prompt/i),
+        "case for fixture subagent-implement fixes routed as own-library prompts",
+      );
+
+      // a Miss caused by a mattpocock/skills skill becomes Upstream feedback
+      assert.ok(
+        hay(/mattpocock\/skills.*Upstream feedback|mattpocock.*Upstream feedback/i),
+        "case for mattpocock/skills skill becoming Upstream feedback",
+      );
+
+      // a globally installed own skill is found through the global lock
+      assert.ok(
+        hay(/globally installed own skill.*(is )?found through (the )?global lock|global lock.*globally installed/i),
+        "case for globally installed own skill found through global lock",
+      );
+
+      // a skill with no lock entry is project-local
+      assert.ok(
+        hay(/skill with no lock entry.*is project-local|no lock entry.*project-local/i),
+        "case for skill with no lock entry is project-local",
+      );
+
+      // an issue request opens one issue and nothing more
+      assert.ok(
+        hay(/issue request opens one issue and nothing more|opens one issue and nothing more/i),
+        "case for issue request opening one issue and nothing more",
+      );
+    });
   });
 });
 

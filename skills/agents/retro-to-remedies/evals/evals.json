@@ -403,6 +403,68 @@
         "Updates the Outcome to applied upon the user answering done"
       ],
       "files": []
+    },
+    {
+      "id": 32,
+      "name": "the fixture Run's subagent-implement fixes routed as own-library prompts for this repository",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model",
+      "expected_output": "The fixture Run's subagent-implement fixes routed as own-library prompts for this repository carrying a /grill-to-tickets prompt targeting this repository.",
+      "expectations": [
+        "Identifies subagent-implement as belonging to the user's own library because its SKILL.md lives under skills/",
+        "Routes subagent-implement fixes as own-library prompts for this repository in the Retro report",
+        "Provides ready-to-run /grill-to-tickets prompt targeting this repository"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/status.md"
+      ]
+    },
+    {
+      "id": 33,
+      "name": "a Miss caused by a mattpocock/skills skill becomes Upstream feedback",
+      "prompt": "/retro-to-remedies mattpocock-skill-miss",
+      "expected_output": "A Miss caused by a mattpocock/skills skill becomes Upstream feedback recorded for that source and never modifies the installed copy.",
+      "expectations": [
+        "Inspects skills-lock.json and resolves skill source to mattpocock/skills",
+        "Routes the Skill fix as Upstream feedback targeting mattpocock/skills",
+        "Leaves the local installed skill copy untouched"
+      ],
+      "files": []
+    },
+    {
+      "id": 34,
+      "name": "a globally installed own skill is found through the global lock",
+      "prompt": "/retro-to-remedies global-skill-run",
+      "expected_output": "A globally installed own skill is found through the global lock ~/.agents/.skill-lock.json when absent from project skills-lock.json.",
+      "expectations": [
+        "Falls back from project skills-lock.json to ~/.agents/.skill-lock.json",
+        "Matches skill lock source to retro-to-remedies's own source ArrayaWongsaita/skills",
+        "Routes the Skill fix as an own-library prompt for the target repository"
+      ],
+      "files": []
+    },
+    {
+      "id": 35,
+      "name": "a skill with no lock entry is project-local",
+      "prompt": "/retro-to-remedies local-skill-run",
+      "expected_output": "A skill with no lock entry in project or global lock and no source under skills/ is project-local.",
+      "expectations": [
+        "Finds no lock entry in skills-lock.json or ~/.agents/.skill-lock.json",
+        "Finds no source under this repository's skills/ directory",
+        "Treats the skill as project-local in the Retro report"
+      ],
+      "files": []
+    },
+    {
+      "id": 36,
+      "name": "an issue request opens one issue and nothing more",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model --open-issue",
+      "expected_output": "An explicit issue request opens one issue and nothing more, leaving all other copies untouched and making no git push or pull request.",
+      "expectations": [
+        "Requires an explicit human request before opening any GitHub issue",
+        "Opens exactly one issue for the requested Skill fix and nothing more",
+        "Pushes no code and creates no pull request"
+      ],
+      "files": []
     }
   ]
 }

@@ -99,9 +99,17 @@ Stage 1 ทำหน้าที่นำ Misses ทั้งหมดมาป�
   4. ใช้ความพยายามในการค้นหาเอกสาร/ไฟล์ → **Pointer** ใน `AGENTS.md`
   5. ขาดแคลนข้อมูลที่เข้าถึงไม่ได้ (เช่น logs, permission) → **Access**
   6. คำสั่งในโปรเจกต์หมดอายุหรือไม่ส่งผล → **Prune** (จำกัดเฉพาะ `AGENTS.md`, `CLAUDE.md`, `CODING_STANDARDS.md` และ Reuse Catalog)
+- **การหาเส้นทางของ Skill Fix (Skill Fix Routing)**:
+  - ตรวจสอบลำดับ lock: เริ่มจาก `skills-lock.json` ของโปรเจกต์ หากไม่พบจึงค้นหาจาก `~/.agents/.skill-lock.json` ส่วนกลาง
+  - การทดสอบความเป็น library ของตนเอง (Own-Library Test): หาก source ตรงกับ `retro-to-remedies` หรือไฟล์ `SKILL.md` อยู่ภายใต้ไดเรกทอรี `skills/` ของ repository นี้ ถือเป็น own library
+  - ผลลัพธ์ 3 ทาง:
+    1. **Own library**: มาตรการ Skill fix จะส่งมอบเป็น ready-to-run prompt สำหรับ `/grill-to-tickets` พร้อมระบุ repository ปลายทาง
+    2. **Upstream feedback**: หากมาจาก source อื่น (เช่น `mattpocock/skills`) จะบันทึกเป็น Upstream feedback โดยไม่แก้ไขสำเนาของ skill ที่ติดตั้งไว้ (installed copies stay untouched)
+    3. **Project-local**: หากไม่มีบันทึกใน lock file ทั้งสองและไม่มี source อยู่ใน `skills/` จะถือเป็น project-local
+  - การเปิด issue: จะเปิด GitHub issue เฉพาะเมื่อผู้ใช้ร้องขออย่างชัดเจนเท่านั้น (issue only on explicit request)
 - **การจัดลำดับตามความสำคัญ (Ranking Order)**: เรียงลำดับความสำคัญโดยนำ Failed Remedy ขึ้นก่อน → ตามด้วย Recurring Remedy → ตามด้วยต้นทุนสูง (review blocker, BLOCKED ticket, failed verification, รอบที่ไม่ได้ SHIP) → ข้อเสนออื่นๆ
 - **Carried findings และ Open bugs**: นำ Carried findings จาก `review-status.md` ทุกข้อมาจับคู่กับ Remedy หรือ proposed decline (ไม่ปล่อยให้ค้างโดยไร้คำตอบ) และแยก defect ของโค้ดฟีเจอร์เป็น Open bugs สำหรับ `/diagnosing-bugs` เท่านั้น (ไม่ถือเป็น Remedy)
-- **โครงสร้างรายงานและคำตอบ 4 แบบ**: เขียนรายงานลง `.scratch/<feature-slug>/retro.md` เรียงตาม 6 ส่วน (sources read/missing, handed-off follow-ups, project Remedies, Skill fixes, Carried findings, Open bugs) จากนั้นหยุดพัก (pause) รอให้ผู้ใช้ตอบคำถาม 4 ตัวเลือก:
+- **โครงสร้างรายงานและคำตอบ 4 แบบ**: เขียนรายงานลง `.scratch/<feature-slug>/retro.md` เรียงตาม 6 ส่วน (sources read/missing, handed-off follow-ups, project Remedies, Skill fixes [แสดงรายการ own library ก่อน แล้วตามด้วย Upstream feedback พร้อมระบุ target ปลายทาง], Carried findings, Open bugs) จากนั้นหยุดพัก (pause) รอให้ผู้ใช้ตอบคำถาม 4 ตัวเลือก:
   - `apply`: อนุมัติให้นำ Text remedies (Standard, Pointer, Prune) ไปแก้ไขและ commit ลง branch
   - `hand off`: ส่งมอบ Code remedies (Check, Skill fix, Access) ไปเป็น prompt สำหรับ `/grill-to-tickets`
   - `decline`: ปฏิเสธมาตรการแก้ไข

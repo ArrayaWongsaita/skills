@@ -767,7 +767,58 @@ describe("retro-to-remedies skill contract", () => {
       assert.match(guideDoc, /decline/i);
     });
   });
+
+  describe("ticket 07 — Skill fix routing", () => {
+    it("references/skill-fix-routing.md states lock lookup order, three outcomes, and own-library test", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/skill-fix-routing.md"), "utf8");
+
+        // lock lookup order: project skills-lock.json, else ~/.agents/.skill-lock.json
+        assert.match(c, /skills-lock\.json.*(~\/\.agents\/\.skill-lock\.json|\.skill-lock\.json)/s);
+
+        // three outcomes:
+        // 1. own library with a /grill-to-tickets prompt naming the target repository
+        assert.match(c, /own library.*\/grill-to-tickets.*(target repository|repository that holds it)/i);
+        // 2. Upstream feedback
+        assert.match(c, /Upstream feedback/);
+        // 3. project-local
+        assert.match(c, /project-local/);
+
+        // own-library test: same lock source as retro-to-remedies, or SKILL.md under this repository's skills/
+        assert.match(c, /same (lock )?source as `?retro-to-remedies`?.*skills\//s);
+      }
+    });
+
+    it("references/skill-fix-routing.md states untouched copies and issue-on-request rules", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/skill-fix-routing.md"), "utf8");
+        assert.match(c, /installed (skill )?cop(y|ies) (stay )?untouched|never edit.*installed (skill )?cop(y|ies)|no installed skill copy is ever edited/i);
+        assert.match(c, /GitHub issue (opens )?only on an? explicit request/i);
+      }
+    });
+
+    it("references/retro-report.md defines Skill fixes section listing own-library fixes, then Upstream feedback, with target", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/retro-report.md"), "utf8");
+        assert.match(c, /own(-|\s+)library.*(then\s+)?Upstream feedback/i);
+        assert.match(c, /target/i);
+      }
+    });
+
+    it("both guides describe where Skill fixes go", async () => {
+      const skillDoc = await readFile(path.resolve("docs/skills/agents/retro-to-remedies.md"), "utf8");
+      assert.match(skillDoc, /Skill fix/i);
+      assert.match(skillDoc, /Upstream feedback/);
+      assert.match(skillDoc, /skills-lock\.json/);
+
+      const guideDoc = await readFile(path.resolve("docs/guides/retro-to-remedies.md"), "utf8");
+      assert.match(guideDoc, /Skill fix/i);
+      assert.match(guideDoc, /Upstream feedback/);
+      assert.match(guideDoc, /skills-lock\.json/);
+    });
+  });
 });
+
 
 
 
