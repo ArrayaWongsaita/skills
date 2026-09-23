@@ -12,32 +12,15 @@ async function readJson(filePath) {
   return JSON.parse(await readFile(filePath, "utf8"));
 }
 
-const evalDirs = [
-  "skills/agents/retro-to-remedies/evals",
-  ".agents/skills/retro-to-remedies/evals",
-];
-const canonicalDir = evalDirs[0];
+const canonicalDir = "skills/agents/retro-to-remedies/evals";
 
 const evalsJson = () => readJson(path.resolve(canonicalDir, "evals.json"));
 const triggerJson = () => readJson(path.resolve(canonicalDir, "trigger-evals.json"));
 
 describe("retro-to-remedies eval suite contract", () => {
-  it("ships trigger-evals.json and evals.json in canonical and mirror copies", async () => {
-    for (const dir of evalDirs) {
-      await fileExists(path.resolve(dir, "trigger-evals.json"));
-      await fileExists(path.resolve(dir, "evals.json"));
-    }
-  });
-
-  it("keeps every eval file byte-identical across the skill copies", async () => {
-    for (const name of ["trigger-evals.json", "evals.json"]) {
-      const contents = await Promise.all(
-        evalDirs.map((dir) => readFile(path.resolve(dir, name), "utf8")),
-      );
-      for (const other of contents.slice(1)) {
-        assert.equal(other, contents[0], `${name} copies must match ${canonicalDir}`);
-      }
-    }
+  it("ships trigger-evals.json and evals.json", async () => {
+    await fileExists(path.resolve(canonicalDir, "trigger-evals.json"));
+    await fileExists(path.resolve(canonicalDir, "evals.json"));
   });
 
   describe("trigger-evals.json", () => {

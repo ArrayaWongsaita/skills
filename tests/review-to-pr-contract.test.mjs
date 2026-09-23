@@ -610,7 +610,7 @@ describe("review-to-pr skill contract", () => {
     });
 
     it("asserts the handoff order (/retro-to-remedies before /pr-to-dev) and the partial-report order (after /review-to-pr continue)", async () => {
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         const s = stageSection(body, 5);
         assert.ok(s, "Stage 5 section present");
         assert.match(

@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { readFile, access, readdir, lstat, readlink } from "node:fs/promises";
+import { readFile, access, readdir } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
 
@@ -46,34 +46,18 @@ function localSkillLinks(markdown) {
 }
 
 const canonicalDir = "skills/agents/retro-to-remedies";
-const mirrorDir = ".agents/skills/retro-to-remedies";
-const symlinkPath = ".claude/skills/retro-to-remedies";
-const skillDirs = [canonicalDir, mirrorDir];
+const skillDirs = [canonicalDir];
 const skillFiles = skillDirs.map((dir) => path.resolve(dir, "SKILL.md"));
 
-async function bothSkillBodies() {
+async function skillBodies() {
   return Promise.all(
     skillFiles.map(async (file) => (await readFile(file, "utf8")).replace(/^---\n[\s\S]*?\n---\n/, "")),
   );
 }
 
-async function walkDirectory(dir) {
-  const entries = await readdir(dir, { withFileTypes: true });
-  const files = [];
-  for (const entry of entries) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...await walkDirectory(full));
-    } else {
-      files.push(full);
-    }
-  }
-  return files;
-}
-
 describe("retro-to-remedies skill contract", () => {
   describe("ticket 01 — scaffold, invocation surface, and trigger policy", () => {
-    it("exists in the canonical and mirror locations with valid frontmatter", async () => {
+    it("has valid frontmatter", async () => {
       for (const file of skillFiles) {
         await fileExists(file);
         const raw = await readFile(file, "utf8");
@@ -88,33 +72,7 @@ describe("retro-to-remedies skill contract", () => {
       }
     });
 
-    it("keeps the canonical and mirror directories byte-identical", async () => {
-      const canonicalFiles = (await walkDirectory(path.resolve(canonicalDir)))
-        .map((f) => path.relative(path.resolve(canonicalDir), f))
-        .sort();
-      const mirrorFiles = (await walkDirectory(path.resolve(mirrorDir)))
-        .map((f) => path.relative(path.resolve(mirrorDir), f))
-        .sort();
-
-      assert.deepEqual(mirrorFiles, canonicalFiles, "canonical and mirror directory trees must match");
-
-      for (const rel of canonicalFiles) {
-        const [cBytes, mBytes] = await Promise.all([
-          readFile(path.resolve(canonicalDir, rel)),
-          readFile(path.resolve(mirrorDir, rel)),
-        ]);
-        assert.ok(cBytes.equals(mBytes), `file ${rel} must be byte-identical between canonical and mirror`);
-      }
-    });
-
-    it("has .claude/skills/retro-to-remedies as a symlink to ../../.agents/skills/retro-to-remedies", async () => {
-      const stat = await lstat(path.resolve(symlinkPath));
-      assert.ok(stat.isSymbolicLink(), `${symlinkPath} must be a symbolic link`);
-      const linkTarget = await readlink(path.resolve(symlinkPath));
-      assert.equal(linkTarget, "../../.agents/skills/retro-to-remedies");
-    });
-
-    it("ships Codex metadata blocking implicit invocation in both copies", async () => {
+    it("ships Codex metadata blocking implicit invocation", async () => {
       for (const dir of skillDirs) {
         const yaml = await readFile(path.resolve(dir, "agents/openai.yaml"), "utf8");
         assert.match(yaml, /display_name:/);
@@ -125,7 +83,7 @@ describe("retro-to-remedies skill contract", () => {
     });
 
     it("documents the invocation surface and the slug resolution order", async () => {
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         assert.match(body, /\/retro-to-remedies\s+\[<feature-slug>\]\s+\[--transcript\]\s+\[--fresh\]/);
         assert.match(body, /\$retro-to-remedies/);
         assert.match(body, /argument\b/i);
@@ -136,7 +94,7 @@ describe("retro-to-remedies skill contract", () => {
     });
 
     it("refuses to run on protected branches before reading any source", async () => {
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         assert.match(body, /\bmain\b/);
         assert.match(body, /\bmaster\b/);
         assert.match(body, /\bdev\b/);
@@ -145,7 +103,7 @@ describe("retro-to-remedies skill contract", () => {
     });
 
     it("provides the Stage 0, Stage 1, Stage 2, and handoff overview with pause after Stage 1", async () => {
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         assert.match(body, /Stage 0/i);
         assert.match(body, /Stage 1/i);
         assert.match(body, /Stage 2/i);
@@ -178,7 +136,7 @@ describe("retro-to-remedies skill contract", () => {
     });
 
     it("steers positively — no 'Never' or 'Do not' in the instruction body", async () => {
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         assert.doesNotMatch(body, /\bNever\b/i, "prompt the positive instead of 'Never'");
         assert.doesNotMatch(body, /\bDo not\b/i, "prompt the positive instead of 'Do not'");
         assert.doesNotMatch(body, /\bDon't\b/i, "prompt the positive instead of 'Don't'");
@@ -221,8 +179,8 @@ describe("retro-to-remedies skill contract", () => {
       assert.match(guideDoc, /\/retro-to-remedies/);
     });
 
-    it("records ADR 0010 and adds domain glossary entries", async () => {
-      const adr = await readFile(path.resolve("docs/decisions/0010-retro-to-remedies-standalone.md"), "utf8");
+    it("records ADR 0012 and adds domain glossary entries", async () => {
+      const adr = await readFile(path.resolve("docs/decisions/0012-retro-to-remedies-standalone.md"), "utf8");
       assert.match(adr, /retro-to-remedies/);
       assert.match(adr, /review-to-pr/);
       assert.match(adr, /pr-to-dev/);
@@ -301,7 +259,7 @@ describe("retro-to-remedies skill contract", () => {
         assert.match(content, /##\s*Stage 0/i);
         assert.match(content, /references\/miss-sources\.md/);
       }
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         const stage0Match = body.match(/###?\s*Stage 0[\s\S]*?(?=###?\s*Stage 1|$)/i);
         assert.ok(stage0Match, "Stage 0 section must be present");
         const stage0Text = stage0Match[0];
@@ -321,7 +279,7 @@ describe("retro-to-remedies skill contract", () => {
         assert.match(c, /ask/i);
         assert.match(c, /transcript/i);
       }
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         const stage0Match = body.match(/###?\s*Stage 0[\s\S]*?(?=###?\s*Stage 1|$)/i);
         assert.ok(stage0Match);
         const stage0Text = stage0Match[0];
@@ -477,7 +435,7 @@ describe("retro-to-remedies skill contract", () => {
         assert.match(content, /references\/classification\.md/);
         assert.match(content, /references\/retro-report\.md/);
       }
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         const stage1Match = body.match(/###?\s*Stage 1[\s\S]*?(?=###?\s*Stage 2|$)/i);
         assert.ok(stage1Match, "Stage 1 section must be present");
         const stage1Text = stage1Match[0];
@@ -575,7 +533,7 @@ describe("retro-to-remedies skill contract", () => {
         assert.match(content, /##\s*Handoff/i);
         assert.match(content, /references\/apply-and-handoff\.md/);
       }
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         const stage2Match = body.match(/###?\s*Stage 2[\s\S]*?(?=###?\s*Handoff|$)/i);
         assert.ok(stage2Match, "Stage 2 section must be present");
         const stage2Text = stage2Match[0];
@@ -740,7 +698,7 @@ describe("retro-to-remedies skill contract", () => {
     });
 
     it("SKILL.md's Stage 0 asks follow-ups before reading sources, and Stage 1 matches against log before classifying", async () => {
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         const stage0Match = body.match(/###?\s*Stage 0[\s\S]*?(?=###?\s*Stage 1|$)/i);
         assert.ok(stage0Match, "Stage 0 section must be present");
         const stage0Text = stage0Match[0];
@@ -865,7 +823,7 @@ describe("retro-to-remedies skill contract", () => {
     });
 
     it("SKILL.md's Stage 0 reads transcripts only with --transcript, or after user agrees when no .scratch/<feature-slug>/", async () => {
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         const stage0Match = body.match(/###?\s*Stage 0[\s\S]*?(?=###?\s*Stage 1|$)/i);
         assert.ok(stage0Match, "Stage 0 section must be present");
         const stage0Text = stage0Match[0];
@@ -927,7 +885,7 @@ describe("retro-to-remedies skill contract", () => {
     });
 
     it("SKILL.md's Stage 0 checks for an unfinished Retro report first and follows references/resume.md", async () => {
-      for (const body of await bothSkillBodies()) {
+      for (const body of await skillBodies()) {
         const stage0Match = body.match(/###?\s*Stage 0[\s\S]*?(?=###?\s*Stage 1|$)/i);
         assert.ok(stage0Match, "Stage 0 section must be present");
         const stage0Text = stage0Match[0];
