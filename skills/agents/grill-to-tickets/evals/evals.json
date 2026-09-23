@@ -304,6 +304,58 @@
         "Shows the checker's story-coverage table in the quiz"
       ],
       "files": []
+    },
+    {
+      "id": 24,
+      "name": "quality: interview asks decisions and looks facts up itself",
+      "prompt": "/grill-to-tickets Add a dark-mode toggle to the settings page. The repository already configures Tailwind with darkMode: 'class', has a ThemeProvider in src/providers/theme.tsx, and stores user preferences through the existing PreferencesStore.",
+      "expected_output": "Establish the facts by inspecting the repository — Tailwind's class strategy, the ThemeProvider, and PreferencesStore — and state them rather than asking. Round 1 holds only decisions with recommended answers, such as the default theme (follow the system setting or light) and whether the choice persists per account or per device.",
+      "expectations": [
+        "Asks the user no question the repository answers (Tailwind setup, ThemeProvider, PreferencesStore)",
+        "States the facts it found before or alongside round 1",
+        "Asks only decisions, each numbered with a recommended answer",
+        "Logs round 1 in decisions.md"
+      ],
+      "files": []
+    },
+    {
+      "id": 25,
+      "name": "quality: spec carries every logged decision",
+      "prompt": "$grill-to-tickets continue member-export. Stage 1: spec.md is drafted. decisions.md holds nine decisions; R3 Q2 settled that one export is capped at 50,000 rows with a message telling the admin to filter, and the blind-spot table carries the assumption that the existing toast reports failures. The draft spec mentions neither.",
+      "expected_output": "Check every decision and assumption in decisions.md against the draft before leaving Stage 1. Add the 50,000-row cap as an implementation decision with a user story (or testing decision) for the filter message, and the toast assumption to Further Notes. Stage 1 is not done until every logged decision and assumption appears in the spec.",
+      "expectations": [
+        "Walks decisions.md entry by entry against spec.md",
+        "Adds the 50,000-row cap and its filter message to the spec",
+        "Adds the toast assumption to Further Notes",
+        "Moves to Stage 2 only after every logged decision and assumption appears in the spec"
+      ],
+      "files": []
+    },
+    {
+      "id": 26,
+      "name": "quality: tickets are vertical slices, not layers",
+      "prompt": "/grill-to-tickets continue member-export. The gate returned SHIP. The first draft breakdown is 01 database query, 02 export API endpoint, 03 export button UI, 04 tests.",
+      "expected_output": "Reject the layered draft: each ticket must cut a narrow path through every layer (query, API, UI, and tests) and be demoable on its own. Re-slice into tracer bullets — for example, a minimal end-to-end CSV export of names first, then the remaining columns, then the 50,000-row cap — each with its own tests, Stories, Reuse, and blocking edges, then run the ticket checker and quiz.",
+      "expectations": [
+        "Identifies the draft as horizontal layers rather than vertical slices",
+        "Re-slices so every ticket crosses query, API, UI, and tests",
+        "Makes each ticket demoable or verifiable on its own",
+        "Keeps tests inside each slice instead of in a separate tests ticket"
+      ],
+      "files": []
+    },
+    {
+      "id": 27,
+      "name": "reviewer finding already settled in decisions.md is spec-level REWORK",
+      "prompt": "$grill-to-tickets continue member-export. Gate cycle 1: the fresh reviewer closes with rework, finding that the spec never says who may export. decisions.md R1 Q1 settled it: admins only.",
+      "expected_output": "Diagnose spec-level REWORK: the decision exists in decisions.md, so a fresh writer holding the log could fix the spec without asking anyone. Re-run to-spec with the finding and R1 Q1 as added context, consume one cycle, and re-review within Stage 2. Returning to Stage 0 would re-ask a settled question.",
+      "expectations": [
+        "Records reworkKind: spec-level, citing decisions.md R1 Q1 in the reasoning",
+        "Re-runs to-spec rather than returning to Stage 0",
+        "Asks the user nothing about who may export",
+        "Consumes one cycle and re-reviews within Stage 2"
+      ],
+      "files": []
     }
   ]
 }

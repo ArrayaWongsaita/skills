@@ -10,8 +10,10 @@ import path from "node:path";
 // only guards that the description does not read as model-invocable (the skill is
 // `disable-model-invocation`, so real trigger tuning is moot). This contract
 // covers what scripts/validate-skills.mjs cannot: the `.agents/` mirror, the
-// one-case-per-routing-branch requirement, and cycle-budget drift between the
-// skill prose and the evals.
+// one-case-per-routing-branch requirement, one case per planning safeguard and
+// per output-quality dimension, and cycle-budget drift between the skill prose
+// and the evals. Benchmark the suite with skill-creator against a snapshot of
+// the previous skill version as the old_skill baseline.
 
 async function fileExists(filePath) {
   await access(filePath, constants.R_OK);
@@ -111,6 +113,36 @@ describe("grill-to-tickets eval suite contract", () => {
         assert.ok(
           evals.some((e) => branch.match.test(e.name)),
           `no eval case covers the Reuse survey ${branch.label}`,
+        );
+      }
+    });
+
+    it("covers every planning safeguard: decision log, resume, blind spots, fresh reviewer, sweep, ticket check", async () => {
+      const { evals } = await evalsJson();
+      const safeguards = [
+        { label: "decision log", match: /decision log records/i },
+        { label: "resume", match: /^continue .*decision log/i },
+        { label: "blind-spot pass", match: /blind-spot pass/i },
+        { label: "fresh reviewer", match: /fresh subagent/i },
+        { label: "reviewer id carry-over", match: /previous findings' ids/i },
+        { label: "FIX_THEN_SHIP sweep", match: /sweeps every restatement/i },
+        { label: "ticket checker", match: /ticket checker/i },
+      ];
+      for (const safeguard of safeguards) {
+        assert.ok(
+          evals.some((e) => safeguard.match.test(e.name)),
+          `no eval case covers the ${safeguard.label} safeguard`,
+        );
+      }
+    });
+
+    it("measures output quality, not only routing: interview, spec, and tickets", async () => {
+      const { evals } = await evalsJson();
+      const quality = evals.filter((e) => /^quality: /.test(e.name));
+      for (const dimension of [/decisions and looks facts up/, /spec carries every logged decision/, /vertical slices/]) {
+        assert.ok(
+          quality.some((e) => dimension.test(e.name)),
+          `no quality case matches ${dimension}`,
         );
       }
     });

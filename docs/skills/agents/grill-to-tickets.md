@@ -56,7 +56,7 @@ npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 - `references/reuse-pass.md` — กฎ reuse ของแต่ละ stage เริ่มจาก Reuse survey ใน Stage 0 (drift check, Coverage, bootstrap, pointer)
 - `references/reuse-catalog-template.md` — template ของ `docs/reuse-catalog.md` ที่ใช้สร้างครั้งแรก header ของไฟล์อธิบายวิธีดูแลตัวเอง
 - `scripts/check-tickets.mjs` — สคริปต์ Node (ไม่มี dependency) ตรวจ ticket ก่อน quiz: story coverage, Blocked by, Reuse field และเจ้าของ create-shared/promote พร้อมพิมพ์ตาราง story coverage (exit 0 ผ่าน, 1 มี error)
-- `evals/evals.json` — เคสพฤติกรรม อย่างน้อยหนึ่งเคสต่อ routing branch ของ Design Review Gate และเคสของ Reuse survey ในรูปแบบ benchmark ของ `skill-creator` รันแบบ on-demand ไม่ได้อยู่ใน CI
+- `evals/evals.json` — เคสพฤติกรรมในรูปแบบ benchmark ของ `skill-creator`: อย่างน้อยหนึ่งเคสต่อ routing branch ของ Design Review Gate, เคสของ Reuse survey, หนึ่งเคสต่อกลไกป้องกัน (decision log, `continue`, blind-spot pass, reviewer ใน context ใหม่, การไล่แก้หลัง `FIX_THEN_SHIP`, สคริปต์ตรวจ ticket) และเคส `quality:` ที่วัดคุณภาพของคำถาม spec และ ticket รันแบบ on-demand ไม่ได้อยู่ใน CI เวลา benchmark ให้ใช้ snapshot ของ skill เวอร์ชันก่อนหน้าเป็น baseline แบบ `old_skill` ของ `skill-creator`
 - `evals/trigger-evals.json` — กันไม่ให้ description ของ skill อ่านเหมือนเป็น model-invocable (skill นี้เป็น `disable-model-invocation`)
 
 ## English / ภาษาอังกฤษ
@@ -157,8 +157,12 @@ siblings) and stops.
 - `scripts/check-tickets.mjs` — a dependency-free Node checker run before the
   Stage 3 quiz: story coverage, blockers, the Reuse field, and create-shared /
   promote ownership, with a story-coverage table (exit 0 pass, 1 errors)
-- `evals/evals.json` — behavioral cases, at least one per Design Review Gate
-  routing branch plus the Reuse survey cases, in `skill-creator`'s benchmark
-  format; run on demand, not in CI
+- `evals/evals.json` — behavioral cases in `skill-creator`'s benchmark format:
+  at least one per Design Review Gate routing branch, the Reuse survey cases, one
+  per planning safeguard (decision log, `continue`, blind-spot pass, fresh
+  reviewer, the `FIX_THEN_SHIP` sweep, the ticket checker), and `quality:` cases
+  that grade the interview, the spec, and the tickets; run on demand, not in CI,
+  benchmarked against a snapshot of the previous skill version as
+  `skill-creator`'s `old_skill` baseline
 - `evals/trigger-evals.json` — guards that the skill's description does not read
   as model-invocable (the skill is `disable-model-invocation`)
