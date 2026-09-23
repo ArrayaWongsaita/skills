@@ -32,7 +32,8 @@ verifying → verified → integrated, or → BLOCKED). It holds:
 - the **ticket table**: every ticket in dependency order, its blockers, and its
   current status
 - per ticket: `status`, `subagent_id`, `agent_type`, `model`, `attempts`,
-  `worker_branch`, `commit`
+  `worker_branch`, `commit`; plus a `catalog` note when a Reuse Catalog entry
+  was skipped because its symbol was not in the changed files
 - the **integration branch ref** (name and current commit)
 
 There is no per-provider usage roll-up — there is no external provider. There is
@@ -64,6 +65,8 @@ Before trusting `status.md`, reconcile it against reality:
    - reset the integration branch to the last still-good commit (the last commit
      whose ticket still verifies)
    - discard the worktrees for the invalidated tickets
+   - re-open each invalidated ticket file — a tracked one comes back with the
+     reset; on a git-ignored one, un-tick its checkboxes and reset its `Status:`
    - list the **discarded commits** at the top of the report, so the blast
      radius is visible
    - re-dispatch from that point

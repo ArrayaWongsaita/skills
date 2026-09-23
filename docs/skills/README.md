@@ -22,6 +22,7 @@ npx skills add ArrayaWongsaita/skills --all
 | `engineering-workflow` | Explicitly route a feature, bug, incident, or large engineering effort through pure-prompt cognitive orchestration, markdown state artifacts, evidence gates, bounded review loops, and resumable transitions. | [คู่มือ / Guide](agents/engineering-workflow.md) |
 | `grill-to-tickets` | Standalone composite skill that carries one idea from a relentless discovery interview through domain modeling, specification, a bounded design-review gate, and vertical ticket breakdown, then stops at published tickets without implementing. | [คู่มือ / Guide](agents/grill-to-tickets.md) |
 | `opencode-implement` | Turn a directory of grill-to-tickets tickets into working code on a resolved, pinned hosted opencode model by planning execution waves, dispatching one headless opencode run worker per ticket in parallel within each wave up to a concurrency cap, forcing test-first implementation, verifying every result, automatically routing to a native-subagent fallback for any ticket the resolved model cannot deliver, integrating one commit per ticket onto a branch, and stopping before review. | [คู่มือ / Guide](agents/opencode-implement.md) |
+| `retro-to-remedies` | Review a finished Run's primary sources to classify misses into environment remedies, commit applied text remedies, record outcomes in the Retro Log, and hand off code remedies before pr-to-dev. | [คู่มือ / Guide](agents/retro-to-remedies.md) |
 | `review-to-pr` | Pick up a verified-but-unreviewed integration branch where implement, agy-implement, or subagent-implement stopped and drive it to a PR-ready state — pin a review point, run a bounded two-axis code-review loop, cluster the blockers and land each as one fix(review) commit, run a conditional system scrutinize gate, get the full suite green, then hand off the PR command without opening the PR. | [คู่มือ / Guide](agents/review-to-pr.md) |
 | `subagent-implement` | Turn a directory of grill-to-tickets tickets into working code without spending the main agent's context on implementation — plan the dependency order, dispatch one native harness subagent per ticket to build it test-first in an isolated worktree, have a fresh verifier subagent reproduce the red state and run the suite, judge the two reports, integrate one commit per ticket onto a branch, and stop before review. | [คู่มือ / Guide](agents/subagent-implement.md) |
 
@@ -36,6 +37,7 @@ npx skills add ArrayaWongsaita/skills \
   --skill engineering-workflow \
   --skill grill-to-tickets \
   --skill opencode-implement \
+  --skill retro-to-remedies \
   --skill review-to-pr \
   --skill subagent-implement
 ```

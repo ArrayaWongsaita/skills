@@ -1,6 +1,0 @@
-interface:
-  display_name: "Review To PR"
-  short_description: "Drive a verified-but-unreviewed integration branch to PR-ready — pin a review point, loop two-axis code-review, fix blockers, conditional scrutinize, green suite, hand off"
-  default_prompt: "Use $review-to-pr from the integration branch to pin the review point, run the two-axis code-review loop, land one fix(review) commit per blocker cluster, run the conditional system scrutinize gate, green the full suite, and hand off the PR command without opening the PR: [ref|slug]."
-policy:
-  allow_implicit_invocation: false

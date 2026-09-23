@@ -129,7 +129,11 @@ subagent call and
 [references/prompt-scaffold.md](references/prompt-scaffold.md) for the worker
 prompt. Write the self-contained prompt to `.scratch/<slug>/prompts/<NN>.md`,
 then dispatch one subagent with `isolation: "worktree"` against a worker branch
-`subagent-implement/<feature-slug>/<NN>` cut from integration `HEAD`.
+`subagent-implement/<feature-slug>/<NN>` cut from integration `HEAD`. The
+prompt carries the ticket's `**Reuse:**` line verbatim and, when the project has
+a Reuse Catalog (`docs/reuse-catalog.md`), a read-only pointer to it for any
+helper the ticket did not plan; a Reuse line with any verb other than `use` also
+names the spec's Reuse Plan among the worker's sections.
 
 The worker builds the ticket test-first, commits on its worker branch, and ends
 its final message with the required return: the red output, the green output, the
@@ -173,8 +177,14 @@ check.
 Follow
 [references/verification-and-integration.md](references/verification-and-integration.md):
 squash-merge the verified worker branch onto the integration branch as exactly
-one commit named for the ticket, ticking that ticket file's acceptance checkboxes
-and setting its `Status:`. A mechanical conflict (import ordering, adjacent
+one commit named for the ticket, then tick that ticket file's acceptance checkboxes
+and set its `Status:` — on disk when `.scratch/` is git-ignored, inside the same
+commit when the ticket file is tracked. The commit carries the ticket's Reuse Catalog
+entries: for each `create-shared`, `create-candidate`, `extend`, or `promote` in
+its Reuse line, the orchestrator greps the symbol in the worker's changed files
+for its path, takes the use-when from the spec's Reuse Plan, and writes the
+entry — no code read, no entry for a symbol that is not there, nothing at all
+when the project has no catalog. A mechanical conflict (import ordering, adjacent
 edits, a moved block) the orchestrator resolves itself; a conflict that encodes a
 design decision (which module owns a shared contract, which schema shape wins)
 halts the run and surfaces the decision — the affected ticket returns to Stage 0.
@@ -229,7 +239,8 @@ request.
   design-encoding conflict is surfaced, and a ticket no worker can complete
   within its retry budget becomes `BLOCKED` and waits for a human.
 - The orchestrator's own steps stay text-only — parse tickets, build the DAG,
-  write prompts, read the two reports, judge, squash-merge, write `status.md`.
+  write prompts, read the two reports, judge, squash-merge, update the Reuse
+  Catalog from text, write `status.md`.
   Reading ticket implementation files, running tests, and running the suite
   happen inside subagents.
 - Workers commit only on their own worker branch; the orchestrator commits only

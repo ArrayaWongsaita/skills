@@ -311,6 +311,43 @@
         "Names the decomposition problem for the user to resolve"
       ],
       "files": []
+    },
+    {
+      "id": 25,
+      "name": "parallel wave-mates read the catalog while the orchestrator writes it serially",
+      "prompt": "/agy-implement .scratch/report-export/ — wave 1 runs tickets 02 and 03 in parallel. Ticket 02's Reuse line is create-shared `buildReportRows`; ticket 03's is create-candidate `downloadBlob`. The project has docs/reuse-catalog.md.",
+      "expected_output": "Both worker prompts carry their Reuse lines verbatim, the read-only Reuse Catalog line, and the spec's Reuse Plan section. Neither worker writes the catalog. At the wave's integration gate the orchestrator squash-merges 02 then 03; inside 02's commit it adds the Shared entry for buildReportRows and inside 03's commit the Candidates entry for downloadBlob (from: report-export) — one entry per ticket commit, written serially, paths from a grep of each worker's changed files.",
+      "expectations": [
+        "Gives both parallel workers the read-only catalog pointer and their Reuse lines",
+        "Writes the catalog only from the orchestrator, during the serial squash-merges",
+        "Puts each entry in its own ticket's commit, in ascending ticket order",
+        "Derives each path from a grep of that worker's changed files"
+      ],
+      "files": []
+    },
+    {
+      "id": 26,
+      "name": "consumer in a later wave gets use for the owner's shared module",
+      "prompt": "$agy-implement .scratch/report-export/ — ticket 02 (wave 0) is create-shared `buildReportRows`; ticket 04 (wave 1, Blocked by: 02) has Reuse line use `buildReportRows`. Show ticket 04's worker prompt Context you need section.",
+      "expected_output": "Ticket 04's prompt carries `Reuse: use `buildReportRows`` verbatim and the Reuse Catalog line — by then the catalog already lists buildReportRows from ticket 02's integration commit. Because the line is use-only, the Reuse Plan is not among the named spec sections.",
+      "expectations": [
+        "Copies ticket 04's use line verbatim into the prompt",
+        "Relies on the entry ticket 02's integration commit already wrote",
+        "Omits the Reuse Plan section for a use-only line"
+      ],
+      "files": []
+    },
+    {
+      "id": 27,
+      "name": "no catalog means no catalog step in any wave",
+      "prompt": "/agy-implement .scratch/legacy-app/ in a project with no docs/reuse-catalog.md.",
+      "expected_output": "Prompts carry the ticket's Reuse line (or `none`) and no Reuse Catalog line; the integration gate performs no catalog step. The run otherwise behaves exactly as without the catalog.",
+      "expectations": [
+        "Omits the Reuse Catalog line from every prompt",
+        "Writes `none` for a ticket without a Reuse field",
+        "Performs no catalog step at any integration gate"
+      ],
+      "files": []
     }
   ]
 }

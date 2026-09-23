@@ -119,7 +119,11 @@ Follow [references/agy-contract.md](references/agy-contract.md) for the exact
 `agy` invocation and [references/prompt-scaffold.md](references/prompt-scaffold.md)
 for the worker prompt. Cut the ticket's worktree and worker branch from
 integration `HEAD`, write the self-contained prompt to
-`.scratch/<slug>/prompts/<NN>.md`, and dispatch `agy` against that worktree.
+`.scratch/<slug>/prompts/<NN>.md`, and dispatch `agy` against that worktree. The
+prompt carries the ticket's `**Reuse:**` line verbatim and, when the project has
+a Reuse Catalog (`docs/reuse-catalog.md`), a read-only pointer to it for any
+helper the ticket did not plan; a Reuse line with any verb other than `use` also
+names the spec's Reuse Plan among the worker's sections.
 
 The worker builds the ticket test-first and commits on its own worker branch.
 Model is assigned at dispatch time by round-robin over dispatch order (see
@@ -159,10 +163,18 @@ verification attempts.
 
 Follow [references/worktree-integration.md](references/worktree-integration.md):
 squash-merge each verified worker branch into the integration branch as one
-commit in ascending ticket-number order (ticking that ticket's checkboxes and
-setting its `Status:`), resolve a mechanical conflict and surface a
+commit in ascending ticket-number order (then ticking that ticket's checkboxes and
+setting its `Status:` — on disk when `.scratch/` is git-ignored, inside the commit
+when the ticket file is tracked), resolve a mechanical conflict and surface a
 design-encoding one, then run the full typecheck and test suite on the
-integrated result before advancing.
+integrated result before advancing. Each ticket's squash commit also carries
+its Reuse Catalog entries: for each `create-shared`, `create-candidate`,
+`extend`, or `promote` in its Reuse line, the orchestrator greps the symbol in
+the worker's changed files for its path, takes the use-when from the spec's
+Reuse Plan, and writes the entry — serially, in ticket order, so the
+orchestrator is the catalog's only writer while parallel wave-mates only read
+it; no entry for a symbol that is not there; nothing at all when the project has
+no catalog.
 
 ## State, failure, and resume
 

@@ -47,7 +47,7 @@
 - [references/workflow.md](../../../skills/git/pr-to-dev/references/workflow.md) — exceptional state evidence, resume และ recovery
 - [references/conflict-resolution.md](../../../skills/git/pr-to-dev/references/conflict-resolution.md) — conflict taxonomy และ safe gate
 - [references/validation-strategy.md](../../../skills/git/pr-to-dev/references/validation-strategy.md) — validation, monorepo, lockfile, generated files
-- [references/pr-template.md](../../../skills/git/pr-to-dev/references/pr-template.md) — PR template และ truthfulness rules
+- [references/pr-template.md](../../../skills/git/pr-to-dev/references/pr-template.md) — PR body ที่ขึ้นต้นด้วย Summary, Evidence (before/after) และ Merge Danger (one-way/two-way door, blast radius) พร้อม truthfulness rules
 - [evals/evals.json](../../../skills/git/pr-to-dev/evals/evals.json) — 19 scenario checks
 
 ## English / ภาษาอังกฤษ
@@ -96,5 +96,5 @@ Hard boundaries include no normal commits on dev/main/master, origin/dev as the 
 - [references/commit-convention.md](../../../skills/git/pr-to-dev/references/commit-convention.md) — semantic commit messages
 - [references/conflict-resolution.md](../../../skills/git/pr-to-dev/references/conflict-resolution.md) — conflict risk and safe resolution
 - [references/validation-strategy.md](../../../skills/git/pr-to-dev/references/validation-strategy.md) — validation and repository variants
-- [references/pr-template.md](../../../skills/git/pr-to-dev/references/pr-template.md) — PR body and template handling
+- [references/pr-template.md](../../../skills/git/pr-to-dev/references/pr-template.md) — PR body led by Summary, Evidence (before/after), and Merge Danger (one-way/two-way door, blast radius), plus template handling
 - [evals/evals.json](../../../skills/git/pr-to-dev/evals/evals.json) — 19 scenario checks

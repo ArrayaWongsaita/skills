@@ -184,3 +184,9 @@ You can also run the validator directly with `node scripts/validate-skills.mjs`.
 3. Run `npm run docs:index`.
 4. Run `npm test` and `npm run validate`.
 5. Review the diff for secrets, machine-specific values, stale links, and inaccurate install commands.
+
+## Git guardrail / ด่านกัน git อันตราย
+
+`.claude/hooks/block-dangerous-git.mjs` runs before every Bash command Claude Code executes in this repo and blocks the git actions `pr-to-dev` forbids: `reset --hard`, `clean -f`, force pushes without an exact-SHA lease, pushing to or committing on `main`/`master`/`dev`, `branch -D`, repository-wide `checkout .` / `restore .` / `--ours .` / `--theirs .`, and `stash drop` / `stash clear`. Every rule has a case in `tests/git-guardrail-hook.test.mjs`; change a rule and its case together. When one of these actions is genuinely needed, run it yourself with `! <command>`.
+
+hook นี้บล็อกคำสั่ง git อันตรายของ agent ใน repo นี้ ถ้าจำเป็นต้องใช้จริงให้รันเองด้วย `! <command>`

@@ -137,18 +137,18 @@ verification/state machinery, no dependency on the sibling skills, stopping
 before review), and it keeps its one differentiator the hosted-model
 siblings still lack — the automatic native-subagent fallback tier (feature
 ADR 0007, amended, not reversed, by
-[`adr/0003-fallback-tier-retained.md`](../../.scratch/opencode-implement-hosted-model/adr/0003-fallback-tier-retained.md)).
+`adr/0003-fallback-tier-retained.md` in the local `.scratch/opencode-implement-hosted-model/` notes).
 What changes is only *why* the skill is standalone: no longer "runs on a
 local model," but "resolves and pins exactly one hosted model per run, with
 `opencode` (not `agy`) as its delegate CLI and a fallback tier `agy-implement`
 does not have."
 
-See
-[`.scratch/opencode-implement-hosted-model/adr/0001-hosted-only.md`](../../.scratch/opencode-implement-hosted-model/adr/0001-hosted-only.md)
-for the decision record and
-[`.scratch/opencode-implement-hosted-model/spec.md`](../../.scratch/opencode-implement-hosted-model/spec.md)
-for the full migration spec. The original text above is left as a historical
-record and is not rewritten.
+See the local notes `.scratch/opencode-implement-hosted-model/adr/0001-hosted-only.md`
+for the decision record and `.scratch/opencode-implement-hosted-model/spec.md`
+for the full migration spec. `.scratch/` is ignored by version control
+([ADR 0011](0011-keep-planning-notes-and-installed-skills-local.md)), so those
+notes exist only in the author's checkout. The original text above is left as a
+historical record and is not rewritten.
 
 การตัดสินใจเดิมด้านบนอธิบาย `opencode-implement` แบบที่ปล่อยครั้งแรก — รันบน local
 model (Ollama) ฟรีและเป็นส่วนตัว ผู้ใช้เลิกใช้ local model ใน `opencode` แล้วย้ายไปใช้

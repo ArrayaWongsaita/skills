@@ -484,6 +484,56 @@
         "Does not let the flags change the stage flow or the budgets"
       ],
       "files": []
+    },
+    {
+      "id": 39,
+      "name": "duplicate of a catalogued module is a Standards-axis blocker",
+      "prompt": "/review-to-pr on subagent-implement/invoice-pdf. The diff adds `formatInvoiceAmount` in src/features/invoices/format.ts, which formats currency the same way; docs/reuse-catalog.md lists `formatCurrency` — `src/lib/money.ts` — use for: every price display, and its Rules say \"Format money with `formatCurrency`\".",
+      "expected_output": "The inline code-review names docs/reuse-catalog.md among the Standards axis's sources. The Standards axis reports formatInvoiceAmount as a documented-standard violation citing the catalog line and Rule. Normalization makes it a blocker — two currency formatters that can diverge is a concrete consequence — so it routes to Stage 2 like any other Standards blocker.",
+      "expectations": [
+        "Passes docs/reuse-catalog.md to the Standards axis as a standards source",
+        "Reports the duplicate as a documented-standard violation citing the catalog line",
+        "Normalizes it to a blocker because two formatters can diverge",
+        "Routes it to Stage 2 with code-review itself unchanged"
+      ],
+      "files": []
+    },
+    {
+      "id": 40,
+      "name": "no catalog leaves the review unchanged",
+      "prompt": "$review-to-pr on agy-implement/legacy-app in a repository with no docs/reuse-catalog.md.",
+      "expected_output": "The Standards axis runs with the repo's documented standards and the smell baseline only; no catalog source is named and no catalog finding can arise. The loop otherwise runs exactly as before.",
+      "expectations": [
+        "Names no catalog source when docs/reuse-catalog.md is absent",
+        "Runs the Standards axis on documented standards and the smell baseline only",
+        "Leaves the loop's routing unchanged"
+      ],
+      "files": []
+    },
+    {
+      "id": 41,
+      "name": "the clean handoff prints /retro-to-remedies on the line before /pr-to-dev",
+      "prompt": "/review-to-pr .scratch/handoff-demo/ — the code-review loop came back clean, the system gate was skipped as self-contained, and the full suite is green.",
+      "expected_output": "Stage 5 prints the handoff and ends with the two next commands in a fresh context: /retro-to-remedies on the line before /pr-to-dev. The run performs no PR step — no git push, no gh, no /pr-to-dev.",
+      "expectations": [
+        "Prints /retro-to-remedies on the line before /pr-to-dev",
+        "Keeps the run free of any PR step",
+        "Leaves both commands for the user to run by hand"
+      ],
+      "files": []
+    },
+    {
+      "id": 42,
+      "name": "the halt / partial report prints /retro-to-remedies after /review-to-pr continue",
+      "prompt": "/review-to-pr — the system scrutinize gate closed with a reject verdict and the run stopped for a human decision. review-status.md records stage 3.",
+      "expected_output": "The run prints the partial report instead of the clean handoff: the reject reason, the stage reached, the cycles spent, the fix(review): commits that did land, and the /review-to-pr continue command followed by /retro-to-remedies — finishing the Run stays the primary path.",
+      "expectations": [
+        "Prints the partial report rather than the clean handoff",
+        "Prints the /review-to-pr continue command first",
+        "Prints /retro-to-remedies after the /review-to-pr continue command",
+        "Performs no PR step"
+      ],
+      "files": []
     }
   ]
 }

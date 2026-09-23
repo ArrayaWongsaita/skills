@@ -66,7 +66,8 @@ or → `BLOCKED`). It holds:
   `attempts` (verification-failure retries against whichever path currently
   holds the ticket), `opencode_retries` (`opencode`-process-failure retries
   on the main path), `worker_branch`, `commit`, and `usage` (that ticket's
-  token usage on whichever path built it)
+  token usage on whichever path built it); plus a `catalog` note when a Reuse
+  Catalog entry was skipped because its symbol was not in the changed files
 - the **integration branch ref** (name and current commit)
 - **cumulative usage split by path** — `tokens.main` (the `opencode` path,
   real spend against the resolved model) and `tokens.fallback` (the native
@@ -114,6 +115,8 @@ integration model:
    hand-edited the tree, or a later change broke it:
    - reset the integration branch to the **last still-verifying commit**
    - discard the worktrees for the invalidated tickets
+   - re-open each invalidated ticket file — a tracked one comes back with the
+     reset; on a git-ignored one, un-tick its checkboxes and reset its `Status:`
    - list the **discarded commits** at the top of the report, so the blast
      radius is visible
    - re-dispatch from that point

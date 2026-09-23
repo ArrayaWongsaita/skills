@@ -5,13 +5,13 @@
       "id": 1,
       "name": "first-pass SHIP straight through the stages",
       "prompt": "/grill-to-tickets Add a \"copy shareable link\" button to the report detail page that copies the report's existing public URL to the clipboard and shows a confirmation toast. One component, no API or schema change, acceptance behavior is explicit, and no open decisions remain — treat the Stage 0 frontier as empty and already confirmed.",
-      "expected_output": "With the Stage 0 frontier already empty and confirmed, pass straight through: synthesize spec.md with to-spec (Stage 1), run scrutinize once (Stage 2), normalize its closing line to SHIP, and advance to Stage 3 to-tickets. Publish tickets under .scratch/<feature-slug>/issues/ and print the /clear then /implement handoff.",
+      "expected_output": "With the Stage 0 frontier already empty and confirmed, pass straight through: synthesize spec.md with to-spec (Stage 1), run scrutinize once in a fresh reviewer subagent (Stage 2), normalize its closing line to SHIP, and advance to Stage 3 to-tickets. Publish tickets under .scratch/<feature-slug>/issues/ and print the handoff: .scratch/ needs no commit, commit any docs/reuse-catalog.md change, /clear, then /subagent-implement .scratch/<feature-slug>/.",
       "expectations": [
         "Confirms the empty Stage 0 frontier, then moves through Stage 1 -> Stage 2 -> Stage 3 in order",
         "Runs scrutinize exactly once and records cycle 1 with verdict SHIP in a single .scratch/<feature-slug>/design-review.md file",
         "Normalizes the scrutinize verdict to the token SHIP with no paraphrasing",
         "Does not enter FIX_THEN_SHIP, REWORK, or a backward transition to Stage 0",
-        "Prints the /clear then /implement <first ticket> handoff and never invokes the implement skill or spawns a stage subagent"
+        "Prints the handoff — .scratch/ needs no commit, commit any catalog change, /clear, then /subagent-implement .scratch/<feature-slug>/ — never invokes an implementer, and dispatches a subagent only for the Stage 2 review"
       ],
       "files": []
     },
@@ -31,8 +31,8 @@
     {
       "id": 3,
       "name": "spec-level REWORK re-runs to-spec inside the gate",
-      "prompt": "$grill-to-tickets continue wishlist-sync. This is gate cycle 2. Stage 2 scrutinize closes with rework: the empty-state behavior was settled in Stage 0, but the spec never wrote it as a user story and the persistence seam is stated too vaguely to break into tickets. Every fact needed to fix it is already in the Stage 0 transcript.",
-      "expected_output": "Diagnose spec-level REWORK — a fresh writer holding the Stage 0 transcript could fix the spec with no new decision. Re-run to-spec inline with the finding as added context, consume one gate cycle, and re-review. Control stays in Stage 2 and the cycle counter is not reset.",
+      "prompt": "$grill-to-tickets continue wishlist-sync. This is gate cycle 2. Stage 2 scrutinize closes with rework: the empty-state behavior was settled in Stage 0, but the spec never wrote it as a user story and the persistence seam is stated too vaguely to break into tickets. Every fact needed to fix it is already recorded in decisions.md.",
+      "expected_output": "Diagnose spec-level REWORK — a fresh writer holding decisions.md could fix the spec with no new decision. Re-run to-spec inline with the finding as added context, consume one gate cycle, and re-review. Control stays in Stage 2 and the cycle counter is not reset.",
       "expectations": [
         "Records reworkKind: spec-level with reasoning that names the finding",
         "Re-runs to-spec inline rather than returning to Stage 0",
@@ -90,6 +90,322 @@
         "Reports budget exhaustion with the unresolved findings and the per-cycle history",
         "States that a fresh budget requires explicit human authorization",
         "Does not advance to Stage 3 ticket breakdown without a SHIP verdict"
+      ],
+      "files": []
+    },
+    {
+      "id": 8,
+      "name": "reuse survey bootstraps a missing catalog with a pointer line",
+      "prompt": "/grill-to-tickets Add CSV export to the orders list page. The project has no docs/reuse-catalog.md yet; an AGENTS.md exists at the repository root.",
+      "expected_output": "In Stage 0, after grounding, run the Reuse survey: with no catalog, survey the areas the idea touches (the orders feature and the shared-code locations) through a read-only fact-lookup subagent, create docs/reuse-catalog.md from the template filled with entries for existing reusable modules and a Coverage line dated today per surveyed area, add one pointer line to AGENTS.md, and list these catalog changes in the Stage 0 pause summary.",
+      "expectations": [
+        "Runs the Reuse survey in Stage 0 before the first grilling round",
+        "Creates docs/reuse-catalog.md from the template, with entries only for code that exists",
+        "Writes a Coverage line dated today for every surveyed area",
+        "Adds exactly one pointer line to AGENTS.md",
+        "Lists the catalog changes in the Stage 0 pause summary"
+      ],
+      "files": []
+    },
+    {
+      "id": 9,
+      "name": "reuse survey drift check removes a stale entry",
+      "prompt": "$grill-to-tickets Add a refund button to the order detail page. docs/reuse-catalog.md lists `formatMoney` — `src/lib/money.ts`, but that file now exports only `formatCurrency`, and nothing in the repository defines formatMoney any more. src/lib/ is in Coverage, and money.ts changed after its Coverage date.",
+      "expected_output": "The drift check greps formatMoney in src/lib/money.ts, finds it absent there and anywhere else in the repository, and removes the entry. Because money.ts changed since the src/lib/ Coverage date, the gap survey re-reads it, adds an entry for formatCurrency, and moves the src/lib/ Coverage date to today. The Stage 0 summary reports the removal and the addition.",
+      "expectations": [
+        "Removes the formatMoney entry after confirming the symbol is gone from the repository",
+        "Re-reads money.ts because it changed after the Coverage date, and adds a formatCurrency entry",
+        "Moves the src/lib/ Coverage date to today",
+        "Reports both catalog changes in the Stage 0 summary"
+      ],
+      "files": []
+    },
+    {
+      "id": 10,
+      "name": "reuse survey re-reads only files changed in a covered area",
+      "prompt": "/grill-to-tickets Add a date-range filter to the reports page. docs/reuse-catalog.md has Coverage `src/features/reports/` — surveyed 2026-09-01, and since then only src/features/reports/use-report-query.ts has changed in that area. src/components/filters/ is not in Coverage.",
+      "expected_output": "Decide the gaps: for the covered src/features/reports/, re-read only use-report-query.ts (the one file the Coverage git log returns); survey all of the uncovered src/components/filters/. Leave the unchanged covered files unread. Write back entries for what was found and set both areas' Coverage dates to today.",
+      "expectations": [
+        "Uses the Coverage date to limit src/features/reports/ to the changed file",
+        "Surveys the whole of the uncovered src/components/filters/",
+        "Leaves covered, unchanged files unread",
+        "Sets the Coverage date of both surveyed areas to today"
+      ],
+      "files": []
+    },
+    {
+      "id": 11,
+      "name": "extend-vs-new reuse choice becomes a grilling question",
+      "prompt": "/grill-to-tickets Add row selection with bulk delete to the users table. docs/reuse-catalog.md lists `DataTable` — `src/components/ui/data-table.tsx` — use for: sortable, paginated tables. DataTable has no selection support today.",
+      "expected_output": "The survey establishes the fact (DataTable exists, lacks selection). Whether to extend DataTable with selection or build a separate selectable table is a real choice, so it joins the grilling frontier as a numbered question with a recommended answer (extend DataTable, keeping existing callers unchanged) and waits for the user's decision.",
+      "expectations": [
+        "Treats DataTable's existence and lack of selection as facts, not questions",
+        "Asks extend-versus-new as a numbered frontier question with a recommended answer",
+        "Waits for the user's answer instead of deciding the reuse choice itself"
+      ],
+      "files": []
+    },
+    {
+      "id": 12,
+      "name": "reuse lens catches a duplicated catalogued module",
+      "prompt": "$grill-to-tickets continue invoice-pdf. Gate cycle 1: the spec's Reuse Plan lists create shared `formatInvoiceAmount(amount, currency)`, but docs/reuse-catalog.md already lists `formatCurrency` — `src/lib/money.ts` — use for: every price display.",
+      "expected_output": "The reuse lens records reuse-duplicate-formatInvoiceAmount. Normalize to FIX_THEN_SHIP, make the minimal spec edit — replace the create-shared entry with use as-is `formatCurrency` and drop the new module — consume one cycle, and re-review within Stage 2.",
+      "expectations": [
+        "Records the finding with the stable id reuse-duplicate-formatInvoiceAmount",
+        "Normalizes the verdict to FIX_THEN_SHIP",
+        "Edits the Reuse Plan in spec.md to use formatCurrency instead of creating a new module",
+        "Consumes one cycle and re-reviews without leaving Stage 2"
+      ],
+      "files": []
+    },
+    {
+      "id": 13,
+      "name": "reuse lens downgrades a speculative shared module to a candidate",
+      "prompt": "/grill-to-tickets continue team-invites. Gate cycle 2: the Reuse Plan lists create shared `parseInviteToken(token)` with a single consumer, story 4, and nobody confirmed any upcoming feature that would use it.",
+      "expected_output": "The reuse lens records reuse-speculative-parseInviteToken: a create-shared entry below the create-shared bar (one consumer, no confirmed upcoming consumer). Normalize to FIX_THEN_SHIP and downgrade the entry to create candidate with a feature-agnostic interface and its plausible second use; consume one cycle and re-review.",
+      "expectations": [
+        "Records the finding with the stable id reuse-speculative-parseInviteToken",
+        "Applies the create-shared bar: one consumer and no user-confirmed upcoming feature",
+        "Downgrades the entry to create candidate rather than deleting it",
+        "Normalizes to FIX_THEN_SHIP and stays in Stage 2"
+      ],
+      "files": []
+    },
+    {
+      "id": 14,
+      "name": "undecided extend-vs-new is decision-level REWORK",
+      "prompt": "$grill-to-tickets continue audit-log-view. Gate cycle 1: the spec extends `DataTable` with virtualized scrolling for 100k-row audit logs, but Stage 0 never settled whether to extend DataTable — used by 14 existing screens — or build a separate virtualized table. The survey only recorded that DataTable exists and has no virtualization.",
+      "expected_output": "The reuse lens records reuse-undecided-DataTable. A fresh writer holding decisions.md could not resolve extend-versus-new without asking, so it is decision-level REWORK: return to Stage 0, put that one question to the user with a recommended answer and log it in decisions.md as a re-grill round, then re-run to-spec and re-review, carrying the cycle counter over.",
+      "expectations": [
+        "Records the finding with the stable id reuse-undecided-DataTable",
+        "Diagnoses decision-level REWORK with reasoning that the trade-off was never decided",
+        "Returns to Stage 0 for that single question and asks it with a recommended answer",
+        "Carries the cycle counter over the transition"
+      ],
+      "files": []
+    },
+    {
+      "id": 15,
+      "name": "shared module gets one owner ticket and its consumers are blocked by it",
+      "prompt": "/grill-to-tickets continue report-export. The gate returned SHIP. The Reuse Plan lists create shared `buildReportRows(report, filters)` with consumers story 2 (Excel export) and story 5 (CSV export), and use as-is `formatCurrency`.",
+      "expected_output": "Break the spec into vertical slices: the Excel export ticket is the owner of buildReportRows (its acceptance criteria cover buildReportRows' behaviour at its interface), and the CSV export ticket lists the Excel ticket in Blocked by. Each ticket carries a Reuse line after Blocked by — the owner: create-shared `buildReportRows` · use `formatCurrency`; the consumer: use `buildReportRows` · use `formatCurrency`. No separate utils ticket. Each ticket also carries a Stories line (the Excel ticket: 2; the CSV ticket: 5). The ticket checker passes before the quiz, and the quiz shows each Reuse line and the story-coverage table.",
+      "expectations": [
+        "Makes exactly one ticket the owner of buildReportRows, the first vertical slice that consumes it",
+        "Blocks the CSV export ticket on the owner ticket",
+        "Writes a Reuse line with fixed verbs after Blocked by on every ticket",
+        "Creates no horizontal utils ticket",
+        "Shows the Reuse lines in the quiz"
+      ],
+      "files": []
+    },
+    {
+      "id": 16,
+      "name": "reuse statement drafted as a checkbox moves to the Reuse field",
+      "prompt": "$grill-to-tickets continue invoice-pdf. The draft ticket 02 has an acceptance checkbox \"- [ ] Formats amounts with the existing formatCurrency\" and no Reuse line.",
+      "expected_output": "The check before the quiz finds a reuse statement among the acceptance criteria. Move it to the ticket's Reuse field (**Reuse:** use `formatCurrency`) and remove the checkbox, because the implementers' verification gates map every acceptance criterion to a new test and a structural 'uses X' claim has none.",
+      "expectations": [
+        "Removes the reuse statement from the acceptance criteria",
+        "Adds **Reuse:** use `formatCurrency` after Blocked by",
+        "Explains that every acceptance criterion must map to a new test in the implementers' verification gates"
+      ],
+      "files": []
+    },
+    {
+      "id": 17,
+      "name": "decision log records each round before the next is asked",
+      "prompt": "/grill-to-tickets Let team admins export the member list as CSV. The user has just answered round 1: Q1 (who may export) — admins only, as recommended; Q2 (which columns) — name, email, role, and joined date, overriding the recommended name-and-email.",
+      "expected_output": "Before posting round 2, fill in round 1 in .scratch/<feature-slug>/decisions.md: each question beside its recommended answer and the decided answer (Q2 records the override, with the user's reason when given). Then post round 2, appending its questions as decided: open and setting State to wait on round 2's answers.",
+      "expectations": [
+        "Records both round-1 answers in decisions.md, each beside its recommended answer",
+        "Writes the round-1 answers before posting round 2",
+        "Appends round 2's questions with decided: open when it posts them",
+        "Sets State's waiting on to round 2's answers",
+        "Keeps CONTEXT.md a glossary: the column choice goes to decisions.md, not CONTEXT.md"
+      ],
+      "files": []
+    },
+    {
+      "id": 18,
+      "name": "continue after /clear resumes from the decision log",
+      "prompt": "$grill-to-tickets continue member-export. The context was cleared mid-interview. .scratch/member-export/decisions.md has State 'stage: 0 — Grill', 'waiting on: answers to round 3'; rounds 1 and 2 are closed, and round 3 has two questions still decided: open. There is no spec.md yet.",
+      "expected_output": "Read decisions.md (State first), then CONTEXT.md and adr/. Resume in Stage 0 by re-posting round 3's two open questions with their recommended answers. Treat every decision in rounds 1 and 2 as settled and ask none of them again. Start no spec, and restart neither the survey nor the interview.",
+      "expectations": [
+        "Reads decisions.md State first and resumes in Stage 0",
+        "Re-posts exactly round 3's two open questions",
+        "Asks no question already decided in rounds 1 or 2",
+        "Starts neither Stage 1 nor a fresh interview"
+      ],
+      "files": []
+    },
+    {
+      "id": 19,
+      "name": "Stage 2 review runs in a fresh subagent from files alone",
+      "prompt": "$grill-to-tickets continue invoice-pdf. decisions.md State: 'stage: 1 — Spec', 'waiting on: nothing'. spec.md is written and the user has confirmed the test seams, so the Design Review Gate opens at cycle 1.",
+      "expected_output": "Dispatch a new subagent for cycle 1, briefed with paths only — spec.md, decisions.md, CONTEXT.md, and adr/ under .scratch/invoice-pdf/, the root CONTEXT.md and docs/adr/ if present, and docs/reuse-catalog.md — to run scrutinize's workflow on spec.md with the reuse lens, return every finding with an id and severity plus scrutinize's closing line, and edit no file. The main thread then normalizes the verdict, routes it, and writes cycle 1 with reviewer: subagent into design-review.md.",
+      "expectations": [
+        "Dispatches the review to a new subagent rather than running scrutinize in the main context",
+        "Briefs the reviewer with file paths, not a summary of the interview",
+        "Keeps the reviewer read-only: it returns findings and the closing line and edits no file",
+        "Normalizes the verdict and routes it on the main thread",
+        "Records reviewer: subagent for cycle 1 in design-review.md"
+      ],
+      "files": []
+    },
+    {
+      "id": 20,
+      "name": "second-cycle reviewer brief carries the previous findings' ids",
+      "prompt": "/grill-to-tickets continue wishlist-sync. Gate cycle 1 closed FIX_THEN_SHIP with blocking findings seam-vague-persistence and reuse-unowned-wishlist-merge; both fixes are applied to spec.md. Start cycle 2.",
+      "expected_output": "Dispatch a new subagent for cycle 2 (not the cycle-1 reviewer). Its brief adds the two previous blocking findings, one line each with its id, and asks the reviewer to report each as resolved or still present under the same id. From the returned ids the main thread fills resolvedFindings, newFindings, and repeatedFindings for cycle 2, which the stall rule reads.",
+      "expectations": [
+        "Uses a new reviewer subagent for cycle 2",
+        "Lists seam-vague-persistence and reuse-unowned-wishlist-merge with their ids in the brief",
+        "Asks the reviewer to reuse those ids for the same findings",
+        "Fills resolvedFindings / newFindings / repeatedFindings from the returned ids"
+      ],
+      "files": []
+    },
+    {
+      "id": 21,
+      "name": "FIX_THEN_SHIP sweeps every restatement of the fixed fact",
+      "prompt": "$grill-to-tickets continue hosted-model-pin. Gate cycle 1 closes fix-then-ship: Implementation Decisions says the worker model is resolved once at dispatch and pinned for every retry, but the reviewer traced the retry path and the Stage 0 decision (decisions.md R2 Q1) says a retry re-resolves the model. Further Notes and user story 12 both repeat the pinned-for-every-retry wording.",
+      "expected_output": "Normalize to FIX_THEN_SHIP and correct Implementation Decisions to the logged decision. Then sweep spec.md for the fact's key terms (pinned, retry, resolve) and align user story 12 and the Further Notes passage too, until a search for the old wording finds nothing. Record all three locations in the cycle's specEdits, consume one cycle, and re-review.",
+      "expectations": [
+        "Normalizes the verdict to FIX_THEN_SHIP and fixes Implementation Decisions",
+        "Searches spec.md for every other statement of the pinned-for-every-retry fact",
+        "Aligns user story 12 and the Further Notes passage with the fix",
+        "Records every changed location in specEdits for cycle 1",
+        "Consumes one cycle and re-reviews within Stage 2"
+      ],
+      "files": []
+    },
+    {
+      "id": 22,
+      "name": "blind-spot pass raises a missing category before the pause",
+      "prompt": "/grill-to-tickets continue member-export. The frontier just emptied. decisions.md settles who may export (admins), the columns, and CSV as the format. Nothing in the log, CONTEXT.md, or adr/ covers organisations with tens of thousands of members, what the admin sees when an export fails, or whether the export is audited. The feature is a web page with no external service.",
+      "expected_output": "Before pausing, run the blind-spot pass: mark all nine categories. Quality attributes (scale of large exports; auditing) and Edge cases and failure (failed export) are missing and would change the spec, so they become one final round of at most five questions with recommended answers, logged in decisions.md. Integrations is n/a with a reason. Gaps that would not change the spec become stated assumptions. Write the table under ## Blind-spot pass, then pause with a summary that shows the table and its assumptions.",
+      "expectations": [
+        "Marks all nine blind-spot categories before pausing",
+        "Asks about large-export scale and the failed-export behaviour in one final round of at most five questions, each with a recommended answer",
+        "Marks Integrations n/a with a one-line reason",
+        "Records gaps that would not change the spec as stated assumptions",
+        "Writes the table under ## Blind-spot pass in decisions.md and shows it, with the assumptions, in the pause summary"
+      ],
+      "files": []
+    },
+    {
+      "id": 23,
+      "name": "ticket checker catches a story with no ticket before the quiz",
+      "prompt": "$grill-to-tickets continue member-export. The gate returned SHIP. spec.md has user stories 1-6; the drafted tickets under .scratch/member-export/issues/ are 01 (Stories: 1, 2), 02 (Stories: 3, 4, Blocked by: 01), and 03 (Stories: 6, Blocked by: 04).",
+      "expected_output": "Run node <skill-dir>/scripts/check-tickets.mjs .scratch/member-export/ before the quiz. It fails with two errors: story 5 has no ticket, and ticket 03 is blocked by 04, which does not exist. Fix both — cover story 5 in a ticket or a new slice, and correct 03's blocker — re-run the checker until it prints result: PASS, then quiz the user with each ticket's Reuse field and the checker's story-coverage table.",
+      "expectations": [
+        "Runs scripts/check-tickets.mjs on the feature directory before presenting the quiz",
+        "Reports that story 5 has no ticket and that ticket 03's blocker 04 does not exist",
+        "Fixes both problems and re-runs the checker until it prints result: PASS",
+        "Shows the checker's story-coverage table in the quiz"
+      ],
+      "files": []
+    },
+    {
+      "id": 24,
+      "name": "quality: interview asks decisions and looks facts up itself",
+      "prompt": "/grill-to-tickets Add a dark-mode toggle to the settings page. The repository already configures Tailwind with darkMode: 'class', has a ThemeProvider in src/providers/theme.tsx, and stores user preferences through the existing PreferencesStore.",
+      "expected_output": "Establish the facts by inspecting the repository — Tailwind's class strategy, the ThemeProvider, and PreferencesStore — and state them rather than asking. Round 1 holds only decisions with recommended answers, such as the default theme (follow the system setting or light) and whether the choice persists per account or per device.",
+      "expectations": [
+        "Asks the user no question the repository answers (Tailwind setup, ThemeProvider, PreferencesStore)",
+        "States the facts it found before or alongside round 1",
+        "Asks only decisions, each numbered with a recommended answer",
+        "Logs round 1 in decisions.md"
+      ],
+      "files": []
+    },
+    {
+      "id": 25,
+      "name": "quality: spec carries every logged decision",
+      "prompt": "$grill-to-tickets continue member-export. Stage 1: spec.md is drafted. decisions.md holds nine decisions; R3 Q2 settled that one export is capped at 50,000 rows with a message telling the admin to filter, and the blind-spot table carries the assumption that the existing toast reports failures. The draft spec mentions neither.",
+      "expected_output": "Check every decision and assumption in decisions.md against the draft before leaving Stage 1. Add the 50,000-row cap as an implementation decision with a user story (or testing decision) for the filter message, and the toast assumption to Further Notes. Stage 1 is not done until every logged decision and assumption appears in the spec.",
+      "expectations": [
+        "Walks decisions.md entry by entry against spec.md",
+        "Adds the 50,000-row cap and its filter message to the spec",
+        "Adds the toast assumption to Further Notes",
+        "Moves to Stage 2 only after every logged decision and assumption appears in the spec"
+      ],
+      "files": []
+    },
+    {
+      "id": 26,
+      "name": "quality: tickets are vertical slices, not layers",
+      "prompt": "/grill-to-tickets continue member-export. The gate returned SHIP. The first draft breakdown is 01 database query, 02 export API endpoint, 03 export button UI, 04 tests.",
+      "expected_output": "Reject the layered draft: each ticket must cut a narrow path through every layer (query, API, UI, and tests) and be demoable on its own. Re-slice into tracer bullets — for example, a minimal end-to-end CSV export of names first, then the remaining columns, then the 50,000-row cap — each with its own tests, Stories, Reuse, and blocking edges, then run the ticket checker and quiz.",
+      "expectations": [
+        "Identifies the draft as horizontal layers rather than vertical slices",
+        "Re-slices so every ticket crosses query, API, UI, and tests",
+        "Makes each ticket demoable or verifiable on its own",
+        "Keeps tests inside each slice instead of in a separate tests ticket"
+      ],
+      "files": []
+    },
+    {
+      "id": 27,
+      "name": "reviewer finding already settled in decisions.md is spec-level REWORK",
+      "prompt": "$grill-to-tickets continue member-export. Gate cycle 1: the fresh reviewer closes with rework, finding that the spec never says who may export. decisions.md R1 Q1 settled it: admins only.",
+      "expected_output": "Diagnose spec-level REWORK: the decision exists in decisions.md, so a fresh writer holding the log could fix the spec without asking anyone. Re-run to-spec with the finding and R1 Q1 as added context, consume one cycle, and re-review within Stage 2. Returning to Stage 0 would re-ask a settled question.",
+      "expectations": [
+        "Records reworkKind: spec-level, citing decisions.md R1 Q1 in the reasoning",
+        "Re-runs to-spec rather than returning to Stage 0",
+        "Asks the user nothing about who may export",
+        "Consumes one cycle and re-reviews within Stage 2"
+      ],
+      "files": []
+    },
+    {
+      "id": 28,
+      "name": "preflight stops when a stage skill is missing",
+      "prompt": "/grill-to-tickets Add CSV export to the orders list page. grilling, domain-modeling, to-spec, and to-tickets are installed under .agents/skills/, but scrutinize exists in none of .agents/skills/, .claude/skills/, ~/.agents/skills/, or ~/.claude/skills/.",
+      "expected_output": "Preflight finds four of the five stage skills and stops before Stage 0: it names scrutinize as missing, prints only its install line (npx skills add thananon/9arm-skills --skill scrutinize), and waits for the user. It creates no .scratch/<feature-slug>/ and asks no grilling question.",
+      "expectations": [
+        "Checks all four locations for each of the five stage skills before Stage 0",
+        "Names scrutinize as the missing skill",
+        "Prints npx skills add thananon/9arm-skills --skill scrutinize and no install line for the skills that exist",
+        "Starts neither the Reuse survey nor the interview, and creates no .scratch/<feature-slug>/"
+      ],
+      "files": []
+    },
+    {
+      "id": 29,
+      "name": "preflight uses a globally installed stage skill",
+      "prompt": "$grill-to-tickets Add row selection to the users table. to-spec and to-tickets are under .agents/skills/; grilling, domain-modeling, and scrutinize exist only under ~/.agents/skills/.",
+      "expected_output": "Preflight resolves to-spec and to-tickets from .agents/skills/ and the other three from ~/.agents/skills/, reports nothing missing, and starts Stage 0, reading each stage skill from the path it found.",
+      "expectations": [
+        "Finds grilling, domain-modeling, and scrutinize under ~/.agents/skills/",
+        "Reports no missing skill and prints no install line",
+        "Proceeds into Stage 0, reading each stage skill from its resolved path"
+      ],
+      "files": []
+    },
+    {
+      "id": 30,
+      "name": "local files replace the stage skills' tracker steps",
+      "prompt": "/grill-to-tickets continue member-export. Stage 1 starts. The project has no issue tracker configured and nobody has run /setup-matt-pocock-skills; to-spec's own instructions say to publish the spec to the issue tracker with the ready-for-agent label.",
+      "expected_output": "Treat this skill's local files as the tracker: write the spec to .scratch/member-export/spec.md, apply no label, publish nothing, and continue Stage 1 without sending the user to /setup-matt-pocock-skills.",
+      "expectations": [
+        "Writes the spec to .scratch/member-export/spec.md",
+        "Publishes nothing to an issue tracker and applies no label",
+        "Does not tell the user to run /setup-matt-pocock-skills",
+        "Continues Stage 1 (test seams) without pausing for tracker setup"
+      ],
+      "files": []
+    },
+    {
+      "id": 31,
+      "name": "a repo that does not ignore .scratch gets a local exclude, not a commit",
+      "prompt": "/grill-to-tickets Add saved filters to the orders list page. The repository is a git repo whose .gitignore does not mention .scratch/, and it has no .scratch/ directory yet.",
+      "expected_output": "Before the first write, `git check-ignore -q .scratch/` exits non-zero, so the skill appends `.scratch/` to the file `git rev-parse --git-path info/exclude` prints, tells the user, and edits no tracked file. It creates .scratch/<feature-slug>/ afterwards. The handoff asks for no commit of .scratch/, so the implementers meet a clean working tree.",
+      "expectations": [
+        "Runs git check-ignore -q .scratch/ before writing anything under .scratch/",
+        "Appends .scratch/ to the local git exclude file rather than editing .gitignore",
+        "Tells the user it added the local exclude",
+        "Edits no tracked file and makes no commit",
+        "Prints a handoff that does not ask to commit .scratch/"
       ],
       "files": []
     }

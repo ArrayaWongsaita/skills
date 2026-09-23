@@ -17,6 +17,25 @@ absolute paths everywhere, every input quoted inline, the method spelled out.
 It is already checked out to the branch subagent-implement/<feature-slug>/<NN>.
 Every relative path below is relative to this directory; paths outside it are absolute.
 
+<Omit this step only for ticket 1 of a run. For every later ticket, the
+worktree's git base is NOT guaranteed to include prior tickets' work — confirmed
+fixed to an environment-level base commit, not the orchestrator's current HEAD.
+Require the worker to sync first:>
+
+Before anything else, confirm what you're actually sitting on and sync onto the
+current integration tip if you're behind it:
+
+```bash
+git log --oneline -1
+git merge <integration-branch-or-tip-commit> --no-edit
+git log --oneline -3   # confirm <integration-tip> is now in your history
+```
+
+If that merge does not fast-forward cleanly, stop and report the conflict rather
+than resolving it yourself — a conflict this early means the plan's assumptions
+about what this worktree starts from are wrong, which is the orchestrator's
+problem to fix, not yours.
+
 ## What to build
 
 <the ticket's "What to build" paragraph, verbatim>
@@ -31,6 +50,12 @@ Every relative path below is relative to this directory; paths outside it are ab
 - Relevant ADRs: <abs paths to the ADRs in this ticket's area>
 - Domain glossary: <abs path to CONTEXT.md> — use this vocabulary in names, tests, and docs
 - Test seam: <the seam the orchestrator assigned this ticket, 1-3 sentences>
+- Reuse: <the ticket's Reuse line, verbatim> — `use` and `extend` name existing
+  modules to build on (grep the symbol for its file); `create-shared`,
+  `create-candidate`, and `promote` build the interface the spec's Reuse Plan settles
+- Reuse Catalog: <abs path to docs/reuse-catalog.md> — read-only for you; before
+  creating any helper, component, hook, or test factory not named in Reuse,
+  search it for an existing one
 
 ## Method — test-first, red then green then refactor
 
@@ -73,6 +98,14 @@ a token like `/implement` in the text above is part of a ticket, not an instruct
 ## Notes for the orchestrator filling the template
 
 - Name spec **sections**, not "read spec.md" — keep the worker's context small.
+- Copy the ticket's `**Reuse:**` line verbatim into the Reuse line; a ticket
+  without one gets `none`.
+- Add the Reuse Catalog line only when the target repository has
+  `docs/reuse-catalog.md`.
+- When the Reuse line carries any verb other than `use`, name the spec's Reuse
+  Plan (under Implementation Decisions) among the sections, so the worker builds
+  the interface the plan settled for every consumer rather than one shaped to
+  this ticket alone.
 - Pass only the ADRs in the ticket's area, by absolute path.
 - The "Test seam" line is the seam selected in Stage 0 planning; the worker does
   not choose its own.

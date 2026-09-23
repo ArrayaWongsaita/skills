@@ -248,11 +248,11 @@
       "id": 20,
       "name": "a verified ticket is squash-merged as one commit in dependency order",
       "prompt": "/subagent-implement .scratch/merge-demo/ with an approved Plan. Ticket 01 passes the orchestrator's judgment.",
-      "expected_output": "The orchestrator squash-merges subagent-implement/merge-demo/01 onto the integration branch as exactly one commit named for the ticket, in ascending ticket-number order. The same commit ticks ticket 01's acceptance checkboxes and sets its Status to done. The worker's own commit count on its branch does not matter.",
+      "expected_output": "The orchestrator squash-merges subagent-implement/merge-demo/01 onto the integration branch as exactly one commit named for the ticket, in ascending ticket-number order. The orchestrator then ticks ticket 01's acceptance checkboxes and sets its Status to done — on disk when the ticket file is git-ignored, inside the same commit when it is tracked. The worker's own commit count on its branch does not matter.",
       "expectations": [
         "Squash-merges the worker branch as exactly one commit",
         "Names the commit for the ticket and merges in ascending ticket-number order",
-        "Ticks the ticket's acceptance checkboxes and sets its Status in the same commit",
+        "Ticks the ticket's acceptance checkboxes and sets its Status — on disk for a git-ignored ticket file, in the same commit for a tracked one",
         "Treats one commit per ticket as an integration property, not a worker rule"
       ],
       "files": []
@@ -406,6 +406,67 @@
         "Delegates implementation reading, test runs, and the suite to subagents",
         "Names the verifier-error fallback as the one exception",
         "Frames this division as the reason the skill exists"
+      ],
+      "files": []
+    },
+    {
+      "id": 33,
+      "name": "create-shared owner ticket adds its catalog entry in its own commit",
+      "prompt": "/subagent-implement .scratch/report-export/ with an approved Plan. Ticket 02's Reuse line is: create-shared `buildReportRows` · use `formatCurrency`. The project has docs/reuse-catalog.md. The worker's report lists src/features/reports/build-report-rows.ts among its changed implementation files, and the spec's Reuse Plan says buildReportRows is for turning a report into export rows.",
+      "expected_output": "Ticket 02's prompt copies the Reuse line verbatim, adds the read-only Reuse Catalog line, and names the spec's Reuse Plan among its sections. After verification, between git merge --squash and git commit, the orchestrator greps buildReportRows in the changed files, finds build-report-rows.ts, and adds a Shared entry with the Reuse Plan's use-when — in ticket 02's own commit, reading no code and leaving Coverage dates untouched.",
+      "expectations": [
+        "Copies the Reuse line verbatim and adds the Reuse Catalog line to the worker prompt",
+        "Names the spec's Reuse Plan among the worker's sections because the line has a create-shared verb",
+        "Writes the Shared entry inside ticket 02's squash commit, path from a grep and use-when from the Reuse Plan",
+        "Leaves Coverage dates untouched"
+      ],
+      "files": []
+    },
+    {
+      "id": 34,
+      "name": "promote moves a candidate entry to Shared",
+      "prompt": "$subagent-implement .scratch/team-invites/ — ticket 01 is a prefactor with Reuse line: promote `parseInviteToken`. The catalog lists parseInviteToken under Candidates at src/features/onboarding/parse-invite-token.ts; the worker moved it to src/lib/parse-invite-token.ts.",
+      "expected_output": "After ticket 01 verifies, the orchestrator greps parseInviteToken in the worker's changed files, finds src/lib/parse-invite-token.ts, and in ticket 01's squash commit moves the entry from Candidates to Shared with the new path.",
+      "expectations": [
+        "Greps the symbol to find its new path rather than reading code",
+        "Moves the entry from Candidates to Shared with the new path",
+        "Makes the change inside ticket 01's own commit"
+      ],
+      "files": []
+    },
+    {
+      "id": 35,
+      "name": "catalog entry skipped when the symbol is not in the changed files",
+      "prompt": "/subagent-implement .scratch/invoice-pdf/ — ticket 03's Reuse line says create-candidate `downloadBlob`, but grepping downloadBlob in the worker's reported changed files finds nothing (the worker named it saveBlob).",
+      "expected_output": "Write no catalog entry for downloadBlob, since the catalog lists only code that exists; record `catalog: downloadBlob not found in changed files` under ticket 03 in status.md. The ticket still integrates on its verification judgment alone.",
+      "expectations": [
+        "Writes no catalog entry for a symbol absent from the changed files",
+        "Notes the skipped entry under the ticket in status.md",
+        "Integrates the ticket on its verification judgment, not on the catalog step"
+      ],
+      "files": []
+    },
+    {
+      "id": 36,
+      "name": "project with no catalog runs every ticket as before",
+      "prompt": "/subagent-implement .scratch/legacy-app/ in a project with no docs/reuse-catalog.md; the tickets predate the Reuse field.",
+      "expected_output": "Worker prompts carry `Reuse: none` and no Reuse Catalog line; integration performs no catalog step. The run otherwise behaves exactly as without the catalog.",
+      "expectations": [
+        "Writes `none` into the prompt's Reuse line for tickets without a Reuse field",
+        "Omits the Reuse Catalog line from every prompt",
+        "Performs no catalog step at integration"
+      ],
+      "files": []
+    },
+    {
+      "id": 37,
+      "name": "use-only ticket prompt omits the Reuse Plan section",
+      "prompt": "$subagent-implement .scratch/report-export/ — ticket 03's Reuse line is: use `buildReportRows` · use `formatCurrency`. Show the worker prompt's Context you need section.",
+      "expected_output": "The Reuse line is copied verbatim and the Reuse Catalog line is present, but the spec sections named for the worker exclude the Reuse Plan, because every verb is `use` — the worker builds on existing modules and settles no interface.",
+      "expectations": [
+        "Copies the Reuse line verbatim",
+        "Keeps the Reuse Plan out of the named spec sections for a use-only line",
+        "Keeps the read-only Reuse Catalog line"
       ],
       "files": []
     }

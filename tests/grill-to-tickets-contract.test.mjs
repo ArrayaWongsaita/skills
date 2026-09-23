@@ -29,11 +29,10 @@ function localSkillLinks(markdown) {
 
 describe("grill-to-tickets composite skill contract", () => {
   const canonicalDir = "skills/agents/grill-to-tickets";
-  const mirrorDir = ".agents/skills/grill-to-tickets";
-  const skillDirs = [canonicalDir, mirrorDir];
+  const skillDirs = [canonicalDir];
   const skillFiles = skillDirs.map((dir) => path.resolve(dir, "SKILL.md"));
 
-  it("exists in the canonical and installed locations with valid frontmatter", async () => {
+  it("has valid frontmatter", async () => {
     for (const file of skillFiles) {
       await fileExists(file);
       const meta = parseFrontmatter(await readFile(file, "utf8"));
@@ -46,14 +45,7 @@ describe("grill-to-tickets composite skill contract", () => {
     }
   });
 
-  it("keeps the canonical and installed copies byte-identical", async () => {
-    const [canonical, mirror] = await Promise.all(
-      skillFiles.map((file) => readFile(file, "utf8")),
-    );
-    assert.equal(canonical, mirror);
-  });
-
-  it("inline-executes the five child skills and hands the tickets to a later /implement run", async () => {
+  it("inline-executes the five child skills and hands the tickets to a later implementer run", async () => {
     for (const file of skillFiles) {
       const content = await readFile(file, "utf8");
       assert.match(content, /inline/i, "must instruct inline execution");
@@ -62,8 +54,8 @@ describe("grill-to-tickets composite skill contract", () => {
       }
       assert.match(
         content,
-        /\/implement\b/,
-        "must hand the tickets to a later /implement run",
+        /\/subagent-implement\b/,
+        "must hand the ticket directory to a later implementer run",
       );
       assert.match(
         content,
@@ -100,6 +92,163 @@ describe("grill-to-tickets composite skill contract", () => {
       assert.match(content, /\.scratch\/<feature-slug>\/spec\.md/);
       assert.match(content, /\.scratch\/<feature-slug>\/design-review\.md/);
       assert.match(content, /\.scratch\/<feature-slug>\/issues\//);
+      assert.match(content, /\.scratch\/<feature-slug>\/decisions\.md/);
+    }
+  });
+
+  it("logs every decision to decisions.md and resumes a run from it", async () => {
+    for (const file of skillFiles) {
+      const content = await readFile(file, "utf8");
+      assert.match(content, /continue <feature-slug>/, "a resume invocation is documented");
+      assert.match(content, /\(references\/decision-log\.md\)/);
+      assert.match(content, /Stage 0[\s\S]*record each answer[\s\S]*before the next round[\s\S]*Stage 1/);
+      assert.match(content, /Stage 1[\s\S]*Synthesize `decisions\.md`[\s\S]*every decision in the log/);
+    }
+    for (const dir of skillDirs) {
+      const log = await readFile(path.resolve(dir, "references/decision-log.md"), "utf8");
+      assert.match(log, /^## State$/m, "the log carries run State");
+      assert.match(log, /waiting on/);
+      assert.match(log, /decided: open/);
+      assert.match(log, /before you post the next\s+round/);
+      assert.match(log, /^## Resume — `continue <feature-slug>`$/m);
+      assert.match(log, /cycle count from `design-review\.md`/, "one source of truth for the gate cycle count");
+
+      const gate = await readFile(path.resolve(dir, "references/design-review-gate.md"), "utf8");
+      assert.match(gate, /this finding and `decisions\.md` to a fresh writer/);
+      assert.doesNotMatch(gate, /transcript/i, "the REWORK test reads the log, not a transcript");
+    }
+  });
+
+  it("runs a Stage 0 Reuse survey against the project's Reuse Catalog", async () => {
+    for (const file of skillFiles) {
+      const content = await readFile(file, "utf8");
+      assert.match(content, /Stage 0[\s\S]*Reuse survey[\s\S]*Relentless interview/, "survey runs before the interview");
+      assert.match(content, /docs\/reuse-catalog\.md/);
+      assert.match(content, /drift-check/i);
+      assert.match(content, /Coverage/);
+      assert.match(content, /\(references\/reuse-pass\.md\)/);
+      assert.match(content, /catalog changes/i, "the Stage 0 pause reports catalog changes");
+    }
+    for (const dir of skillDirs) {
+      const pass = await readFile(path.resolve(dir, "references/reuse-pass.md"), "utf8");
+      assert.match(pass, /exists now/i, "catalog lists only code that exists");
+      assert.match(pass, /drift-check/i);
+      assert.match(pass, /git log --since=<date> --first-parent --diff-merges=first-parent --name-only/);
+      assert.match(pass, /Explore-type subagent/);
+      assert.match(pass, /Bootstrap/);
+      assert.match(pass, /AGENTS\.md[\s\S]{0,80}CLAUDE\.md/, "pointer goes to AGENTS.md, else CLAUDE.md");
+      assert.match(pass, /numbered question with a\s+recommended answer/);
+
+      const template = await readFile(path.resolve(dir, "references/reuse-catalog-template.md"), "utf8");
+      assert.match(template, /every line describes code that exists now/i);
+      assert.match(template, /- `symbol` — `path\/to\/file` — use for:/);
+      for (const heading of ["Where shared code lives", "Rules", "Shared", "Candidates", "Coverage"]) {
+        assert.match(template, new RegExp(`^## ${heading}$`, "m"), `template has ## ${heading}`);
+      }
+    }
+  });
+
+  it("writes a Reuse Plan in the spec and reviews it through the gate's reuse lens", async () => {
+    for (const file of skillFiles) {
+      const content = await readFile(file, "utf8");
+      assert.match(content, /Stage 1[\s\S]*### Reuse Plan[\s\S]*Stage 2/, "Stage 1 writes the Reuse Plan");
+      assert.match(content, /Stage 2[\s\S]*reuse lens/i, "Stage 2 applies the reuse lens");
+    }
+    for (const dir of skillDirs) {
+      const pass = await readFile(path.resolve(dir, "references/reuse-pass.md"), "utf8");
+      for (const category of [
+        "Use as-is",
+        "Extend",
+        "Create shared",
+        "Create candidate",
+        "Promote",
+        "Kept separate on purpose",
+      ]) {
+        assert.match(pass, new RegExp(`\\*\\*${category}\\*\\*`), `Reuse Plan category ${category}`);
+      }
+      assert.match(pass, /create-shared bar/i);
+      assert.match(pass, /two or more user stories/);
+      assert.match(pass, /confirmed in Stage 0 that a named upcoming feature/);
+      assert.match(pass, /designed for\s+extraction/i);
+
+      const gate = await readFile(path.resolve(dir, "references/design-review-gate.md"), "utf8");
+      assert.match(gate, /## Reuse lens/);
+      for (const id of ["reuse-duplicate-", "reuse-unowned-", "reuse-speculative-", "reuse-undecided-"]) {
+        assert.match(gate, new RegExp(id), `gate carries finding id ${id}`);
+      }
+      assert.match(gate, /reuse-duplicate-[^\n]*FIX_THEN_SHIP/);
+      assert.match(gate, /reuse-undecided-[^\n]*decision-level/);
+    }
+  });
+
+  it("runs a blind-spot pass over fixed categories before the Stage 0 pause", async () => {
+    for (const file of skillFiles) {
+      const content = await readFile(file, "utf8");
+      assert.match(content, /\*\*Blind-spot pass\.\*\*[\s\S]*\*\*Pause\.\*\*/, "the pass runs before the pause");
+      assert.match(content, /\(references\/blind-spot-pass\.md\)/);
+      assert.match(content, /blind-spot assumption appears in Further Notes/);
+    }
+    for (const dir of skillDirs) {
+      const pass = await readFile(path.resolve(dir, "references/blind-spot-pass.md"), "utf8");
+      for (const category of [
+        "Scope and behaviour",
+        "Domain and data",
+        "Interaction and flow",
+        "Quality attributes",
+        "Integrations",
+        "Edge cases and failure",
+        "Constraints and trade-offs",
+        "Terminology",
+        "Completion signals",
+      ]) {
+        assert.match(pass, new RegExp(`^\\| ${category} \\|`, "m"), `category ${category}`);
+      }
+      for (const mark of ["`clear`", "`partial`", "`missing`", "`n/a`"]) {
+        assert.ok(pass.includes(mark), `mark ${mark}`);
+      }
+      assert.match(pass, /at most five questions/);
+      assert.match(pass, /stated assumption/);
+      assert.match(pass, /## Blind-spot pass/);
+      assert.match(pass, /done when every category carries a mark/);
+    }
+  });
+
+  it("dispatches each Stage 2 review to a fresh, read-only reviewer", async () => {
+    for (const file of skillFiles) {
+      const content = await readFile(file, "utf8");
+      const stage2 = content.slice(content.indexOf("## Stage 2"), content.indexOf("## Stage 3"));
+      assert.match(stage2, /fresh reviewer subagent/);
+      assert.match(stage2, /edits nothing/);
+      assert.match(stage2, /\(references\/design-review-gate\.md\) — Reviewer/);
+      assert.match(content, /Stages 0, 1, and 3 run \*\*inline\*\*/);
+      assert.match(content, /Two steps dispatch a subagent/);
+    }
+    for (const dir of skillDirs) {
+      const gate = await readFile(path.resolve(dir, "references/design-review-gate.md"), "utf8");
+      const reviewer = gate.slice(gate.indexOf("## Reviewer"), gate.indexOf("## Verdict vocabulary"));
+      assert.ok(reviewer.startsWith("## Reviewer"), "the gate reference has a Reviewer section");
+      for (const brief of ["**Paths:**", "**Task:**", "**Prior findings,**", "**Return:**"]) {
+        assert.ok(reviewer.includes(brief), `the reviewer brief names ${brief}`);
+      }
+      assert.match(reviewer, /edits no file/);
+      assert.match(reviewer, /`reviewer: inline`/, "the inline fallback is recorded");
+      assert.match(gate, /^- `reviewer` — /m, "each cycle records its reviewer");
+    }
+    await fileExists(path.resolve("docs/decisions/0010-grill-to-tickets-fresh-context-design-review.md"));
+  });
+
+  it("sweeps every restatement of a fact that FIX_THEN_SHIP corrects", async () => {
+    for (const file of skillFiles) {
+      const content = await readFile(file, "utf8");
+      assert.match(content, /\*\*`FIX_THEN_SHIP`\*\*[^\n]*\n[^\n]*sweep the spec so every passage restating the same fact/);
+    }
+    for (const dir of skillDirs) {
+      const gate = await readFile(path.resolve(dir, "references/design-review-gate.md"), "utf8");
+      const fix = gate.slice(gate.indexOf("### `FIX_THEN_SHIP`"), gate.indexOf("### `REWORK` — spec-level"));
+      assert.match(fix, /\*\*sweep\*\* the spec/);
+      assert.match(fix, /done when a search for the old wording finds\s+nothing/);
+      assert.match(fix, /`specEdits`/);
+      assert.match(gate, /^- `specEdits` — /m, "each cycle records its spec edits");
     }
   });
 
@@ -139,11 +288,103 @@ describe("grill-to-tickets composite skill contract", () => {
     }
   });
 
-  it("prints the /clear then /implement resume handoff", async () => {
+  it("keeps .scratch/ out of git: ensures a local exclude and asks for no commit of it", async () => {
     for (const file of skillFiles) {
       const content = await readFile(file, "utf8");
-      assert.match(content, /\/clear/);
-      assert.match(content, /\/implement \.scratch\/<feature-slug>\/issues\/01-/);
+      const storage = content.slice(content.indexOf("## Feature-Scoped Storage"), content.indexOf("## Stage 0"));
+      assert.match(storage, /git check-ignore -q \.scratch\//);
+      assert.match(storage, /git rev-parse --git-path info\/exclude/);
+      assert.match(storage, /changes no tracked file/);
+      const handoff = content.slice(content.indexOf("## Stop — Handoff"), content.indexOf("## Constraints"));
+      assert.doesNotMatch(handoff, /Commit \.scratch\//, "the handoff must not ask to commit .scratch/");
+    }
+  });
+
+  it("prints the catalog commit, /clear, then directory-implementer handoff", async () => {
+    for (const file of skillFiles) {
+      const content = await readFile(file, "utf8");
+      const handoff = content.slice(content.indexOf("## Stop — Handoff"));
+      assert.match(handoff, /\.scratch\/ is local and git-ignored[\s\S]*Commit any\s+change to docs\/reuse-catalog\.md[\s\S]*clean\s+working tree/);
+      assert.match(handoff, /\/clear/);
+      assert.match(handoff, /\/subagent-implement \.scratch\/<feature-slug>\//);
+      assert.match(handoff, /\/agy-implement[\s\S]{0,40}\/opencode-implement/);
+      assert.ok(
+        handoff.indexOf("Commit") < handoff.indexOf("/clear") &&
+          handoff.indexOf("/clear") < handoff.indexOf("/subagent-implement"),
+        "catalog commit, then /clear, then the implementer",
+      );
+    }
+  });
+
+  it("carries reuse into tickets: one owner per shared module and a Reuse field", async () => {
+    for (const file of skillFiles) {
+      const content = await readFile(file, "utf8");
+      const stage3 = content.slice(content.indexOf("## Stage 3"), content.indexOf("## Stop"));
+      assert.match(stage3, /owner\s+ticket/i);
+      assert.match(stage3, /\*\*Reuse:\*\*/);
+      for (const verb of ["use", "extend", "create-shared", "create-candidate", "promote"]) {
+        assert.match(stage3, new RegExp(`\`${verb}\``), `Stage 3 names the verb ${verb}`);
+      }
+      assert.match(stage3, /out of the\s+acceptance criteria/i);
+    }
+    for (const dir of skillDirs) {
+      const pass = await readFile(path.resolve(dir, "references/reuse-pass.md"), "utf8");
+      const stage3 = pass.slice(pass.indexOf("## Stage 3"));
+      assert.match(stage3, /exactly one \*\*owner ticket\*\*/);
+      assert.match(stage3, /`Blocked by`/);
+      assert.match(stage3, /directly after `\*\*Blocked by:\*\*`/);
+      assert.match(stage3, /`\*\*Reuse:\*\* none`/);
+      assert.match(stage3, /map every acceptance criterion to a new test/);
+      assert.match(stage3, /Check before the quiz/);
+    }
+  });
+
+  it("runs the ticket checker before the quiz and traces every ticket to its stories", async () => {
+    for (const file of skillFiles) {
+      const content = await readFile(file, "utf8");
+      const stage3 = content.slice(content.indexOf("## Stage 3"), content.indexOf("## Stop"));
+      assert.match(stage3, /`\*\*Stories:\*\*` line after `\*\*Reuse:\*\*`/);
+      assert.match(stage3, /node <this skill's directory>\/scripts\/check-tickets\.mjs \.scratch\/<feature-slug>\//);
+      assert.match(stage3, /\(scripts\/check-tickets\.mjs\)/);
+      assert.match(stage3, /story-coverage table/);
+      assert.match(stage3, /Re-run the checker after every change/);
+      assert.match(stage3, /`result: PASS`/, "Stage 3 ends on a passing check");
+    }
+    for (const dir of skillDirs) {
+      const pass = await readFile(path.resolve(dir, "references/reuse-pass.md"), "utf8");
+      const check = pass.slice(pass.indexOf("### Check before the quiz"));
+      assert.match(check, /scripts\/check-tickets\.mjs/);
+      assert.match(check, /no reuse statement sits among the acceptance criteria/);
+      assert.match(pass, /one module per bullet, its symbol first and in backticks/);
+    }
+  });
+
+  it("preflights the five stage skills across install locations and keeps the tracker local", async () => {
+    for (const file of skillFiles) {
+      const content = await readFile(file, "utf8");
+      const preflight = content.slice(content.indexOf("## Preflight"), content.indexOf("## Feature-Scoped Storage"));
+      assert.ok(preflight.startsWith("## Preflight"), "SKILL.md has a Preflight section before storage");
+      const order = [
+        ".agents/skills/<skill>/SKILL.md",
+        ".claude/skills/<skill>/SKILL.md",
+        "~/.agents/skills/<skill>/SKILL.md",
+        "~/.claude/skills/<skill>/SKILL.md",
+      ].map((p) => preflight.indexOf(p));
+      assert.ok(order.every((i) => i !== -1), "all four locations are listed");
+      assert.deepEqual([...order].sort((a, b) => a - b), order, "project installs are searched before global ones");
+      assert.match(preflight, /stop before Stage 0/);
+      for (const [source, skill] of [
+        ["mattpocock/skills", "grilling"],
+        ["mattpocock/skills", "domain-modeling"],
+        ["mattpocock/skills", "to-spec"],
+        ["mattpocock/skills", "to-tickets"],
+        ["thananon/9arm-skills", "scrutinize"],
+      ]) {
+        assert.ok(preflight.includes(`npx skills add ${source} --skill ${skill}`), `install line for ${skill}`);
+      }
+      assert.match(content, /at the\s+path Preflight found/);
+      assert.match(content, /local files are the tracker/);
+      assert.match(content, /`\/setup-matt-pocock-skills`, write the local artifact instead/);
     }
   });
 

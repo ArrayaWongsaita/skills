@@ -1,6 +1,6 @@
 # ADR 0003: grill-to-tickets is a standalone composite, not a refactor of grill-with-docs
 
-- Status / สถานะ: Accepted / ยอมรับแล้ว
+- Status / สถานะ: Accepted / ยอมรับแล้ว; context amended by ADR 0009 (`grill-with-docs` restored to upstream)
 - Date / วันที่: 2026-08-31
 
 ## Context / บริบท

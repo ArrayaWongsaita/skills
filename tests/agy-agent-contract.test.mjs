@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { readFile, access, readdir } from "node:fs/promises";
+import { readFile, access } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
 
@@ -35,12 +35,11 @@ function localSkillLinks(markdown) {
 }
 
 const canonicalDir = "skills/agents/agy-agent";
-const mirrorDir = ".agents/skills/agy-agent";
-const skillDirs = [canonicalDir, mirrorDir];
+const skillDirs = [canonicalDir];
 const skillFiles = skillDirs.map((dir) => path.resolve(dir, "SKILL.md"));
 
 describe("agy-agent skill contract", () => {
-  it("exists in canonical and mirror locations with valid frontmatter", async () => {
+  it("has valid frontmatter", async () => {
     for (const file of skillFiles) {
       await fileExists(file);
       const meta = parseFrontmatter(await readFile(file, "utf8"));
@@ -71,25 +70,6 @@ describe("agy-agent skill contract", () => {
       /allow_implicit_invocation:\s*false/,
       "openai.yaml must disallow implicit invocation",
     );
-  });
-
-  it("keeps canonical and mirror copies byte-identical across all files", async () => {
-    const canonicalFiles = await readdir(canonicalDir, { recursive: true });
-    for (const relative of canonicalFiles) {
-      const canonicalPath = path.resolve(canonicalDir, relative);
-      const mirrorPath = path.resolve(mirrorDir, relative);
-      try {
-        const canonicalStat = await readFile(canonicalPath);
-        const mirrorStat = await readFile(mirrorPath);
-        assert.deepEqual(
-          canonicalStat,
-          mirrorStat,
-          `file ${relative} must be byte-identical across canonical and mirror`,
-        );
-      } catch (err) {
-        if (err.code !== "EISDIR") throw err;
-      }
-    }
   });
 
   it("steers positively without 'Never' or 'Do not' in instruction body", async () => {

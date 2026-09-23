@@ -64,9 +64,12 @@ Run by the orchestrator, per ticket, in the ticket's worktree — detailed in
    ```
 
    A branch cut before earlier same-wave merges replays its diff onto the
-   advanced integration branch; any conflict falls to step 2. The same commit
-   ticks that ticket file's acceptance checkboxes and sets its `Status:` to
-   done. "One commit per ticket" is a property of this merge, not a worker rule.
+   advanced integration branch; any conflict falls to step 2. The orchestrator
+   ticks that ticket file's acceptance checkboxes and sets its `Status:` to done.
+   `.scratch/` is normally git-ignored, so those edits land on disk only; a
+   tracked ticket file is staged into the same commit. That commit carries the
+   ticket's Reuse Catalog update (below). "One commit per
+   ticket" is a property of this merge, not a worker rule.
 2. **Conflict routing.** A **mechanical conflict** (import ordering, adjacent
    edits, a moved block) the orchestrator resolves itself on the main thread. A
    conflict that **encodes a design decision** — which module owns a shared
@@ -82,3 +85,30 @@ A wide-refactor expand–contract sequence is just an ordinary serial chain here
 `to-tickets` stratifies it into waves (expand | migrate batches | contract), and
 this gate runs the full suite at every wave boundary — so it stays green step to
 step, with no wide-refactor-specific handling.
+
+## Reuse Catalog update — inside each ticket's squash commit
+
+When the target repository has `docs/reuse-catalog.md` and a ticket's
+`**Reuse:**` line carries `create-shared`, `create-candidate`, `extend`, or
+`promote`, the orchestrator updates the catalog between that ticket's
+`git merge --squash` and `git commit`, so the entries land in the ticket's own
+commit. The wave's merges run one at a time in ascending ticket-number order, so
+these writes are serial even when the wave's workers ran in parallel — the
+workers only read the catalog. For each such verb:
+
+1. **Path.** Grep the bare symbol in the implementation files the worker
+   reported as changed. Not found → write no entry, and note
+   `catalog: <symbol> not found in changed files` under the ticket in
+   `status.md`; the catalog lists only code that exists.
+2. **Use-when.** Take it from the spec's Reuse Plan entry for that symbol.
+3. **Write** the entry in the format the catalog's header states:
+   - `create-shared` → add it under Shared, in the category that fits;
+   - `create-candidate` → add it under Candidates with `· from: <feature-slug>`;
+   - `promote` → move its entry from Candidates to Shared, with its new path;
+   - `extend` → update the existing entry's use-when when the Reuse Plan changed
+     it, or add the entry when the module was not yet catalogued.
+
+The symbol comes from the ticket, the path from a grep, the use-when from the
+spec — the orchestrator reads no code for this step. It is the catalog's only
+writer during a run. Coverage dates stay as they are, because only a Reuse
+survey moves them. With no catalog file, skip this section.

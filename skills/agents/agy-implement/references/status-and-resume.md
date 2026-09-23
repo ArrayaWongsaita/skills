@@ -35,7 +35,9 @@ verifying → verified → integrated, or → BLOCKED). It holds:
 - the **wave table**: each wave, its tickets, and each ticket's serial/parallel
   disposition
 - per ticket: `status`, `conversation_id`, `model`, `attempts`,
-  `failover_attempts`, `worker_branch`, `commit`, and `usage`
+  `failover_attempts`, `worker_branch`, `commit`, and `usage`; plus a `catalog`
+  note when a Reuse Catalog entry was skipped because its symbol was not in the
+  changed files
 - the **integration branch ref** (name and current commit)
 - **cumulative per-provider usage** — input / output / thinking / cache-read /
   total tokens summed per provider across the run
@@ -67,6 +69,8 @@ Before trusting `status.md`, reconcile it against reality:
    - reset the integration branch to the last still-good commit (the last commit
      whose ticket still verifies)
    - discard the worktrees for the invalidated tickets
+   - re-open each invalidated ticket file — a tracked one comes back with the
+     reset; on a git-ignored one, un-tick its checkboxes and reset its `Status:`
    - list the **discarded commits** at the top of the report, so the blast
      radius is visible
    - re-dispatch from that point
