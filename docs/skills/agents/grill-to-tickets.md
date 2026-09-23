@@ -36,7 +36,7 @@ npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 1. **Stage 0 — Grill**: เริ่มด้วย **Reuse survey** อ่าน `docs/reuse-catalog.md` ของ project ตรวจว่าทุกรายการยังมีอยู่จริง แล้วสำรวจเฉพาะส่วนที่ยังไม่เคยสำรวจหรือไฟล์ที่เปลี่ยนหลังวันที่ใน Coverage (ถ้ายังไม่มี catalog จะสร้างให้พร้อมเพิ่มบรรทัดชี้ใน `AGENTS.md`) ทางเลือกเรื่อง reuse เช่น ขยายของเดิมหรือสร้างใหม่ จะกลายเป็นคำถามให้คุณตัดสิน จากนั้นสัมภาษณ์แบบ design tree พร้อมทำ domain modeling เขียน `CONTEXT.md` / `adr/` ทันทีที่ term นิ่ง บันทึกทุกคำถามและคำตอบลง **Decision Log** (`decisions.md`) ก่อนถามรอบถัดไป เมื่อ frontier ว่างจะทำ **Blind-spot pass** ไล่ 9 หมวด (scope, data, flow, quality attributes, integrations, edge cases, constraints, terminology, completion signals) ช่องว่างที่เปลี่ยน spec ได้จะถูกถามเป็นรอบสุดท้ายไม่เกิน 5 ข้อ ที่เหลือเขียนเป็นสมมติฐานให้เห็น แล้วหยุดขอ confirmation
 2. **Stage 1 — Spec**: รัน `to-spec` สังเคราะห์ `decisions.md`, glossary และ ADR เป็น `spec.md` โดยไม่สัมภาษณ์ซ้ำ ทุกการตัดสินใจใน log ต้องอยู่ใน spec พร้อม **Reuse Plan** ที่ระบุว่าแต่ละ module จะใช้ของเดิม ขยาย สร้างเป็น shared (ต้องมีผู้ใช้ตั้งแต่ 2 ราย) สร้างเป็น candidate promote หรือแยกไว้โดยตั้งใจ
 3. **Stage 2 — Design Review Gate**: แต่ละรอบส่ง `scrutinize` ไปรันใน subagent ตัวใหม่ที่เห็นแค่ไฟล์และไม่แก้ไฟล์ใด ๆ (อ่าน spec แบบเดียวกับ implementer) แล้ว context หลัก normalize verdict เป็น `SHIP` / `FIX_THEN_SHIP` / `REWORK` / `REJECT` (`FIX_THEN_SHIP` แก้แล้วต้องไล่แก้ทุกประโยคใน spec ที่พูดเรื่องเดียวกันให้ตรงกัน) เก็บรายงานไว้ไฟล์เดียว `design-review.md` อัปเดตทุกรอบ และตรวจ **reuse lens** ทุกรอบ (ของที่ซ้ำกับ catalog, logic ที่ไม่มีเจ้าของ, shared ที่เผื่ออนาคตเกินไป)
-4. **Stage 3 — Tickets**: เมื่อได้ `SHIP` รัน `to-tickets` เขียน ticket ลง `.scratch/<feature-slug>/issues/` shared module ใหม่แต่ละตัวมี ticket เจ้าของใบเดียวและ ticket ที่ใช้ต้องรอ ticket เจ้าของ ทุก ticket มีบรรทัด `**Reuse:**` (`use` / `extend` / `create-shared` / `create-candidate` / `promote`) ซึ่งไม่ใช่ acceptance criterion
+4. **Stage 3 — Tickets**: เมื่อได้ `SHIP` รัน `to-tickets` เขียน ticket ลง `.scratch/<feature-slug>/issues/` shared module ใหม่แต่ละตัวมี ticket เจ้าของใบเดียวและ ticket ที่ใช้ต้องรอ ticket เจ้าของ ทุก ticket มีบรรทัด `**Reuse:**` (`use` / `extend` / `create-shared` / `create-candidate` / `promote`) ซึ่งไม่ใช่ acceptance criterion และมีบรรทัด `**Stories:**` บอกเลข user story ที่ ticket นั้นส่งมอบ ก่อน quiz ต้องรัน `scripts/check-tickets.mjs` ให้ผ่าน (ทุก story มี ticket, Blocked by ชี้ ticket ที่มีจริงและเลขต่ำกว่า, Reuse ถูกที่และใช้คำกริยาถูก, create-shared/promote มีเจ้าของใบเดียวที่ block ผู้ใช้รายอื่น) แล้วแสดงตาราง story coverage ใน quiz
 5. **Stop**: บอกให้ commit ไฟล์วางแผนและ `docs/reuse-catalog.md` แล้วพิมพ์ `/clear` ตามด้วย `/subagent-implement .scratch/<feature-slug>/` (หรือ `/agy-implement` / `/opencode-implement`) ไม่เรียก implementer เอง
 
 `REWORK` แบบ spec-level รัน `to-spec` ใหม่และอยู่ใน Stage 2 ส่วน decision-level กลับไป Stage 0 เพื่อ grill
@@ -55,6 +55,7 @@ npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 - `references/design-review-gate.md` — source เดียวของ routing table เต็ม, cycle accounting, stall detection, gate report format (SKILL.md Stage 2 เก็บแค่สรุปสั้น ๆ ต่อ verdict แล้วชี้มาที่นี่)
 - `references/reuse-pass.md` — กฎ reuse ของแต่ละ stage เริ่มจาก Reuse survey ใน Stage 0 (drift check, Coverage, bootstrap, pointer)
 - `references/reuse-catalog-template.md` — template ของ `docs/reuse-catalog.md` ที่ใช้สร้างครั้งแรก header ของไฟล์อธิบายวิธีดูแลตัวเอง
+- `scripts/check-tickets.mjs` — สคริปต์ Node (ไม่มี dependency) ตรวจ ticket ก่อน quiz: story coverage, Blocked by, Reuse field และเจ้าของ create-shared/promote พร้อมพิมพ์ตาราง story coverage (exit 0 ผ่าน, 1 มี error)
 - `evals/evals.json` — เคสพฤติกรรม อย่างน้อยหนึ่งเคสต่อ routing branch ของ Design Review Gate และเคสของ Reuse survey ในรูปแบบ benchmark ของ `skill-creator` รันแบบ on-demand ไม่ได้อยู่ใน CI
 - `evals/trigger-evals.json` — กันไม่ให้ description ของ skill อ่านเหมือนเป็น model-invocable (skill นี้เป็น `disable-model-invocation`)
 
@@ -123,8 +124,13 @@ spec restating the same fact. A spec-level `REWORK` re-runs `to-spec` without le
 `REWORK` returns to Stage 0 to re-grill, and the cycle counter carries over. On
 `SHIP`, tickets are published — each new shared module with exactly one owner
 ticket that its other consumers are blocked by, and every ticket with a
-`**Reuse:**` line of fixed verbs that stays out of the acceptance criteria — and
-the skill prints a handoff (commit the planning files, `/clear`, then
+`**Reuse:**` line of fixed verbs that stays out of the acceptance criteria, plus a
+`**Stories:**` line naming the spec stories it delivers. Before the quiz, the
+bundled `scripts/check-tickets.mjs` must pass: every story has a ticket, every
+blocker exists with a lower number, the Reuse field sits after Blocked by with
+the fixed verbs, and every create-shared or promote symbol has one ticket that
+blocks its other users; the quiz shows its story-coverage table. Then the skill
+prints a handoff (commit the planning files, `/clear`, then
 `/subagent-implement .scratch/<feature-slug>/` or its `agy` / `opencode`
 siblings) and stops.
 
@@ -148,6 +154,9 @@ siblings) and stops.
   Stage 0 Reuse survey (drift check, Coverage, bootstrap, pointer)
 - `references/reuse-catalog-template.md` — the bootstrap template for
   `docs/reuse-catalog.md`, whose header makes the file self-describing
+- `scripts/check-tickets.mjs` — a dependency-free Node checker run before the
+  Stage 3 quiz: story coverage, blockers, the Reuse field, and create-shared /
+  promote ownership, with a story-coverage table (exit 0 pass, 1 errors)
 - `evals/evals.json` — behavioral cases, at least one per Design Review Gate
   routing branch plus the Reuse survey cases, in `skill-creator`'s benchmark
   format; run on demand, not in CI

@@ -178,18 +178,36 @@ accounting, and gate report format live in
 
 Once the gate returns `SHIP`, run `to-tickets` inline against the shipped
 `spec.md`. Break it into tracer-bullet vertical slices, each declaring its
-blocking edges, and publish one file per ticket under
+blocking edges, and write one file per ticket under
 `.scratch/<feature-slug>/issues/<NN>-<slug>.md`, numbered from `01` in dependency
-order. Quiz the user on granularity and blocking edges until they approve.
+order. Every ticket carries a `**Stories:**` line after `**Reuse:**`: the spec's
+user-story numbers it delivers (`2, 5`, or a range `3-6`), or `none` for a
+prefactor.
 
 Reuse rides into the tickets: each new shared module gets exactly one **owner
 ticket** — the first vertical slice that consumes it — and every other consumer
 is blocked by it; each promote becomes a prefactor ticket. Every ticket carries
 a `**Reuse:**` line after `**Blocked by:**` with the fixed verbs `use`, `extend`,
 `create-shared`, `create-candidate`, `promote` (or `none`), kept out of the
-acceptance criteria. Check ownership and the Reuse fields before the quiz, and
-show each ticket's Reuse field in it. Rules, and why reuse stays out of the
-acceptance criteria: [reuse-pass.md](references/reuse-pass.md) — Stage 3.
+acceptance criteria. Rules, and why reuse stays out of the acceptance criteria:
+[reuse-pass.md](references/reuse-pass.md) — Stage 3.
+
+**Check, then quiz.** Run the ticket checker that ships with this skill:
+
+```text
+node <this skill's directory>/scripts/check-tickets.mjs .scratch/<feature-slug>/
+```
+
+[check-tickets.mjs](scripts/check-tickets.mjs) verifies that every user story
+has a ticket, that Stories and Blocked by name real stories and lower-numbered
+tickets, that the Reuse field sits after Blocked by with the fixed verbs, and
+that every create-shared or promote symbol has exactly one ticket, which blocks
+every other ticket using it. Fix what it reports, then quiz the user on
+granularity and blocking edges, showing each ticket's Reuse field and the
+checker's story-coverage table. Re-run the checker after every change the quiz
+makes. Stage 3 is done when the user approves the breakdown and the checker
+prints `result: PASS`. Where Node is unavailable, apply the checks listed in the
+script's header by hand.
 
 ## Stop — Handoff
 

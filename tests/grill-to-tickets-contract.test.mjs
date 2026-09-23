@@ -335,6 +335,26 @@ describe("grill-to-tickets composite skill contract", () => {
     }
   });
 
+  it("runs the ticket checker before the quiz and traces every ticket to its stories", async () => {
+    for (const file of skillFiles) {
+      const content = await readFile(file, "utf8");
+      const stage3 = content.slice(content.indexOf("## Stage 3"), content.indexOf("## Stop"));
+      assert.match(stage3, /`\*\*Stories:\*\*` line after `\*\*Reuse:\*\*`/);
+      assert.match(stage3, /node <this skill's directory>\/scripts\/check-tickets\.mjs \.scratch\/<feature-slug>\//);
+      assert.match(stage3, /\(scripts\/check-tickets\.mjs\)/);
+      assert.match(stage3, /story-coverage table/);
+      assert.match(stage3, /Re-run the checker after every change/);
+      assert.match(stage3, /`result: PASS`/, "Stage 3 ends on a passing check");
+    }
+    for (const dir of skillDirs) {
+      const pass = await readFile(path.resolve(dir, "references/reuse-pass.md"), "utf8");
+      const check = pass.slice(pass.indexOf("### Check before the quiz"));
+      assert.match(check, /scripts\/check-tickets\.mjs/);
+      assert.match(check, /no reuse statement sits among the acceptance criteria/);
+      assert.match(pass, /one module per bullet, its symbol first and in backticks/);
+    }
+  });
+
   it("forbids modifying upstream-tracked skills or the lock file", async () => {
     for (const file of skillFiles) {
       const content = await readFile(file, "utf8");

@@ -188,7 +188,7 @@
       "id": 15,
       "name": "shared module gets one owner ticket and its consumers are blocked by it",
       "prompt": "/grill-to-tickets continue report-export. The gate returned SHIP. The Reuse Plan lists create shared `buildReportRows(report, filters)` with consumers story 2 (Excel export) and story 5 (CSV export), and use as-is `formatCurrency`.",
-      "expected_output": "Break the spec into vertical slices: the Excel export ticket is the owner of buildReportRows (its acceptance criteria cover buildReportRows' behaviour at its interface), and the CSV export ticket lists the Excel ticket in Blocked by. Each ticket carries a Reuse line after Blocked by — the owner: create-shared `buildReportRows` · use `formatCurrency`; the consumer: use `buildReportRows` · use `formatCurrency`. No separate utils ticket. The quiz shows each Reuse line.",
+      "expected_output": "Break the spec into vertical slices: the Excel export ticket is the owner of buildReportRows (its acceptance criteria cover buildReportRows' behaviour at its interface), and the CSV export ticket lists the Excel ticket in Blocked by. Each ticket carries a Reuse line after Blocked by — the owner: create-shared `buildReportRows` · use `formatCurrency`; the consumer: use `buildReportRows` · use `formatCurrency`. No separate utils ticket. Each ticket also carries a Stories line (the Excel ticket: 2; the CSV ticket: 5). The ticket checker passes before the quiz, and the quiz shows each Reuse line and the story-coverage table.",
       "expectations": [
         "Makes exactly one ticket the owner of buildReportRows, the first vertical slice that consumes it",
         "Blocks the CSV export ticket on the owner ticket",
@@ -289,6 +289,19 @@
         "Marks Integrations n/a with a one-line reason",
         "Records gaps that would not change the spec as stated assumptions",
         "Writes the table under ## Blind-spot pass in decisions.md and shows it, with the assumptions, in the pause summary"
+      ],
+      "files": []
+    },
+    {
+      "id": 23,
+      "name": "ticket checker catches a story with no ticket before the quiz",
+      "prompt": "$grill-to-tickets continue member-export. The gate returned SHIP. spec.md has user stories 1-6; the drafted tickets under .scratch/member-export/issues/ are 01 (Stories: 1, 2), 02 (Stories: 3, 4, Blocked by: 01), and 03 (Stories: 6, Blocked by: 04).",
+      "expected_output": "Run node <skill-dir>/scripts/check-tickets.mjs .scratch/member-export/ before the quiz. It fails with two errors: story 5 has no ticket, and ticket 03 is blocked by 04, which does not exist. Fix both — cover story 5 in a ticket or a new slice, and correct 03's blocker — re-run the checker until it prints result: PASS, then quiz the user with each ticket's Reuse field and the checker's story-coverage table.",
+      "expectations": [
+        "Runs scripts/check-tickets.mjs on the feature directory before presenting the quiz",
+        "Reports that story 5 has no ticket and that ticket 03's blocker 04 does not exist",
+        "Fixes both problems and re-runs the checker until it prints result: PASS",
+        "Shows the checker's story-coverage table in the quiz"
       ],
       "files": []
     }

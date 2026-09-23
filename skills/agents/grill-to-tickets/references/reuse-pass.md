@@ -139,6 +139,9 @@ the later feature that brings the second consumer.
 - **Kept separate on purpose:** import vs export validation — import guards untrusted files, export guards our own data; they change for different reasons
 ```
 
+Write one module per bullet, its symbol first and in backticks, as above: the
+Stage 3 ticket checker reads each create-shared and promote entry that way.
+
 ## Stage 3 — Owner tickets and the Reuse field
 
 ### Ownership
@@ -177,13 +180,16 @@ provides is a normal, testable criterion on its owner ticket.
 
 ### Check before the quiz
 
-Before presenting the breakdown, confirm:
+Before presenting the breakdown, run `scripts/check-tickets.mjs` (Stage 3 in
+`SKILL.md` gives the command). It confirms the ownership rules mechanically:
 
-- every create-shared module has exactly one owner ticket;
-- every other ticket consuming it is blocked by that owner;
-- every promote has its prefactor ticket;
-- every ticket has a Reuse field, and no reuse statement sits among the
-  acceptance criteria.
+- every create-shared and promote entry in the Reuse Plan has its ticket;
+- each create-shared or promote symbol sits on exactly one ticket;
+- every other ticket using that symbol is blocked by that ticket;
+- every ticket has a Reuse field directly after Blocked by, with the fixed
+  verbs.
+
+One check stays yours: no reuse statement sits among the acceptance criteria.
 
 Show each ticket's Reuse field in the quiz alongside its title, blocking edges,
 and what it delivers.

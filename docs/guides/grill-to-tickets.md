@@ -123,6 +123,12 @@ Stop: Handoff message (commit ไฟล์วางแผน, /clear แล้�
      **Reuse:** use `formatCurrency` · create-shared `buildReportRows`
      ```
    - เรื่อง reuse ห้ามเขียนเป็น acceptance checkbox เพราะ implementer ต้องมี test ใหม่รองรับทุก criterion ข้อ "ใช้ X" เขียน test ไม่ได้ ticket จะ verify ไม่ผ่านจนติด `BLOCKED`
+   - ทุก ticket มีบรรทัด `**Stories:**` ต่อจาก `**Reuse:**` บอกเลข user story ใน spec ที่ ticket นั้นส่งมอบ เช่น `2, 5` หรือช่วง `3-6` (ticket prefactor ใช้ `none`)
+   - ก่อน quiz ให้รันสคริปต์ตรวจ ticket ที่มากับ skill:
+     ```bash
+     node <โฟลเดอร์ของ skill>/scripts/check-tickets.mjs .scratch/<feature-slug>/
+     ```
+     สคริปต์ตรวจว่าทุก story มี ticket, `Stories` และ `Blocked by` ชี้ของที่มีจริง (blocker ต้องเลขต่ำกว่า), `Reuse` อยู่ต่อจาก `Blocked by` และใช้คำกริยาที่กำหนด, create-shared/promote ทุกตัวใน Reuse Plan มี ticket เจ้าของใบเดียวที่ block ticket อื่นที่ใช้ แก้จนขึ้น `result: PASS` แล้วแสดงตาราง story coverage ใน quiz และรันซ้ำทุกครั้งที่ quiz ทำให้ ticket เปลี่ยน
 5. **Stop — Handoff (ส่งมอบงาน):**
    - แสดงข้อความสรุปและแนะนำขั้นตอนสำหรับเซสชันถัดไป:
      ```text
