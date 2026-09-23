@@ -36,7 +36,7 @@ docs/reuse-catalog/<area>.md and keep this file as the map.
 ## Rules
 
 - Give each skill its own copy of any reference material it needs, so every skill installs and runs on its own (ADRs 0003–0008).
-- Mirror a workflow skill byte-identically into `.agents/skills/<skill>/`, and let its contract test assert the mirror matches.
+- Keep `skills/` as the only tracked copy of a skill; `.agents/` and `.claude/skills/` are local install output (ADR 0011), so a contract test reads `skills/` only.
 - Keep each `tests/*.test.mjs` file self-contained, defining its file helpers (`fileExists`, `parseFrontmatter`) locally.
 - List skills through `discoverSkills` rather than walking `skills/` by hand.
 
