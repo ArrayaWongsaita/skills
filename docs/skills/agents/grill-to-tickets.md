@@ -36,8 +36,8 @@ npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 1. **Stage 0 — Grill**: เริ่มด้วย **Reuse survey** อ่าน `docs/reuse-catalog.md` ของ project ตรวจว่าทุกรายการยังมีอยู่จริง แล้วสำรวจเฉพาะส่วนที่ยังไม่เคยสำรวจหรือไฟล์ที่เปลี่ยนหลังวันที่ใน Coverage (ถ้ายังไม่มี catalog จะสร้างให้พร้อมเพิ่มบรรทัดชี้ใน `AGENTS.md`) ทางเลือกเรื่อง reuse เช่น ขยายของเดิมหรือสร้างใหม่ จะกลายเป็นคำถามให้คุณตัดสิน จากนั้นสัมภาษณ์แบบ design tree พร้อมทำ domain modeling เขียน `CONTEXT.md` / `adr/` ทันทีที่ term นิ่ง แล้วหยุดขอ confirmation เมื่อ frontier ว่าง
 2. **Stage 1 — Spec**: รัน `to-spec` สังเคราะห์บทสนทนาเป็น `spec.md` โดยไม่สัมภาษณ์ซ้ำ พร้อม **Reuse Plan** ที่ระบุว่าแต่ละ module จะใช้ของเดิม ขยาย สร้างเป็น shared (ต้องมีผู้ใช้ตั้งแต่ 2 ราย) สร้างเป็น candidate promote หรือแยกไว้โดยตั้งใจ
 3. **Stage 2 — Design Review Gate**: รัน `scrutinize` แล้ว normalize verdict เป็น `SHIP` / `FIX_THEN_SHIP` / `REWORK` / `REJECT` เก็บรายงานไว้ไฟล์เดียว `design-review.md` อัปเดตทุกรอบ และตรวจ **reuse lens** ทุกรอบ (ของที่ซ้ำกับ catalog, logic ที่ไม่มีเจ้าของ, shared ที่เผื่ออนาคตเกินไป)
-4. **Stage 3 — Tickets**: เมื่อได้ `SHIP` รัน `to-tickets` เขียน ticket ลง `.scratch/<feature-slug>/issues/`
-5. **Stop**: พิมพ์คำสั่ง `/clear` แล้ว `/implement <ticket แรก>` ไม่เรียก `implement` เอง
+4. **Stage 3 — Tickets**: เมื่อได้ `SHIP` รัน `to-tickets` เขียน ticket ลง `.scratch/<feature-slug>/issues/` shared module ใหม่แต่ละตัวมี ticket เจ้าของใบเดียวและ ticket ที่ใช้ต้องรอ ticket เจ้าของ ทุก ticket มีบรรทัด `**Reuse:**` (`use` / `extend` / `create-shared` / `create-candidate` / `promote`) ซึ่งไม่ใช่ acceptance criterion
+5. **Stop**: บอกให้ commit ไฟล์วางแผนและ `docs/reuse-catalog.md` แล้วพิมพ์ `/clear` ตามด้วย `/subagent-implement .scratch/<feature-slug>/` (หรือ `/agy-implement` / `/opencode-implement`) ไม่เรียก implementer เอง
 
 `REWORK` แบบ spec-level รัน `to-spec` ใหม่และอยู่ใน Stage 2 ส่วน decision-level กลับไป Stage 0 เพื่อ grill
 การตัดสินใจนั้นใหม่ โดย cycle counter ไม่ถูก reset
@@ -105,8 +105,12 @@ one stable `design-review.md` report, and bounds itself to six cycles with early
 stops for stalls and a required human authorization on budget exhaustion. A
 spec-level `REWORK` re-runs `to-spec` without leaving the gate; a decision-level
 `REWORK` returns to Stage 0 to re-grill, and the cycle counter carries over. On
-`SHIP`, tickets are published and the skill prints a `/clear` + `/implement`
-handoff and stops.
+`SHIP`, tickets are published — each new shared module with exactly one owner
+ticket that its other consumers are blocked by, and every ticket with a
+`**Reuse:**` line of fixed verbs that stays out of the acceptance criteria — and
+the skill prints a handoff (commit the planning files, `/clear`, then
+`/subagent-implement .scratch/<feature-slug>/` or its `agy` / `opencode`
+siblings) and stops.
 
 ### Example prompt
 

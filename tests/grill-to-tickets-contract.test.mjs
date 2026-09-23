@@ -53,7 +53,7 @@ describe("grill-to-tickets composite skill contract", () => {
     assert.equal(canonical, mirror);
   });
 
-  it("inline-executes the five child skills and hands the tickets to a later /implement run", async () => {
+  it("inline-executes the five child skills and hands the tickets to a later implementer run", async () => {
     for (const file of skillFiles) {
       const content = await readFile(file, "utf8");
       assert.match(content, /inline/i, "must instruct inline execution");
@@ -62,8 +62,8 @@ describe("grill-to-tickets composite skill contract", () => {
       }
       assert.match(
         content,
-        /\/implement\b/,
-        "must hand the tickets to a later /implement run",
+        /\/subagent-implement\b/,
+        "must hand the ticket directory to a later implementer run",
       );
       assert.match(
         content,
@@ -201,11 +201,42 @@ describe("grill-to-tickets composite skill contract", () => {
     }
   });
 
-  it("prints the /clear then /implement resume handoff", async () => {
+  it("prints the commit, /clear, then directory-implementer handoff", async () => {
     for (const file of skillFiles) {
       const content = await readFile(file, "utf8");
-      assert.match(content, /\/clear/);
-      assert.match(content, /\/implement \.scratch\/<feature-slug>\/issues\/01-/);
+      const handoff = content.slice(content.indexOf("## Stop — Handoff"));
+      assert.match(handoff, /Commit \.scratch\/<feature-slug>\/[\s\S]*docs\/reuse-catalog\.md[\s\S]*clean\s+working tree/);
+      assert.match(handoff, /\/clear/);
+      assert.match(handoff, /\/subagent-implement \.scratch\/<feature-slug>\//);
+      assert.match(handoff, /\/agy-implement[\s\S]{0,40}\/opencode-implement/);
+      assert.ok(
+        handoff.indexOf("Commit") < handoff.indexOf("/clear") &&
+          handoff.indexOf("/clear") < handoff.indexOf("/subagent-implement"),
+        "commit, then /clear, then the implementer",
+      );
+    }
+  });
+
+  it("carries reuse into tickets: one owner per shared module and a Reuse field", async () => {
+    for (const file of skillFiles) {
+      const content = await readFile(file, "utf8");
+      const stage3 = content.slice(content.indexOf("## Stage 3"), content.indexOf("## Stop"));
+      assert.match(stage3, /owner\s+ticket/i);
+      assert.match(stage3, /\*\*Reuse:\*\*/);
+      for (const verb of ["use", "extend", "create-shared", "create-candidate", "promote"]) {
+        assert.match(stage3, new RegExp(`\`${verb}\``), `Stage 3 names the verb ${verb}`);
+      }
+      assert.match(stage3, /out of the\s+acceptance criteria/i);
+    }
+    for (const dir of skillDirs) {
+      const pass = await readFile(path.resolve(dir, "references/reuse-pass.md"), "utf8");
+      const stage3 = pass.slice(pass.indexOf("## Stage 3"));
+      assert.match(stage3, /exactly one \*\*owner ticket\*\*/);
+      assert.match(stage3, /`Blocked by`/);
+      assert.match(stage3, /directly after `\*\*Blocked by:\*\*`/);
+      assert.match(stage3, /`\*\*Reuse:\*\* none`/);
+      assert.match(stage3, /map every acceptance criterion to a new test/);
+      assert.match(stage3, /Check before the quiz/);
     }
   });
 

@@ -9,10 +9,12 @@ disable-model-invocation: true
 Carry a single idea from a relentless interview through to published, ticket-ready
 work, then stop at the handoff. This skill inline-executes `grilling`,
 `domain-modeling`, `to-spec`, `scrutinize`, and `to-tickets` in sequence; a
-separate `/implement` run picks the tickets up afterward.
+separate implementer run (`/subagent-implement`, `/agy-implement`, or
+`/opencode-implement`) picks the ticket directory up afterward.
 
 ```
-Stage 0: Grill        grilling + domain-modeling  → CONTEXT.md, adr/
+Stage 0: Grill        reuse survey + grilling + domain-modeling
+                      → CONTEXT.md, adr/, docs/reuse-catalog.md
    │ (pause: explicit confirmation, empty frontier)
    ▼
 Stage 1: Spec         to-spec                     → spec.md
@@ -22,7 +24,7 @@ Stage 2: Design Review Gate   scrutinize          → design-review.md   (bounde
    ▼
 Stage 3: Tickets      to-tickets                  → issues/NN-<slug>.md
    ▼
-Stop: handoff message (/clear + /implement <first ticket>)
+Stop: handoff message (commit, /clear, /subagent-implement <dir>)
 ```
 
 ## Invocation
@@ -44,7 +46,7 @@ one continuous context window. `to-spec` and `to-tickets` are
 `disable-model-invocation: true`, so inline is their only path; the rest run
 inline too, keeping the whole interview-to-tickets pass on one unbroken reasoning
 thread. Keep every stage on the main thread — stopping at tickets exists precisely
-to hand a fresh context window to a later `/implement` run.
+to hand a fresh context window to a later implementer run.
 
 This skill owns its own copy of the Design Review Gate rules and runs fully
 standalone.
@@ -155,6 +157,15 @@ blocking edges, and publish one file per ticket under
 `.scratch/<feature-slug>/issues/<NN>-<slug>.md`, numbered from `01` in dependency
 order. Quiz the user on granularity and blocking edges until they approve.
 
+Reuse rides into the tickets: each new shared module gets exactly one **owner
+ticket** — the first vertical slice that consumes it — and every other consumer
+is blocked by it; each promote becomes a prefactor ticket. Every ticket carries
+a `**Reuse:**` line after `**Blocked by:**` with the fixed verbs `use`, `extend`,
+`create-shared`, `create-candidate`, `promote` (or `none`), kept out of the
+acceptance criteria. Check ownership and the Reuse fields before the quiz, and
+show each ticket's Reuse field in it. Rules, and why reuse stays out of the
+acceptance criteria: [reuse-pass.md](references/reuse-pass.md) — Stage 3.
+
 ## Stop — Handoff
 
 Print a handoff message and stop:
@@ -163,14 +174,20 @@ Print a handoff message and stop:
 Tickets published to .scratch/<feature-slug>/issues/. Planning is done; this skill
 hands off here.
 
+Commit .scratch/<feature-slug>/ and any change to docs/reuse-catalog.md or the
+AGENTS.md / CLAUDE.md pointer first — the implementers start only from a clean
+working tree.
+
 To keep peak reasoning for implementation, reset context:
 /clear
 
-Then start the first ticket in a fresh session:
-/implement .scratch/<feature-slug>/issues/01-<first-ticket-slug>.md
+Then implement the whole ticket directory in a fresh session; the implementer
+keeps docs/reuse-catalog.md current as each ticket lands:
+/subagent-implement .scratch/<feature-slug>/
+(or /agy-implement or /opencode-implement with the same argument)
 ```
 
-The later `/implement` run owns implementation; this skill's job ends at the
+The later implementer run owns implementation; this skill's job ends at the
 handoff.
 
 ## Constraints

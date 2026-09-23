@@ -138,3 +138,52 @@ the later feature that brings the second consumer.
 - **Promote:** none
 - **Kept separate on purpose:** import vs export validation — import guards untrusted files, export guards our own data; they change for different reasons
 ```
+
+## Stage 3 — Owner tickets and the Reuse field
+
+### Ownership
+
+- Each **create shared** module has exactly one **owner ticket**: the first
+  vertical slice that consumes it. The owner's acceptance criteria include the
+  module's behaviour at its interface, tested there, as settled in the Reuse
+  Plan. Every other consuming ticket lists the owner in `Blocked by`, so no two
+  tickets — serial or in one parallel wave — can each build their own copy.
+  Shared modules ride inside vertical slices; a horizontal "utils" ticket has no
+  place here.
+- Each **promote** becomes a prefactor ticket that moves the candidate into the
+  shared layer; the ticket bringing the new consumer is blocked by it.
+- **Create candidate** and **extend** belong to the ticket whose slice needs
+  them; **use as-is** needs no ordering.
+
+### The Reuse field
+
+Every ticket carries a `**Reuse:**` line directly after `**Blocked by:**`,
+listing its reuse actions with fixed verbs, symbols in backticks:
+
+```markdown
+**Reuse:** use `formatCurrency` · extend `DataTable` (add `selectable`) · create-shared `buildReportRows` · create-candidate `downloadBlob` · promote `useReportFilters`
+```
+
+A ticket with no reuse action carries `**Reuse:** none`. The verbs are `use`,
+`extend`, `create-shared`, `create-candidate`, `promote`. The catalog-aware
+implementers copy this line into the worker's prompt and read the non-`use`
+verbs to update `docs/reuse-catalog.md` at integration.
+
+Reuse guidance lives in this field alone, outside the acceptance criteria: the
+implementers' verification gates map every acceptance criterion to a new test,
+and "uses `formatCurrency`" has no behavioural test — as a checkbox it would fail
+verification until the ticket is `BLOCKED`. The *behaviour* a new shared module
+provides is a normal, testable criterion on its owner ticket.
+
+### Check before the quiz
+
+Before presenting the breakdown, confirm:
+
+- every create-shared module has exactly one owner ticket;
+- every other ticket consuming it is blocked by that owner;
+- every promote has its prefactor ticket;
+- every ticket has a Reuse field, and no reuse statement sits among the
+  acceptance criteria.
+
+Show each ticket's Reuse field in the quiz alongside its title, blocking edges,
+and what it delivers.

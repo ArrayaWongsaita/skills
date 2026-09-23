@@ -5,13 +5,13 @@
       "id": 1,
       "name": "first-pass SHIP straight through the stages",
       "prompt": "/grill-to-tickets Add a \"copy shareable link\" button to the report detail page that copies the report's existing public URL to the clipboard and shows a confirmation toast. One component, no API or schema change, acceptance behavior is explicit, and no open decisions remain — treat the Stage 0 frontier as empty and already confirmed.",
-      "expected_output": "With the Stage 0 frontier already empty and confirmed, pass straight through: synthesize spec.md with to-spec (Stage 1), run scrutinize once (Stage 2), normalize its closing line to SHIP, and advance to Stage 3 to-tickets. Publish tickets under .scratch/<feature-slug>/issues/ and print the /clear then /implement handoff.",
+      "expected_output": "With the Stage 0 frontier already empty and confirmed, pass straight through: synthesize spec.md with to-spec (Stage 1), run scrutinize once (Stage 2), normalize its closing line to SHIP, and advance to Stage 3 to-tickets. Publish tickets under .scratch/<feature-slug>/issues/ and print the handoff: commit the planning artifacts, /clear, then /subagent-implement .scratch/<feature-slug>/.",
       "expectations": [
         "Confirms the empty Stage 0 frontier, then moves through Stage 1 -> Stage 2 -> Stage 3 in order",
         "Runs scrutinize exactly once and records cycle 1 with verdict SHIP in a single .scratch/<feature-slug>/design-review.md file",
         "Normalizes the scrutinize verdict to the token SHIP with no paraphrasing",
         "Does not enter FIX_THEN_SHIP, REWORK, or a backward transition to Stage 0",
-        "Prints the /clear then /implement <first ticket> handoff and never invokes the implement skill or spawns a stage subagent"
+        "Prints the commit, /clear, then /subagent-implement .scratch/<feature-slug>/ handoff, never invokes an implementer, and runs no stage in a subagent"
       ],
       "files": []
     },
@@ -181,6 +181,32 @@
         "Diagnoses decision-level REWORK with reasoning that the trade-off was never decided",
         "Returns to Stage 0 for that single question and asks it with a recommended answer",
         "Carries the cycle counter over the transition"
+      ],
+      "files": []
+    },
+    {
+      "id": 15,
+      "name": "shared module gets one owner ticket and its consumers are blocked by it",
+      "prompt": "/grill-to-tickets continue report-export. The gate returned SHIP. The Reuse Plan lists create shared `buildReportRows(report, filters)` with consumers story 2 (Excel export) and story 5 (CSV export), and use as-is `formatCurrency`.",
+      "expected_output": "Break the spec into vertical slices: the Excel export ticket is the owner of buildReportRows (its acceptance criteria cover buildReportRows' behaviour at its interface), and the CSV export ticket lists the Excel ticket in Blocked by. Each ticket carries a Reuse line after Blocked by — the owner: create-shared `buildReportRows` · use `formatCurrency`; the consumer: use `buildReportRows` · use `formatCurrency`. No separate utils ticket. The quiz shows each Reuse line.",
+      "expectations": [
+        "Makes exactly one ticket the owner of buildReportRows, the first vertical slice that consumes it",
+        "Blocks the CSV export ticket on the owner ticket",
+        "Writes a Reuse line with fixed verbs after Blocked by on every ticket",
+        "Creates no horizontal utils ticket",
+        "Shows the Reuse lines in the quiz"
+      ],
+      "files": []
+    },
+    {
+      "id": 16,
+      "name": "reuse statement drafted as a checkbox moves to the Reuse field",
+      "prompt": "$grill-to-tickets continue invoice-pdf. The draft ticket 02 has an acceptance checkbox \"- [ ] Formats amounts with the existing formatCurrency\" and no Reuse line.",
+      "expected_output": "The check before the quiz finds a reuse statement among the acceptance criteria. Move it to the ticket's Reuse field (**Reuse:** use `formatCurrency`) and remove the checkbox, because the implementers' verification gates map every acceptance criterion to a new test and a structural 'uses X' claim has none.",
+      "expectations": [
+        "Removes the reuse statement from the acceptance criteria",
+        "Adds **Reuse:** use `formatCurrency` after Blocked by",
+        "Explains that every acceptance criterion must map to a new test in the implementers' verification gates"
       ],
       "files": []
     }

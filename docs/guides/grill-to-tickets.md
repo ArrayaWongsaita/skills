@@ -89,7 +89,7 @@ Stage 2: Design Review Gate   scrutinize          → design-review.md   (จำ
    ▼
 Stage 3: Tickets      to-tickets                  → issues/NN-<slug>.md
    ▼
-Stop: Handoff message (แนะนำคำสั่ง /clear และ /subagent-implement ต่อไป)
+Stop: Handoff message (commit ไฟล์วางแผน, /clear แล้ว /subagent-implement)
 ```
 
 1. **Stage 0 — Grill (สัมภาษณ์และสร้างโมเดลโดเมน):**
@@ -112,12 +112,21 @@ Stop: Handoff message (แนะนำคำสั่ง /clear และ /subag
    - ทุกรอบตรวจ **reuse lens** ด้วย: spec สร้างของที่ catalog มีอยู่แล้ว, logic ที่หลาย story ใช้แต่ไม่มีเจ้าของ, หรือ shared ที่มีผู้ใช้ไม่ถึงเกณฑ์ ➔ `FIX_THEN_SHIP` ส่วนทางเลือกขยาย-หรือ-สร้างใหม่ที่ยังไม่มีใครตัดสิน ➔ `REWORK` แบบ decision-level
 4. **Stage 3 — Tickets (แตกชิ้นงานย่อย):**
    - เมื่อผ่านเกณฑ์ `SHIP` จะนำ `spec.md` มาแตกเป็น Tracer-bullet vertical slices เก็บไว้ใน `issues/<NN>-<slug>.md` เรียงตามลำดับ Dependency
+   - shared module ใหม่แต่ละตัวมี **ticket เจ้าของ (owner ticket)** เพียงใบเดียว คือ vertical slice แรกที่ใช้ ticket อื่นที่ใช้ต้องรอ ticket เจ้าของ (Blocked by) จึงไม่มีทางเขียนซ้ำกันแม้รัน parallel ส่วน promote จะกลายเป็น prefactor ticket
+   - ทุก ticket มีบรรทัด `**Reuse:**` ต่อจาก `**Blocked by:**` ใช้คำกริยาตายตัว `use` / `extend` / `create-shared` / `create-candidate` / `promote` (หรือ `none`) เช่น
+     ```markdown
+     **Reuse:** use `formatCurrency` · create-shared `buildReportRows`
+     ```
+   - เรื่อง reuse ห้ามเขียนเป็น acceptance checkbox เพราะ implementer ต้องมี test ใหม่รองรับทุก criterion ข้อ "ใช้ X" เขียน test ไม่ได้ ticket จะ verify ไม่ผ่านจนติด `BLOCKED`
 5. **Stop — Handoff (ส่งมอบงาน):**
-   - แสดงข้อความสรุปและแนะนำคำสั่งสำหรับเซสชันถัดไป เช่น:
+   - แสดงข้อความสรุปและแนะนำขั้นตอนสำหรับเซสชันถัดไป:
      ```text
+     # 1. commit .scratch/<feature-slug>/ และ docs/reuse-catalog.md (implementer เริ่มได้เฉพาะ working tree ที่สะอาด)
      /clear
      /subagent-implement .scratch/<feature-slug>/
+     # หรือ /agy-implement หรือ /opencode-implement ด้วย argument เดียวกัน
      ```
+   - implementer ทั้งสามตัวส่งบรรทัด Reuse ให้ worker และอัปเดต `docs/reuse-catalog.md` เมื่อแต่ละ ticket เข้า branch
 
 ---
 
