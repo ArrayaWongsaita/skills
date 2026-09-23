@@ -26,7 +26,7 @@ Skill นี้จะนำ Branch ดังกล่าวมาผ่านก
    - Scrutinize Gate จำกัดไม่เกิน **6 รอบ**
    - มีระบบตรวจจับการไม่คืบหน้า (No-progress / Stall detection) เพื่อหยุดแจ้งมนุษย์ทันทีหากแก้ไม่ตรงจุด
 5. **หยุดก่อนเปิด PR (Safe Terminal Stance):**
-   - ทำงานเสร็จแล้วจะส่งมอบรายงานพร้อมแนะนำคำสั่ง `/pr-to-dev` โดยไม่ทำการ `git push` หรือสร้าง PR ขึ้น GitHub เองโดยพลการ
+   - ทำงานเสร็จแล้วจะส่งมอบรายงานพร้อมแนะนำคำสั่ง `/retro-to-remedies` เพื่อเก็บบทเรียนของ Run ก่อน แล้วจึง `/pr-to-dev` โดยไม่ทำการ `git push` หรือสร้าง PR ขึ้น GitHub เองโดยพลการ
 
 ---
 
@@ -104,7 +104,7 @@ Stage 3: System scrutinize       ประเมินเกณฑ์ควา�
 Stage 4: Full suite green        รัน Typecheck เต็ม และ Test Suite ทั้งหมดให้เขียว
    │  (ถ้าพังจะถือเป็น blocker ใหม่และกลับไป Stage 2)
    ▼
-Stage 5: Handoff                 สรุปรายงาน, แสดง commit และส่งมอบคำสั่ง /pr-to-dev
+Stage 5: Handoff                 สรุปรายงาน, แสดง commit และส่งมอบคำสั่ง /retro-to-remedies -> /pr-to-dev
 ```
 
 1. **Stage 0 — Pin Review Point (ปักหมุดจุดรีวิว):**
@@ -123,8 +123,9 @@ Stage 5: Handoff                 สรุปรายงาน, แสดง co
 5. **Stage 4 — Full Suite Green (ตรวจสอบภาพรวม):**
    - รัน Typecheck ทั้งระบบและ Unit/Integration Test ทั้งหมด ยืนยันว่าไม่มีส่วนใดพัง
 6. **Stage 5 — Handoff (ส่งมอบ):**
-   - พิมพ์ข้อความสรุปผลการรีวิวและแนะนำให้เปิด PR ด้วย:
+   - พิมพ์ข้อความสรุปผลการรีวิวและแนะนำลำดับถัดไป: รัน Retro เพื่อเก็บบทเรียนของ Run ก่อน แล้วจึงเปิด PR ด้วย:
      ```text
+     /retro-to-remedies
      /pr-to-dev
      ```
 

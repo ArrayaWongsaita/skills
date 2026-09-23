@@ -12,8 +12,8 @@ has reviewed it — and drive it to a PR-ready state. The main agent — the
 **orchestrator** — pins the review point, runs each `code-review` and
 `scrutinize` pass, judges the findings, dispatches or hand-applies the fixes,
 lands one `fix(review):` commit per blocker cluster on the branch in place, gets
-the full suite green, and stops at the handoff. Opening the PR is the next
-command, run by hand.
+the full suite green, and stops at the handoff. The Retro and the PR are the next
+commands, run by hand.
 
 This is `engineering-workflow`'s feature-flow §8–9 split out standalone, the same
 way `grill-to-tickets` is §1–3 and `subagent-implement` is §7. It carries its own
@@ -37,8 +37,8 @@ Stage 3: System scrutinize -- only if cross-cutting or risky
 Stage 4: Full suite green   fresh verifier runs the whole typecheck + whole suite
    |  red -> new blocker -> Stage 2
    v
-Stage 5: Handoff   branch, verdicts, fix commits, green-suite line, /pr-to-dev
-         the run performs no PR step
+Stage 5: Handoff   branch, verdicts, fix commits, green-suite line
+         /retro-to-remedies -> /pr-to-dev, run by hand; no PR step
 ```
 
 ## Invocation
@@ -204,7 +204,8 @@ fix(review): commits added:
   <sha>  fix(review): <summary>
   ...
 
-Opening the PR is the next step, in a fresh context:
+The next commands, in a fresh context — the Retro, then the PR:
+/retro-to-remedies
 /pr-to-dev
 ```
 
@@ -212,8 +213,9 @@ The run performs no PR step — no `git push`, no `gh`, no `/pr-to-dev` — the 
 terminal stance `subagent-implement` takes toward `/code-review`. A run that
 ended with `unfixable` blockers or a red suite prints the partial report from
 [references/status-and-resume.md](references/status-and-resume.md) instead: the
-unresolved blockers, the stage reached, the cycles spent, and the
-`/review-to-pr continue` command.
+unresolved blockers, the stage reached, the cycles spent, the
+`/review-to-pr continue` command, then `/retro-to-remedies` — finishing the Run
+stays the primary path.
 
 ## State, failure, and resume
 
@@ -235,8 +237,8 @@ loses nothing.
   per cluster, in the order the fixes are made. They stay their own commits
   rather than folding into a ticket commit (feature ADR 0002).
 - The run performs no PR step — `git push`, `gh`, `/pr-to-dev`, and issue-tracker
-  updates are all left for the human. The handoff prints the `/pr-to-dev`
-  command; opening the PR is the next command, run by hand.
+  updates are all left for the human. The handoff prints the `/retro-to-remedies`
+  and `/pr-to-dev` commands; running them is the next step, by hand.
 - Keep `engineering-workflow`, `grill-to-tickets`, `agy-implement`,
   `subagent-implement`, every `mattpocock/skills`-sourced file, and
   `skills-lock.json` exactly as they are — this skill is standalone by design
