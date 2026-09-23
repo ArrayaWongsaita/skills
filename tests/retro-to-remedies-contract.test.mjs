@@ -349,4 +349,162 @@ describe("retro-to-remedies skill contract", () => {
       assert.match(guideDoc, /git/i);
     });
   });
+
+  describe("ticket 03 — Stage 1, classify, rank, and report", () => {
+    it("references/classification.md states the six Remedy kinds and the ordered rule", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/classification.md"), "utf8");
+
+        // 6 kinds
+        assert.match(c, /\bCheck\b/);
+        assert.match(c, /\bStandard\b/);
+        assert.match(c, /\bPointer\b/);
+        assert.match(c, /\bSkill fix\b/);
+        assert.match(c, /\bPrune\b/);
+        assert.match(c, /\bAccess\b/);
+
+        // Ordered rule:
+        // (1) following a skill's instructions as written produced the Miss, because they are wrong or outdated -> Skill fix,
+        // while an agent that departed from correct instructions falls to the rules below
+        assert.match(c, /following a skill's instructions as written[\s\S]*?produced the Miss[\s\S]*?wrong or outdated[\s\S]*?Skill fix/i);
+        assert.match(c, /departed from correct instructions/i);
+
+        // (2) Mechanical miss -> Check
+        assert.match(c, /Mechanical miss[\s\S]*?Check|Check[\s\S]*?Mechanical miss/i);
+
+        // (3) Judgement miss -> Standard, or a Reuse Catalog Rule for a reuse convention
+        assert.match(c, /Judgement miss[\s\S]*?Standard/i);
+        assert.match(c, /Reuse Catalog.*Rule.*reuse convention|reuse convention.*Reuse Catalog.*Rule/i);
+
+        // (4) navigation effort -> Pointer
+        assert.match(c, /navigation.*Pointer|Pointer.*navigation/i);
+
+        // (5) unreachable information -> Access
+        assert.match(c, /unreachable information.*Access|Access.*unreachable information|information.*could not reach.*Access|Access.*information.*could not reach/i);
+
+        // (6) a project instruction with no effect or gone stale -> Prune
+        assert.match(c, /no effect or.*gone stale.*Prune|Prune.*no effect or.*gone stale|stale.*Prune|Prune.*stale/i);
+      }
+    });
+
+    it("holds the Destinations table from the spec, with Prune limited and Text vs Code split", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/classification.md"), "utf8");
+
+        // Destinations table
+        assert.match(c, /\|.*Remedy kind.*\|.*Destination.*\|/);
+        assert.match(c, /\|.*Check.*\|.*handed off:.*(test|lint|hook|CI).*/i);
+        assert.match(c, /\|.*Standard.*\|.*CODING_STANDARDS\.md.*Reuse Catalog.*Rule.*/i);
+        assert.match(c, /\|.*Pointer.*\|.*AGENTS\.md.*CLAUDE\.md.*/i);
+        assert.match(c, /\|.*Skill fix.*\|.*handed off:.*\/grill-to-tickets.*Upstream feedback.*/i);
+        assert.match(c, /\|.*Prune.*\|.*AGENTS\.md.*CLAUDE\.md.*CODING_STANDARDS\.md.*Reuse Catalog.*/i);
+        assert.match(c, /\|.*Access.*\|.*handed off:.*config.*tooling.*/i);
+
+        // Prune limitation
+        assert.match(c, /an instruction inside a skill is a Skill fix/i);
+
+        // Text remedy (Standard, Pointer, Prune) versus Code remedy (Check, Skill fix, Access)
+        assert.match(c, /Text remed(y|ies)[\s\S]*?(Standard|Pointer|Prune)/i);
+        assert.match(c, /Code remed(y|ies)[\s\S]*?(Check|Skill fix|Access)/i);
+      }
+    });
+
+    it("states the evidence bar, merge of same-cause Misses, cost ranking, Carried findings, and Open bugs", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/classification.md"), "utf8");
+
+        // Evidence bar: at least one located, quoted Primary source per Remedy; none -> dropped
+        assert.match(c, /at least one located, quoted Primary source/i);
+        assert.match(c, /without evidence.*dropped|none.*dropped/i);
+
+        // Merge same-cause Misses
+        assert.match(c, /Merge Misses that share a cause into one Remedy|causes, not symptoms/i);
+
+        // Cost ranking: blocker, BLOCKED, failed verification, no SHIP, then the rest
+        assert.match(c, /blocker/i);
+        assert.match(c, /BLOCKED/);
+        assert.match(c, /failed verification/i);
+        assert.match(c, /SHIP/);
+
+        // Carried findings each mapped to a Remedy or a proposed decline
+        assert.match(c, /Carried finding.*mapped to.*(Remedy|proposed decline)/i);
+
+        // Open bugs reported for /diagnosing-bugs and never as Remedies
+        assert.match(c, /Open bug.*\/diagnosing-bugs/i);
+        assert.match(c, /never.*Remed(y|ies)|not.*Remed(y|ies)/i);
+      }
+    });
+
+    it("references/retro-report.md defines sections in order, remedy fields, and choice validity", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/retro-report.md"), "utf8");
+
+        // Sections in order:
+        // 1. sources read and missing
+        // 2. handed-off follow-ups (and their answers)
+        // 3. project Remedies
+        // 4. Skill fixes
+        // 5. Carried findings
+        // 6. Open bugs
+        assert.match(c, /sources read and missing/i);
+        assert.match(c, /handed-off follow-ups/i);
+        assert.match(c, /project Remedies/i);
+        assert.match(c, /Skill fixes/i);
+        assert.match(c, /Carried findings/i);
+        assert.match(c, /Open bugs/i);
+
+        // Each Remedy's fields:
+        // id, kind, severity reason, Misses with location and quote, destination, exact change or /grill-to-tickets prompt, recommended answer, Choice: line
+        assert.match(c, /\bid\b/i);
+        assert.match(c, /\bkind\b/i);
+        assert.match(c, /severity reason/i);
+        assert.match(c, /location.*quote|quote.*location/i);
+        assert.match(c, /\bdestination\b/i);
+        assert.match(c, /exact change[\s\S]*?\/grill-to-tickets prompt|\/grill-to-tickets prompt[\s\S]*?exact change/i);
+        assert.match(c, /recommended answer/i);
+        assert.match(c, /Choice:/);
+
+        // Choice validity: apply is valid only for Text remedies and hand off only for Code remedies
+        assert.match(c, /`?apply`? is valid only for Text remedies/i);
+        assert.match(c, /`?hand off`? (is valid )?only for Code remedies/i);
+      }
+    });
+
+    it("SKILL.md's ## Stage 1 section drives both references and ends on its completion criterion and pauses", async () => {
+      for (const file of skillFiles) {
+        const content = await readFile(file, "utf8");
+        assert.match(content, /##\s*Stage 1/i);
+        assert.match(content, /references\/classification\.md/);
+        assert.match(content, /references\/retro-report\.md/);
+      }
+      for (const body of await bothSkillBodies()) {
+        const stage1Match = body.match(/###?\s*Stage 1[\s\S]*?(?=###?\s*Stage 2|$)/i);
+        assert.ok(stage1Match, "Stage 1 section must be present");
+        const stage1Text = stage1Match[0];
+        assert.match(stage1Text, /completion criterion|completion/i);
+        assert.match(stage1Text, /every Miss (is )?covered by a Remedy, an Open bug, or a proposed decline/i);
+        assert.match(stage1Text, /every Remedy (is )?complete|every Remedy has a kind/i);
+        assert.match(stage1Text, /pause/i);
+      }
+    });
+
+    it("both guides describe the report and the four answers", async () => {
+      const skillDoc = await readFile(path.resolve("docs/skills/agents/retro-to-remedies.md"), "utf8");
+      assert.match(skillDoc, /Stage 1/i);
+      assert.match(skillDoc, /apply/);
+      assert.match(skillDoc, /hand off/);
+      assert.match(skillDoc, /decline/);
+      assert.match(skillDoc, /defer/);
+      assert.match(skillDoc, /retro\.md/);
+
+      const guideDoc = await readFile(path.resolve("docs/guides/retro-to-remedies.md"), "utf8");
+      assert.match(guideDoc, /Stage 1/i);
+      assert.match(guideDoc, /apply/);
+      assert.match(guideDoc, /hand off/);
+      assert.match(guideDoc, /decline/);
+      assert.match(guideDoc, /defer/);
+      assert.match(guideDoc, /retro\.md/);
+    });
+  });
 });
+

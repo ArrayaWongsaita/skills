@@ -141,5 +141,58 @@ describe("retro-to-remedies eval suite contract", () => {
         "case for no .scratch/<feature-slug>/ asking before reading transcript",
       );
     });
+
+    it("covers the branches listed in ticket 03 (classification of fixture Run, reuse convention rule, evidence-free dropped, Open bug kept out, apply refused on Code remedy)", async () => {
+      const { evals } = await evalsJson();
+      const hay = (re) => evals.some((e) => re.test(e.name) || re.test(e.expected_output));
+
+      // fixture Run classified as the spec's Further Notes table:
+      // instructions wrong -> Skill fix
+      assert.ok(
+        hay(/instructions wrong.*Skill fix|wrong.*instructions.*Skill fix/i),
+        "case for instructions wrong -> Skill fix",
+      );
+      // ticket 02's departure -> Check
+      assert.ok(
+        hay(/ticket 02.*departure.*Check|departure.*Check/i),
+        "case for ticket 02's departure -> Check",
+      );
+      // std-3 -> Check
+      assert.ok(
+        hay(/std-3.*Check/i),
+        "case for std-3 -> Check",
+      );
+      // std-2 -> Standard
+      assert.ok(
+        hay(/std-2.*Standard/i),
+        "case for std-2 -> Standard",
+      );
+      // std-4 -> proposed decline
+      assert.ok(
+        hay(/std-4.*proposed decline/i),
+        "case for std-4 -> proposed decline",
+      );
+      // a reuse convention -> Reuse Catalog Rule
+      assert.ok(
+        hay(/reuse convention.*Reuse Catalog Rule|reuse convention.*Rule/i),
+        "case for a reuse convention -> Reuse Catalog Rule",
+      );
+      // an evidence-free Remedy dropped
+      assert.ok(
+        hay(/evidence-free.*dropped|no evidence.*dropped/i),
+        "case for evidence-free Remedy dropped",
+      );
+      // an Open bug kept out of Remedies
+      assert.ok(
+        hay(/Open bug.*kept out.*Remedies|Open bug.*never.*Remed/i),
+        "case for Open bug kept out of Remedies",
+      );
+      // apply refused on a Code remedy
+      assert.ok(
+        hay(/apply refused on.*Code remedy|refuse.*apply.*Code remedy/i),
+        "case for apply refused on a Code remedy",
+      );
+    });
   });
 });
+

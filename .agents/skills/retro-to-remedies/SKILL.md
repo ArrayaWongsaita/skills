@@ -51,7 +51,11 @@ Completion criterion: every present source read, and every Miss has a location a
 
 ### Stage 1 — Classify and report
 
-Group related misses by root cause and reconcile them against prior entries in `docs/retro-log.md`. Classify each miss deterministically into one of six Remedy kinds: Check, Standard, Pointer, Skill fix, Prune, or Access. Escalate recurring misses from previously applied remedies into stronger kinds. Route Skill fixes between local repositories and upstream feedback based on package lock files. Write the complete proposal to `.scratch/<feature-slug>/retro.md` with verbatim quotes and concrete changes or prompts.
+Group related misses by root cause and reconcile them against prior entries in `docs/retro-log.md`. Classify each miss deterministically into one of six Remedy kinds following the ordered rule: Skill fix, Check, Standard, Pointer, Access, or Prune. Drop any candidate without evidence. Map every Carried finding to a Remedy or proposed decline, and route feature defects to `/diagnosing-bugs` as Open bugs. Rank remedies by cost and recurrence. Consult [references/classification.md](references/classification.md) for detailed classification rules, destinations, and ranking.
+
+Write the structured Retro report to `.scratch/<feature-slug>/retro.md` containing the required sections in order, with exact text changes for Text remedies and `/grill-to-tickets` prompts for Code remedies, as detailed in [references/retro-report.md](references/retro-report.md). Route Skill fixes between local repositories and upstream feedback based on [references/skill-fix-routing.md](references/skill-fix-routing.md).
+
+Completion criterion: every Miss is covered by a Remedy, an Open bug, or a proposed decline; every Remedy is complete with a kind, a destination, evidence, a recommended answer, and either its exact text change or its prompt.
 
 Pause execution immediately after writing the report to await human choices (`apply`, `hand off`, `decline`, or `defer`) for each proposed Remedy.
 
@@ -59,6 +63,7 @@ Detailed guidance:
 - Classification rules and remedy kinds: [references/classification.md](references/classification.md)
 - Report format and section structure: [references/retro-report.md](references/retro-report.md)
 - Skill fix ownership and routing: [references/skill-fix-routing.md](references/skill-fix-routing.md)
+
 
 ### Stage 2 — Apply and hand off
 

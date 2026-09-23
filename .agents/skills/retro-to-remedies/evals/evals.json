@@ -109,6 +109,131 @@
         "Avoids silent multi-megabyte transcript reading without user consent"
       ],
       "files": []
+    },
+    {
+      "id": 9,
+      "name": "fixture classification instructions wrong yields Skill fix",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model",
+      "expected_output": "Following subagent-implement instructions as written caused worktree cut from a fixed base (harness note) and worker branch ref collision (gotcha) because the skill's instructions were wrong or outdated, classifying both as Skill fixes for subagent-implement.",
+      "expectations": [
+        "Applies the first classification rule: following a skill's instructions as written produced the Miss because instructions were wrong or outdated -> Skill fix",
+        "Proposes Skill fix for subagent-implement with ready-to-run prompt for this repository",
+        "Cites unmerged fix/subagent-implement-worktree-base-assumption"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/status.md"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "fixture classification ticket 02 departure yields Check",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model",
+      "expected_output": "Ticket 02 dispatched without isolation although the skill requires it represents ticket 02's departure from correct instructions, falling through rule 1 to rule 2 (Mechanical miss) and yielding a Check.",
+      "expectations": [
+        "Identifies ticket 02 dispatched without isolation as an agent departure from correct instructions",
+        "Applies rule 2 to classify it as a Check that the worker's first step fails unless running in its own worktree on its own branch",
+        "Hands off Check as a Code remedy"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/status.md"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "fixture classification std-3 carried mechanical pattern yields Check",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model",
+      "expected_output": "std-3 where a reference cites the feature's own ticket numbers is a mechanical syntactic pattern, classifying std-3 as a Check to fail when a skill reference names the tickets that built it.",
+      "expectations": [
+        "Treats carried finding std-3 as a Miss",
+        "Applies rule 2 to classify mechanical pattern into a Check",
+        "Hands off Check to fail fixed pattern such as Tickets 03-04"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/review-status.md"
+      ]
+    },
+    {
+      "id": 12,
+      "name": "fixture classification std-2 carried judgement miss yields Standard",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model",
+      "expected_output": "std-2 where one rule is restated four times requires human judgement of intent across files, classifying std-2 as a Standard in CODING_STANDARDS.md.",
+      "expectations": [
+        "Treats carried finding std-2 as a Miss",
+        "Applies rule 3 to classify judgement miss into a Standard",
+        "Targets CODING_STANDARDS.md with rule to state each rule once per skill and point to it elsewhere"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/review-status.md"
+      ]
+    },
+    {
+      "id": 13,
+      "name": "fixture classification std-4 carried intentional style yields proposed decline",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model",
+      "expected_output": "std-4 where one command is shown twice was intentional duplication for reader convenience, mapping std-4 to a proposed decline with rationale.",
+      "expectations": [
+        "Treats carried finding std-4 as a Miss",
+        "Maps finding to a proposed decline rather than carrying it open again",
+        "Provides clear decline rationale in the Carried findings section"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/review-status.md"
+      ]
+    },
+    {
+      "id": 14,
+      "name": "classification reuse convention yields Reuse Catalog Rule",
+      "prompt": "/retro-to-remedies shared-components-feature",
+      "expected_output": "A Miss concerning an architectural component reuse convention is classified under rule 3 as a judgement miss but routes specifically to a Reuse Catalog Rule.",
+      "expectations": [
+        "Identifies reuse convention in review findings",
+        "Applies rule 3 to route reuse convention to the Reuse Catalog's Rules rather than general coding standards",
+        "Specifies docs/reuse-catalog.md as target destination"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/review-status.md"
+      ]
+    },
+    {
+      "id": 15,
+      "name": "evidence bar ensures an evidence-free Remedy is dropped",
+      "prompt": "/retro-to-remedies speculative-run",
+      "expected_output": "Enforces the evidence bar so an evidence-free Remedy without located quote is dropped from the report.",
+      "expectations": [
+        "Enforces the evidence bar requiring at least one located verbatim quote from primary sources",
+        "Confirms that an evidence-free Remedy is dropped completely",
+        "Leaves no ungrounded suggestions in the Retro report"
+      ],
+      "files": []
+    },
+    {
+      "id": 16,
+      "name": "feature defect reported as Open bug kept out of Remedies",
+      "prompt": "/retro-to-remedies faulty-feature",
+      "expected_output": "A defect discovered in the feature's own source code is reported for /diagnosing-bugs in the Open bugs section, and is kept out of Remedies.",
+      "expectations": [
+        "Distinguishes environment misses from feature code defects",
+        "Reports feature code defect under the Open bugs section pointing to /diagnosing-bugs",
+        "Ensures an Open bug is never proposed as a Remedy or modified by the Retro"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/review-status.md"
+      ]
+    },
+    {
+      "id": 17,
+      "name": "choice validation refuses apply on a Code remedy",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model",
+      "expected_output": "Refuses apply choice on a Code remedy such as a Check or Skill fix, enforcing that apply is valid only for Text remedies and hand off only for Code remedies.",
+      "expectations": [
+        "Validates user answer against remedy type",
+        "Rejects apply on Code remedies (Check, Skill fix, Access)",
+        "Instructs that hand off is required for Code remedies"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/review-status.md"
+      ]
     }
   ]
 }
+

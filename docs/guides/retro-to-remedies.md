@@ -78,7 +78,22 @@ Stage 0 ทำหน้าที่รวบรวมหลักฐานทั
 
 ### Stage 1 — Classify and report
 
-นำ Misses มาจัดกลุ่มตามสาเหตุ ตรวจสอบการเกิดซ้ำกับ `docs/retro-log.md` และจำแนกเป็น 6 มาตรการ (Check, Standard, Pointer, Skill fix, Prune, Access) จัดลำดับและเขียนรายงานลง `.scratch/<feature-slug>/retro.md` จากนั้นหยุดพักรอคำตอบ (`apply`, `hand off`, `decline`, `defer`) จากผู้ใช้
+Stage 1 ทำหน้าที่นำ Misses ทั้งหมดมาประมวลผลเป็นมาตรการปรับปรุงสภาพแวดล้อม (Environment Remedies):
+- **รวมสาเหตุและตัดข้อเสนอที่ไม่มีหลักฐาน (Evidence Bar)**: รวม Misses ที่แชร์สาเหตุเดียวกันเข้าด้วยกันเป็นหนึ่ง Remedy และตัดข้อเสนอใดๆ ที่ไม่มีข้อความยกมาตรงตัว (verbatim quote) และตำแหน่งพิกัด (location) ออกจากรายงานโดยสิ้นเชิง
+- **กฎการจำแนกตามลำดับ (Ordered Rule)**: จำแนกประเภท Remedy ตามกฎ 6 ข้อตามลำดับ:
+  1. หากการทำตามคำสั่งของ skill ตรงตัวทำให้เกิด Miss เพราะคำสั่งผิดหรือล้าสมัย → **Skill fix** (แต่หาก agent เบี่ยงเบนจากคำสั่งที่ถูกต้อง จะตกไปยังกฎข้อถัดไปเพื่อสร้าง Check)
+  2. กฎตายตัวสามารถตรวจจับได้ (Mechanical miss) → **Check** (test, lint rule, hook, CI)
+  3. ต้องใช้การตัดสินใจเจตนาของมนุษย์ (Judgement miss) → **Standard** ใน `CODING_STANDARDS.md` หรือกฎใน Reuse Catalog สำหรับ reuse convention
+  4. ใช้ความพยายามในการค้นหาเอกสาร/ไฟล์ → **Pointer** ใน `AGENTS.md`
+  5. ขาดแคลนข้อมูลที่เข้าถึงไม่ได้ (เช่น logs, permission) → **Access**
+  6. คำสั่งในโปรเจกต์หมดอายุหรือไม่ส่งผล → **Prune** (จำกัดเฉพาะ `AGENTS.md`, `CLAUDE.md`, `CODING_STANDARDS.md` และ Reuse Catalog)
+- **การจัดลำดับตามต้นทุนและความถี่ (Cost Ranking)**: เรียงลำดับจาก Failed Remedy → Recurring Remedy → ต้นทุนสูง (review blocker, BLOCKED ticket, failed verification, รอบที่ไม่ได้ SHIP) → ข้อเสนออื่นๆ
+- **Carried findings และ Open bugs**: นำ Carried findings จาก `review-status.md` ทุกข้อมาจับคู่กับ Remedy หรือ proposed decline (ไม่ปล่อยให้ค้างโดยไร้คำตอบ) และแยก defect ของโค้ดฟีเจอร์เป็น Open bugs สำหรับ `/diagnosing-bugs` เท่านั้น (ไม่ถือเป็น Remedy)
+- **โครงสร้างรายงานและคำตอบ 4 แบบ**: เขียนรายงานลง `.scratch/<feature-slug>/retro.md` เรียงตาม 6 ส่วน (sources read/missing, handed-off follow-ups, project Remedies, Skill fixes, Carried findings, Open bugs) จากนั้นหยุดพัก (pause) รอให้ผู้ใช้ตอบคำถาม 4 ตัวเลือก:
+  - `apply`: อนุมัติให้นำ Text remedies (Standard, Pointer, Prune) ไปแก้ไขและ commit ลง branch
+  - `hand off`: ส่งมอบ Code remedies (Check, Skill fix, Access) ไปเป็น prompt สำหรับ `/grill-to-tickets`
+  - `decline`: ปฏิเสธมาตรการแก้ไข
+  - `defer`: เลื่อนการตัดสินใจออกไปก่อน
 
 ### Stage 2 — Apply and hand off
 
