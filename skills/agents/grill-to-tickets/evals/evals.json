@@ -31,8 +31,8 @@
     {
       "id": 3,
       "name": "spec-level REWORK re-runs to-spec inside the gate",
-      "prompt": "$grill-to-tickets continue wishlist-sync. This is gate cycle 2. Stage 2 scrutinize closes with rework: the empty-state behavior was settled in Stage 0, but the spec never wrote it as a user story and the persistence seam is stated too vaguely to break into tickets. Every fact needed to fix it is already in the Stage 0 transcript.",
-      "expected_output": "Diagnose spec-level REWORK — a fresh writer holding the Stage 0 transcript could fix the spec with no new decision. Re-run to-spec inline with the finding as added context, consume one gate cycle, and re-review. Control stays in Stage 2 and the cycle counter is not reset.",
+      "prompt": "$grill-to-tickets continue wishlist-sync. This is gate cycle 2. Stage 2 scrutinize closes with rework: the empty-state behavior was settled in Stage 0, but the spec never wrote it as a user story and the persistence seam is stated too vaguely to break into tickets. Every fact needed to fix it is already recorded in decisions.md.",
+      "expected_output": "Diagnose spec-level REWORK — a fresh writer holding decisions.md could fix the spec with no new decision. Re-run to-spec inline with the finding as added context, consume one gate cycle, and re-review. Control stays in Stage 2 and the cycle counter is not reset.",
       "expectations": [
         "Records reworkKind: spec-level with reasoning that names the finding",
         "Re-runs to-spec inline rather than returning to Stage 0",
@@ -175,7 +175,7 @@
       "id": 14,
       "name": "undecided extend-vs-new is decision-level REWORK",
       "prompt": "$grill-to-tickets continue audit-log-view. Gate cycle 1: the spec extends `DataTable` with virtualized scrolling for 100k-row audit logs, but Stage 0 never settled whether to extend DataTable — used by 14 existing screens — or build a separate virtualized table. The survey only recorded that DataTable exists and has no virtualization.",
-      "expected_output": "The reuse lens records reuse-undecided-DataTable. A fresh writer holding the Stage 0 transcript could not resolve extend-versus-new without asking, so it is decision-level REWORK: return to Stage 0, put that one question to the user with a recommended answer, then re-run to-spec and re-review, carrying the cycle counter over.",
+      "expected_output": "The reuse lens records reuse-undecided-DataTable. A fresh writer holding decisions.md could not resolve extend-versus-new without asking, so it is decision-level REWORK: return to Stage 0, put that one question to the user with a recommended answer and log it in decisions.md as a re-grill round, then re-run to-spec and re-review, carrying the cycle counter over.",
       "expectations": [
         "Records the finding with the stable id reuse-undecided-DataTable",
         "Diagnoses decision-level REWORK with reasoning that the trade-off was never decided",
@@ -207,6 +207,33 @@
         "Removes the reuse statement from the acceptance criteria",
         "Adds **Reuse:** use `formatCurrency` after Blocked by",
         "Explains that every acceptance criterion must map to a new test in the implementers' verification gates"
+      ],
+      "files": []
+    },
+    {
+      "id": 17,
+      "name": "decision log records each round before the next is asked",
+      "prompt": "/grill-to-tickets Let team admins export the member list as CSV. The user has just answered round 1: Q1 (who may export) — admins only, as recommended; Q2 (which columns) — name, email, role, and joined date, overriding the recommended name-and-email.",
+      "expected_output": "Before posting round 2, fill in round 1 in .scratch/<feature-slug>/decisions.md: each question beside its recommended answer and the decided answer (Q2 records the override, with the user's reason when given). Then post round 2, appending its questions as decided: open and setting State to wait on round 2's answers.",
+      "expectations": [
+        "Records both round-1 answers in decisions.md, each beside its recommended answer",
+        "Writes the round-1 answers before posting round 2",
+        "Appends round 2's questions with decided: open when it posts them",
+        "Sets State's waiting on to round 2's answers",
+        "Keeps CONTEXT.md a glossary: the column choice goes to decisions.md, not CONTEXT.md"
+      ],
+      "files": []
+    },
+    {
+      "id": 18,
+      "name": "continue after /clear resumes from the decision log",
+      "prompt": "$grill-to-tickets continue member-export. The context was cleared mid-interview. .scratch/member-export/decisions.md has State 'stage: 0 — Grill', 'waiting on: answers to round 3'; rounds 1 and 2 are closed, and round 3 has two questions still decided: open. There is no spec.md yet.",
+      "expected_output": "Read decisions.md (State first), then CONTEXT.md and adr/. Resume in Stage 0 by re-posting round 3's two open questions with their recommended answers. Treat every decision in rounds 1 and 2 as settled and ask none of them again. Start no spec, and restart neither the survey nor the interview.",
+      "expectations": [
+        "Reads decisions.md State first and resumes in Stage 0",
+        "Re-posts exactly round 3's two open questions",
+        "Asks no question already decided in rounds 1 or 2",
+        "Starts neither Stage 1 nor a fresh interview"
       ],
       "files": []
     }

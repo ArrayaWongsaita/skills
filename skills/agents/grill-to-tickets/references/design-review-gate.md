@@ -61,21 +61,21 @@ cycle. Re-review. Control stays in Stage 2.
 ### `REWORK` — decision-level
 
 The finding traces to **a decision no one has made** — `to-spec` cannot
-synthesize it from the conversation because the conversation never resolved it. A
+synthesize it from `decisions.md` because Stage 0 never resolved it. A
 new actor appeared, a trade-off was skipped, a constraint surfaced that changes
 the approach.
 
 Route: return to Stage 0 and re-grill that specific decision (inline `grilling` +
-`domain-modeling`), updating `CONTEXT.md` / `adr/` as it resolves, then re-run
-`to-spec` and re-review.
+`domain-modeling`), logging the round in `decisions.md` and updating
+`CONTEXT.md` / `adr/` as it resolves, then re-run `to-spec` and re-review.
 
 The cycle counter **carries over**. A backward transition to Stage 0 never resets
 it — decision-level rework spends the same six-cycle budget as everything else.
 
 ### Distinguishing the two
 
-Ask: *if I handed this finding and the full Stage 0 transcript to a fresh writer,
-could they fix the spec without asking anyone a question?* Yes → spec-level. No,
+Ask: *if I handed this finding and `decisions.md` to a fresh writer, could they
+fix the spec without asking anyone a question?* Yes → spec-level. No,
 they'd have to get a decision first → decision-level. Write the answer and the
 reasoning into `reworkKind` / `reworkReasoning` every time, so the two paths are
 visible in the report.

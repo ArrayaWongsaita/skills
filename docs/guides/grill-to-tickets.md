@@ -54,11 +54,13 @@ npx skills add thananon/9arm-skills --skill scrutinize
 Skill นี้ถูกตั้งค่าแบบ Explicit Invocation (ต้องเรียกใช้ผ่านคำสั่งโดยตรงเท่านั้น):
 - Slash command: `/grill-to-tickets <คำอธิบายไอเดียหรือฟีเจอร์>`
 - Codex command: `$grill-to-tickets <คำอธิบายไอเดียหรือฟีเจอร์>`
+- ทำต่อจากรอบที่ค้างไว้ (เช่น หลัง `/clear` หรือ session หลุด): `/grill-to-tickets continue <feature-slug>` โดย skill จะอ่าน State ใน `decisions.md` แล้วทำต่อจากจุดเดิม ไม่ถามคำถามที่ตอบไปแล้วซ้ำ
 
 ### โครงสร้างไฟล์ที่สร้างขึ้น (Feature-scoped Storage)
 ไฟล์ผลลัพธ์ทั้งหมดจะถูกจัดเก็บแยกไว้ใต้โฟลเดอร์ `.scratch/<feature-slug>/` โดยไม่ปะปนกับโค้ดหลัก:
 ```text
 .scratch/<feature-slug>/
+├── decisions.md        # Decision Log: ทุกคำถาม คำตอบแนะนำ คำตอบจริง และ State ของ run
 ├── CONTEXT.md          # พจนานุกรมคำศัพท์เชิงโดเมน (Ubiquitous Language)
 ├── adr/                # บันทึกการตัดสินใจทางสถาปัตยกรรม (NNNN-<slug>.md)
 ├── spec.md             # เอกสารข้อกำหนดของฟีเจอร์ (Specification)
@@ -97,10 +99,11 @@ Stop: Handoff message (commit ไฟล์วางแผน, /clear แล้�
    - **Reuse survey:** อ่าน `docs/reuse-catalog.md` ตรวจว่าทุกรายการยังมีอยู่จริง (drift check) แล้วสำรวจเฉพาะส่วนที่ไม่อยู่ใน Coverage และไฟล์ที่เปลี่ยนหลังวันที่ใน Coverage ผลที่เจอเขียนกลับลง catalog ถ้ายังไม่มี catalog จะสร้างจาก template พร้อมเพิ่มบรรทัดชี้ใน `AGENTS.md` (หรือ `CLAUDE.md`)
    - ทางเลือกเรื่อง reuse ที่ต้องตัดสินจริง เช่น ขยายของเดิมหรือสร้างใหม่ จะถูกถามเป็นคำถามพร้อมคำตอบแนะนำ
    - สัมภาษณ์ถามตอบทีละประเด็นโดยมีตัวเลือกแนะนำ (ใช้ `grilling`)
+   - ทุกรอบคำถามถูกบันทึกลง `decisions.md` ตอนถาม และบันทึกคำตอบก่อนถามรอบถัดไป เพื่อให้การตัดสินใจไม่หายเมื่อ context ถูก compact หรือ `/clear`
    - บันทึกคำศัพท์ลง `CONTEXT.md` และบันทึกการตัดสินใจยากๆ ลง `adr/` ทันที (ใช้ `domain-modeling`)
    - เมื่อตัดสินใจครบแล้ว จะสรุปและหยุดรอคำยืนยันจากผู้ใช้ก่อนก้าวต่อไป
 2. **Stage 1 — Spec (จัดทำเอกสารข้อกำหนด):**
-   - รวบรวมผลการตัดสินใจมาเขียนเป็น `spec.md` ตามหัวข้อมาตรฐาน พร้อมกำหนด Test Seams (รอยต่อสำหรับทดสอบ)
+   - รวบรวมผลการตัดสินใจจาก `decisions.md`, `CONTEXT.md` และ `adr/` มาเขียนเป็น `spec.md` ตามหัวข้อมาตรฐาน พร้อมกำหนด Test Seams (รอยต่อสำหรับทดสอบ) ทุกการตัดสินใจใน log ต้องปรากฏใน spec
    - ใต้ Implementation Decisions มี **Reuse Plan** บอกว่าแต่ละ module จะ ใช้ของเดิม / ขยายของเดิม / สร้างเป็น shared (พร้อม interface และผู้ใช้ที่ระบุชื่อ) / สร้างเป็น candidate / promote candidate / แยกไว้โดยตั้งใจ
    - เกณฑ์สร้าง shared: ต้องมีผู้ใช้จริงตั้งแต่ 2 story ขึ้นไป (หรือ caller เดิม 1 + story 1 หรือคุณยืนยันว่ามีฟีเจอร์ถัดไปใช้แน่) ถ้าไม่ถึงให้เป็น candidate ที่ออกแบบให้ดึงออกมาได้ภายหลัง
 3. **Stage 2 — Design Review Gate (ตรวจสอบการออกแบบ):**

@@ -33,6 +33,9 @@ Explicit invocation only:
 
 - Universal / slash command: `/grill-to-tickets <idea>`
 - Codex command: `$grill-to-tickets <idea>`
+- Resume a run: `/grill-to-tickets continue <feature-slug>` (or `$grill-to-tickets
+  continue <feature-slug>`) — pick up from the Decision Log's State, as
+  [decision-log.md](references/decision-log.md) — Resume describes.
 
 Codex policy is declared in `agents/openai.yaml` (`allow_implicit_invocation: false`).
 Claude Code installations rely on `disable-model-invocation: true`. Require explicit
@@ -58,6 +61,7 @@ idea (lowercase alphanumeric with hyphens).
 
 ```
 .scratch/<feature-slug>/
+├── decisions.md        # Decision Log: every question and answer, plus run State
 ├── CONTEXT.md          # domain glossary and ubiquitous language
 ├── adr/                # architectural decision records (NNNN-<slug>.md)
 ├── spec.md             # feature specification
@@ -77,7 +81,8 @@ Run `grilling` and `domain-modeling` together as one discovery pass.
 
 1. **Ground in existing context.** Read the repository's root `CONTEXT.md` and
    `docs/adr/` if they exist, plus any relevant existing directory under
-   `.scratch/`. Initialize `.scratch/<feature-slug>/`.
+   `.scratch/`. Initialize `.scratch/<feature-slug>/` with its
+   `decisions.md` State.
 2. **Reuse survey.** Read `docs/reuse-catalog.md`, drift-check every entry
    against the code, and survey only the gaps — areas the idea touches that
    Coverage lacks, and files changed in covered areas since their Coverage date.
@@ -90,7 +95,10 @@ Run `grilling` and `domain-modeling` together as one discovery pass.
    Work the tree in rounds across the frontier — every decision whose
    prerequisites are settled. Number each question and give a recommended answer.
    Find facts yourself through repository inspection and tool lookups; reserve
-   questions for human decisions.
+   questions for human decisions. Log every round in
+   `.scratch/<feature-slug>/decisions.md` as you post it, and record each answer
+   there before the next round — the log, not the conversation, is what Stage 1
+   and a resumed run read: [decision-log.md](references/decision-log.md).
 4. **Active domain modeling (inline `domain-modeling`).** Challenge overloaded
    terms, sharpen fuzzy language, and stress-test relationships with concrete
    scenarios. Write terms into `.scratch/<feature-slug>/CONTEXT.md` the moment
@@ -102,12 +110,14 @@ Run `grilling` and `domain-modeling` together as one discovery pass.
 
 ## Stage 1 — Spec
 
-Run `to-spec` inline. Synthesize the settled conversation, glossary, and ADRs
+Run `to-spec` inline. Synthesize `decisions.md`, the glossary, and the ADRs
 directly into `.scratch/<feature-slug>/spec.md` using the standard sections
 (Problem Statement, Solution, User Stories, Implementation Decisions, Testing
 Decisions, Out of Scope, Further Notes). Sketch the test seams and confirm them
 with the user. Stage 0 already settled the decisions — synthesize them and keep
-the interview closed.
+the interview closed. The spec is done when every decision in the log appears in
+it: as a story, an implementation or testing decision, an out-of-scope line, or
+a further note.
 
 Implementation Decisions includes a `### Reuse Plan`: every reusable module the
 spec touches, by symbol, as use as-is, extend, create shared, create candidate,

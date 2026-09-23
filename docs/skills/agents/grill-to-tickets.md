@@ -31,10 +31,10 @@ npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 
 ### วิธีทำงานหลัก
 
-เรียก `/grill-to-tickets <idea>` หรือ `$grill-to-tickets <idea>` จากนั้น:
+เรียก `/grill-to-tickets <idea>` หรือ `$grill-to-tickets <idea>` (ถ้า run ค้างกลางทาง เช่นหลัง `/clear` ให้เรียก `/grill-to-tickets continue <feature-slug>` เพื่อทำต่อจาก State ใน `decisions.md`) จากนั้น:
 
-1. **Stage 0 — Grill**: เริ่มด้วย **Reuse survey** อ่าน `docs/reuse-catalog.md` ของ project ตรวจว่าทุกรายการยังมีอยู่จริง แล้วสำรวจเฉพาะส่วนที่ยังไม่เคยสำรวจหรือไฟล์ที่เปลี่ยนหลังวันที่ใน Coverage (ถ้ายังไม่มี catalog จะสร้างให้พร้อมเพิ่มบรรทัดชี้ใน `AGENTS.md`) ทางเลือกเรื่อง reuse เช่น ขยายของเดิมหรือสร้างใหม่ จะกลายเป็นคำถามให้คุณตัดสิน จากนั้นสัมภาษณ์แบบ design tree พร้อมทำ domain modeling เขียน `CONTEXT.md` / `adr/` ทันทีที่ term นิ่ง แล้วหยุดขอ confirmation เมื่อ frontier ว่าง
-2. **Stage 1 — Spec**: รัน `to-spec` สังเคราะห์บทสนทนาเป็น `spec.md` โดยไม่สัมภาษณ์ซ้ำ พร้อม **Reuse Plan** ที่ระบุว่าแต่ละ module จะใช้ของเดิม ขยาย สร้างเป็น shared (ต้องมีผู้ใช้ตั้งแต่ 2 ราย) สร้างเป็น candidate promote หรือแยกไว้โดยตั้งใจ
+1. **Stage 0 — Grill**: เริ่มด้วย **Reuse survey** อ่าน `docs/reuse-catalog.md` ของ project ตรวจว่าทุกรายการยังมีอยู่จริง แล้วสำรวจเฉพาะส่วนที่ยังไม่เคยสำรวจหรือไฟล์ที่เปลี่ยนหลังวันที่ใน Coverage (ถ้ายังไม่มี catalog จะสร้างให้พร้อมเพิ่มบรรทัดชี้ใน `AGENTS.md`) ทางเลือกเรื่อง reuse เช่น ขยายของเดิมหรือสร้างใหม่ จะกลายเป็นคำถามให้คุณตัดสิน จากนั้นสัมภาษณ์แบบ design tree พร้อมทำ domain modeling เขียน `CONTEXT.md` / `adr/` ทันทีที่ term นิ่ง บันทึกทุกคำถามและคำตอบลง **Decision Log** (`decisions.md`) ก่อนถามรอบถัดไป แล้วหยุดขอ confirmation เมื่อ frontier ว่าง
+2. **Stage 1 — Spec**: รัน `to-spec` สังเคราะห์ `decisions.md`, glossary และ ADR เป็น `spec.md` โดยไม่สัมภาษณ์ซ้ำ ทุกการตัดสินใจใน log ต้องอยู่ใน spec พร้อม **Reuse Plan** ที่ระบุว่าแต่ละ module จะใช้ของเดิม ขยาย สร้างเป็น shared (ต้องมีผู้ใช้ตั้งแต่ 2 ราย) สร้างเป็น candidate promote หรือแยกไว้โดยตั้งใจ
 3. **Stage 2 — Design Review Gate**: รัน `scrutinize` แล้ว normalize verdict เป็น `SHIP` / `FIX_THEN_SHIP` / `REWORK` / `REJECT` เก็บรายงานไว้ไฟล์เดียว `design-review.md` อัปเดตทุกรอบ และตรวจ **reuse lens** ทุกรอบ (ของที่ซ้ำกับ catalog, logic ที่ไม่มีเจ้าของ, shared ที่เผื่ออนาคตเกินไป)
 4. **Stage 3 — Tickets**: เมื่อได้ `SHIP` รัน `to-tickets` เขียน ticket ลง `.scratch/<feature-slug>/issues/` shared module ใหม่แต่ละตัวมี ticket เจ้าของใบเดียวและ ticket ที่ใช้ต้องรอ ticket เจ้าของ ทุก ticket มีบรรทัด `**Reuse:**` (`use` / `extend` / `create-shared` / `create-candidate` / `promote`) ซึ่งไม่ใช่ acceptance criterion
 5. **Stop**: บอกให้ commit ไฟล์วางแผนและ `docs/reuse-catalog.md` แล้วพิมพ์ `/clear` ตามด้วย `/subagent-implement .scratch/<feature-slug>/` (หรือ `/agy-implement` / `/opencode-implement`) ไม่เรียก implementer เอง
@@ -50,6 +50,7 @@ npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 
 ### ไฟล์ที่เกี่ยวข้อง
 
+- `references/decision-log.md` — รูปแบบของ Decision Log (`decisions.md`) เวลาที่ต้องเขียน และขั้นตอน `continue <feature-slug>`
 - `references/design-review-gate.md` — source เดียวของ routing table เต็ม, cycle accounting, stall detection, gate report format (SKILL.md Stage 2 เก็บแค่สรุปสั้น ๆ ต่อ verdict แล้วชี้มาที่นี่)
 - `references/reuse-pass.md` — กฎ reuse ของแต่ละ stage เริ่มจาก Reuse survey ใน Stage 0 (drift check, Coverage, bootstrap, pointer)
 - `references/reuse-catalog-template.md` — template ของ `docs/reuse-catalog.md` ที่ใช้สร้างครั้งแรก header ของไฟล์อธิบายวิธีดูแลตัวเอง
@@ -90,14 +91,18 @@ npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 
 ### Main workflow
 
-Invoke `/grill-to-tickets <idea>` or `$grill-to-tickets <idea>`. The skill runs
+Invoke `/grill-to-tickets <idea>` or `$grill-to-tickets <idea>`; resume an
+interrupted run with `/grill-to-tickets continue <feature-slug>`. The skill runs
 four stages — Grill, Spec, Design Review Gate, Tickets — writing every feature
 artifact under `.scratch/<feature-slug>/`. Stage 0 opens with a Reuse survey
 against the project's Reuse Catalog (`docs/reuse-catalog.md`): it drift-checks
 every entry, surveys only uncovered areas and files changed since their Coverage
 date, bootstraps the catalog (with a pointer line in `AGENTS.md` or
 `CLAUDE.md`) when it is missing, and turns genuine reuse choices into grilling
-questions. Stage 1 writes a Reuse Plan into the spec — use as-is, extend, create
+questions. Every question and answer is logged in the Decision Log
+(`decisions.md`) before the next round, together with the run's State, so a
+resumed run and Stage 1 read decisions from a file rather than from recall.
+Stage 1 writes the spec from that log, and a Reuse Plan into it — use as-is, extend, create
 shared (two or more real consumers), create candidate, promote, or kept separate
 on purpose — and every gate cycle applies a reuse lens that flags duplicated,
 unowned, and speculative shared modules. The Design Review Gate normalizes each
@@ -121,6 +126,8 @@ siblings) and stops.
 
 ### Related files
 
+- `references/decision-log.md` — the Decision Log format, when to write it, and
+  the `continue <feature-slug>` resume procedure
 - `references/design-review-gate.md` — the single source for the full routing
   table, cycle accounting, stall detection, and the per-cycle gate report format;
   SKILL.md Stage 2 keeps only a brief per-verdict summary and points here

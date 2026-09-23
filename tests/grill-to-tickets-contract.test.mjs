@@ -100,6 +100,30 @@ describe("grill-to-tickets composite skill contract", () => {
       assert.match(content, /\.scratch\/<feature-slug>\/spec\.md/);
       assert.match(content, /\.scratch\/<feature-slug>\/design-review\.md/);
       assert.match(content, /\.scratch\/<feature-slug>\/issues\//);
+      assert.match(content, /\.scratch\/<feature-slug>\/decisions\.md/);
+    }
+  });
+
+  it("logs every decision to decisions.md and resumes a run from it", async () => {
+    for (const file of skillFiles) {
+      const content = await readFile(file, "utf8");
+      assert.match(content, /continue <feature-slug>/, "a resume invocation is documented");
+      assert.match(content, /\(references\/decision-log\.md\)/);
+      assert.match(content, /Stage 0[\s\S]*record each answer[\s\S]*before the next round[\s\S]*Stage 1/);
+      assert.match(content, /Stage 1[\s\S]*Synthesize `decisions\.md`[\s\S]*every decision in the log/);
+    }
+    for (const dir of skillDirs) {
+      const log = await readFile(path.resolve(dir, "references/decision-log.md"), "utf8");
+      assert.match(log, /^## State$/m, "the log carries run State");
+      assert.match(log, /waiting on/);
+      assert.match(log, /decided: open/);
+      assert.match(log, /before you post the next\s+round/);
+      assert.match(log, /^## Resume — `continue <feature-slug>`$/m);
+      assert.match(log, /cycle count from `design-review\.md`/, "one source of truth for the gate cycle count");
+
+      const gate = await readFile(path.resolve(dir, "references/design-review-gate.md"), "utf8");
+      assert.match(gate, /this finding and `decisions\.md` to a fresh writer/);
+      assert.doesNotMatch(gate, /transcript/i, "the REWORK test reads the log, not a transcript");
     }
   });
 
