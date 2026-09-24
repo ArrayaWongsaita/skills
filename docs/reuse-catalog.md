@@ -55,6 +55,7 @@ docs/reuse-catalog/<area>.md and keep this file as the map.
 
 - `parseTicket` — `skills/agents/grill-to-tickets/scripts/check-tickets.mjs` — use for: reading any `**Name:** value` field from a local ticket file · from: grill-to-tickets
 - `checkFeature` — `skills/agents/grill-to-tickets/scripts/check-tickets.mjs` — use for: mechanical checks over a feature's spec and tickets (errors, notes, story coverage, blocker sets) · from: grill-to-tickets
+- `sectionOf` — `skills/agents/grill-to-tickets/scripts/check-tickets.mjs` — use for: reading one section of a markdown document by heading · from: grill-to-tickets-production
 - `extractBlock` — `tests/implementer-reuse-drift.test.mjs` — use for: slicing a start/end-delimited prose block out of a reference file to compare across skills · from: tests
 
 ## Coverage

@@ -9,6 +9,14 @@
 // - every **Blocked by:** entry names an existing, lower-numbered ticket;
 // - every ticket has **Reuse:** directly after **Blocked by:**, using only the
 //   fixed verbs;
+// - every ticket has **Seam:** directly after **Stories:**;
+// - every ticket has **Context:** directly after **Seam:**;
+// - every **Seam:** and **Context:** is a single non-empty line with no non-field line directly after it;
+// - every spec § ref in **Context:** matches exactly one heading in spec.md;
+// - every path in **Context:** is relative to the project root, does not escape it, and is not a directory;
+// - every plain and (edit) file in **Context:** exists in the repository;
+// - every (new) file in **Context:** does not exist yet, and only one ticket marks it (new);
+// - every (from NN) and (edit from NN) file in **Context:** is created by a transitive blocker NN marked (new);
 // - every create-shared and promote entry in spec.md's "### Reuse Plan" has a
 //   ticket carrying that verb for its symbol;
 // - each create-shared or promote symbol has exactly one ticket, and every
@@ -16,7 +24,7 @@
 //
 // Exit codes: 0 clean, 1 errors found, 2 unusable input.
 
-import { readFile, readdir } from "node:fs/promises";
+import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -53,18 +61,113 @@ export function parseReusePlan(spec) {
   return plan;
 }
 
+export function sectionOf(spec, ref) {
+  if (typeof spec !== "string" || !ref) {
+    return { error: "missing" };
+  }
+
+  const lines = spec.split("\n");
+  let inFenced = false;
+  let fenceChar = "";
+  let fenceLen = 0;
+
+  const headings = [];
+  const ancestorStack = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    const fenceMatch = line.match(/^ {0,3}(`{3,}|~{3,})/);
+    if (fenceMatch) {
+      const char = fenceMatch[1][0];
+      const len = fenceMatch[1].length;
+      if (!inFenced) {
+        inFenced = true;
+        fenceChar = char;
+        fenceLen = len;
+        continue;
+      } else if (char === fenceChar && len >= fenceLen) {
+        inFenced = false;
+        continue;
+      }
+    }
+
+    if (inFenced) continue;
+
+    const hMatch = line.match(/^ {0,3}(#{1,6})(?:\s+(.*)|\s*$)/);
+    if (hMatch) {
+      const level = hMatch[1].length;
+      const rawText = hMatch[2] || "";
+      const text = rawText.replace(/^[\s#]+/, "").replace(/[\s#]+$/, "").trim();
+
+      while (ancestorStack.length > 0 && ancestorStack[ancestorStack.length - 1].level >= level) {
+        ancestorStack.pop();
+      }
+
+      const ancestors = ancestorStack.map((a) => a.text);
+      headings.push({ text, level, lineIndex: i, ancestors });
+      ancestorStack.push({ text, level });
+    }
+  }
+
+  const segments = ref.split("›").map((s) => s.trim()).filter(Boolean);
+  if (segments.length === 0) return { error: "missing" };
+
+  const targetHeading = segments[segments.length - 1];
+  const refAncestors = segments.slice(0, -1);
+
+  const matches = headings.filter((h) => {
+    if (h.text !== targetHeading) return false;
+    if (refAncestors.length === 0) return true;
+    let aIdx = 0;
+    for (const needed of refAncestors) {
+      let found = false;
+      while (aIdx < h.ancestors.length) {
+        if (h.ancestors[aIdx] === needed) {
+          found = true;
+          aIdx++;
+          break;
+        }
+        aIdx++;
+      }
+      if (!found) return false;
+    }
+    return true;
+  });
+
+  if (matches.length === 0) return { error: "missing" };
+  if (matches.length > 1) return { error: "ambiguous" };
+
+  const matched = matches[0];
+  const startLine = matched.lineIndex;
+
+  let endLine = lines.length;
+  for (const h of headings) {
+    if (h.lineIndex > startLine && h.level <= matched.level) {
+      endLine = h.lineIndex;
+      break;
+    }
+  }
+
+  const text = lines.slice(startLine, endLine).join("\n");
+  return { text };
+}
+
 export function parseTicket(file, text) {
   const heading = text.match(/^#\s+(\d+):\s*(.+?)\s*$/m);
+  const lines = text.split("\n");
   const fields = [];
-  for (const line of text.split("\n")) {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     const field = line.match(/^\*\*([A-Za-z][A-Za-z ]*):\*\*\s*(.*?)\s*$/);
-    if (field) fields.push({ name: field[1], value: field[2] });
+    if (field) fields.push({ name: field[1], value: field[2], lineIndex: i });
   }
   return {
     file,
     number: heading ? Number(heading[1]) : null,
     title: heading ? heading[2] : null,
     fields,
+    lines,
     field: (name) => fields.find((f) => f.name === name)?.value,
   };
 }
@@ -137,7 +240,24 @@ function parseStoryRefs(value, stories) {
   return { refs, problems };
 }
 
-export function checkFeature({ spec, tickets: ticketFiles }) {
+function isFollowedByNonField(field, lines) {
+  if (!lines) return false;
+  const nextIdx = field.lineIndex + 1;
+  if (nextIdx >= lines.length) return false;
+  const nextLine = lines[nextIdx];
+  if (nextLine.trim() === "") return false;
+  return !/^\*\*([A-Za-z][A-Za-z ]*):\*\*/.test(nextLine);
+}
+
+function getFile(files, normPath) {
+  if (!files) return null;
+  if (files instanceof Map) {
+    return files.has(normPath) ? files.get(normPath) : null;
+  }
+  return Object.hasOwn(files, normPath) ? files[normPath] : null;
+}
+
+export function checkFeature({ spec, tickets: ticketFiles, files }) {
   const errors = [];
   const notes = [];
   const stories = parseStories(spec ?? "");
@@ -212,6 +332,196 @@ export function checkFeature({ spec, tickets: ticketFiles }) {
       for (const ref of refs) coverage.get(ref)?.push(ticket.number);
       if (refs.length === 0 && problems.length === 0) notes.push(`${where} delivers no story (Stories: none)`);
     }
+
+    // Seam validation
+    const seamFields = ticket.fields.filter((f) => f.name === "Seam");
+    if (seamFields.length === 0) {
+      errors.push(`${where}: **Seam:** is missing`);
+    } else {
+      if (seamFields.length > 1) {
+        errors.push(`${where}: **Seam:** is repeated`);
+      }
+      if (seamFields[0].value.trim() === "") {
+        errors.push(`${where}: **Seam:** is empty`);
+      }
+      const storiesIndex = ticket.fields.findIndex((f) => f.name === "Stories");
+      const seamIndex = ticket.fields.findIndex((f) => f.name === "Seam");
+      if (storiesIndex !== -1 && seamIndex !== storiesIndex + 1) {
+        errors.push(`${where}: **Seam:** must come directly after **Stories:**`);
+      }
+      for (const sf of seamFields) {
+        if (isFollowedByNonField(sf, ticket.lines)) {
+          errors.push(`${where}: **Seam:** is followed directly by a non-field line`);
+        }
+      }
+    }
+
+    // Context validation
+    const contextFields = ticket.fields.filter((f) => f.name === "Context");
+    if (contextFields.length === 0) {
+      errors.push(`${where}: **Context:** is missing`);
+    } else {
+      if (contextFields.length > 1) {
+        errors.push(`${where}: **Context:** is repeated`);
+      }
+      if (contextFields[0].value.trim() === "") {
+        errors.push(`${where}: **Context:** is empty`);
+      }
+      const seamIndex = ticket.fields.findIndex((f) => f.name === "Seam");
+      const contextIndex = ticket.fields.findIndex((f) => f.name === "Context");
+      if (seamIndex !== -1 && contextIndex !== seamIndex + 1) {
+        errors.push(`${where}: **Context:** must come directly after **Seam:**`);
+      }
+      for (const cf of contextFields) {
+        if (isFollowedByNonField(cf, ticket.lines)) {
+          errors.push(`${where}: **Context:** is followed directly by a non-field line`);
+        }
+      }
+    }
+  }
+
+  // Calculate transitive blockers for each ticket
+  const ticketMap = new Map(tickets.map((t) => [t.number, t]));
+  const transitiveBlockers = new Map();
+  for (const t of tickets) {
+    const allBlockers = new Set();
+    const queue = [...(t.blockers || [])];
+    while (queue.length > 0) {
+      const bNum = queue.pop();
+      if (!allBlockers.has(bNum)) {
+        allBlockers.add(bNum);
+        const bTicket = ticketMap.get(bNum);
+        if (bTicket && bTicket.blockers) {
+          for (const nextB of bTicket.blockers) {
+            if (!allBlockers.has(nextB)) queue.push(nextB);
+          }
+        }
+      }
+    }
+    transitiveBlockers.set(t.number, allBlockers);
+  }
+
+  // Collect (new) paths per ticket and detect duplicate (new) across tickets
+  const newPathsByTicket = new Map();
+  for (const ticket of tickets) {
+    ticket.newPaths = new Set();
+    const contextVal = ticket.field("Context");
+    if (!contextVal) continue;
+    const items = contextVal.split("·").map((s) => s.trim()).filter(Boolean);
+    for (const item of items) {
+      const newMatch = item.match(/^\(new\)\s+(.+)$/);
+      if (newMatch) {
+        const norm = path.posix.normalize(newMatch[1].trim());
+        ticket.newPaths.add(norm);
+        const list = newPathsByTicket.get(norm) ?? [];
+        list.push(ticket);
+        newPathsByTicket.set(norm, list);
+      }
+    }
+  }
+
+  for (const [norm, ownerTickets] of newPathsByTicket) {
+    if (ownerTickets.length > 1) {
+      const list = ownerTickets.map((t) => pad(t.number)).join(", ");
+      errors.push(`Context path "${norm}" is marked (new) by multiple tickets (${list})`);
+    }
+  }
+
+  // Validate Context items
+  for (const ticket of tickets) {
+    const where = `issues/${ticket.file}`;
+    const contextVal = ticket.field("Context");
+    if (!contextVal) continue;
+    const items = contextVal.split("·").map((s) => s.trim()).filter(Boolean);
+
+    for (const item of items) {
+      const specMatch = item.match(/^spec\s+§\s+(.+)$/);
+      if (specMatch) {
+        const ref = specMatch[1].trim();
+        if (spec !== null) {
+          const res = sectionOf(spec, ref);
+          if (res.error === "missing") {
+            errors.push(`${where}: Context spec § ${ref} matches no heading in spec.md`);
+          } else if (res.error === "ambiguous") {
+            errors.push(`${where}: Context spec § ${ref} is ambiguous`);
+          }
+        }
+        continue;
+      }
+
+      let marker = "plain";
+      let rawPath = "";
+      let fromTicketNumber = null;
+
+      const fromMatch = item.match(/^\(from\s+(\d+)\)\s+(.+)$/);
+      const editFromMatch = item.match(/^\(edit\s+from\s+(\d+)\)\s+(.+)$/);
+      const editMatch = item.match(/^\(edit\)\s+(.+)$/);
+      const newMatch = item.match(/^\(new\)\s+(.+)$/);
+
+      if (fromMatch) {
+        marker = "from";
+        fromTicketNumber = Number(fromMatch[1]);
+        rawPath = fromMatch[2].trim();
+      } else if (editFromMatch) {
+        marker = "edit from";
+        fromTicketNumber = Number(editFromMatch[1]);
+        rawPath = editFromMatch[2].trim();
+      } else if (editMatch) {
+        marker = "edit";
+        rawPath = editMatch[1].trim();
+      } else if (newMatch) {
+        marker = "new";
+        rawPath = newMatch[1].trim();
+      } else {
+        marker = "plain";
+        rawPath = item.trim();
+      }
+
+      if (path.posix.isAbsolute(rawPath)) {
+        errors.push(`${where}: Context path "${rawPath}" is absolute`);
+        continue;
+      }
+
+      const norm = path.posix.normalize(rawPath);
+      if (norm.startsWith("../") || norm === ".." || norm.startsWith("/..")) {
+        errors.push(`${where}: Context path "${rawPath}" escapes the project root`);
+        continue;
+      }
+
+      const fileEntry = getFile(files, norm);
+      if (fileEntry && typeof fileEntry === "object" && fileEntry.directory) {
+        errors.push(`${where}: Context path "${norm}" is a directory`);
+        continue;
+      }
+
+      if (marker === "plain") {
+        if (fileEntry === null) {
+          errors.push(`${where}: Context path "${norm}" does not exist`);
+        }
+      } else if (marker === "edit") {
+        if (fileEntry === null) {
+          errors.push(`${where}: Context (edit) path "${norm}" does not exist`);
+        }
+      } else if (marker === "new") {
+        if (fileEntry !== null) {
+          errors.push(`${where}: Context (new) path "${norm}" already exists`);
+        }
+      } else if (marker === "from" || marker === "edit from") {
+        const nn = fromTicketNumber;
+        const creator = ticketMap.get(nn);
+        if (!creator) {
+          errors.push(`${where}: Context (${marker} ${pad(nn)}) ticket ${nn} does not exist`);
+        } else {
+          const tBlockers = transitiveBlockers.get(ticket.number) ?? new Set();
+          if (!tBlockers.has(nn)) {
+            errors.push(`${where}: Context (${marker} ${pad(nn)}) ticket ${pad(nn)} is not a transitive blocker`);
+          }
+          if (!creator.newPaths.has(norm)) {
+            errors.push(`${where}: Context (${marker} ${pad(nn)}) ticket ${pad(nn)} does not mark "${norm}" as (new)`);
+          }
+        }
+      }
+    }
   }
 
   const plan = parseReusePlan(spec ?? "");
@@ -255,14 +565,65 @@ export function checkFeature({ spec, tickets: ticketFiles }) {
   return { errors, notes, coverage, tickets: tickets.map((t) => t.number) };
 }
 
+export function findProjectRoot(dir) {
+  let current = path.resolve(dir);
+  while (true) {
+    if (path.basename(current) === ".scratch") {
+      return path.dirname(current);
+    }
+    const parent = path.dirname(current);
+    if (parent === current) {
+      throw new Error(`cannot find .scratch ancestor for ${dir}`);
+    }
+    current = parent;
+  }
+}
+
 export async function checkFeatureDir(dir) {
+  const projectRoot = findProjectRoot(dir);
   const spec = await readFile(path.join(dir, "spec.md"), "utf8").catch(() => null);
   const issuesDir = path.join(dir, "issues");
   const names = (await readdir(issuesDir)).filter((name) => name.endsWith(".md")).sort();
   const tickets = await Promise.all(
     names.map(async (file) => ({ file, text: await readFile(path.join(issuesDir, file), "utf8") })),
   );
-  return checkFeature({ spec, tickets });
+
+  const files = new Map();
+  for (const { text, file } of tickets) {
+    const ticketObj = parseTicket(file, text);
+    const contextVal = ticketObj.field("Context");
+    if (!contextVal) continue;
+    const items = contextVal.split("·").map((s) => s.trim()).filter(Boolean);
+    for (const item of items) {
+      if (item.startsWith("spec §") || item.startsWith("spec\t§")) continue;
+      let rawPath = item;
+      const m = item.match(/^\((?:edit|new|from\s+\d+|edit\s+from\s+\d+)\)\s+(.+)$/);
+      if (m) rawPath = m[1];
+      const norm = path.posix.normalize(rawPath.trim());
+      if (path.posix.isAbsolute(norm) || norm.startsWith("../") || norm === "..") {
+        continue;
+      }
+      if (!files.has(norm)) {
+        const fullPath = path.resolve(projectRoot, norm);
+        try {
+          const st = await stat(fullPath);
+          if (st.isDirectory()) {
+            files.set(norm, { directory: true });
+          } else {
+            files.set(norm, await readFile(fullPath, "utf8"));
+          }
+        } catch (err) {
+          if (err.code === "ENOENT") {
+            files.set(norm, null);
+          } else {
+            throw err;
+          }
+        }
+      }
+    }
+  }
+
+  return checkFeature({ spec, tickets, files });
 }
 
 export function formatReport(dir, { errors, notes, coverage }) {
@@ -291,7 +652,7 @@ async function main(argv) {
   try {
     result = await checkFeatureDir(dir);
   } catch (error) {
-    console.error(`check-tickets: cannot read ${path.join(dir, "issues")}: ${error.message}`);
+    console.error(`check-tickets: ${error.message}`);
     return 2;
   }
   console.log(formatReport(dir, result));
