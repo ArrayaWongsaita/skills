@@ -11,6 +11,7 @@ import * as checkTicketsModule from "../skills/agents/grill-to-tickets/scripts/c
 const {
   checkFeature,
   checkFeatureDir,
+  formatReport,
   parseReusePlan,
   parseStories,
   parseTicket,
@@ -1120,6 +1121,229 @@ describe("check-tickets", () => {
     }
   });
 
+  // --- Warnings: an acceptance criterion that mentions a suite or tool run ---
+  it("warns, naming the ticket and criterion, when an acceptance criterion mentions a suite or tool run", () => {
+    const warningsFor = (criterion) => {
+      const tickets = passing();
+      tickets[2] = ticket("03", "Hide emails", {
+        blockedBy: "01",
+        stories: "3",
+        extra: `- [ ] ${criterion}\n`,
+      });
+      const result = checkFeature({ spec, tickets });
+      assert.deepEqual(result.errors, []);
+      return result.warnings;
+    };
+
+    for (const criterion of [
+      "npm test",
+      "npm run lint",
+      "npm run validate",
+      "npm run typecheck",
+      "tests pass",
+      "test passes",
+      "typecheck passes",
+      "lint passes",
+      "suite passes",
+      "Run NPM TEST before the commit",
+    ]) {
+      const warnings = warningsFor(criterion);
+      assert.deepEqual(warnings?.length, 1, `${criterion}: ${warnings?.join("\n")}`);
+      assert.match(warnings[0], /issues\/03-hide-emails\.md/);
+      assert.ok(warnings[0].includes(criterion), warnings[0]);
+    }
+
+    assert.deepEqual(warningsFor("the guide describes X"), []);
+  });
+
+  // --- Warnings: two tickets changing the same path without an edge ---
+  it("warns when two tickets change the same path and neither transitively blocks the other", () => {
+    const files = { "src/shared.mjs": "export const shared = 1;\n" };
+    const edit = "spec § User Stories · (edit) src/shared.mjs";
+    const unordered = [
+      ticket("01", "Export members", { reuse: "create-shared `buildMemberRows`", stories: "1, 1a", context: edit, files }),
+      ticket("02", "CSV download", { stories: "2", context: edit, files }),
+      ticket("03", "Hide emails", { stories: "3" }),
+    ];
+    const resUnordered = checkFeature({ spec, tickets: unordered, files });
+    assert.deepEqual(resUnordered.errors, []);
+    assert.deepEqual(resUnordered.warnings?.length, 1, resUnordered.warnings?.join("\n"));
+    assert.match(resUnordered.warnings[0], /issues\/01-export-members\.md and issues\/02-csv-download\.md/);
+    assert.match(resUnordered.warnings[0], /src\/shared\.mjs/);
+
+    // A direct edge between the pair ends the warning.
+    const ordered = [
+      ticket("01", "Export members", { reuse: "create-shared `buildMemberRows`", stories: "1, 1a", context: edit, files }),
+      ticket("02", "CSV download", { blockedBy: "01", stories: "2", context: edit, files }),
+      ticket("03", "Hide emails", { stories: "3" }),
+    ];
+    assert.deepEqual(checkFeature({ spec, tickets: ordered, files }).warnings, []);
+
+    // A transitive edge counts too: 03 is blocked by 02, which is blocked by 01.
+    const transitive = [
+      ticket("01", "Export members", { reuse: "create-shared `buildMemberRows`", stories: "1, 1a", context: edit, files }),
+      ticket("02", "CSV download", { blockedBy: "01", stories: "2", context: edit, files }),
+      ticket("03", "Hide emails", { blockedBy: "02", stories: "3", context: edit, files }),
+    ];
+    assert.deepEqual(checkFeature({ spec, tickets: transitive, files }).warnings, []);
+
+    // One ticket naming the path twice is not two tickets changing it.
+    const twice = [
+      ticket("01", "Export members", {
+        reuse: "create-shared `buildMemberRows`",
+        stories: "1, 1a",
+        context: "spec § User Stories · (edit) src/shared.mjs · (edit) src/shared.mjs",
+        files,
+      }),
+      ticket("02", "CSV download", { stories: "2" }),
+      ticket("03", "Hide emails", { stories: "3" }),
+    ];
+    assert.deepEqual(checkFeature({ spec, tickets: twice, files }).warnings, []);
+  });
+
+  it("warns on the same path marked (new) or (edit from NN) when no edge orders the pair", () => {
+    const dupNew = [
+      ticket("01", "Export members", { stories: "1, 1a", context: "spec § User Stories · (new) src/dup.mjs" }),
+      ticket("02", "CSV download", { stories: "2", context: "spec § User Stories · (new) src/dup.mjs" }),
+      ticket("03", "Hide emails", { stories: "3" }),
+    ];
+    const resNew = checkFeature({ spec, tickets: dupNew, files: {} });
+    assert.ok(
+      resNew.warnings?.some(
+        (w) => /01-export-members\.md and issues\/02-csv-download\.md/.test(w) && /src\/dup\.mjs/.test(w),
+      ),
+      resNew.warnings?.join("\n"),
+    );
+
+    const editFrom = [
+      ticket("01", "Export members", {
+        reuse: "create-shared `buildMemberRows`",
+        stories: "1, 1a",
+        context: "spec § User Stories · (new) src/created.mjs",
+      }),
+      ticket("02", "CSV download", {
+        blockedBy: "01",
+        stories: "2",
+        context: "spec § User Stories · (edit from 01) src/created.mjs",
+      }),
+      ticket("03", "Hide emails", {
+        blockedBy: "01",
+        stories: "3",
+        context: "spec § User Stories · (edit from 01) src/created.mjs",
+      }),
+    ];
+    const resEditFrom = checkFeature({ spec, tickets: editFrom, files: {} });
+    assert.deepEqual(resEditFrom.errors, []);
+    assert.deepEqual(resEditFrom.warnings?.length, 1, resEditFrom.warnings?.join("\n"));
+    assert.match(resEditFrom.warnings[0], /issues\/02-csv-download\.md and issues\/03-hide-emails\.md/);
+    assert.match(resEditFrom.warnings[0], /src\/created\.mjs/);
+  });
+
+  // --- Warnings: more than 15 tickets ---
+  it("warns above 15 tickets, proposing a split into separate feature slugs", () => {
+    const many = (count) =>
+      Array.from({ length: count }, (_, index) => {
+        const number = String(index + 1).padStart(2, "0");
+        return ticket(number, `Ticket ${number}`, {
+          blockedBy: index === 0 ? "None (can start immediately)" : "01",
+          stories: "1",
+        });
+      });
+
+    const res16 = checkFeature({ spec, tickets: many(16) });
+    assert.deepEqual(res16.warnings?.length, 1, res16.warnings?.join("\n"));
+    assert.match(res16.warnings[0], /16 tickets/);
+    assert.match(res16.warnings[0], /separate feature slugs/i);
+
+    assert.deepEqual(checkFeature({ spec, tickets: many(15) }).warnings, []);
+  });
+
+  // --- DAG summary: waves, width, critical path, recommendation ---
+  it("computes each ticket's wave, the maximum wave width, and the critical-path length", () => {
+    const chain = [
+      ticket("01", "First", { stories: "1" }),
+      ticket("02", "Second", { blockedBy: "01", stories: "1a" }),
+      ticket("03", "Third", { blockedBy: "02", stories: "2, 3" }),
+    ];
+    assert.deepEqual(checkFeature({ spec, tickets: chain }).dag, {
+      waves: [[1], [2], [3]],
+      width: 1,
+      criticalPath: 3,
+      recommendation: ["subagent-implement"],
+    });
+
+    const diamond = [
+      ticket("01", "Base", { stories: "1" }),
+      ticket("02", "Left", { blockedBy: "01", stories: "1a" }),
+      ticket("03", "Right", { blockedBy: "01", stories: "2" }),
+      ticket("04", "Join", { blockedBy: "02, 03", stories: "3" }),
+    ];
+    assert.deepEqual(checkFeature({ spec, tickets: diamond }).dag, {
+      waves: [[1], [2, 3], [4]],
+      width: 2,
+      criticalPath: 3,
+      recommendation: ["subagent-implement", "agy-implement", "opencode-implement"],
+    });
+
+    const wide = [
+      ticket("01", "Base", { stories: "1" }),
+      ticket("02", "Second", { blockedBy: "01", stories: "1a" }),
+      ticket("03", "Third", { blockedBy: "01", stories: "2" }),
+      ticket("04", "Fourth", { blockedBy: "01", stories: "3" }),
+    ];
+    assert.deepEqual(checkFeature({ spec, tickets: wide }).dag, {
+      waves: [[1], [2, 3, 4]],
+      width: 3,
+      criticalPath: 2,
+      recommendation: ["agy-implement", "opencode-implement"],
+    });
+  });
+
+  // --- Report order and warnings-only PASS ---
+  it("formatReport prints errors, warnings, story coverage, the budget table, the DAG summary, notes, then the result", () => {
+    const tickets = passing();
+    tickets[2] = ticket("03", "Hide emails", { blockedBy: "01", stories: "none", extra: "- [ ] npm test\n" });
+    const report = formatReport(".scratch/export-feature", checkFeature({ spec, tickets }));
+
+    const at = (needle) => {
+      const index = report.indexOf(needle);
+      assert.ok(index !== -1, `"${needle}" missing from:\n${report}`);
+      return index;
+    };
+    const positions = ["errors (", "warnings (", "story coverage:", "budget:", "dag:", "notes:", "result: FAIL"].map(at);
+    assert.deepEqual([...positions].sort((a, b) => a - b), positions, report);
+    assert.match(
+      report,
+      /dag:\n  wave 0: 01\n  wave 1: 02, 03\n  maximum wave width: 2\n  critical-path length: 2\n  recommended implementer: subagent-implement, agy-implement, opencode-implement/,
+    );
+  });
+
+  it("prints warnings and a DAG summary, and exits 0, when the only findings are warnings", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "check-tickets-warnings-"));
+    const dir = path.join(root, ".scratch", "export-feature");
+    try {
+      await mkdir(path.join(dir, "issues"), { recursive: true });
+      await writeFile(path.join(dir, "spec.md"), spec);
+      const tickets = passing();
+      tickets[2] = ticket("03", "Hide emails", { blockedBy: "01", stories: "3", extra: "- [ ] npm test\n" });
+      tickets.push(ticket("04", "Docs pass", { stories: "none" }));
+      for (const { file, text } of tickets) await writeFile(path.join(dir, "issues", file), text);
+
+      // execFile rejects on a non-zero exit code, so reaching the assertions means exit 0.
+      const { stdout } = await run("node", [script, dir]);
+      assert.match(stdout, /warnings \(1\):/);
+      assert.match(stdout, /npm test/);
+      const positions = ["warnings (", "story coverage:", "budget:", "dag:", "notes:", "result: PASS"].map((needle) => {
+        const index = stdout.indexOf(needle);
+        assert.ok(index !== -1, `"${needle}" missing from:\n${stdout}`);
+        return index;
+      });
+      assert.deepEqual([...positions].sort((a, b) => a - b), positions, stdout);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // --- Documentation of the Budget line ---
   it("ticket-format.md documents the Budget line, its measurement, and the unmeasured fallback", async () => {
     const content = await readFile(
@@ -1142,5 +1366,7 @@ describe("check-tickets", () => {
     assert.match(header, /\*\*Budget:\*\*/);
     assert.match(header, /2000/);
     assert.match(header, /--write-budget/);
+    assert.match(header, /warning/i);
+    assert.match(header, /wave/i);
   });
 });

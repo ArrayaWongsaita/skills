@@ -27,6 +27,13 @@
 // - with --write-budget, the measurement is written to each ticket's Budget line
 //   (inserted directly after Context when absent), skipping tickets with Context
 //   errors, before every check runs;
+// - every acceptance criterion that mentions a suite or tool run warns — "npm
+//   test", "tests pass", "typecheck passes", "lint passes", "suite passes";
+// - two tickets that change the same (edit), (new), or (edit from NN) path with
+//   no transitive edge between them warn, as does a feature above 15 tickets;
+// - warnings never change the result;
+// - the DAG summary lists each wave's tickets, the maximum wave width, the
+//   critical-path length, and the implementer those recommend;
 // - every create-shared and promote entry in spec.md's "### Reuse Plan" has a
 //   ticket carrying that verb for its symbol;
 // - each create-shared or promote symbol has exactly one ticket, and every
@@ -42,6 +49,8 @@ const REUSE_VERBS = new Set(["use", "extend", "create-shared", "create-candidate
 const OWNING_VERBS = ["create-shared", "promote"];
 const TICKET_FILE = /^(\d{2,})-[a-z0-9][a-z0-9-]*\.md$/;
 const STORY_ID = /^\d+[a-z]?$/;
+const SUITE_RUN =
+  /\bnpm (run )?(test|lint|validate|typecheck)\b|\btests? pass(es)?\b|\btypecheck pass(es)?\b|\blint pass(es)?\b|\bsuite pass(es)?\b/i;
 
 export function parseStories(spec) {
   const lines = spec.split("\n");
@@ -357,6 +366,40 @@ function getFile(files, normPath) {
   return Object.hasOwn(files, normPath) ? files[normPath] : null;
 }
 
+// The DAG summary: a ticket's wave is 0 when it has no blockers, otherwise one
+// more than its highest blocker's wave. The number of waves is the critical
+// path; the maximum wave width picks the implementers that fit the graph.
+function computeDag(tickets) {
+  const byNumber = new Map(tickets.map((t) => [t.number, t]));
+  const waveOf = new Map();
+  const wave = (ticket) => {
+    if (waveOf.has(ticket.number)) return waveOf.get(ticket.number);
+    waveOf.set(ticket.number, 0); // a cycle is already reported as an error
+    let value = 0;
+    for (const blocker of ticket.blockers ?? []) {
+      const other = byNumber.get(blocker);
+      if (other) value = Math.max(value, wave(other) + 1);
+    }
+    waveOf.set(ticket.number, value);
+    return value;
+  };
+
+  const waves = [];
+  for (const ticket of tickets) {
+    const index = wave(ticket);
+    while (waves.length <= index) waves.push([]);
+    waves[index].push(ticket.number);
+  }
+  const width = waves.reduce((max, numbers) => Math.max(max, numbers.length), 0);
+  const recommendation =
+    width >= 3
+      ? ["agy-implement", "opencode-implement"]
+      : width === 2
+        ? ["subagent-implement", "agy-implement", "opencode-implement"]
+        : ["subagent-implement"];
+  return { waves, width, criticalPath: waves.length, recommendation };
+}
+
 export function checkFeature({ spec, tickets: ticketFiles, files }) {
   const errors = [];
   const notes = [];
@@ -532,6 +575,50 @@ export function checkFeature({ spec, tickets: ticketFiles, files }) {
     }
   }
 
+  // Warnings: findings the quiz must acknowledge, but that never change the
+  // result. Two tickets that change one path may land in the same wave unless
+  // an edge orders them.
+  const warnings = [];
+  const touchesByPath = new Map();
+  for (const ticket of tickets) {
+    for (const item of contextItemsOf(ticket)) {
+      if (item.kind !== "file") continue;
+      if (item.marker !== "edit" && item.marker !== "new" && item.marker !== "edit from") continue;
+      const norm = path.posix.normalize(item.rawPath);
+      const touching = touchesByPath.get(norm) ?? new Map();
+      touching.set(ticket.number, ticket);
+      touchesByPath.set(norm, touching);
+    }
+  }
+  for (const [norm, touching] of touchesByPath) {
+    const list = [...touching.values()];
+    for (let i = 0; i < list.length; i++) {
+      for (let j = i + 1; j < list.length; j++) {
+        const [a, b] = [list[i], list[j]];
+        const ordered =
+          transitiveBlockers.get(a.number)?.has(b.number) || transitiveBlockers.get(b.number)?.has(a.number);
+        if (!ordered) {
+          warnings.push(
+            `issues/${a.file} and issues/${b.file} both change "${norm}" and neither transitively blocks the other`,
+          );
+        }
+      }
+    }
+  }
+  for (const ticket of tickets) {
+    for (const line of ticket.lines) {
+      const criterion = line.match(/^\s*- \[[ xX]\] (.*)$/);
+      if (criterion && SUITE_RUN.test(criterion[1])) {
+        warnings.push(
+          `issues/${ticket.file}: acceptance criterion "${criterion[1].trim()}" mentions a suite or tool run`,
+        );
+      }
+    }
+  }
+  if (tickets.length > 15) {
+    warnings.push(`the feature has ${tickets.length} tickets; split it into separate feature slugs`);
+  }
+
   // Validate Context items
   for (const ticket of tickets) {
     const where = `issues/${ticket.file}`;
@@ -684,7 +771,7 @@ export function checkFeature({ spec, tickets: ticketFiles, files }) {
     if (covering.length === 0) errors.push(`story ${id} has no ticket`);
   }
 
-  return { errors, notes, coverage, tickets: tickets.map((t) => t.number), budgets };
+  return { errors, warnings, notes, coverage, tickets: tickets.map((t) => t.number), budgets, dag: computeDag(tickets) };
 }
 
 export function findProjectRoot(dir) {
@@ -763,11 +850,14 @@ export async function checkFeatureDir(dir, { writeBudget = false } = {}) {
   return checkFeature({ spec, tickets, files });
 }
 
-export function formatReport(dir, { errors, notes, coverage, budgets = [] }) {
+export function formatReport(dir, { errors, warnings = [], notes, coverage, budgets = [], dag }) {
   const pad = (n) => String(n).padStart(2, "0");
   const lines = [`check-tickets: ${dir}`];
   if (errors.length > 0) {
     lines.push(`errors (${errors.length}):`, ...errors.map((e) => `  - ${e}`));
+  }
+  if (warnings.length > 0) {
+    lines.push(`warnings (${warnings.length}):`, ...warnings.map((w) => `  - ${w}`));
   }
   lines.push("story coverage:");
   for (const [id, covering] of coverage) {
@@ -783,6 +873,15 @@ export function formatReport(dir, { errors, notes, coverage, budgets = [] }) {
       `  ${pad(budget.number).padEnd(6)}  ${String(budget.tokens).padEnd(11)}  ${String(budget.criteria).padEnd(8)}  ${budget.modules}`,
     );
   }
+  lines.push("dag:");
+  if (dag.waves.length === 0) {
+    lines.push("  (no tickets)");
+  } else {
+    dag.waves.forEach((numbers, index) => lines.push(`  wave ${index}: ${numbers.map(pad).join(", ")}`));
+  }
+  lines.push(`  maximum wave width: ${dag.width}`);
+  lines.push(`  critical-path length: ${dag.criticalPath}`);
+  lines.push(`  recommended implementer: ${dag.recommendation.join(", ")}`);
   if (notes.length > 0) lines.push("notes:", ...notes.map((n) => `  - ${n}`));
   const count = `${errors.length} error${errors.length === 1 ? "" : "s"}`;
   lines.push(errors.length === 0 ? "result: PASS" : `result: FAIL (${count})`);
