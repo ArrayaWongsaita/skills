@@ -603,3 +603,55 @@ describe("agy-implement skill contract", () => {
     });
   });
 });
+
+describe("ticket 09 — budget_estimate and usage_total", () => {
+  it("status.md records budget_estimate and usage_total per ticket with the path, per-invocation, BLOCKED, and unknown rules", async () => {
+    for (const dir of skillDirs) {
+      const d = await readFile(path.resolve(dir, "references/status-and-resume.md"), "utf8");
+      const record = d.match(/- per ticket:[\s\S]*?(?=\n- the \*\*integration branch ref)/i);
+      assert.ok(record, "per-ticket record present");
+      assert.match(record[0], /budget_estimate/, "per-ticket record gains budget_estimate");
+      assert.match(record[0], /usage_total/, "per-ticket record gains usage_total");
+      assert.match(
+        d,
+        /budget_estimate[\s\S]{0,160}Budget line[\s\S]{0,80}verbatim|Budget line[\s\S]{0,80}verbatim[\s\S]{0,160}budget_estimate/i,
+        "budget_estimate is the Budget line verbatim",
+      );
+      assert.match(d, /`?none`?[\s\S]{0,160}budget_estimate|budget_estimate[\s\S]{0,200}`?none`?/i, "budget_estimate is none without a Budget line");
+      assert.match(
+        d,
+        /path that delivered[\s\S]{0,200}(failover|every model)/i,
+        "the delivering path covers every failover model",
+      );
+      assert.match(
+        d,
+        /every (dispatch|invocation)[\s\S]{0,80}resume/i,
+        "usage_total is summed per invocation, every dispatch and resume",
+      );
+      assert.match(
+        d,
+        /BLOCKED[\s\S]{0,240}path whose budget[\s\S]{0,160}exhausted|path whose budget[\s\S]{0,160}exhausted[\s\S]{0,240}BLOCKED/i,
+        "a BLOCKED ticket sums the path whose budget it exhausted",
+      );
+      assert.match(d, /`?unknown`?/, "usage_total is unknown when unreported");
+      assert.match(d, /existing `?usage`?[^\n]{0,80}(stays|stay|remain|kept)/i, "existing usage fields stay");
+      assert.match(
+        d,
+        /input_tokens\s*\+\s*output_tokens\s*\+\s*thinking_tokens/,
+        "derives usage_total from input + output + thinking tokens",
+      );
+      assert.match(d, /envelope/i, "the derivation runs over each envelope");
+    }
+  });
+
+  it("agy-contract.md's validation-probe table asks whether a --conversation resume's usage is cumulative", async () => {
+    for (const dir of skillDirs) {
+      const c = await readFile(path.resolve(dir, "references/agy-contract.md"), "utf8");
+      const probeTable = c.match(/## Provisional values pending validation probes[\s\S]*$/);
+      assert.ok(probeTable, "validation-probe table present");
+      assert.match(probeTable[0], /--conversation/, "probe table names --conversation");
+      assert.match(probeTable[0], /cumulative/i, "probe table questions cumulativeness");
+      assert.match(probeTable[0], /resum/i, "probe table names a resume");
+    }
+  });
+});

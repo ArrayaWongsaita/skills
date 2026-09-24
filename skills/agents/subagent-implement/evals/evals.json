@@ -508,6 +508,32 @@
         "Writes every edit, new, and from path relative to the worktree"
       ],
       "files": []
+    },
+    {
+      "id": 41,
+      "name": "records budget_estimate and usage_total per ticket, with a separate verifier total",
+      "prompt": "/subagent-implement .scratch/graph-export/ with an approved Plan. Ticket 01 carries **Budget:** read ~12k tokens · 6 criteria · 3 modules. Its worker reports subagent tokens on the first dispatch and again on one verification-failure resume; the verifier reports its own tokens. Show ticket 01's status.md record after integration.",
+      "expected_output": "The record carries budget_estimate: read ~12k tokens · 6 criteria · 3 modules — the Budget line verbatim — and usage_total: the worker's reported subagent tokens summed per invocation over the path that delivered ticket 01, so both the dispatch and the resume count because none is confirmed cumulative. The worker's reported tokens are recorded as given and noted as possibly cache-inclusive. verifier_usage_total is recorded separately. The worker's reported usage stays; usage_total is the one comparable number derived from it.",
+      "expectations": [
+        "Records budget_estimate as the Budget line verbatim",
+        "Sums usage_total per invocation over the path that delivered the ticket",
+        "Notes the worker's reported tokens as possibly cache-inclusive",
+        "Records verifier_usage_total separately"
+      ],
+      "files": []
+    },
+    {
+      "id": 42,
+      "name": "a BLOCKED ticket sums usage_total over the path whose budget it exhausted",
+      "prompt": "/subagent-implement .scratch/graph-export/ with an approved Plan. Ticket 02 carries **Budget:** read ~9k tokens · 4 criteria · 2 modules. It is BLOCKED (TICKET_VERIFICATION_FAILED) after three verification failures, and the harness reported no usage on its final dispatch. Show ticket 02's status.md record.",
+      "expected_output": "The record's status is BLOCKED (TICKET_VERIFICATION_FAILED) and usage_total sums every usage report on the path whose budget it exhausted — ticket 02's final path — over each dispatch and resume of that path. budget_estimate is ticket 02's Budget line verbatim: read ~9k tokens · 4 criteria · 2 modules. The record's status tells the delivered and BLOCKED cases apart, and usage_total is unknown when the harness reports no usage.",
+      "expectations": [
+        "Sums usage_total over the path whose budget the BLOCKED ticket exhausted",
+        "Records budget_estimate as the Budget line verbatim",
+        "Lets the record's status tell the delivered and BLOCKED cases apart",
+        "Records usage_total as unknown when the harness reports no usage"
+      ],
+      "files": []
     }
   ]
 }

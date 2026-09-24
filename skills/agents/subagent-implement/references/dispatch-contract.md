@@ -115,5 +115,6 @@ references rather than the workflow:
 | `isolation: "worktree"` keeps a worktree that has commits, and its path + branch are recoverable by the orchestrator | dispatch a worker that commits, then locate the worktree and branch from the orchestrator |
 | ~~the worktree is cut from the orchestrator's current HEAD at dispatch~~ | **CONFIRMED FALSE.** Two dispatches, different orchestrator checkouts, both landed on the same fixed base commit. See the confirmed-behavior note above — every prompt past ticket 1 needs its own sync-onto-integration-tip step. |
 | `SendMessage` resumes a backgrounded worker with its context intact | resume one worker with a follow-up, confirm it still has the ticket context |
-| the final report carries token usage | inspect one completed worker's result; if present, roll it into `status.md` as a bonus |
+| the final report carries token usage | **CONFIRMED.** The completion notification's usage block carries the subagent's tokens; sum it per invocation into `status.md`'s `usage_total` |
+| a resumed worker's usage report is cumulative | resume one worker and compare the follow-up's usage block with the first; `usage_total` sums each invocation, so a cumulative figure would double-count |
 | `Explore` reads deeply enough to summarise a test diff | run one verifier; if its reading is too shallow, switch the verifier to `general-purpose` instructed to write nothing |

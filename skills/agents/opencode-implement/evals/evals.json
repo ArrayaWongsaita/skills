@@ -578,6 +578,32 @@
         "Groups the Context files as read, change, and create"
       ],
       "files": []
+    },
+    {
+      "id": 50,
+      "name": "records budget_estimate and usage_total from step_finish events or the fallback",
+      "prompt": "/opencode-implement .scratch/graph-export/ with an approved Plan. Ticket 01 carries **Budget:** read ~12k tokens · 6 criteria · 3 modules. Its main-path run emits three step_finish events with tokens {input: 9000, output: 700, reasoning: 300}, {input: 5000, output: 400, reasoning: 100}, {input: 2000, output: 100, reasoning: 50}; a verification-failure resume emits one more. Show ticket 01's status.md record after integration.",
+      "expected_output": "The record carries budget_estimate: read ~12k tokens · 6 criteria · 3 modules — the Budget line verbatim — and usage_total: input + output + reasoning over every step_finish event of every run on the main path, cache reads excluded, summed per invocation because none is confirmed cumulative. On the fallback path the same field records the subagent's reported tokens. The existing usage field stays; usage_total is the one comparable number derived from it.",
+      "expectations": [
+        "Records budget_estimate as the Budget line verbatim",
+        "Derives the main-path usage_total as input + output + reasoning over every step_finish event of every run",
+        "Sums every dispatch and resume because none is confirmed cumulative",
+        "Records the fallback subagent's reported tokens on the fallback path"
+      ],
+      "files": []
+    },
+    {
+      "id": 51,
+      "name": "a BLOCKED ticket sums usage_total over the path whose budget it exhausted",
+      "prompt": "/opencode-implement .scratch/graph-export/ --opencode-only. Ticket 02 carries **Budget:** read ~9k tokens · 4 criteria · 2 modules. It is BLOCKED (TICKET_TOO_LARGE_FOR_CONTEXT) on the main path after two runs and a resume. Show ticket 02's status.md record.",
+      "expected_output": "The record's status is BLOCKED (TICKET_TOO_LARGE_FOR_CONTEXT) and usage_total sums every usage report on the path whose budget it exhausted — the main opencode path, its final path — as input + output + reasoning over every step_finish event of every run, cache reads excluded, per invocation. budget_estimate is ticket 02's Budget line verbatim: read ~9k tokens · 4 criteria · 2 modules. The record's status tells the delivered and BLOCKED cases apart, and usage_total is unknown when the path reports no usage.",
+      "expectations": [
+        "Sums usage_total over the path whose budget the BLOCKED ticket exhausted",
+        "Derives the sum from step_finish input + output + reasoning",
+        "Records budget_estimate as the Budget line verbatim",
+        "Records usage_total as unknown when the path reports no usage"
+      ],
+      "files": []
     }
   ]
 }

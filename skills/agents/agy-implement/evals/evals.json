@@ -387,6 +387,32 @@
         "Groups the Context files as read, change, and create"
       ],
       "files": []
+    },
+    {
+      "id": 31,
+      "name": "records budget_estimate and usage_total from input, output, and thinking tokens",
+      "prompt": "/agy-implement .scratch/graph-export/ with an approved Plan. Ticket 01 carries **Budget:** read ~12k tokens · 6 criteria · 3 modules. Its first envelope reports input_tokens 14151, output_tokens 800, thinking_tokens 200; a verification-failure resume reports input_tokens 16000, output_tokens 700, thinking_tokens 150. Show ticket 01's status.md record after integration.",
+      "expected_output": "The record carries budget_estimate: read ~12k tokens · 6 criteria · 3 modules — the Budget line verbatim — and usage_total: 14151 + 800 + 200 + 16000 + 700 + 150 = 32001, input_tokens + output_tokens + thinking_tokens over each envelope, cache reads excluded. Both the dispatch and the resume are summed because none is confirmed cumulative. Every failover model on the delivering path contributes its own envelope, and the existing usage field stays: usage_total is the one comparable number derived from it.",
+      "expectations": [
+        "Records budget_estimate as the Budget line verbatim",
+        "Derives usage_total as input_tokens + output_tokens + thinking_tokens over each envelope",
+        "Sums every dispatch and resume on the delivering path, including failover models",
+        "Keeps the existing usage field alongside usage_total"
+      ],
+      "files": []
+    },
+    {
+      "id": 32,
+      "name": "a BLOCKED ticket sums usage_total over every failover envelope it exhausted",
+      "prompt": "/agy-implement .scratch/graph-export/ with an approved Plan. Ticket 02 carries **Budget:** read ~9k tokens · 4 criteria · 2 modules. It is BLOCKED (TICKET_PROVIDER_FAILED) after exhausting MAX_FAILOVER_ATTEMPTS = 3 — two envelopes on the first model and one on the failover model. Show ticket 02's status.md record.",
+      "expected_output": "The record's status is BLOCKED (TICKET_PROVIDER_FAILED) and usage_total sums every envelope on the path whose budget it exhausted — its final path, including the failover model — as input_tokens + output_tokens + thinking_tokens over each envelope, cache reads excluded, per invocation. budget_estimate is ticket 02's Budget line verbatim: read ~9k tokens · 4 criteria · 2 modules. The record's status tells the delivered and BLOCKED cases apart, and usage_total is unknown when the envelope reports no usage.",
+      "expectations": [
+        "Sums usage_total over the path whose budget the BLOCKED ticket exhausted",
+        "Includes every failover model's envelope in the sum",
+        "Records budget_estimate as the Budget line verbatim",
+        "Records usage_total as unknown when the envelope reports no usage"
+      ],
+      "files": []
     }
   ]
 }

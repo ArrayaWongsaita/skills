@@ -192,5 +192,20 @@ describe("agy-implement eval suite contract", () => {
       const raw = await readFile(path.resolve(canonicalDir, "evals.json"), "utf8");
       assert.doesNotMatch(raw, /(?<!-)to-tickets/);
     });
+
+    it("covers per-ticket budget_estimate and usage_total, including a BLOCKED ticket", async () => {
+      const { evals } = await evalsJson();
+      const hay = (re) => evals.some((e) => re.test(e.name) || re.test(e.expected_output));
+      assert.ok(hay(/budget_estimate/), "records budget_estimate");
+      assert.ok(hay(/usage_total/), "records usage_total");
+      assert.ok(hay(/input_tokens \+ output_tokens \+ thinking_tokens/), "derives usage_total from input + output + thinking tokens");
+      assert.ok(hay(/failover/i), "the delivering path includes every failover model");
+      assert.ok(hay(/unknown/), "usage_total is unknown when unreported");
+      const blocked = evals.find(
+        (e) => /BLOCKED/.test(e.expected_output) && /usage_total/.test(e.expected_output),
+      );
+      assert.ok(blocked, "a BLOCKED ticket records usage_total on the path whose budget it exhausted");
+      assert.match(blocked.expected_output, /path whose budget|final path|exhausted/i);
+    });
   });
 });

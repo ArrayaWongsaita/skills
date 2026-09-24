@@ -110,6 +110,7 @@ reasoning about which model suits which ticket. The assignment is recorded in
 | failure / timeout `status` tokens | validation probe 1 | `agy -p` impossible task, short `--print-timeout` |
 | `--sandbox` permits typecheck/test | validation probe 2 | throwaway worktree, run the suite |
 | `--conversation` retry carries context | validation probe 3 | one task, then a follow-up turn |
+| whether a `--conversation` resume's `usage` is cumulative | validation probe 3 follow-up | one task, then a resume; compare the two envelopes' `usage` — `usage_total` sums each envelope, so a cumulative figure would double-count |
 | `--json-schema` on the final result | validation probe 4 | enforce `{verdict, files[], red, green, coverage[]}` |
 | real parallel worktree collisions | validation probe 5 | two edge-free tickets, two workers, dry-run merge |
 | `stream-json` progress events | validation probe 6 | `agy --output-format stream-json` for stall detection |

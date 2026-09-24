@@ -498,3 +498,48 @@ describe("subagent-implement skill contract", () => {
     });
   });
 });
+
+describe("ticket 09 — budget_estimate and usage_total", () => {
+  it("status.md records budget_estimate and usage_total per ticket with the path, per-invocation, BLOCKED, and unknown rules", async () => {
+    for (const dir of skillDirs) {
+      const d = await readFile(path.resolve(dir, "references/status-and-resume.md"), "utf8");
+      const record = d.match(/- per ticket:[\s\S]*?(?=\n- the \*\*integration branch ref)/i);
+      assert.ok(record, "per-ticket record present");
+      assert.match(record[0], /budget_estimate/, "per-ticket record gains budget_estimate");
+      assert.match(record[0], /usage_total/, "per-ticket record gains usage_total");
+      assert.match(record[0], /verifier_usage_total/, "per-ticket record gains verifier_usage_total");
+      assert.match(
+        d,
+        /budget_estimate[\s\S]{0,160}Budget line[\s\S]{0,80}verbatim|Budget line[\s\S]{0,80}verbatim[\s\S]{0,160}budget_estimate/i,
+        "budget_estimate is the Budget line verbatim",
+      );
+      assert.match(d, /`?none`?[\s\S]{0,160}budget_estimate|budget_estimate[\s\S]{0,200}`?none`?/i, "budget_estimate is none without a Budget line");
+      assert.match(
+        d,
+        /path that delivered[\s\S]{0,160}every (dispatch|invocation)[\s\S]{0,80}resume/i,
+        "usage_total sums the delivering path per invocation, every dispatch and resume",
+      );
+      assert.match(
+        d,
+        /BLOCKED[\s\S]{0,240}path whose budget[\s\S]{0,160}exhausted|path whose budget[\s\S]{0,160}exhausted[\s\S]{0,240}BLOCKED/i,
+        "a BLOCKED ticket sums the path whose budget it exhausted",
+      );
+      assert.match(d, /`?unknown`?/, "usage_total is unknown when unreported");
+      assert.match(d, /`usage`[^\n]{0,80}(stays|stay|remains|kept)/i, "the worker's reported usage stays");
+      assert.match(d, /possibly\s+cache-inclusive/i, "the reported tokens are noted as possibly cache-inclusive");
+      assert.match(d, /no per-provider|there is no external provider/i, "keeps the no per-provider roll-up sentence");
+    }
+  });
+
+  it("dispatch-contract.md confirms the token-usage row and questions a resumed report's cumulativeness", async () => {
+    for (const dir of skillDirs) {
+      const c = await readFile(path.resolve(dir, "references/dispatch-contract.md"), "utf8");
+      const usageRow = c.match(/\|[^\n|]*final report carries token usage[^\n|]*\|[^\n]*\|/i);
+      assert.ok(usageRow, "the token-usage row is present");
+      assert.match(usageRow[0], /confirmed/i, "the token-usage row is marked confirmed");
+      assert.doesNotMatch(usageRow[0], /\bbonus\b/i, "the bonus wording is gone");
+      assert.match(c, /cumulative/i, "a point to confirm asks whether a resumed report's usage is cumulative");
+      assert.match(c, /resum/i, "that point names a resume");
+    }
+  });
+});

@@ -1133,3 +1133,66 @@ describe("opencode-implement skill contract", () => {
     });
   });
 });
+
+describe("ticket 09 — budget_estimate and usage_total", () => {
+  it("status.md records budget_estimate and usage_total per ticket with the path, per-invocation, BLOCKED, and unknown rules", async () => {
+    for (const dir of skillDirs) {
+      const d = await readFile(path.resolve(dir, "references/status-and-resume.md"), "utf8");
+      const record = d.match(/- per ticket:[\s\S]*?(?=\n- the \*\*integration branch ref)/i);
+      assert.ok(record, "per-ticket record present");
+      assert.match(record[0], /budget_estimate/, "per-ticket record gains budget_estimate");
+      assert.match(record[0], /usage_total/, "per-ticket record gains usage_total");
+      assert.match(
+        d,
+        /budget_estimate[\s\S]{0,160}Budget line[\s\S]{0,80}verbatim|Budget line[\s\S]{0,80}verbatim[\s\S]{0,160}budget_estimate/i,
+        "budget_estimate is the Budget line verbatim",
+      );
+      assert.match(d, /`?none`?[\s\S]{0,160}budget_estimate|budget_estimate[\s\S]{0,200}`?none`?/i, "budget_estimate is none without a Budget line");
+      assert.match(
+        d,
+        /path that delivered[\s\S]{0,240}(main `?opencode`? path|native-subagent fallback|fallback)/i,
+        "the delivering path names the main path and the native-subagent fallback",
+      );
+      assert.match(
+        d,
+        /every\s+(dispatch|invocation)[\s\S]{0,80}resume/i,
+        "usage_total is summed per invocation, every dispatch and resume",
+      );
+      assert.match(
+        d,
+        /BLOCKED[\s\S]{0,240}path whose budget[\s\S]{0,160}exhausted|path whose budget[\s\S]{0,160}exhausted[\s\S]{0,240}BLOCKED/i,
+        "a BLOCKED ticket sums the path whose budget it exhausted",
+      );
+      assert.match(d, /`?unknown`?/, "usage_total is unknown when unreported");
+      assert.match(d, /existing `?usage`?[^\n]{0,80}(stays|stay|remain|kept)/i, "existing usage fields stay");
+      assert.match(
+        d,
+        /input\s*\+\s*output\s*\+\s*reasoning/,
+        "derives the main-path usage_total from input + output + reasoning",
+      );
+      assert.match(d, /step_finish/, "sums every step_finish event of every run");
+      assert.match(
+        d,
+        /fallback[\s\S]{0,200}(reported tokens|subagent's reported)|(reported tokens|subagent's reported)[\s\S]{0,200}fallback/i,
+        "the fallback path records the subagent's reported tokens",
+      );
+    }
+  });
+
+  it("the Budget line makes TICKET_TOO_LARGE_FOR_CONTEXT rarer without ruling it out", async () => {
+    for (const dir of skillDirs) {
+      for (const rel of ["references/fallback.md", "references/status-and-resume.md"]) {
+        const c = await readFile(path.resolve(dir, rel), "utf8");
+        const hit = c.match(/[^\n]*TICKET_TOO_LARGE_FOR_CONTEXT[\s\S]{0,400}/);
+        assert.ok(hit, `${rel} keeps TICKET_TOO_LARGE_FOR_CONTEXT`);
+        const section = hit[0];
+        assert.match(section, /Budget line/i, `${rel} ties the trigger to the Budget line`);
+        assert.match(section, /rarer/i, `${rel} says the Budget line makes it rarer`);
+        assert.match(section, /without ruling it out|not ruled out|does not rule it out|never rules it out/i, `${rel} does not retire the trigger`);
+        assert.match(section, /rare/i, `${rel} keeps "rare"`);
+        assert.match(section, /runtime/i, `${rel} keeps "runtime"`);
+        assert.doesNotMatch(c, /context[- ]budget/i, `${rel} avoids "context budget"`);
+      }
+    }
+  });
+});

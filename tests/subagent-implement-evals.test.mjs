@@ -156,5 +156,19 @@ describe("subagent-implement eval suite contract", () => {
         "the case groups Context files as read, change, and create",
       );
     });
+
+    it("covers per-ticket budget_estimate and usage_total, including a BLOCKED ticket", async () => {
+      const { evals } = await evalsJson();
+      const hay = (re) => evals.some((e) => re.test(e.name) || re.test(e.expected_output));
+      assert.ok(hay(/budget_estimate/), "records budget_estimate");
+      assert.ok(hay(/usage_total/), "records usage_total");
+      assert.ok(hay(/verifier_usage_total/), "records verifier_usage_total separately");
+      assert.ok(hay(/unknown/), "usage_total is unknown when unreported");
+      const blocked = evals.find(
+        (e) => /BLOCKED/.test(e.expected_output) && /usage_total/.test(e.expected_output),
+      );
+      assert.ok(blocked, "a BLOCKED ticket records usage_total on the path whose budget it exhausted");
+      assert.match(blocked.expected_output, /path whose budget|final path|exhausted/i);
+    });
   });
 });
