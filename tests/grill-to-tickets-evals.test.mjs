@@ -112,6 +112,7 @@ describe("grill-to-tickets eval suite contract", () => {
         { label: "ticket checker", match: /ticket checker/i },
         { label: "preflight: missing stage skill", match: /preflight stops/i },
         { label: "preflight: global install", match: /preflight uses a globally installed/i },
+        { label: "preflight: lock by location", match: /preflight records the lock by location/i },
         { label: "local tracker", match: /local files replace/i },
         { label: "git-ignored scratch", match: /local exclude/i },
       ];

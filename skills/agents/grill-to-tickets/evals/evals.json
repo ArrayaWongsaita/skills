@@ -360,10 +360,10 @@
     {
       "id": 28,
       "name": "preflight stops when a stage skill is missing",
-      "prompt": "/grill-to-tickets Add CSV export to the orders list page. grilling, domain-modeling, to-spec, and to-tickets are installed under .agents/skills/, but scrutinize exists in none of .agents/skills/, .claude/skills/, ~/.agents/skills/, or ~/.claude/skills/.",
-      "expected_output": "Preflight finds four of the five stage skills and stops before Stage 0: it names scrutinize as missing, prints only its install line (npx skills add thananon/9arm-skills --skill scrutinize), and waits for the user. It creates no .scratch/<feature-slug>/ and asks no grilling question.",
+      "prompt": "/grill-to-tickets Add CSV export to the orders list page. grilling and domain-modeling are installed under .agents/skills/, but scrutinize exists in none of .agents/skills/, .claude/skills/, ~/.agents/skills/, or ~/.claude/skills/.",
+      "expected_output": "Preflight finds two of the three stage skills and stops before Stage 0: it names scrutinize as missing, prints only its install line (npx skills add thananon/9arm-skills --skill scrutinize), and waits for the user. It creates no .scratch/<feature-slug>/ and asks no grilling question.",
       "expectations": [
-        "Checks all four locations for each of the five stage skills before Stage 0",
+        "Checks all four locations for each of the three stage skills before Stage 0",
         "Names scrutinize as the missing skill",
         "Prints npx skills add thananon/9arm-skills --skill scrutinize and no install line for the skills that exist",
         "Starts neither the Reuse survey nor the interview, and creates no .scratch/<feature-slug>/"
@@ -373,12 +373,25 @@
     {
       "id": 29,
       "name": "preflight uses a globally installed stage skill",
-      "prompt": "$grill-to-tickets Add row selection to the users table. to-spec and to-tickets are under .agents/skills/; grilling, domain-modeling, and scrutinize exist only under ~/.agents/skills/.",
-      "expected_output": "Preflight resolves to-spec and to-tickets from .agents/skills/ and the other three from ~/.agents/skills/, reports nothing missing, and starts Stage 0, reading each stage skill from the path it found.",
+      "prompt": "$grill-to-tickets Add row selection to the users table. grilling and domain-modeling are under .agents/skills/; scrutinize exists only under ~/.agents/skills/.",
+      "expected_output": "Preflight resolves grilling and domain-modeling from .agents/skills/ and scrutinize from ~/.agents/skills/, reports nothing missing, and starts Stage 0, reading each stage skill from the path it found.",
       "expectations": [
-        "Finds grilling, domain-modeling, and scrutinize under ~/.agents/skills/",
+        "Finds scrutinize under ~/.agents/skills/",
         "Reports no missing skill and prints no install line",
         "Proceeds into Stage 0, reading each stage skill from its resolved path"
+      ],
+      "files": []
+    },
+    {
+      "id": 32,
+      "name": "Preflight records the lock by location",
+      "prompt": "/grill-to-tickets Add export feature. grilling is found under .agents/skills/grilling/, domain-modeling under .claude/skills/domain-modeling/, and scrutinize under ~/.agents/skills/scrutinize/. The project skills-lock.json holds computedHash values for grilling and domain-modeling. Global ~/.agents/.skill-lock.json has no entry for scrutinize.",
+      "expected_output": "Preflight resolves grilling (.agents/skills/) and domain-modeling (.claude/skills/) from the project and scrutinize (~/.agents/skills/) from home. It reads skills-lock.json computedHash for grilling and domain-modeling, and ~/.agents/.skill-lock.json for scrutinize. Because scrutinize has no entry in the global lock, Preflight records 'no lock entry'. It writes these into decisions.md under ## Preflight as ### Preflight <date> when initializing Stage 0.",
+      "expectations": [
+        "Resolves project skills against skills-lock.json computedHash",
+        "Resolves global skills against ~/.agents/.skill-lock.json skillFolderHash",
+        "Records 'no lock entry' when a lock file, entry, or value is missing",
+        "Writes the dated entry under ## Preflight in decisions.md without recomputation or warning"
       ],
       "files": []
     },

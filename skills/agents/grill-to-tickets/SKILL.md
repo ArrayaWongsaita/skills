@@ -67,8 +67,8 @@ standalone.
 ## Preflight
 
 Before Stage 0, and before `continue` resumes a run, locate the `SKILL.md` of
-each stage skill — `grilling`, `domain-modeling`, `to-spec`, `scrutinize`,
-`to-tickets` — taking the first of these that exists:
+each stage skill — `grilling`, `domain-modeling`, `scrutinize` — taking the
+first of these that exists:
 
 1. `.agents/skills/<skill>/SKILL.md`
 2. `.claude/skills/<skill>/SKILL.md`
@@ -76,15 +76,21 @@ each stage skill — `grilling`, `domain-modeling`, `to-spec`, `scrutinize`,
 4. `~/.claude/skills/<skill>/SKILL.md`
 
 When any is missing, stop before Stage 0: name the missing skills and print the
-install line for each of them, then wait for the user.
+install line for each missing one, then wait for the user.
 
 ```text
 npx skills add mattpocock/skills --skill grilling
 npx skills add mattpocock/skills --skill domain-modeling
-npx skills add mattpocock/skills --skill to-spec
-npx skills add mattpocock/skills --skill to-tickets
 npx skills add thananon/9arm-skills --skill scrutinize
 ```
+
+Use `npx skills check` to check the stage skills for updates.
+
+For each skill found, record the path found and the hash its matching lock holds:
+- a skill found under `.agents/skills/` or `.claude/skills/` reads the project `skills-lock.json` → `skills.<name>.computedHash`;
+- a skill found under `~/.agents/skills/` or `~/.claude/skills/` reads `~/.agents/.skill-lock.json` → `skills.<name>.skillFolderHash`.
+
+Record the value as the lock holds it without recomputation, comparison, or warning. A missing lock file, a missing entry, or an empty value records `no lock entry`. Stage 0 step 1 writes the first dated entry under `## Preflight` in `decisions.md`; each `continue` appends another.
 
 ## Feature-Scoped Storage
 
@@ -120,7 +126,8 @@ Run `grilling` and `domain-modeling` together as one discovery pass.
 1. **Ground in existing context.** Read the repository's root `CONTEXT.md` and
    `docs/adr/` if they exist, plus any relevant existing directory under
    `.scratch/`. Initialize `.scratch/<feature-slug>/` with its
-   `decisions.md` State.
+   `decisions.md` State and write the first `### Preflight <date>` entry under
+   `## Preflight` recording the stage skills' paths and lock hashes.
 2. **Reuse survey.** Read `docs/reuse-catalog.md`, drift-check every entry
    against the code, and survey only the gaps — areas the idea touches that
    Coverage lacks, and files changed in covered areas since their Coverage date.

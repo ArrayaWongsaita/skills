@@ -107,6 +107,7 @@ describe("grill-to-tickets composite skill contract", () => {
     for (const dir of skillDirs) {
       const log = await readFile(path.resolve(dir, "references/decision-log.md"), "utf8");
       assert.match(log, /^## State$/m, "the log carries run State");
+      assert.match(log, /^## Preflight$/m, "the log carries Preflight entries");
       assert.match(log, /waiting on/);
       assert.match(log, /decided: open/);
       assert.match(log, /before you post the next\s+round/);
@@ -359,7 +360,7 @@ describe("grill-to-tickets composite skill contract", () => {
     }
   });
 
-  it("preflights the five stage skills across install locations and keeps the tracker local", async () => {
+  it("preflights the three stage skills across install locations and keeps the tracker local", async () => {
     for (const file of skillFiles) {
       const content = await readFile(file, "utf8");
       const preflight = content.slice(content.indexOf("## Preflight"), content.indexOf("## Feature-Scoped Storage"));
@@ -376,12 +377,18 @@ describe("grill-to-tickets composite skill contract", () => {
       for (const [source, skill] of [
         ["mattpocock/skills", "grilling"],
         ["mattpocock/skills", "domain-modeling"],
-        ["mattpocock/skills", "to-spec"],
-        ["mattpocock/skills", "to-tickets"],
         ["thananon/9arm-skills", "scrutinize"],
       ]) {
         assert.ok(preflight.includes(`npx skills add ${source} --skill ${skill}`), `install line for ${skill}`);
       }
+      assert.ok(!preflight.includes("to-spec"), "no install line for to-spec");
+      assert.ok(!preflight.includes("to-tickets"), "no install line for to-tickets");
+      assert.match(preflight, /skills-lock\.json/);
+      assert.match(preflight, /computedHash/);
+      assert.match(preflight, /~\/\.agents\/\.skill-lock\.json/);
+      assert.match(preflight, /skillFolderHash/);
+      assert.match(preflight, /no lock entry/);
+      assert.match(preflight, /npx skills check/);
       assert.match(content, /at the\s+path Preflight found/);
       assert.match(content, /local files are the tracker/);
     }
