@@ -157,5 +157,25 @@ describe("opencode-implement eval suite contract", () => {
         "a ticket without Seam, Context, or Budget runs as today",
       );
     });
+
+    it("covers the ticket Context rule — its spec refs drive the read list and an untracked read-only file comes from the main checkout", async () => {
+      const { evals } = await evalsJson();
+      const contextCase = evals.find(
+        (e) =>
+          /\*\*Context:\*\*/.test(e.prompt) &&
+          /read[- ]only[- ]sections|read only these sections|read list/i.test(e.expected_output) &&
+          /untracked/i.test(e.expected_output) &&
+          /main checkout/i.test(e.expected_output),
+      );
+      assert.ok(
+        contextCase,
+        "an eval case has Context drive the worker's read list and passes an untracked read-only file from the main checkout",
+      );
+      assert.match(
+        contextCase.expected_output,
+        /read[\s\S]{0,80}change[\s\S]{0,80}create/i,
+        "the case groups Context files as read, change, and create",
+      );
+    });
   });
 });

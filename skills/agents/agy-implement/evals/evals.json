@@ -374,6 +374,19 @@
         "Runs wave 0 without asking the user to add the missing fields"
       ],
       "files": []
+    },
+    {
+      "id": 30,
+      "name": "Context drives the worker's read list and an untracked read-only file comes from the main checkout",
+      "prompt": "/agy-implement .scratch/graph-export/ with an approved Plan. Ticket 01 carries **Context:** spec § Implementation Decisions › Export format · docs/decisions/0014-export-format.md · .scratch/graph-export/export-notes.md · (edit) src/features/export/build-export.ts · (edit from 00) src/features/export/register-export.ts · (new) src/features/export/export-format.ts. .scratch/graph-export/export-notes.md is not tracked by git. Show ticket 01's Plan touch-set and its worker prompt Context you need section.",
+      "expected_output": "Ticket 01's Plan touch-set is the Context line's (edit), (new), and (edit from 00) files as given, still only an advisory hint. The read only these sections list is the ticket's spec § refs, so the worker reads the Export format section rather than the whole spec. docs/decisions/0014-export-format.md is tracked, so it is written relative to the worktree. .scratch/graph-export/export-notes.md is an untracked read-only Context file, so it is passed by its absolute path in the project root's main checkout — git ls-files --error-unmatch does not match it. The Context files are grouped as read, change, and create: read lists the tracked path, the untracked path, and the (from 00) path; change lists the (edit) and (edit from 00) paths; create lists the (new) path.",
+      "expectations": [
+        "Takes the Plan touch-set from the Context line's edit, new, and edit-from files",
+        "Builds the read only these sections list from the ticket's spec § refs",
+        "Passes the untracked read-only file by its absolute path in the main checkout",
+        "Groups the Context files as read, change, and create"
+      ],
+      "files": []
     }
   ]
 }

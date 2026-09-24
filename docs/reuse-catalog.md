@@ -60,6 +60,7 @@ docs/reuse-catalog/<area>.md and keep this file as the map.
 - `formatReport` — `skills/agents/grill-to-tickets/scripts/check-tickets.mjs` — use for: rendering the checker's text report (errors, warnings, story coverage, budget table, DAG summary, notes, result) · from: grill-to-tickets-production
 - `sectionOf` — `skills/agents/grill-to-tickets/scripts/check-tickets.mjs` — use for: reading one section of a markdown document by heading · from: grill-to-tickets-production
 - `extractBlock` — `tests/implementer-reuse-drift.test.mjs` — use for: slicing a start/end-delimited prose block out of a reference file to compare across skills · from: tests
+- `SHARED_BLOCKS` — `tests/implementer-reuse-drift.test.mjs` — use for: keeping a prose block word-for-word identical across the three implementer skills · from: grill-to-tickets-production
 
 ## Coverage
 

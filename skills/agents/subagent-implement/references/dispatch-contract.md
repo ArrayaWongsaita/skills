@@ -30,8 +30,12 @@ Agent(
 
 The worker's working directory is its worktree, already on the worker branch
 `subagent-implement/<feature-slug>/<NN>` — see the confirmed-behavior note
-below on what commit it's actually cut from. Every path in the prompt is
-absolute.
+below on what commit it's actually cut from. Paths in the prompt follow the
+path rule: a path inside that working directory is written relative to it; a
+path outside it — the parent `spec.md`, an ADR, an untracked read-only Context
+file — is absolute. A read-only path that `git ls-files --error-unmatch` does
+not match is untracked, so it resolves by absolute path in the project root's
+main checkout.
 
 **Confirmed (not "cut from integration HEAD" as originally assumed):** the
 worktree's git base is a **fixed commit for the whole environment**, not the
@@ -43,9 +47,8 @@ prompt after the first ticket must therefore open with an explicit sync
 step — merge (or cherry-pick) the current integration branch's tip into the
 worktree before doing anything else — rather than assuming the checkout
 already reflects prior tickets' work. Untracked `.scratch/<feature-slug>/`
-content is unaffected by this: it is present in every worktree regardless of
-the git base, so spec/CONTEXT/ADR/ticket files are always reachable by
-absolute path.
+content is unaffected by this: spec/CONTEXT/ADR/ticket files are passed by
+absolute path in the main checkout, not read from the worktree.
 
 ## Resolving the worker agent
 

@@ -47,8 +47,14 @@ opencode run --format json --model <pinned-model> --dir <worktree> \
 |---|---|
 | `--format json` | newline-delimited JSON events on stdout (parsed below) |
 | `--model <pinned-model>` | the run's one resolved-and-pinned model; passed explicitly to every worker |
-| `--dir <worktree>` | the worker's working directory is the ticket's worktree; every path in the prompt is absolute |
+| `--dir <worktree>` | the worker's working directory is the ticket's worktree, where the prompt's relative paths resolve |
 | `--dangerously-skip-permissions "<prompt>"` | edits and bash run unattended, confined to `--dir`. `opencode`'s default is already "allow all tools"; this is belt-and-suspenders. |
+
+Paths in the prompt follow the path rule: a path inside the worker's working
+directory is written relative to it; a path outside it — the parent `spec.md`,
+an ADR, an untracked read-only Context file — is absolute. A read-only path
+that `git ls-files --error-unmatch` does not match is untracked, so it resolves
+by absolute path in the project root's main checkout.
 
 There is no `--print-timeout` and no `--disable-slash-commands` in `opencode run`.
 

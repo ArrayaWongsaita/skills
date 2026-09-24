@@ -238,6 +238,53 @@ describe("subagent-implement skill contract", () => {
     });
   });
 
+  describe("ticket 08 — Context drives the worker prompt", () => {
+    const PATH_RULE_DOCS = ["references/prompt-scaffold.md", "references/dispatch-contract.md"];
+
+    it("the scaffold and the contract state the path rule, never absolute-everywhere", async () => {
+      for (const dir of skillDirs) {
+        for (const rel of PATH_RULE_DOCS) {
+          const c = await readFile(path.resolve(dir, rel), "utf8");
+          assert.doesNotMatch(
+            c,
+            /every path in the prompt is\s+absolute|absolute\s+paths\s+everywhere/i,
+            `${rel} drops the absolute-everywhere rule`,
+          );
+          assert.match(c, /relative to it|relative to this directory|inside the worker's working directory/i, `${rel} states relative paths resolve inside the working directory`);
+          assert.match(c, /outside it[\s\S]{0,200}absolute|absolute[\s\S]{0,200}outside it/i, `${rel} states paths outside the working directory are absolute`);
+          assert.match(c, /git ls-files --error-unmatch/, `${rel} names the untracked read-only test`);
+          assert.match(c, /main checkout/i, `${rel} resolves an untracked read-only file in the main checkout`);
+        }
+      }
+    });
+
+    it("Context fills the read-only-sections list and groups its files as read, change, and create", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/prompt-scaffold.md"), "utf8");
+        const notes = c.slice(c.indexOf("## Notes for the orchestrator"));
+        assert.match(notes, /\*\*Context:\*\*/, "the notes rule names Context");
+        assert.match(notes, /`spec §` refs[\s\S]{0,160}read only these sections|read only these sections[\s\S]{0,160}`spec §` refs/i, "spec refs become the read-only-sections list");
+        assert.match(notes, /read[\s\S]{0,80}change[\s\S]{0,80}create/i, "files are grouped read, change, and create");
+        assert.match(notes, /\(from NN\)/);
+        assert.match(notes, /\(edit\)/);
+        assert.match(notes, /\(edit from NN\)/);
+        assert.match(notes, /\(new\)/);
+        assert.match(notes, /without a context[\s\S]{0,160}today's|today's[\s\S]{0,160}without a context/i, "without Context, today's judgement applies");
+      }
+    });
+
+    it("the Working directory placeholder names the harness-made worktree without an absolute path", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/prompt-scaffold.md"), "utf8");
+        const section = c.match(/## Working directory[\s\S]*?(?=\n## )/);
+        assert.ok(section, "Working directory section present");
+        assert.doesNotMatch(section[0], /absolute path to this worker's git worktree/i);
+        assert.match(section[0], /your current working directory/i);
+        assert.match(section[0], /worktree the harness created/i);
+      }
+    });
+  });
+
   describe("Stage 1 — dispatch, verify, integrate", () => {
     it("dispatch-contract.md documents the Agent-tool call and the agent/model resolution", async () => {
       for (const dir of skillDirs) {

@@ -72,11 +72,13 @@ Within a wave, two tickets with no `Blocked by` edge between them are
 
 ## 5. Estimate each ticket's touch-set (advisory hint)
 
-For each ticket, estimate the files and directories it will create or modify,
-from the "What to build" text, the parent spec, and a look at the current
-codebase. This is an **advisory hint shown in the Plan, not a gate** — a
-pre-implementation guess is not reliable enough to gate concurrency on, and the
-integration gate catches the same collisions deterministically.
+For each ticket with a `**Context:**` line, its touch-set is the files that
+line marks `(edit)`, `(new)`, and `(edit from NN)`, used as given. For a ticket
+without one, estimate the files and directories it will create or modify from
+the "What to build" text, the parent spec, and a look at the current codebase.
+Either way this is an **advisory hint shown in the Plan, not a gate** — a
+pre-implementation estimate is not reliable enough to gate concurrency on, and
+the integration gate catches the same collisions deterministically.
 
 Raise a **`likely-overlapping — consider serializing`** flag on a pair of
 independent same-wave tickets when either:

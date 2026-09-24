@@ -26,6 +26,12 @@ const SHARED_BLOCKS = [
     end: "this ticket alone.",
   },
   {
+    name: "Seam and Context prompt rules",
+    file: () => "references/prompt-scaffold.md",
+    start: '- The "Test seam" line is the seam selected in Stage 0 planning; the worker',
+    end: "absolute path in the project root's main checkout.",
+  },
+  {
     name: "Reuse Catalog update steps",
     file: (skill) => IMPLEMENTERS[skill].integration,
     start: "1. **Path.**",

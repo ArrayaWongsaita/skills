@@ -20,11 +20,17 @@ agy -p "$(cat .scratch/<slug>/prompts/<NN>.md)" \
 | flag | why |
 |---|---|
 | `-p "<prompt>"` | non-interactive single task; the prompt is the worker prompt file's contents |
-| `--add-dir <worktree>` | grant the worker its worktree; the process's working directory is that worktree and every path in the prompt is absolute |
+| `--add-dir <worktree>` | grant the worker its worktree; the process's working directory is that worktree, where the prompt's relative paths resolve |
 | `--output-format json` | structured result envelope (below) |
 | `--print-timeout 45m` | real implementation tasks exceed the 5m default; raise generously (default 45m, editable in the Plan) |
 | `--disable-slash-commands` | a ticket body token like `/implement` cannot trigger anything inside the worker; the orchestrator owns all skill routing |
 | `--model <id>` | passed **only** when the run has a model list; assigned at dispatch time by round-robin over dispatch order (see below) |
+
+Paths in the prompt follow the path rule: a path inside the worker's working
+directory is written relative to it; a path outside it — the parent `spec.md`,
+an ADR, an untracked read-only Context file — is absolute. A read-only path
+that `git ls-files --error-unmatch` does not match is untracked, so it resolves
+by absolute path in the project root's main checkout.
 
 ### Permission mode
 
