@@ -5,7 +5,7 @@
       "id": 1,
       "name": "first-pass SHIP straight through the stages",
       "prompt": "/grill-to-tickets Add a \"copy shareable link\" button to the report detail page that copies the report's existing public URL to the clipboard and shows a confirmation toast. One component, no API or schema change, acceptance behavior is explicit, and no open decisions remain — treat the Stage 0 frontier as empty and already confirmed.",
-      "expected_output": "With the Stage 0 frontier already empty and confirmed, pass straight through: synthesize spec.md with to-spec (Stage 1), run scrutinize once in a fresh reviewer subagent (Stage 2), normalize its closing line to SHIP, and advance to Stage 3 to-tickets. Publish tickets under .scratch/<feature-slug>/issues/ and print the handoff: .scratch/ needs no commit, commit any docs/reuse-catalog.md change, /clear, then /subagent-implement .scratch/<feature-slug>/.",
+      "expected_output": "With the Stage 0 frontier already empty and confirmed, pass straight through: synthesize spec.md in Stage 1, run scrutinize once in a fresh reviewer subagent (Stage 2), normalize its closing line to SHIP, and advance to Stage 3 (ticket-format.md). Publish tickets under .scratch/<feature-slug>/issues/ and print the handoff: .scratch/ needs no commit, commit any docs/reuse-catalog.md change, /clear, then /subagent-implement .scratch/<feature-slug>/.",
       "expectations": [
         "Confirms the empty Stage 0 frontier, then moves through Stage 1 -> Stage 2 -> Stage 3 in order",
         "Runs scrutinize exactly once and records cycle 1 with verdict SHIP in a single .scratch/<feature-slug>/design-review.md file",
@@ -24,18 +24,18 @@
         "Normalizes the verdict to the token FIX_THEN_SHIP",
         "Edits .scratch/<feature-slug>/spec.md in place as the minimal correction to the violated invariant",
         "Consumes exactly one gate cycle and re-reviews within Stage 2",
-        "Does not re-run to-spec, return to Stage 0, or add a dependency the finding did not require"
+        "Does not re-run Stage 1, return to Stage 0, or add a dependency the finding did not require"
       ],
       "files": []
     },
     {
       "id": 3,
-      "name": "spec-level REWORK re-runs to-spec inside the gate",
+      "name": "spec-level REWORK re-runs Stage 1 inside the gate",
       "prompt": "$grill-to-tickets continue wishlist-sync. This is gate cycle 2. Stage 2 scrutinize closes with rework: the empty-state behavior was settled in Stage 0, but the spec never wrote it as a user story and the persistence seam is stated too vaguely to break into tickets. Every fact needed to fix it is already recorded in decisions.md.",
-      "expected_output": "Diagnose spec-level REWORK — a fresh writer holding decisions.md could fix the spec with no new decision. Re-run to-spec inline with the finding as added context, consume one gate cycle, and re-review. Control stays in Stage 2 and the cycle counter is not reset.",
+      "expected_output": "Diagnose spec-level REWORK — a fresh writer holding decisions.md could fix the spec with no new decision. Re-run Stage 1 inline with the finding as added context, consume one gate cycle, and re-review. Control stays in Stage 2 and the cycle counter is not reset.",
       "expectations": [
         "Records reworkKind: spec-level with reasoning that names the finding",
-        "Re-runs to-spec inline rather than returning to Stage 0",
+        "Re-runs Stage 1 inline rather than returning to Stage 0",
         "Consumes one gate cycle and re-reviews without leaving Stage 2",
         "Does not reset the cycle counter, and keeps one stable design-review.md updated in place"
       ],
@@ -44,8 +44,8 @@
     {
       "id": 4,
       "name": "decision-level REWORK returns to Stage 0 without resetting the counter",
-      "prompt": "$grill-to-tickets continue wishlist-sync. This is gate cycle 3. Stage 2 scrutinize closes with rework: the spec assumes wishlists are private to one account, but a shared-household actor has surfaced that nobody decided on. to-spec cannot synthesize a decision that was never made.",
-      "expected_output": "Diagnose decision-level REWORK — the finding traces to a decision no one has made. Return to Stage 0, re-grill only that decision (inline grilling + domain-modeling), update CONTEXT.md and adr/, then re-run to-spec and re-review. The cycle counter carries the backward transition and stays at 3.",
+      "prompt": "$grill-to-tickets continue wishlist-sync. This is gate cycle 3. Stage 2 scrutinize closes with rework: the spec assumes wishlists are private to one account, but a shared-household actor has surfaced that nobody decided on. Stage 1 cannot synthesize a decision that was never made.",
+      "expected_output": "Diagnose decision-level REWORK — the finding traces to a decision no one has made. Return to Stage 0, re-grill only that decision (inline grilling + domain-modeling), update CONTEXT.md and adr/, then re-run Stage 1 and re-review. The cycle counter carries the backward transition and stays at 3.",
       "expectations": [
         "Records reworkKind: decision-level with reasoning that it traces to an unmade decision",
         "Returns to Stage 0 and re-grills the specific decision, updating CONTEXT.md and adr/",
@@ -175,7 +175,7 @@
       "id": 14,
       "name": "undecided extend-vs-new is decision-level REWORK",
       "prompt": "$grill-to-tickets continue audit-log-view. Gate cycle 1: the spec extends `DataTable` with virtualized scrolling for 100k-row audit logs, but Stage 0 never settled whether to extend DataTable — used by 14 existing screens — or build a separate virtualized table. The survey only recorded that DataTable exists and has no virtualization.",
-      "expected_output": "The reuse lens records reuse-undecided-DataTable. A fresh writer holding decisions.md could not resolve extend-versus-new without asking, so it is decision-level REWORK: return to Stage 0, put that one question to the user with a recommended answer and log it in decisions.md as a re-grill round, then re-run to-spec and re-review, carrying the cycle counter over.",
+      "expected_output": "The reuse lens records reuse-undecided-DataTable. A fresh writer holding decisions.md could not resolve extend-versus-new without asking, so it is decision-level REWORK: return to Stage 0, put that one question to the user with a recommended answer and log it in decisions.md as a re-grill round, then re-run Stage 1 and re-review, carrying the cycle counter over.",
       "expectations": [
         "Records the finding with the stable id reuse-undecided-DataTable",
         "Diagnoses decision-level REWORK with reasoning that the trade-off was never decided",
@@ -348,10 +348,10 @@
       "id": 27,
       "name": "reviewer finding already settled in decisions.md is spec-level REWORK",
       "prompt": "$grill-to-tickets continue member-export. Gate cycle 1: the fresh reviewer closes with rework, finding that the spec never says who may export. decisions.md R1 Q1 settled it: admins only.",
-      "expected_output": "Diagnose spec-level REWORK: the decision exists in decisions.md, so a fresh writer holding the log could fix the spec without asking anyone. Re-run to-spec with the finding and R1 Q1 as added context, consume one cycle, and re-review within Stage 2. Returning to Stage 0 would re-ask a settled question.",
+      "expected_output": "Diagnose spec-level REWORK: the decision exists in decisions.md, so a fresh writer holding the log could fix the spec without asking anyone. Re-run Stage 1 with the finding and R1 Q1 as added context, consume one cycle, and re-review within Stage 2. Returning to Stage 0 would re-ask a settled question.",
       "expectations": [
         "Records reworkKind: spec-level, citing decisions.md R1 Q1 in the reasoning",
-        "Re-runs to-spec rather than returning to Stage 0",
+        "Re-runs Stage 1 rather than returning to Stage 0",
         "Asks the user nothing about who may export",
         "Consumes one cycle and re-reviews within Stage 2"
       ],
@@ -384,9 +384,9 @@
     },
     {
       "id": 30,
-      "name": "local files replace the stage skills' tracker steps",
-      "prompt": "/grill-to-tickets continue member-export. Stage 1 starts. The project has no issue tracker configured and nobody has run /setup-matt-pocock-skills; to-spec's own instructions say to publish the spec to the issue tracker with the ready-for-agent label.",
-      "expected_output": "Treat this skill's local files as the tracker: write the spec to .scratch/member-export/spec.md, apply no label, publish nothing, and continue Stage 1 without sending the user to /setup-matt-pocock-skills.",
+      "name": "local files replace tracker: spec-format carries no tracker step",
+      "prompt": "/grill-to-tickets continue member-export. Stage 1 starts. The project has no issue tracker configured and nobody has run /setup-matt-pocock-skills; Stage 1 follows references/spec-format.md.",
+      "expected_output": "references/spec-format.md carries no tracker, label, or /setup-matt-pocock-skills step: write the spec to .scratch/member-export/spec.md, apply no label, publish nothing, and continue Stage 1 without sending the user to /setup-matt-pocock-skills.",
       "expectations": [
         "Writes the spec to .scratch/member-export/spec.md",
         "Publishes nothing to an issue tracker and applies no label",

@@ -7,9 +7,10 @@ disable-model-invocation: true
 # Grill To Tickets
 
 Carry a single idea from a relentless interview through to published, ticket-ready
-work, then stop at the handoff. This skill inline-executes `grilling`,
-`domain-modeling`, `to-spec`, and `to-tickets` in sequence, with `scrutinize`
-reviewing the spec in a fresh context between them; a separate implementer run
+work, then stop at the handoff. This skill inline-executes `grilling` and
+`domain-modeling`, writes `spec.md` following [spec-format.md](references/spec-format.md),
+reviews the spec in a fresh context with `scrutinize`, and writes tickets following
+[ticket-format.md](references/ticket-format.md); a separate implementer run
 (`/subagent-implement`, `/agy-implement`, or `/opencode-implement`) picks the
 ticket directory up afterward.
 
@@ -20,12 +21,12 @@ Stage 0: Grill        reuse survey + grilling + domain-modeling
                       → decisions.md, CONTEXT.md, adr/, docs/reuse-catalog.md
    │ (pause: explicit confirmation, empty frontier)
    ▼
-Stage 1: Spec         to-spec                     → spec.md
+Stage 1: Spec         spec-format.md              → spec.md
    ▼
 Stage 2: Design Review Gate   scrutinize (fresh reviewer) → design-review.md   (bounded loop)
    │ (SHIP)
    ▼
-Stage 3: Tickets      to-tickets                  → issues/NN-<slug>.md
+Stage 3: Tickets      ticket-format.md            → issues/NN-<slug>.md
    ▼
 Stop: handoff message (commit catalog changes, /clear, /subagent-implement <dir>)
 ```
@@ -48,21 +49,17 @@ human invocation before starting.
 
 Stages 0, 1, and 3 run **inline**: read each stage skill's `SKILL.md` at the
 path Preflight found and follow its workflow steps directly, in this one
-continuous context window. `to-spec` and `to-tickets` are
-`disable-model-invocation: true`, so inline is their only path; `grilling` and
-`domain-modeling` run inline too, keeping the interview, the spec, and the tickets
+continuous context window. This skill follows three stage skills (`grilling`,
+`domain-modeling`, `scrutinize`) and two owned formats
+([spec-format.md](references/spec-format.md) and
+[ticket-format.md](references/ticket-format.md)). `grilling` and
+`domain-modeling` run inline, keeping the interview, the spec, and the tickets
 on one reasoning thread, where the user is.
 
 Two steps dispatch a subagent, and neither makes a decision: the Reuse survey's
 fact lookup in Stage 0, and the Stage 2 reviewer. The reviewer runs `scrutinize`
 in a fresh context so it reads the spec the way the implementer will — from files
 alone, without the interview's answers to fill its gaps.
-
-This skill's local files are the tracker. Where a stage skill publishes to an
-issue tracker, applies a triage label, or sends the user to
-`/setup-matt-pocock-skills`, write the local artifact instead: `to-spec`'s spec
-becomes `spec.md`, and `to-tickets` writes `issues/<NN>-<slug>.md` files marked
-`**Status:** ready-for-agent`.
 
 This skill owns its own copy of the Design Review Gate rules and runs fully
 standalone.
@@ -91,7 +88,7 @@ npx skills add thananon/9arm-skills --skill scrutinize
 
 ## Feature-Scoped Storage
 
-Store every artifact under a dedicated directory. Derive `<feature-slug>` from the
+Store every artifact under a dedicated directory; local files are the tracker. Derive `<feature-slug>` from the
 idea (lowercase alphanumeric with hyphens).
 
 ```
@@ -157,14 +154,16 @@ Run `grilling` and `domain-modeling` together as one discovery pass.
 
 ## Stage 1 — Spec
 
-Run `to-spec` inline. Synthesize `decisions.md`, the glossary, and the ADRs
-directly into `.scratch/<feature-slug>/spec.md` using the standard sections
-(Problem Statement, Solution, User Stories, Implementation Decisions, Testing
-Decisions, Out of Scope, Further Notes). Sketch the test seams and confirm them
-with the user. Stage 0 already settled the decisions — synthesize them and keep
-the interview closed. The spec is done when every decision in the log appears in
-it — as a story, an implementation or testing decision, an out-of-scope line, or
-a further note — and every blind-spot assumption appears in Further Notes.
+Write `.scratch/<feature-slug>/spec.md` following
+[spec-format.md](references/spec-format.md). Synthesize `decisions.md`, the
+glossary, and the ADRs directly into `.scratch/<feature-slug>/spec.md` using the
+standard sections (Problem Statement, Solution, User Stories, Implementation
+Decisions, Testing Decisions, Out of Scope, Further Notes). Sketch the test
+seams and confirm them with the user. Stage 0 already settled the decisions —
+synthesize them and keep the interview closed. The spec is done when
+every decision in the log appears in it — as a story, an implementation or
+testing decision, an out-of-scope line, or a further note — and
+every blind-spot assumption appears in Further Notes.
 
 Implementation Decisions includes a `### Reuse Plan`: every reusable module the
 spec touches, by symbol, as use as-is, extend, create shared, create candidate,
@@ -192,7 +191,7 @@ Route the verdict:
   sweep the spec so every passage restating the same fact agrees with it,
   consume one cycle, re-review, stay in Stage 2.
 - **`REWORK`, spec-level** (the finding is about how the spec is written) →
-  re-run `to-spec` with the finding as added context, consume one cycle,
+  re-run Stage 1 with the finding as added context, consume one cycle,
   re-review, stay in Stage 2.
 - **`REWORK`, decision-level** (the finding traces to a decision nobody made) →
   return to Stage 0 to re-grill that one decision; the running cycle count
@@ -212,11 +211,11 @@ accounting, and gate report format live in
 
 ## Stage 3 — Tickets
 
-Once the gate returns `SHIP`, run `to-tickets` inline against the shipped
-`spec.md`. Break it into tracer-bullet vertical slices, each declaring its
-blocking edges, and write one file per ticket under
-`.scratch/<feature-slug>/issues/<NN>-<slug>.md`, numbered from `01` in dependency
-order. Every ticket carries a `**Stories:**` line after `**Reuse:**`: the spec's
+Once the gate returns `SHIP`, write tickets following
+[ticket-format.md](references/ticket-format.md) against the shipped `spec.md`.
+Break it into tracer-bullet vertical slices, each declaring its blocking edges,
+and write one file per ticket under `.scratch/<feature-slug>/issues/<NN>-<slug>.md`,
+numbered from `01` in dependency order. Every ticket carries a `**Stories:**` line after `**Reuse:**`: the spec's
 user-story numbers it delivers (`2, 5`, or a range `3-6`), or `none` for a
 prefactor.
 

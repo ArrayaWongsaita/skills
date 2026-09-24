@@ -45,12 +45,12 @@ describe("grill-to-tickets composite skill contract", () => {
     }
   });
 
-  it("inline-executes the five child skills and hands the tickets to a later implementer run", async () => {
+  it("inline-executes the three stage skills and two owned formats and hands the tickets to a later implementer run", async () => {
     for (const file of skillFiles) {
       const content = await readFile(file, "utf8");
       assert.match(content, /inline/i, "must instruct inline execution");
-      for (const child of ["grilling", "domain-modeling", "to-spec", "scrutinize", "to-tickets"]) {
-        assert.match(content, new RegExp(child), `must name child skill ${child}`);
+      for (const item of ["grilling", "domain-modeling", "scrutinize", "spec-format", "ticket-format"]) {
+        assert.match(content, new RegExp(item), `must name stage skill or owned format ${item}`);
       }
       assert.match(
         content,
@@ -384,7 +384,6 @@ describe("grill-to-tickets composite skill contract", () => {
       }
       assert.match(content, /at the\s+path Preflight found/);
       assert.match(content, /local files are the tracker/);
-      assert.match(content, /`\/setup-matt-pocock-skills`, write the local artifact instead/);
     }
   });
 
@@ -431,5 +430,150 @@ describe("grill-to-tickets composite skill contract", () => {
     assert.match(guide, /^## ภาษาไทย \/ Thai\s*$/m);
     assert.match(guide, /^## English \/ ภาษาอังกฤษ\s*$/m);
     assert.match(guide, /npx skills add ArrayaWongsaita\/skills --skill grill-to-tickets/);
+  });
+
+  it("owns spec-format.md adapted from to-spec with upstream source line and license", async () => {
+    for (const dir of skillDirs) {
+      const specFormatPath = path.resolve(dir, "references/spec-format.md");
+      await fileExists(specFormatPath);
+      const content = await readFile(specFormatPath, "utf8");
+
+      // Opens with source line naming mattpocock/skills, skill path, computedHash as sha256 folder hash
+      const firstLine = content.split("\n")[0];
+      assert.match(firstLine, /mattpocock\/skills/);
+      assert.match(firstLine, /skills\/engineering\/to-spec\/SKILL\.md/);
+      assert.match(firstLine, /3fa1a0695d4ea242fae9e569e4d22aa1788623197abb33bfadafae7315789bbf/);
+      assert.match(firstLine, /sha256 folder hash/);
+      assert.match(firstLine, /\[UPSTREAM-LICENSE\.md\]\(UPSTREAM-LICENSE\.md\)/);
+
+      // UPSTREAM-LICENSE.md exists and contains upstream MIT notice verbatim
+      const licensePath = path.resolve(dir, "references/UPSTREAM-LICENSE.md");
+      await fileExists(licensePath);
+      const license = await readFile(licensePath, "utf8");
+      assert.match(license, /^MIT License\s+Copyright \(c\) 2026 Matt Pocock/m);
+      assert.match(license, /Permission is hereby granted, free of charge/);
+
+      // Process & template
+      assert.match(content, /explore/i);
+      assert.match(content, /seam/i);
+      for (const section of [
+        "Problem Statement",
+        "Solution",
+        "User Stories",
+        "Implementation Decisions",
+        "Testing Decisions",
+        "Out of Scope",
+        "Further Notes",
+      ]) {
+        assert.match(content, new RegExp(`## ${section}`));
+      }
+      assert.match(content, /### Reuse Plan/);
+      assert.match(content, /every decision in the log|every logged decision/i);
+      assert.match(content, /blind-spot assumption/i);
+      assert.match(content, /heading.*never.*repeat|unique/i);
+      assert.match(content, /bold lines/i);
+      assert.match(content, /### Changed tests and wording/);
+
+      // No tracker, label, or /setup-matt-pocock-skills
+      assert.doesNotMatch(content, /tracker/i);
+      assert.doesNotMatch(content, /ready-for-agent/i);
+      assert.doesNotMatch(content, /\/setup-matt-pocock-skills/);
+    }
+  });
+
+  it("owns ticket-format.md adapted from to-tickets with upstream source line and license", async () => {
+    for (const dir of skillDirs) {
+      const ticketFormatPath = path.resolve(dir, "references/ticket-format.md");
+      await fileExists(ticketFormatPath);
+      const content = await readFile(ticketFormatPath, "utf8");
+
+      // Opens with source line naming mattpocock/skills, skill path, computedHash as sha256 folder hash
+      const firstLine = content.split("\n")[0];
+      assert.match(firstLine, /mattpocock\/skills/);
+      assert.match(firstLine, /skills\/engineering\/to-tickets\/SKILL\.md/);
+      assert.match(firstLine, /bf5e6ebcb4f1272de0c188d5b3901f265a03d1fa9935a21a7a56938e21e2e761/);
+      assert.match(firstLine, /sha256 folder hash/);
+      assert.match(firstLine, /\[UPSTREAM-LICENSE\.md\]\(UPSTREAM-LICENSE\.md\)/);
+
+      // Process & vertical slices
+      assert.match(content, /vertical slice/i);
+      assert.match(content, /prefactor/i);
+      assert.match(content, /expand–contract|expand-contract/i);
+      assert.match(content, /quiz/i);
+      assert.match(content, /# <NN>:/);
+      assert.match(content, /\*\*What to build:\*\*/);
+      assert.match(content, /\*\*Blocked by:\*\*/);
+
+      // Acceptance criteria rules
+      assert.match(content, /suite.*typecheck.*lint.*not acceptance criteria|not acceptance criteria/i);
+      assert.match(content, /testable statement/i);
+      assert.match(content, /no file paths|avoid specific file paths/i);
+
+      // No tracker, label, or /setup-matt-pocock-skills
+      assert.doesNotMatch(content, /tracker/i);
+      assert.doesNotMatch(content, /triage label/i);
+      assert.doesNotMatch(content, /\/setup-matt-pocock-skills/);
+    }
+  });
+
+  it("points SKILL.md, design-review-gate, and reuse-pass at owned formats", async () => {
+    for (const file of skillFiles) {
+      const content = await readFile(file, "utf8");
+
+      // Intro and diagram
+      assert.match(content, /spec-format\.md/);
+      assert.match(content, /ticket-format\.md/);
+      assert.match(content, /locate the five stage skills/);
+
+      // Inline Execution
+      const inlineSection = content.slice(content.indexOf("## Inline Execution"), content.indexOf("## Preflight"));
+      assert.match(inlineSection, /Stages 0, 1, and 3 run \*\*inline\*\*/);
+      assert.match(inlineSection, /at the\s+path Preflight found/);
+      for (const skill of ["grilling", "domain-modeling", "scrutinize"]) {
+        assert.match(inlineSection, new RegExp(skill));
+      }
+      assert.match(inlineSection, /spec-format\.md/);
+      assert.match(inlineSection, /ticket-format\.md/);
+      assert.doesNotMatch(inlineSection, /tracker/i);
+
+      // Feature-Scoped Storage carries "local files are the tracker"
+      const storageSection = content.slice(content.indexOf("## Feature-Scoped Storage"), content.indexOf("## Stage 0"));
+      assert.match(storageSection, /local files are the tracker/);
+
+      // Stage 1 follows spec-format.md
+      const stage1 = content.slice(content.indexOf("## Stage 1"), content.indexOf("## Stage 2"));
+      assert.match(stage1, /spec-format\.md/);
+      assert.match(stage1, /every\s+decision in the log appears in it/);
+      assert.match(stage1, /### Reuse Plan/);
+
+      // Stage 2 rework names Stage 1
+      const stage2 = content.slice(content.indexOf("## Stage 2"), content.indexOf("## Stage 3"));
+      assert.match(stage2, /re-run Stage 1/);
+      assert.doesNotMatch(stage2, /re-run `?to-spec`?/);
+
+      // Stage 3 follows ticket-format.md
+      const stage3 = content.slice(content.indexOf("## Stage 3"), content.indexOf("## Stop"));
+      assert.match(stage3, /ticket-format\.md/);
+      assert.match(stage3, /Re-run the checker after every change/);
+      assert.match(stage3, /story-coverage table/);
+      assert.match(stage3, /`result: PASS`/);
+    }
+
+    for (const dir of skillDirs) {
+      // design-review-gate.md
+      const gate = await readFile(path.resolve(dir, "references/design-review-gate.md"), "utf8");
+      assert.match(gate, /Stage 3 \(`ticket-format\.md`\)/);
+      assert.match(gate, /re-run Stage 1 inline/);
+      assert.match(gate, /Stage 1 cannot/);
+      assert.match(gate, /re-run Stage 1 and re-review/);
+      assert.match(gate, /re-run Stage 1 with the finding/);
+      assert.doesNotMatch(gate, /`to-spec`/);
+      assert.doesNotMatch(gate, /`to-tickets`/);
+
+      // reuse-pass.md line 99
+      const reusePass = await readFile(path.resolve(dir, "references/reuse-pass.md"), "utf8");
+      assert.match(reusePass, /`spec-format\.md`'s rule/);
+      assert.doesNotMatch(reusePass, /`to-spec`'s rule/);
+    }
   });
 });
