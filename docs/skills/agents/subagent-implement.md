@@ -8,7 +8,7 @@
 
 ### มีไว้ทำอะไร
 
-รับ directory ของ ticket ที่ `grill-to-tickets` / `to-tickets` ปล่อยไว้ที่
+รับ directory ของ ticket ที่ `grill-to-tickets` ปล่อยไว้ที่
 `.scratch/<feature-slug>/issues/` แล้วพาไปเป็นโค้ดที่รันได้จริง **โดยไม่เปลือง
 context ของ main agent** agent หลัก (**orchestrator**) อ่าน ticket set กับ
 `spec.md` แม่ วางลำดับงานจาก dependency graph แล้ว dispatch **worker** ซึ่งเป็น
@@ -39,7 +39,7 @@ npx skills add ArrayaWongsaita/skills --skill subagent-implement
 
 ### ไม่ควรใช้เมื่อไร
 
-- ยังไม่มี ticket — ใช้ `/grill-to-tickets` หรือ `/to-tickets` ก่อน
+- ยังไม่มี ticket — ใช้ `/grill-to-tickets` ก่อน
 - อยากขับทั้ง lifecycle รวม review และ PR — ใช้ `/engineering-workflow`
 - ต้องการกระจายงานข้ามหลาย LLM provider เพื่อเลี่ยง rate limit — ใช้ `/agy-implement`
 - เป็น ticket แก้บั๊กหรือ incident — v1 รองรับเฉพาะ feature ticket set
@@ -69,6 +69,13 @@ main agent)
    และคำสั่ง `/code-review` + `/scrutinize` ที่ต้องรันต่อใน context ใหม่ ไม่ push
    ไม่เปิด PR
 
+Seam, Context และ Budget: worker ใช้ `**Seam:**` ของ ticket แบบ **verbatim** เป็น
+ขอบเขตเทสต์ และประกอบ **read list** ของตัวเองจาก `**Context:**` (spec sections
+และไฟล์ แยก read / change / create) พาธใน worktree ของ worker เขียนเป็น relative
+พาธนอก worktree เขียนเป็น absolute และ `status.md` เก็บ `budget_estimate`
+(ข้อความ `**Budget:**` แบบ verbatim, `none` ถ้าไม่มี) คู่กับ `usage_total`
+(token จริงรวมทุก usage report บน path ที่ส่ง ticket)
+
 sub-command: `continue` resume พร้อม Reality reconciliation, `status` / `list`
 อ่านอย่างเดียว
 
@@ -92,8 +99,8 @@ sub-command: `continue` resume พร้อม Reality reconciliation, `status` 
 
 ### Purpose
 
-Take a directory of tracer-bullet tickets that `grill-to-tickets` / `to-tickets`
-published under `.scratch/<feature-slug>/issues/` and drive it to working code
+Take a directory of tracer-bullet tickets that `grill-to-tickets` published
+under `.scratch/<feature-slug>/issues/` and drive it to working code
 **without spending the main agent's context on implementation**. The main agent —
 the **orchestrator** — plans the order of work from the dependency graph, then
 dispatches one **worker** (a native harness subagent) per ticket to build it
@@ -124,7 +131,7 @@ npx skills add ArrayaWongsaita/skills --skill subagent-implement
 
 ### Do not use it when
 
-- There are no tickets yet — run `/grill-to-tickets` or `/to-tickets` first.
+- There are no tickets yet — run `/grill-to-tickets` first.
 - You want the full lifecycle including review and a PR — use
   `/engineering-workflow`.
 - You want the run spread across several LLM providers to dodge a rate limit —
@@ -158,6 +165,14 @@ pins the worker subagent type for the run; `--model <id>` is a raw pass-through
 3. **Stop — Handoff**: print the integration branch name, confirm one commit per
    ticket, and hand over the exact `/code-review` and `/scrutinize` commands for
    a fresh context. It never pushes or opens a PR.
+
+Seam, Context, and budget: the worker uses the ticket's `**Seam:**` **verbatim**
+as its test boundary and builds its **read list** from the ticket's
+`**Context:**` line (spec sections plus files, split into read / change /
+create). Paths inside the worker's worktree are **relative**; paths outside it
+are **absolute**. `status.md` records each ticket's `budget_estimate` (the
+`**Budget:**` text verbatim, or `none`) beside `usage_total` (the ticket's real
+token cost, summed over every usage report on the path that delivered it).
 
 Sub-commands: `continue` resumes with Reality reconciliation; `status` and
 `list` are read-only.

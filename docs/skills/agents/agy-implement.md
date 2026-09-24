@@ -30,7 +30,7 @@ npx skills add ArrayaWongsaita/skills --skill agy-implement
 
 ### ไม่ควรใช้เมื่อไร
 
-- ยังไม่มี ticket — ใช้ `/grill-to-tickets` หรือ `/to-tickets` ก่อน
+- ยังไม่มี ticket — ใช้ `/grill-to-tickets` ก่อน
 - อยากขับทั้ง lifecycle รวม review และ PR — ใช้ `/engineering-workflow`
 - เป็น ticket แก้บั๊กหรือ incident — v1 รองรับเฉพาะ feature ticket set
 - อยากลง implement เองใน context เดียว — ใช้ `/implement`
@@ -51,6 +51,13 @@ npx skills add ArrayaWongsaita/skills --skill agy-implement
    worker ที่รัน parallel จึงแค่อ่าน ไม่มีทางชนกัน
 3. **Stop — Handoff**: พิมพ์ชื่อ integration branch, สรุป token ต่อ provider และคำสั่ง
    `/code-review` + `/scrutinize` ที่ต้องรันต่อใน context ใหม่ ไม่ push ไม่เปิด PR
+
+Seam, Context และ Budget: worker ใช้ `**Seam:**` ของ ticket แบบ **verbatim** เป็น
+ขอบเขตเทสต์ และประกอบ **read list** ของตัวเองจาก `**Context:**` (spec sections
+และไฟล์ แยก read / change / create) พาธใน worktree ของ worker เขียนเป็น relative
+พาธนอก worktree เขียนเป็น absolute และ `status.md` เก็บ `budget_estimate`
+(ข้อความ `**Budget:**` แบบ verbatim, `none` ถ้าไม่มี) คู่กับ `usage_total`
+(token จริงรวมทุก usage report บน path ที่ส่ง ticket)
 
 sub-command: `continue` resume พร้อม Reality reconciliation, `status` / `list` อ่านอย่างเดียว
 
@@ -100,7 +107,7 @@ npx skills add ArrayaWongsaita/skills --skill agy-implement
 
 ### Do not use it when
 
-- There are no tickets yet — run `/grill-to-tickets` or `/to-tickets` first.
+- There are no tickets yet — run `/grill-to-tickets` first.
 - You want the full lifecycle including review and a PR — use
   `/engineering-workflow`.
 - The tickets are bug fixes or an incident — v1 accepts feature ticket sets only.
@@ -126,6 +133,14 @@ modified `.scratch/*/issues/` directory).
 3. **Stop — Handoff**: print the integration branch name, per-provider token
    usage, and the exact `/code-review` and `/scrutinize` commands to run next in
    a fresh context. It never pushes or opens a PR.
+
+Seam, Context, and budget: the worker uses the ticket's `**Seam:**` **verbatim**
+as its test boundary and builds its **read list** from the ticket's
+`**Context:**` line (spec sections plus files, split into read / change /
+create). Paths inside the worker's worktree are **relative**; paths outside it
+are **absolute**. `status.md` records each ticket's `budget_estimate` (the
+`**Budget:**` text verbatim, or `none`) beside `usage_total` (the ticket's real
+token cost, summed over every usage report on the path that delivered it).
 
 Sub-commands: `continue` resumes with Reality reconciliation; `status` and `list`
 are read-only.

@@ -82,6 +82,15 @@ Stop: Handoff (ส่งมอบ integration branch พร้อมรายง
 
 ---
 
+### Seam, Context และการบันทึก budget ของ ticket
+
+- **Seam:** worker (และ fallback subagent) ใช้ `**Seam:**` ของ ticket แบบ **verbatim** เป็นขอบเขตที่เขียนเทสต์ ไม่เลือก seam เอง — orchestrator ส่ง seam ที่ Planning เลือกไว้ให้ใน prompt
+- **Context:** worker สร้าง **read list** ของตัวเองจากบรรทัด `**Context:**` ของ ticket โดยแยกเป็น read / change / create; `spec §` refs กลายเป็นรายการ section ที่อ่าน และไฟล์ read-only ที่ยังไม่ถูก track ใน worktree จะถูกส่งเป็น absolute path จาก main checkout ของ project
+- **Path rule:** พาธที่อยู่ใน worktree ของ worker เขียนเป็น relative; พาธที่อยู่นอก worktree (spec แม่, ADR, ไฟล์ read-only ที่ untracked) เขียนเป็น absolute
+- **การบันทึก budget:** `status.md` เก็บ `budget_estimate` ของแต่ละ ticket (ข้อความ `**Budget:**` แบบ **verbatim** หรือ `none` ถ้า ticket ไม่มี) คู่กับ `usage_total` ซึ่งเป็นผลรวม token จริงของ ticket นั้น (input + output + thinking/reasoning, ไม่นับ cache read) จากทุก usage report บน path ที่ส่ง ticket สำเร็จ ทั้ง main path และ fallback path; ถ้า harness ไม่รายงาน usage จะเป็น `unknown`
+
+---
+
 ## 4. ตัวอย่างคำสั่งและ Prompt ใช้งานจริง
 
 ### ตัวอย่างที่ 1: รันด้วยการตั้งค่าอัตโนมัติ

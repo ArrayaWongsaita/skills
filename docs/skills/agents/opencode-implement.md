@@ -8,7 +8,7 @@
 
 ### มีไว้ทำอะไร
 
-รับ directory ของ ticket ที่ `grill-to-tickets` / `to-tickets` ปล่อยไว้ที่
+รับ directory ของ ticket ที่ `grill-to-tickets` ปล่อยไว้ที่
 `.scratch/<feature-slug>/issues/` แล้วพาไปเป็นโค้ดที่รันได้จริง บน **hosted model
 ตัวเดียวที่ resolve แล้ว pin ไว้ทั้ง run** agent หลัก (**orchestrator**) วางแผน
 dependency order เป็น **execution wave** ประเมิน touch-set ของแต่ละ ticket เพื่อ
@@ -42,7 +42,7 @@ npx skills add ArrayaWongsaita/skills --skill opencode-implement
 
 ### ไม่ควรใช้เมื่อไร
 
-- ยังไม่มี ticket — ใช้ `/grill-to-tickets` หรือ `/to-tickets` ก่อน
+- ยังไม่มี ticket — ใช้ `/grill-to-tickets` ก่อน
 - อยากขับทั้ง lifecycle รวม review และ PR — ใช้ `/engineering-workflow`
 - ต้องการกระจายงานข้ามหลาย LLM provider ด้วย round-robin failover — ใช้ `/agy-implement`
 - อยากให้ context ของ main agent เหลือเยอะโดยใช้ subagent ของ harness เป็นทางหลัก — ใช้ `/subagent-implement`
@@ -75,6 +75,14 @@ npx skills add ArrayaWongsaita/skills --skill opencode-implement
    สรุป token ทั้งสองทาง (`tokens.main` = spend จริงบน main path,
    `tokens.fallback` = ticket ที่ fallback พร้อมโค้ดที่ออกจากเครื่อง) และคำสั่ง
    `/code-review` + `/scrutinize` ที่ต้องรันต่อใน context ใหม่ ไม่ push ไม่เปิด PR
+
+Seam, Context และ Budget: worker (และ fallback subagent) ใช้ `**Seam:**` ของ
+ticket แบบ **verbatim** เป็นขอบเขตเทสต์ และประกอบ **read list** ของตัวเองจาก
+`**Context:**` (spec sections และไฟล์ แยก read / change / create) พาธใน worktree
+ของ worker เขียนเป็น relative พาธนอก worktree เขียนเป็น absolute และ `status.md`
+เก็บ `budget_estimate` (ข้อความ `**Budget:**` แบบ verbatim, `none` ถ้าไม่มี)
+คู่กับ `usage_total` (token จริงรวมทุก usage report บน path ที่ส่ง ticket,
+ทั้ง main path และ fallback path)
 
 Run options: `--model provider/model` (ไม่มี default ระดับ skill — ถ้าไม่ระบุ
 orchestrator จะ resolve จาก `opencode` เองครั้งเดียวก่อน wave 0 แล้ว pin ไว้ทั้ง
@@ -144,7 +152,7 @@ npx skills add ArrayaWongsaita/skills --skill opencode-implement
 
 ### Do not use it when
 
-- There are no tickets yet — run `/grill-to-tickets` or `/to-tickets` first.
+- There are no tickets yet — run `/grill-to-tickets` first.
 - You want the full lifecycle including review and a PR — use
   `/engineering-workflow`.
 - You want the run spread across several providers with round-robin failover
@@ -184,6 +192,15 @@ recently modified `.scratch/*/issues/` directory).
    Claude token spend and a note that its code left the machine), and the
    exact `/code-review` and `/scrutinize` commands to run next in a fresh
    context. It never pushes or opens a PR.
+
+Seam, Context, and budget: the worker (and the fallback subagent, which gets the
+same scaffold) uses the ticket's `**Seam:**` **verbatim** as its test boundary
+and builds its **read list** from the ticket's `**Context:**` line (spec
+sections plus files, split into read / change / create). Paths inside the
+worker's worktree are **relative**; paths outside it are **absolute**.
+`status.md` records each ticket's `budget_estimate` (the `**Budget:**` text
+verbatim, or `none`) beside `usage_total` (the ticket's real token cost, summed
+over every usage report on the path that delivered it, main path or fallback).
 
 Run options: `--model provider/model` (no skill-level default — when omitted,
 the orchestrator resolves the model once from `opencode` itself, before wave
