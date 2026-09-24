@@ -95,15 +95,15 @@ describe("opencode-implement skill contract", () => {
         assert.match(body, /wave/i);
         assert.match(body, /parallel/i);
         assert.match(body, /concurrency cap/i);
-        // Every ticket-06 purge target, scoped so the legitimate
-        // `to-tickets` local format ticket-naming phrase (unrelated to
-        // "local model" execution) is not a false positive, and neither is
-        // the --strict-local flag NAME (a literal deprecated-alias token,
-        // not prose describing the skill as local).
+        // Every ticket-06 purge target. The ticket-format phrase is now the
+        // `grill-to-tickets` ticket format (renamed from `to-tickets` local
+        // format), so the exemption follows the rename; the --strict-local
+        // flag NAME is a literal deprecated-alias token, not prose
+        // describing the skill as local.
         const withoutExemptions = body
-          .replace(/`?to-tickets`?\s*local format/gi, "")
+          .replace(/`?grill-to-tickets`?\s*ticket format/gi, "")
           .replace(/--strict-local/gi, "");
-        assert.doesNotMatch(withoutExemptions, /\blocal\b/i, "no 'local' language outside the to-tickets local format name and the --strict-local flag name");
+        assert.doesNotMatch(withoutExemptions, /\blocal\b/i, "no 'local' language outside the grill-to-tickets ticket format name and the --strict-local flag name");
         assert.doesNotMatch(body, /ollama/i, "no Ollama language");
         assert.doesNotMatch(body, /zero-cost/i, "no zero-cost framing");
         assert.doesNotMatch(body, /\bprivate\b/i, "no privacy framing");
@@ -280,6 +280,55 @@ describe("opencode-implement skill contract", () => {
         assert.doesNotMatch(stage0, /step plan/i);
         assert.doesNotMatch(stage0, /sub-step/i);
         assert.doesNotMatch(stage0, /predicted path/i);
+      }
+    });
+  });
+
+  describe("ticket 07 — grill-to-tickets ticket format and Seam rule", () => {
+    it("calls the input the grill-to-tickets ticket format, never the to-tickets local format", async () => {
+      for (const dir of skillDirs) {
+        const docs = (
+          await Promise.all(
+            ["SKILL.md", "references/planning.md", "references/worktree-integration.md"].map((file) =>
+              readFile(path.resolve(dir, file), "utf8"),
+            ),
+          )
+        ).join("\n");
+        assert.match(docs, /the `grill-to-tickets` ticket format/);
+        assert.doesNotMatch(docs, /(?<!-)to-tickets/);
+      }
+    });
+
+    it("lists every ticket header field in the ticket-format block", async () => {
+      for (const dir of skillDirs) {
+        const planning = await readFile(path.resolve(dir, "references/planning.md"), "utf8");
+        const block = planning.match(/## 2\. Parse the ticket format[\s\S]*?(?=\n## )/);
+        assert.ok(block, "planning.md §2 ticket-format block present");
+        for (const field of [
+          "**What to build:**",
+          "**Blocked by:**",
+          "**Reuse:**",
+          "**Stories:**",
+          "**Seam:**",
+          "**Context:**",
+          "**Budget:**",
+          "**Status:**",
+          "- [ ]",
+        ]) {
+          assert.ok(block[0].includes(field), `ticket-format block lists ${field}`);
+        }
+      }
+    });
+
+    it("uses a ticket's Seam verbatim and today's rule otherwise", async () => {
+      for (const dir of skillDirs) {
+        const planning = await readFile(path.resolve(dir, "references/planning.md"), "utf8");
+        const step = planning.match(/## \d+\. Select a test seam per ticket[\s\S]*?(?=\n## )/);
+        assert.ok(step, "seam step present");
+        assert.match(step[0], /\*\*Seam:\*\*/);
+        assert.match(step[0], /verbatim/i);
+        assert.match(step[0], /Testing Decisions/);
+        assert.match(step[0], /narrowest/);
       }
     });
   });

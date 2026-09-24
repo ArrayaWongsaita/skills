@@ -195,6 +195,49 @@ describe("subagent-implement skill contract", () => {
     });
   });
 
+  describe("grill-to-tickets ticket format and Seam rule", () => {
+    it("calls the input the grill-to-tickets ticket format, never the to-tickets local format", async () => {
+      for (const dir of skillDirs) {
+        const docs = await joinDocs(dir, "planning.md");
+        assert.match(docs, /the `grill-to-tickets` ticket format/);
+        assert.doesNotMatch(docs, /(?<!-)to-tickets/);
+      }
+    });
+
+    it("lists every ticket header field in the ticket-format block", async () => {
+      for (const dir of skillDirs) {
+        const planning = await readFile(path.resolve(dir, "references/planning.md"), "utf8");
+        const block = planning.match(/## 2\. Parse the ticket format[\s\S]*?(?=\n## )/);
+        assert.ok(block, "planning.md §2 ticket-format block present");
+        for (const field of [
+          "**What to build:**",
+          "**Blocked by:**",
+          "**Reuse:**",
+          "**Stories:**",
+          "**Seam:**",
+          "**Context:**",
+          "**Budget:**",
+          "**Status:**",
+          "- [ ]",
+        ]) {
+          assert.ok(block[0].includes(field), `ticket-format block lists ${field}`);
+        }
+      }
+    });
+
+    it("uses a ticket's Seam verbatim and today's rule otherwise", async () => {
+      for (const dir of skillDirs) {
+        const planning = await readFile(path.resolve(dir, "references/planning.md"), "utf8");
+        const step = planning.match(/## \d+\. Select a test seam per ticket[\s\S]*?(?=\n## )/);
+        assert.ok(step, "seam step present");
+        assert.match(step[0], /\*\*Seam:\*\*/);
+        assert.match(step[0], /verbatim/i);
+        assert.match(step[0], /Testing Decisions/);
+        assert.match(step[0], /narrowest/);
+      }
+    });
+  });
+
   describe("Stage 1 — dispatch, verify, integrate", () => {
     it("dispatch-contract.md documents the Agent-tool call and the agent/model resolution", async () => {
       for (const dir of skillDirs) {

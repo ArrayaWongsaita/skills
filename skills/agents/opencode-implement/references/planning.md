@@ -21,7 +21,7 @@ Load, from the resolved feature directory:
 
 ## 2. Parse the ticket format
 
-Each ticket is in the `to-tickets` local format:
+Each ticket is in the `grill-to-tickets` ticket format:
 
 ```
 # <NN>: <title>
@@ -29,15 +29,20 @@ Each ticket is in the `to-tickets` local format:
 **What to build:** <end-to-end behaviour>
 
 **Blocked by:** <numbers/titles>, or "None (can start immediately)"
-
+**Reuse:** <catalog verbs and symbols>, or "none"
+**Stories:** <story numbers>
+**Seam:** <one test boundary>
+**Context:** <spec section refs and files>
+**Budget:** read ~<N>k tokens · <C> criteria · <M> modules
 **Status:** ready-for-agent
 
 - [ ] <acceptance criterion>
 ```
 
 Record per ticket: number `NN`, slug, title, the verbatim "What to build", the
-verbatim acceptance checkboxes, and the `Blocked by` list parsed into a set of
-ticket numbers. "None (can start immediately)" parses to the empty set. A blocker
+verbatim acceptance checkboxes, the `Blocked by` list parsed into a set of
+ticket numbers, and the verbatim `**Seam:**` line when the ticket has one.
+"None (can start immediately)" parses to the empty set. A blocker
 written as a title rather than a number resolves by matching the title.
 
 ## 3. Build and validate the dependency DAG
@@ -52,9 +57,9 @@ naming the specific broken ticket:
   matches no existing ticket number or title — halts with
   `BLOCKED (TICKET_SET_MISSING_BLOCKER)` (a missing blocker), naming the ticket
   and the dangling reference.
-- **Numbering consistent with a topological order.** `to-tickets` numbers tickets
-  from `01` in dependency order, so every ticket's blockers should have lower
-  numbers. A ticket blocked by a higher-numbered ticket halts with
+- **Numbering consistent with a topological order.** `grill-to-tickets` numbers
+  tickets from `01` in dependency order, so every ticket's blockers should have
+  lower numbers. A ticket blocked by a higher-numbered ticket halts with
   `BLOCKED (TICKET_SET_NUMBERING)` naming both.
 
 ## 4. Compute execution waves
@@ -94,23 +99,26 @@ user decides at Plan approval which flagged tickets to serialize and which to ru
 in parallel anyway — the integration gate, not this heuristic, is what guarantees
 correctness.
 
-A ticket that `to-tickets` sequenced as a **wide-refactor expand–contract batch**
-runs as ordered serial steps on the integration branch — `to-tickets` stratifies
-expand | migrate batches | contract into successive waves, and the integration
-gate runs the full suite at each wave boundary, so the batch stays green step to
-step. It gets no wide-refactor-specific handling beyond honoring the order.
+A ticket that `grill-to-tickets` sequenced as a **wide-refactor expand–contract
+batch** runs as ordered serial steps on the integration branch —
+`grill-to-tickets` stratifies expand | migrate batches | contract into successive
+waves, and the integration gate runs the full suite at each wave boundary, so the
+batch stays green step to step. It gets no wide-refactor-specific handling beyond
+honoring the order.
 
 ## 6. Select a test seam per ticket
 
-The orchestrator selects each ticket's test seam at planning, using the parent
-spec's **Testing Decisions** as the primary input wherever they constrain it.
-Where the Testing Decisions name a seam for the ticket's area, use it verbatim.
-Where they only give module-level guidance, choose the narrowest public boundary
-that exercises the ticket's acceptance criteria and record it. Every seam is
-shown in the Plan; the worker is handed its seam and tests there rather than
-inventing one. A ticket whose acceptance criteria cannot be exercised by an
-isolated test at any seam is a decomposition problem — it returns to planning
-rather than being implemented without a test.
+A ticket's `**Seam:**` line, when present, is its test seam — use it verbatim.
+
+For a ticket without one, the orchestrator selects the seam at planning, using
+the parent spec's **Testing Decisions** as the primary input wherever they
+constrain it. Where the Testing Decisions name a seam for the ticket's area, use
+it verbatim. Where they only give module-level guidance, choose the narrowest
+public boundary that exercises the ticket's acceptance criteria and record it.
+Every seam is shown in the Plan; the worker is handed its seam and tests there
+rather than inventing one. A ticket whose acceptance criteria cannot be exercised
+by an isolated test at any seam is a decomposition problem — it returns to
+planning rather than being implemented without a test.
 
 ## 7. Emit the Plan and pause
 

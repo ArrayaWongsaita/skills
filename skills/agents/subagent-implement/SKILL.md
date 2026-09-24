@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Subagent Implement
 
-Take a directory of `grill-to-tickets` / `to-tickets` tracer-bullet tickets and
+Take a directory of `grill-to-tickets` tracer-bullet tickets and
 drive it to working code **while the main agent's context stays lean**. The main
 agent — the **orchestrator** — reads the ticket set and its parent `spec.md`,
 plans the order of work from the dependency graph, then dispatches one **worker**
@@ -95,17 +95,18 @@ Follow [references/planning.md](references/planning.md). In short:
 
 1. **Resolve the target** and load every ticket, the parent `spec.md`, the
    feature `CONTEXT.md` / `adr/`, and the repo's own decisions.
-2. **Parse** every ticket in the `to-tickets` local format.
+2. **Parse** every ticket in the `grill-to-tickets` ticket format.
 3. **Build and validate the dependency DAG** — acyclic, every blocker resolvable,
    numbering consistent with a topological order. A cycle, a missing blocker, or
    inconsistent numbering **halts the run before any other work**, naming the
    specific broken ticket.
 4. **Compute the dependency order** — a topological ordering of the tickets. The
    **frontier** is every ticket whose blockers have all landed.
-5. **Select a test seam per ticket** from the parent spec's Testing Decisions
-   where they constrain it, otherwise the narrowest public boundary that
-   exercises the ticket's acceptance criteria. A ticket no isolated test can
-   exercise returns to planning rather than shipping without a test.
+5. **Select a test seam per ticket** — the ticket's own `**Seam:**` line where
+   it has one, otherwise from the parent spec's Testing Decisions where they
+   constrain it, then the narrowest public boundary that exercises the ticket's
+   acceptance criteria. A ticket no isolated test can exercise returns to
+   planning rather than shipping without a test.
 6. **Match an agent per ticket** — see
    [references/dispatch-contract.md](references/dispatch-contract.md). The default
    is a general-purpose subagent; a run-level `--agent` pin overrides.

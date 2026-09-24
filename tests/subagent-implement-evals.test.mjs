@@ -123,5 +123,18 @@ describe("subagent-implement eval suite contract", () => {
         assert.ok(hay(re), `no eval case covers: ${label}`);
       }
     });
+
+    it("covers the ticket Seam rule — verbatim when present, today's rule otherwise", async () => {
+      const { evals } = await evalsJson();
+      const hay = (re) => evals.some((e) => re.test(e.name) || re.test(e.expected_output));
+      assert.ok(
+        hay(/[Ss]eam[\s\S]{0,200}verbatim|verbatim[\s\S]{0,100}[Ss]eam/),
+        "a ticket's Seam is used verbatim as its test seam",
+      );
+      assert.ok(
+        hay(/without[^\n]{0,30}[Ss]eam|predates the new fields/i),
+        "a ticket without Seam, Context, or Budget runs as today",
+      );
+    });
   });
 });

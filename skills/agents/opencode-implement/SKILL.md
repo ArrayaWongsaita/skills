@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # opencode Implement
 
-Take a directory of `grill-to-tickets` / `to-tickets` tracer-bullet tickets and
+Take a directory of `grill-to-tickets` tracer-bullet tickets and
 drive it to working code on one **resolved, pinned hosted** `opencode` model.
 The main agent — the **orchestrator** — reads the ticket set and its parent
 `spec.md`, plans the dependency order into **execution waves**, and estimates
@@ -123,7 +123,7 @@ Follow [references/planning.md](references/planning.md). In short:
 
 1. **Resolve the target** and load every ticket, the parent `spec.md`, the
    feature `CONTEXT.md` / `adr/`, and the repo's own decisions.
-2. **Parse** every ticket in the `to-tickets` local format.
+2. **Parse** every ticket in the `grill-to-tickets` ticket format.
 3. **Build and validate the dependency DAG** — acyclic, every blocker resolvable,
    numbering consistent with a topological order. A cycle, a missing blocker, or
    inconsistent numbering **halts the run before any other work**
@@ -139,10 +139,11 @@ Follow [references/planning.md](references/planning.md). In short:
    touches a cross-cutting file (router, DI container, root schema,
    migrations, `package.json`/lockfiles, CI config, shared config). The
    integration gate, not this heuristic, is the correctness guarantee.
-6. **Select a test seam per ticket** from the parent spec's Testing Decisions
-   where they constrain it, otherwise the narrowest public boundary that
-   exercises the ticket's acceptance criteria. A ticket no isolated test can
-   exercise returns to planning rather than shipping without a test.
+6. **Select a test seam per ticket** — the ticket's own `**Seam:**` line where
+   it has one, otherwise from the parent spec's Testing Decisions where they
+   constrain it, then the narrowest public boundary that exercises the ticket's
+   acceptance criteria. A ticket no isolated test can exercise returns to
+   planning rather than shipping without a test.
 7. **Emit the Plan** — the wave table plus, per ticket: its blockers,
    estimated touch-set, serial/parallel proposal with overlap flags, test
    seam, and retry budgets (`MAX_TICKET_ATTEMPTS`, `MAX_OPENCODE_RETRIES`);

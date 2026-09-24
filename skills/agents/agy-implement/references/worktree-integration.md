@@ -82,9 +82,9 @@ Run by the orchestrator, per ticket, in the ticket's worktree — detailed in
    retry (verification budget) or `BLOCKED`.
 
 A wide-refactor expand–contract sequence is just an ordinary serial chain here:
-`to-tickets` stratifies it into waves (expand | migrate batches | contract), and
-this gate runs the full suite at every wave boundary — so it stays green step to
-step, with no wide-refactor-specific handling.
+`grill-to-tickets` stratifies it into waves (expand | migrate batches |
+contract), and this gate runs the full suite at every wave boundary — so it stays
+green step to step, with no wide-refactor-specific handling.
 
 ## Reuse Catalog update — inside each ticket's squash commit
 

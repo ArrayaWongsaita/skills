@@ -539,6 +539,32 @@
         "Performs no catalog step at integration"
       ],
       "files": []
+    },
+    {
+      "id": 47,
+      "name": "a ticket's Seam is used verbatim as its test seam",
+      "prompt": "/opencode-implement .scratch/seam-demo/ — ticket 01 carries **Seam:** the checkFeature boundary over an in-memory ticket set; ticket 02 has no Seam line but the parent spec's Testing Decisions name a seam for its area. Present the Plan and show ticket 01's worker prompt Test seam section.",
+      "expected_output": "Ticket 01's test seam is its own **Seam:** line used verbatim — ticket 01's prompt Test seam section carries that boundary, not a re-derived one. Ticket 02 falls back to today's rule: the parent spec's Testing Decisions seam for its area, otherwise the narrowest public boundary that exercises its acceptance criteria.",
+      "expectations": [
+        "Uses ticket 01's **Seam:** line verbatim in its worker prompt's Test seam section",
+        "Does not re-derive or narrow a seam for a ticket that carries one",
+        "Falls back for ticket 02 to the Testing Decisions seam, then the narrowest public boundary",
+        "Shows each ticket's resulting seam in the Plan"
+      ],
+      "files": []
+    },
+    {
+      "id": 48,
+      "name": "a ticket without the new Seam, Context, or Budget fields runs as today",
+      "prompt": "/opencode-implement .scratch/legacy-demo/ — every ticket predates the new fields: no ticket carries Seam, Context, or Budget. Present the Plan and run wave 0.",
+      "expected_output": "The missing fields change nothing: the orchestrator selects each seam by today's rule — the parent spec's Testing Decisions where they constrain it, otherwise the narrowest public boundary — computes waves and touch-sets as before, and builds each worker prompt from the ticket and spec text by today's judgement.",
+      "expectations": [
+        "Treats a ticket without Seam, Context, or Budget exactly as before the fields existed",
+        "Selects seams from the parent spec's Testing Decisions, narrowing to the narrowest public boundary",
+        "Computes waves and touch-sets from the ticket text as today",
+        "Runs wave 0 without asking the user to add the missing fields"
+      ],
+      "files": []
     }
   ]
 }

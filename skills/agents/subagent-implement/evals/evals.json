@@ -469,6 +469,32 @@
         "Keeps the read-only Reuse Catalog line"
       ],
       "files": []
+    },
+    {
+      "id": 38,
+      "name": "a ticket's Seam is used verbatim as its test seam",
+      "prompt": "/subagent-implement .scratch/seam-demo/ — ticket 01 carries **Seam:** the checkFeature boundary over an in-memory ticket set; ticket 02 has no Seam line but the parent spec's Testing Decisions name a seam for its area. Present the Plan.",
+      "expected_output": "Ticket 01's test seam is its own **Seam:** line used verbatim — the orchestrator does not re-derive it or narrow it. Ticket 02 falls back to today's rule: the parent spec's Testing Decisions seam for its area, otherwise the narrowest public boundary that exercises its acceptance criteria. The Plan shows each ticket's seam.",
+      "expectations": [
+        "Uses ticket 01's **Seam:** line verbatim as that ticket's test seam",
+        "Does not re-derive or narrow a seam for a ticket that carries one",
+        "Falls back for ticket 02 to the Testing Decisions seam, then the narrowest public boundary",
+        "Shows the resulting seam per ticket in the Plan"
+      ],
+      "files": []
+    },
+    {
+      "id": 39,
+      "name": "a ticket without the new Seam, Context, or Budget fields runs as today",
+      "prompt": "/subagent-implement .scratch/legacy-demo/ — every ticket predates the new fields: no ticket carries Seam, Context, or Budget. Present the Plan and run ticket 01.",
+      "expected_output": "The missing fields change nothing: the orchestrator selects each seam by today's rule — the parent spec's Testing Decisions where they constrain it, otherwise the narrowest public boundary — and composes the worker prompt from the ticket and spec text by today's judgement.",
+      "expectations": [
+        "Treats a ticket without Seam, Context, or Budget exactly as before the fields existed",
+        "Selects seams from the parent spec's Testing Decisions, narrowing to the narrowest public boundary",
+        "Composes the worker prompt from the ticket and spec text as today",
+        "Runs ticket 01 without asking the user to add the missing fields"
+      ],
+      "files": []
     }
   ]
 }
