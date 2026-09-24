@@ -115,6 +115,12 @@ describe("grill-to-tickets eval suite contract", () => {
         { label: "preflight: lock by location", match: /preflight records the lock by location/i },
         { label: "local tracker", match: /local files replace/i },
         { label: "git-ignored scratch", match: /local exclude/i },
+        { label: "budget-line mismatch", match: /budget-line mismatch/i },
+        { label: "(from NN) without its blocker", match: /\(from NN\) without its blocker/i },
+        { label: "untestable-criteria warning acknowledged", match: /untestable-criteria warning/i },
+        { label: "same-file warning adds an edge", match: /same-file warning adds an edge/i },
+        { label: "above 15 tickets proposes a split", match: /above 15 tickets proposes a split/i },
+        { label: "handoff recommends from the DAG", match: /handoff recommends an implementer from the DAG/i },
       ];
       for (const safeguard of safeguards) {
         assert.ok(

@@ -421,6 +421,82 @@
         "Prints a handoff that does not ask to commit .scratch/"
       ],
       "files": []
+    },
+    {
+      "id": 33,
+      "name": "Budget-line mismatch fails the checker",
+      "prompt": "$grill-to-tickets continue member-export. The gate returned SHIP. Ticket 02's **Budget:** line was copied by hand, and the checker reports it differs from the measurement after ticket 02's Context gained a spec section.",
+      "expected_output": "The checker fails the run: a Budget line that differs from the measurement is an error, never a warning. Re-run node <skill-dir>/scripts/check-tickets.mjs .scratch/member-export/ --write-budget so the line is rewritten from the measurement, then continue to the quiz only once it prints result: PASS.",
+      "expectations": [
+        "Treats the differing Budget line as an error before the quiz",
+        "Re-runs the checker with --write-budget to write the measured line",
+        "Never copies or adjusts the Budget line by hand",
+        "Reaches result: PASS before quizzing"
+      ],
+      "files": []
+    },
+    {
+      "id": 34,
+      "name": "(from NN) without its blocker fails the checker",
+      "prompt": "$grill-to-tickets continue member-export. The gate returned SHIP. Ticket 03's Context lists (from 01) src/member-rows.mjs, but ticket 03's **Blocked by:** is None (can start immediately).",
+      "expected_output": "The checker fails the run: a (from 01) item requires ticket 01 to be among ticket 03's transitive blockers and to carry (new) for that path. Add 01 to ticket 03's **Blocked by:** when the file is genuinely needed, then re-run with --write-budget until result: PASS.",
+      "expectations": [
+        "Treats (from NN) without its transitive blocker as an error before the quiz",
+        "Adds the missing blocking edge rather than deleting a needed Read set item",
+        "Re-runs the checker with --write-budget and reaches result: PASS"
+      ],
+      "files": []
+    },
+    {
+      "id": 35,
+      "name": "untestable-criteria warning is acknowledged in the log",
+      "prompt": "$grill-to-tickets continue member-export. The checker prints result: PASS with one warning: issues/02-csv-download.md: acceptance criterion \"npm test passes\" mentions a suite or tool run.",
+      "expected_output": "Show the warning in the quiz and settle it before Stage 3 is done: rewrite the criterion as a testable behaviour and log the warning under ## Ticket warnings in decisions.md as `<warning> — fixed: <change>`, or keep it and log `<warning> — acknowledged`. result: PASS alone does not finish Stage 3.",
+      "expectations": [
+        "Shows every warning in the quiz",
+        "Logs the warning under ## Ticket warnings in decisions.md",
+        "Uses the — acknowledged or — fixed: <change> suffix",
+        "Does not treat result: PASS as permission to skip the warning"
+      ],
+      "files": []
+    },
+    {
+      "id": 36,
+      "name": "same-file warning adds an edge",
+      "prompt": "$grill-to-tickets continue member-export. The checker prints result: PASS with one warning: issues/01-export-members.md and issues/02-csv-download.md both change \"src/lib/rows.mjs\" and neither transitively blocks the other.",
+      "expected_output": "Resolve the warning in the quiz: if 02 consumes 01's change to src/lib/rows.mjs, add 01 to 02's **Blocked by:** and re-run the checker with --write-budget until the warning clears; if the changes are genuinely independent, keep the tickets unordered and log the warning under ## Ticket warnings as `<warning> — acknowledged`.",
+      "expectations": [
+        "Treats the same-file warning as an edge-or-acknowledge decision in the quiz",
+        "Adds the blocking edge when the later ticket consumes the earlier ticket's change",
+        "Re-runs the checker with --write-budget after the edge and confirms the warning clears",
+        "Logs the warning under ## Ticket warnings when it stays unordered"
+      ],
+      "files": []
+    },
+    {
+      "id": 37,
+      "name": "above 15 tickets proposes a split",
+      "prompt": "$grill-to-tickets continue platform-migration. The gate returned SHIP. The draft breakdown is 18 tickets, all under .scratch/platform-migration/issues/.",
+      "expected_output": "The checker prints result: PASS with the warning that the feature has 18 tickets and should be split into separate feature slugs. In the quiz, propose the split — for example platform-migration-core for the first deliverable and platform-migration-followup for the rest — and log the warning under ## Ticket warnings as `<warning> — fixed: <change>` or `<warning> — acknowledged` with the reason to keep one feature.",
+      "expectations": [
+        "Reports the above-15-tickets warning in the quiz",
+        "Proposes splitting the feature into separate feature slugs",
+        "Logs the warning under ## Ticket warnings with the fixed or acknowledged suffix"
+      ],
+      "files": []
+    },
+    {
+      "id": 38,
+      "name": "handoff recommends an implementer from the DAG",
+      "prompt": "$grill-to-tickets continue member-export. The checker's final run shows wave 0: 01, wave 1: 02, 03, 04; maximum wave width 3; critical-path length 2.",
+      "expected_output": "Print the handoff in order: commit any docs/reuse-catalog.md change, /clear, then the DAG summary — waves, maximum wave width, critical-path length, and recommended implementer — between /clear and the implementer commands, recommending agy-implement or opencode-implement for width 3 and naming the skills without a leading slash. Then /subagent-implement .scratch/member-export/ with /agy-implement and /opencode-implement as the alternatives.",
+      "expectations": [
+        "Prints the DAG summary and recommended implementer after /clear and before the implementer commands",
+        "Recommends agy-implement or opencode-implement for a maximum wave width of 3",
+        "Names the recommended skills without a leading slash",
+        "Keeps the Commit -> /clear -> /subagent-implement order"
+      ],
+      "files": []
     }
   ]
 }

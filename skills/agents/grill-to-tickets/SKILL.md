@@ -234,21 +234,28 @@ a `**Reuse:**` line after `**Blocked by:**` with the fixed verbs `use`, `extend`
 acceptance criteria. Rules, and why reuse stays out of the acceptance criteria:
 [reuse-pass.md](references/reuse-pass.md) — Stage 3.
 
-**Check, then quiz.** Run the ticket checker that ships with this skill:
+**Draft, measure, fix, then quiz.** Write the draft tickets first, then run the
+ticket checker that ships with this skill with `--write-budget`, so it writes
+every ticket's Budget line from its measurement:
 
 ```text
-node <this skill's directory>/scripts/check-tickets.mjs .scratch/<feature-slug>/
+node <this skill's directory>/scripts/check-tickets.mjs .scratch/<feature-slug>/ --write-budget
 ```
 
 [check-tickets.mjs](scripts/check-tickets.mjs) verifies that every user story
 has a ticket, that Stories and Blocked by name real stories and lower-numbered
-tickets, that the Reuse field sits after Blocked by with the fixed verbs, and
-that every create-shared or promote symbol has exactly one ticket, which blocks
-every other ticket using it. Fix what it reports, then quiz the user on
-granularity and blocking edges, showing each ticket's Reuse field and the
-checker's story-coverage table. Re-run the checker after every change the quiz
-makes. Stage 3 is done when the user approves the breakdown and the checker
-prints `result: PASS`. Where Node is unavailable, apply the checks listed in the
+tickets, that the Reuse field sits after Blocked by with the fixed verbs, that
+Seam, Context, and Budget are present, single-line, in order, and real, and that
+every create-shared or promote symbol has exactly one ticket, which blocks every
+other ticket using it. Fix every error it reports, then quiz the user on
+granularity and blocking edges, showing each ticket's Reuse, Seam, Context, and
+Budget, and showing the checker's story-coverage table, budget table, DAG
+summary, and every warning. Re-run the checker after every change with `--write-budget`.
+
+Stage 3 is done when the checker prints `result: PASS`, every warning is logged
+under `## Ticket warnings` in `decisions.md` — one line per warning,
+`<warning> — acknowledged` or `<warning> — fixed: <change>` — and the user
+approves the breakdown. Where Node is unavailable, apply the checks listed in the
 script's header by hand.
 
 ## Stop — Handoff
@@ -265,6 +272,16 @@ implementers start only from a clean working tree.
 
 To keep peak reasoning for implementation, reset context:
 /clear
+
+Paste the checker's final DAG summary — its waves, maximum wave width,
+critical-path length, and recommended implementer, with the skill names carrying
+no leading slash:
+
+  wave 0: 01
+  wave 1: 02, 03
+  maximum wave width: 2
+  critical-path length: 2
+  recommended implementer: subagent-implement, agy-implement, opencode-implement
 
 Then implement the whole ticket directory in a fresh session; the implementer
 keeps docs/reuse-catalog.md current as each ticket lands:

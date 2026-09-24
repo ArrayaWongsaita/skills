@@ -360,6 +360,55 @@ describe("grill-to-tickets composite skill contract", () => {
     }
   });
 
+  it("runs Stage 3 as draft, --write-budget, fix, quiz, re-run, and settles every warning in the log", async () => {
+    for (const file of skillFiles) {
+      const content = await readFile(file, "utf8");
+      const stage3 = content.slice(content.indexOf("## Stage 3"), content.indexOf("## Stop"));
+      assert.match(
+        stage3,
+        /draft[\s\S]*--write-budget[\s\S]*fix[\s\S]*quiz/i,
+        "Stage 3 orders draft -> --write-budget -> fix errors -> quiz",
+      );
+      assert.match(
+        stage3,
+        /Re-run the checker after every change[^\n]*--write-budget/,
+        "each change is re-checked with --write-budget",
+      );
+      assert.match(
+        stage3,
+        /Reuse[\s\S]*Seam[\s\S]*Context[\s\S]*Budget[\s\S]*story-coverage\s+table[\s\S]*budget\s+table[\s\S]*DAG\s+summary[\s\S]*warning/i,
+        "the quiz shows each ticket's Reuse, Seam, Context, and Budget, the coverage and budget tables, the DAG summary, and every warning",
+      );
+      assert.match(stage3, /`result: PASS`/);
+      assert.match(stage3, /## Ticket warnings/);
+      assert.match(stage3, /— acknowledged/);
+      assert.match(stage3, /— fixed: <change>/);
+      assert.match(stage3, /user\s+approves/i);
+    }
+    for (const dir of skillDirs) {
+      const log = await readFile(path.resolve(dir, "references/decision-log.md"), "utf8");
+      assert.match(log, /^## Ticket warnings$/m, "the log carries Ticket warnings entries");
+      assert.match(log, /— acknowledged/);
+      assert.match(log, /— fixed: <change>/);
+    }
+  });
+
+  it("prints the DAG summary and recommended implementer between /clear and the implementer commands", async () => {
+    for (const file of skillFiles) {
+      const content = await readFile(file, "utf8");
+      const handoff = content.slice(content.indexOf("## Stop — Handoff"));
+      const clearIndex = handoff.indexOf("/clear");
+      const implementerIndex = handoff.indexOf("/subagent-implement");
+      assert.ok(clearIndex !== -1 && implementerIndex !== -1, "the handoff has /clear and the implementer command");
+      const between = handoff.slice(clearIndex + "/clear".length, implementerIndex);
+      assert.match(between, /DAG summary/i, "the DAG summary sits after /clear");
+      assert.match(between, /recommended implementer/i, "the recommendation sits after /clear");
+      const recommendation = between.split("\n").find((line) => /recommended implementer/i.test(line));
+      assert.ok(recommendation, "the DAG summary carries the recommendation line");
+      assert.doesNotMatch(recommendation, /\//, "the recommended skills carry no leading slash");
+    }
+  });
+
   it("preflights the three stage skills across install locations and keeps the tracker local", async () => {
     for (const file of skillFiles) {
       const content = await readFile(file, "utf8");
