@@ -17,6 +17,7 @@ const {
 } = checkTicketsModule;
 
 const sectionOf = (...args) => checkTicketsModule.sectionOf?.(...args);
+const estimateTokens = (...args) => checkTicketsModule.estimateTokens?.(...args);
 
 const script = path.resolve("skills/agents/grill-to-tickets/scripts/check-tickets.mjs");
 const run = promisify(execFile);
@@ -44,6 +45,44 @@ const spec = `# Spec
 ## Testing Decisions
 `;
 
+// The measurement rule from the spec, applied by hand: ⌈ASCII code points ÷ 4⌉
+// + non-ASCII code points.
+function countTokens(text) {
+  let ascii = 0;
+  let nonAscii = 0;
+  for (const character of text) {
+    if (character.codePointAt(0) < 128) ascii += 1;
+    else nonAscii += 1;
+  }
+  return Math.ceil(ascii / 4) + nonAscii;
+}
+
+// The Budget line the checker should measure for a ticket fixture.
+function autoBudget(text, context, files = {}) {
+  const sources = [text.split("\n").filter((line) => !line.startsWith("**Budget:**")).join("\n")];
+  const modules = new Set();
+  let allowance = 0;
+  for (const item of (context ?? "").split("·").map((s) => s.trim()).filter(Boolean)) {
+    const specRef = item.match(/^spec\s+§\s+(.+)$/);
+    if (specRef) {
+      const section = sectionOf(spec, specRef[1]);
+      if (section?.text) sources.push(section.text);
+      continue;
+    }
+    const marker = item.match(/^\((edit|new|from\s+\d+|edit\s+from\s+\d+)\)\s+(.+)$/);
+    const norm = path.posix.normalize(marker ? marker[2].trim() : item);
+    if (!marker || marker[1] === "edit") {
+      const content = files[norm];
+      if (typeof content === "string") sources.push(content);
+    }
+    if (marker && marker[1] !== "edit") allowance += 2000;
+    if (marker && marker[1] !== "from") modules.add(path.posix.dirname(norm));
+  }
+  const tokens = countTokens(sources.join("\n")) + allowance;
+  const criteria = text.split("\n").filter((line) => /^\s*- \[[ xX]\] /.test(line)).length;
+  return `read ~${Math.round(tokens / 1000)}k tokens · ${criteria} criteria · ${modules.size} modules`;
+}
+
 function ticket(
   number,
   title,
@@ -53,6 +92,8 @@ function ticket(
     stories = "none",
     seam = "test boundary",
     context = "spec § User Stories",
+    budget,
+    files = {},
     extra = "",
   } = {},
 ) {
@@ -63,7 +104,15 @@ function ticket(
   if (seam !== null) lines.push(`**Seam:** ${seam}`, "");
   if (context !== null) lines.push(`**Context:** ${context}`, "");
   lines.push(extra, "**Status:** ready-for-agent", "", "- [ ] It works");
-  return { file: `${number}-${title.toLowerCase().replace(/\W+/g, "-")}.md`, text: lines.join("\n") };
+  const file = `${number}-${title.toLowerCase().replace(/\W+/g, "-")}.md`;
+  if (budget === null) return { file, text: lines.join("\n") };
+  const contextIndex = lines.findIndex((line) => line.startsWith("**Context:**"));
+  const insertAt = contextIndex === -1 ? lines.length : contextIndex + 1;
+  const withBudget = [...lines];
+  withBudget.splice(insertAt, 0, "**Budget:** placeholder");
+  const line = budget ?? autoBudget(withBudget.join("\n"), context, files);
+  withBudget[insertAt] = `**Budget:** ${line}`;
+  return { file, text: withBudget.join("\n") };
 }
 
 const passing = () => [
@@ -657,6 +706,7 @@ describe("check-tickets", () => {
       reuse: "create-shared `buildMemberRows`",
       stories: "1, 1a",
       context: "spec § User Stories · (edit) src/created.mjs",
+      files: { "src/created.mjs": "content" },
     });
     tLacksNew[1] = ticket("02", "CSV download", {
       blockedBy: "01",
@@ -697,6 +747,7 @@ describe("check-tickets", () => {
       reuse: "create-shared `buildMemberRows`",
       stories: "1, 1a",
       context: "spec § User Stories · ./src/foo/../utils.mjs",
+      files: { "src/utils.mjs": "export const x = 1;" },
     });
     const res = checkFeature({ spec, tickets, files: { "src/utils.mjs": "export const x = 1;" } });
     assert.deepEqual(res.errors, []);
@@ -717,6 +768,7 @@ describe("check-tickets", () => {
         reuse: "create-shared `buildMemberRows`",
         stories: "1, 1a",
         context: "spec § User Stories · src/code.mjs",
+        files: { "src/code.mjs": "console.log(1);" },
       });
       for (const { file, text } of t) await writeFile(path.join(dir, "issues", file), text);
 
@@ -736,5 +788,359 @@ describe("check-tickets", () => {
     } finally {
       await rm(root, { recursive: true, force: true });
     }
+  });
+
+  // --- Budget measurement: estimateTokens and checkFeature ---
+  it("estimateTokens counts ASCII code points at one per four plus one per non-ASCII code point", () => {
+    assert.equal(typeof checkTicketsModule.estimateTokens, "function");
+    assert.equal(estimateTokens(""), 0);
+    assert.equal(estimateTokens("abcd"), 1);
+    assert.equal(estimateTokens("abcde"), 2);
+    // 6 ASCII + 3 Thai: ⌈6 ÷ 4⌉ + 3 = 5
+    assert.equal(estimateTokens("abcdefกขค"), 5);
+    // a surrogate pair is one code point, not two UTF-16 units
+    assert.equal(estimateTokens("a😀"), 2);
+  });
+
+  it("checkFeature measures read tokens over the ticket, its spec sections, and its read or (edit) files, with an allowance for absent files", () => {
+    const budgetSpec = [
+      "# Budget Spec",
+      "",
+      "## User Stories",
+      "",
+      "1. A story",
+      "",
+      "## Later",
+      "",
+      "later text",
+    ].join("\n");
+    const section = sectionOf(budgetSpec, "User Stories").text;
+    const files = { "src/read.mjs": "export const read = 1;\n", "src/edit.mjs": "export const edit = 2;\n" };
+    const t1 = [
+      "# 01: Measure",
+      "",
+      "**Blocked by:** none",
+      "**Reuse:** none",
+      "**Stories:** 1",
+      "**Seam:** test boundary",
+      "**Context:** spec § User Stories · src/read.mjs · (edit) src/edit.mjs",
+      "**Status:** ready-for-agent",
+      "",
+      "- [ ] first",
+      "- [x] second",
+    ].join("\n");
+    const t2 = [
+      "# 02: Create",
+      "",
+      "**Blocked by:** 01",
+      "**Reuse:** none",
+      "**Stories:** 1",
+      "**Seam:** test boundary",
+      "**Context:** spec § User Stories · (new) lib/created.mjs",
+      "**Status:** ready-for-agent",
+      "",
+      "- [ ] only",
+    ].join("\n");
+    const t3 = [
+      "# 03: Edit created",
+      "",
+      "**Blocked by:** 02",
+      "**Reuse:** none",
+      "**Stories:** 1",
+      "**Seam:** test boundary",
+      "**Context:** spec § User Stories · (edit from 02) lib/created.mjs",
+      "**Status:** ready-for-agent",
+      "",
+      "- [ ] only",
+    ].join("\n");
+
+    const result = checkFeature({
+      spec: budgetSpec,
+      tickets: [
+        { file: "01-measure.md", text: t1 },
+        { file: "02-create.md", text: t2 },
+        { file: "03-edit-created.md", text: t3 },
+      ],
+      files,
+    });
+
+    const expected = [
+      countTokens([t1, section, files["src/read.mjs"], files["src/edit.mjs"]].join("\n")),
+      countTokens([t2, section].join("\n")) + 2000,
+      countTokens([t3, section].join("\n")) + 2000,
+    ];
+    assert.ok(Array.isArray(result.budgets), "checkFeature returns a budgets array");
+    assert.deepEqual(
+      result.budgets.map((b) => [b.number, b.tokens, b.criteria, b.modules, b.line]),
+      [
+        [1, expected[0], 2, 1, `read ~${Math.round(expected[0] / 1000)}k tokens · 2 criteria · 1 modules`],
+        [2, expected[1], 1, 1, `read ~${Math.round(expected[1] / 1000)}k tokens · 1 criteria · 1 modules`],
+        [3, expected[2], 1, 1, `read ~${Math.round(expected[2] / 1000)}k tokens · 1 criteria · 1 modules`],
+      ],
+    );
+  });
+
+  it("checkFeature errors on a Budget line that is missing, repeated, out of order, or followed by a non-field line", () => {
+    const missing = passing();
+    missing[0] = ticket("01", "Export members", {
+      reuse: "create-shared `buildMemberRows`",
+      stories: "1, 1a",
+      budget: null,
+    });
+    const resMissing = checkFeature({ spec, tickets: missing });
+    assert.ok(
+      resMissing.errors.some((e) => /01-export-members\.md: \*\*Budget:\*\* is missing/.test(e)),
+      resMissing.errors.join("\n"),
+    );
+
+    const empty = passing();
+    empty[0] = ticket("01", "Export members", {
+      reuse: "create-shared `buildMemberRows`",
+      stories: "1, 1a",
+      budget: "",
+    });
+    const resEmpty = checkFeature({ spec, tickets: empty });
+    assert.ok(
+      resEmpty.errors.some((e) => /01-export-members\.md: \*\*Budget:\*\* is empty/.test(e)),
+      resEmpty.errors.join("\n"),
+    );
+
+    const repeated = passing();
+    repeated[0] = ticket("01", "Export members", {
+      reuse: "create-shared `buildMemberRows`",
+      stories: "1, 1a",
+      extra: "**Budget:** read ~1k tokens · 1 criteria · 1 modules\n",
+    });
+    const resRepeated = checkFeature({ spec, tickets: repeated });
+    assert.ok(
+      resRepeated.errors.some((e) => /01-export-members\.md: \*\*Budget:\*\* is repeated/.test(e)),
+      resRepeated.errors.join("\n"),
+    );
+
+    const outOfOrder = passing();
+    outOfOrder[0] = {
+      file: "01-export-members.md",
+      text: [
+        "# 01: Export members",
+        "",
+        "**Blocked by:** None (can start immediately)",
+        "**Reuse:** create-shared `buildMemberRows`",
+        "**Stories:** 1, 1a",
+        "**Seam:** test boundary",
+        "**Budget:** read ~1k tokens · 1 criteria · 1 modules",
+        "**Context:** spec § User Stories",
+        "**Status:** ready-for-agent",
+        "",
+        "- [ ] It works",
+      ].join("\n"),
+    };
+    const resOrder = checkFeature({ spec, tickets: outOfOrder });
+    assert.ok(
+      resOrder.errors.some((e) => /01-export-members\.md: \*\*Budget:\*\* must come directly after \*\*Context:\*\*/.test(e)),
+      resOrder.errors.join("\n"),
+    );
+
+    const followedNonField = passing();
+    followedNonField[0] = {
+      file: "01-export-members.md",
+      text: [
+        "# 01: Export members",
+        "",
+        "**Blocked by:** None (can start immediately)",
+        "**Reuse:** create-shared `buildMemberRows`",
+        "**Stories:** 1, 1a",
+        "**Seam:** test boundary",
+        "**Context:** spec § User Stories",
+        "**Budget:** read ~1k tokens · 1 criteria · 0 modules",
+        "a wrapping line",
+        "**Status:** ready-for-agent",
+        "",
+        "- [ ] It works",
+      ].join("\n"),
+    };
+    const resFollowed = checkFeature({ spec, tickets: followedNonField });
+    assert.ok(
+      resFollowed.errors.some((e) => /01-export-members\.md: \*\*Budget:\*\* is followed directly by a non-field line/.test(e)),
+      resFollowed.errors.join("\n"),
+    );
+  });
+
+  it("checkFeature errors on a malformed, unmeasured, or differing Budget line, but skips differs for Context errors", () => {
+    const malformed = passing();
+    malformed[0] = ticket("01", "Export members", {
+      reuse: "create-shared `buildMemberRows`",
+      stories: "1, 1a",
+      budget: "about twenty thousand tokens",
+    });
+    const resMalformed = checkFeature({ spec, tickets: malformed });
+    assert.ok(
+      resMalformed.errors.some((e) => /01-export-members\.md: \*\*Budget:\*\* is malformed/.test(e)),
+      resMalformed.errors.join("\n"),
+    );
+
+    const unmeasured = passing();
+    unmeasured[0] = ticket("01", "Export members", {
+      reuse: "create-shared `buildMemberRows`",
+      stories: "1, 1a",
+      budget: "unmeasured",
+    });
+    const resUnmeasured = checkFeature({ spec, tickets: unmeasured });
+    assert.ok(
+      resUnmeasured.errors.some((e) => /01-export-members\.md: \*\*Budget:\*\* is unmeasured/.test(e)),
+      resUnmeasured.errors.join("\n"),
+    );
+
+    const stale = passing();
+    stale[0] = ticket("01", "Export members", {
+      reuse: "create-shared `buildMemberRows`",
+      stories: "1, 1a",
+      budget: "read ~99k tokens · 1 criteria · 0 modules",
+    });
+    const resStale = checkFeature({ spec, tickets: stale });
+    assert.ok(
+      resStale.errors.some((e) =>
+        /01-export-members\.md: \*\*Budget:\*\* read ~99k tokens · 1 criteria · 0 modules differs from the measurement/.test(e),
+      ),
+      resStale.errors.join("\n"),
+    );
+
+    const contextErrors = passing();
+    contextErrors[0] = ticket("01", "Export members", {
+      reuse: "create-shared `buildMemberRows`",
+      stories: "1, 1a",
+      context: "spec § User Stories · src/absent.mjs",
+      budget: "read ~99k tokens · 1 criteria · 0 modules",
+    });
+    const resSkipped = checkFeature({ spec, tickets: contextErrors, files: {} });
+    assert.ok(
+      resSkipped.errors.some((e) => /Context path "src\/absent\.mjs" does not exist/.test(e)),
+      resSkipped.errors.join("\n"),
+    );
+    assert.ok(!resSkipped.errors.some((e) => /differs from the measurement/.test(e)), resSkipped.errors.join("\n"));
+  });
+
+  // --- --write-budget and the report's budget table ---
+  it("--write-budget, in any argument position, rewrites every Budget line and then reports", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "check-tickets-budget-"));
+    const dir = path.join(root, ".scratch", "export-feature");
+    try {
+      await mkdir(path.join(dir, "issues"), { recursive: true });
+      await writeFile(path.join(dir, "spec.md"), spec);
+
+      const tickets = passing();
+      tickets[0] = ticket("01", "Export members", {
+        reuse: "create-shared `buildMemberRows`",
+        stories: "1, 1a",
+        budget: "read ~99k tokens · 9 criteria · 9 modules",
+      });
+      tickets[1] = ticket("02", "CSV download", {
+        blockedBy: "01",
+        reuse: "use `buildMemberRows` · use `formatDate`",
+        stories: "2",
+        context: "spec § User Stories · (new) src/csv.mjs",
+        budget: null,
+      });
+      for (const { file, text } of tickets) await writeFile(path.join(dir, "issues", file), text);
+
+      const { stdout } = await run("node", [script, dir, "--write-budget"]);
+      assert.match(stdout, /result: PASS/);
+
+      const coverageIndex = stdout.indexOf("story coverage:");
+      const budgetIndex = stdout.indexOf("budget:");
+      assert.ok(coverageIndex !== -1 && budgetIndex > coverageIndex, stdout);
+      assert.match(
+        stdout,
+        /budget:\n\s*ticket\s+read tokens\s+criteria\s+modules\n\s*01\s+\d+\s+1\s+0/,
+        stdout,
+      );
+
+      const expected01 = autoBudget(tickets[0].text, "spec § User Stories");
+      const written01 = await readFile(path.join(dir, "issues", tickets[0].file), "utf8");
+      assert.deepEqual(
+        written01.split("\n").filter((line) => line.startsWith("**Budget:**")),
+        [`**Budget:** ${expected01}`],
+      );
+
+      const expected02 = autoBudget(tickets[1].text, "spec § User Stories · (new) src/csv.mjs");
+      const written02 = await readFile(path.join(dir, "issues", tickets[1].file), "utf8");
+      const lines02 = written02.split("\n");
+      assert.equal(
+        lines02[lines02.findIndex((line) => line.startsWith("**Context:**")) + 1],
+        `**Budget:** ${expected02}`,
+      );
+
+      // The flag works in any argument position and a second run changes nothing.
+      const again = await run("node", [script, "--write-budget", dir]);
+      assert.match(again.stdout, /result: PASS/);
+      assert.equal(await readFile(path.join(dir, "issues", tickets[0].file), "utf8"), written01);
+      assert.equal(await readFile(path.join(dir, "issues", tickets[1].file), "utf8"), written02);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("--write-budget leaves a ticket with Context errors unchanged", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "check-tickets-ctx-budget-"));
+    const dir = path.join(root, ".scratch", "export-feature");
+    try {
+      await mkdir(path.join(dir, "issues"), { recursive: true });
+      await writeFile(path.join(dir, "spec.md"), spec);
+
+      const tickets = passing();
+      tickets[0] = ticket("01", "Export members", {
+        reuse: "create-shared `buildMemberRows`",
+        stories: "1, 1a",
+        budget: null,
+      });
+      tickets[2] = ticket("03", "Hide emails", {
+        blockedBy: "01",
+        stories: "3",
+        context: "spec § User Stories · src/absent.mjs",
+        budget: null,
+      });
+      for (const { file, text } of tickets) await writeFile(path.join(dir, "issues", file), text);
+
+      const result = await checkFeatureDir(dir, { writeBudget: true });
+      assert.ok(
+        result.errors.some((e) => /03-hide-emails\.md: Context path "src\/absent\.mjs" does not exist/.test(e)),
+        result.errors.join("\n"),
+      );
+      assert.ok(
+        result.errors.some((e) => /03-hide-emails\.md: \*\*Budget:\*\* is missing/.test(e)),
+        result.errors.join("\n"),
+      );
+
+      const written01 = await readFile(path.join(dir, "issues", tickets[0].file), "utf8");
+      assert.match(written01, /\*\*Budget:\*\* read ~\d+k tokens · 1 criteria · 0 modules/);
+      const written03 = await readFile(path.join(dir, "issues", tickets[2].file), "utf8");
+      assert.equal(written03, tickets[2].text);
+      assert.ok(!written03.includes("**Budget:**"), written03);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // --- Documentation of the Budget line ---
+  it("ticket-format.md documents the Budget line, its measurement, and the unmeasured fallback", async () => {
+    const content = await readFile(
+      path.resolve("skills/agents/grill-to-tickets/references/ticket-format.md"),
+      "utf8",
+    );
+    assert.match(content, /\*\*Budget:\*\*/);
+    assert.match(content, /directly after `?\*\*Context:\*\*`?/i);
+    assert.match(content, /read ~<N>k tokens · <C> criteria · <M> modules/);
+    assert.match(content, /\*\*Budget:\*\* unmeasured/);
+    assert.match(content, /⌈ASCII code points ÷ 4⌉ \+ non-ASCII code points/);
+    assert.match(content, /2000/);
+    const template = content.slice(content.indexOf("## Local Ticket Template"));
+    assert.match(template, /\*\*Context:\*\*[\s\S]*?\*\*Budget:\*\*[\s\S]*?\*\*Status:\*\*/);
+  });
+
+  it("the checker header lists the Budget checks, the measurement, and --write-budget", async () => {
+    const content = await readFile(script, "utf8");
+    const header = content.slice(0, content.indexOf("\nimport "));
+    assert.match(header, /\*\*Budget:\*\*/);
+    assert.match(header, /2000/);
+    assert.match(header, /--write-budget/);
   });
 });

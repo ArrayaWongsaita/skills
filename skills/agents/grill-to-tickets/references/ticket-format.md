@@ -24,7 +24,7 @@ Break the work into tracer-bullet tickets.
 
 - Each slice cuts a narrow but complete path through every layer (schema, API, UI, tests): vertical, not a horizontal slice of one layer.
 - A completed slice is demoable or verifiable on its own.
-- Sizing: each slice is sized to fit in a single fresh context window.
+- Sizing: each slice is sized to fit in a single fresh context window; its `**Budget:**` line records the measurement.
 - Any prefactoring should be done first.
 - Give each ticket its blocking edges: the other tickets that must complete before it can start. A ticket with no blockers can start immediately. Work the frontier: tickets whose blockers are all complete.
 
@@ -52,6 +52,12 @@ Wide refactors are the exception to vertical slicing. A wide refactor is one mec
   - `(from NN) <path>` — a file that does not exist yet, that ticket NN creates, and that this ticket reads.
   - `(edit from NN) <path>` — a file that does not exist yet, that ticket NN creates, and that this ticket changes.
   For both `(from NN)` and `(edit from NN)` forms, ticket NN must carry `(new) <path>` and must be among this ticket's transitive blockers. Paths are relative to the project root and normalised with `path.posix.normalize`. An absolute path, a path that escapes the root, or a directory is an error.
+- **Budget:** Every ticket carries a `**Budget:**` line directly after `**Context:**` recording the checker's measurement of its Read set. It must be a single non-empty line, shaped `read ~<N>k tokens · <C> criteria · <M> modules`:
+  - read tokens = ⌈ASCII code points ÷ 4⌉ + non-ASCII code points, counted over all of these sources together: the ticket file with its `**Budget:**` line removed, each section its `spec §` refs name, and each read-only and `(edit)` file — plus 2000 for each `(new)`, `(from NN)`, or `(edit from NN)` file;
+  - `N` is `Math.round(read tokens ÷ 1000)`;
+  - `C` counts the ticket's lines matching `^\s*- \[[ xX]\] `;
+  - `M` counts the distinct parent directories of its `(edit)`, `(new)`, and `(edit from NN)` files.
+  Run `scripts/check-tickets.mjs` to check the line; `--write-budget` writes it from the measurement. Without Node, write `**Budget:** unmeasured` and apply the checks by hand.
 
 ### 4. Quiz the user
 
@@ -87,6 +93,7 @@ Write one file per ticket under `.scratch/<feature-slug>/issues/<NN>-<slug>.md`,
 **Stories:** user-story numbers delivered (or none)
 **Seam:** one test boundary from the spec's Testing Decisions
 **Context:** spec § <ref> · path/to/file · (edit) path/to/file · (new) path/to/file · (from NN) path/to/file · (edit from NN) path/to/file
+**Budget:** read ~<N>k tokens · <C> criteria · <M> modules
 **Status:** ready-for-agent
 
 - [ ] Acceptance criterion 1

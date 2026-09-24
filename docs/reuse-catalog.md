@@ -54,7 +54,10 @@ docs/reuse-catalog/<area>.md and keep this file as the map.
 ## Candidates
 
 - `parseTicket` — `skills/agents/grill-to-tickets/scripts/check-tickets.mjs` — use for: reading any `**Name:** value` field from a local ticket file · from: grill-to-tickets
-- `checkFeature` — `skills/agents/grill-to-tickets/scripts/check-tickets.mjs` — use for: mechanical checks over a feature's spec and tickets (errors, notes, story coverage, blocker sets) · from: grill-to-tickets
+- `checkFeature` — `skills/agents/grill-to-tickets/scripts/check-tickets.mjs` — use for: mechanical checks over a feature's spec and tickets (errors, notes, story coverage, blocker sets, budgets) · from: grill-to-tickets
+- `estimateTokens` — `skills/agents/grill-to-tickets/scripts/check-tickets.mjs` — use for: estimating the tokens of a text · from: grill-to-tickets-production
+- `checkFeatureDir` — `skills/agents/grill-to-tickets/scripts/check-tickets.mjs` — use for: running the checks over a feature directory (project root, Context files, optional Budget writing) · from: grill-to-tickets-production
+- `formatReport` — `skills/agents/grill-to-tickets/scripts/check-tickets.mjs` — use for: rendering the checker's text report (errors, story coverage, budget table, notes, result) · from: grill-to-tickets-production
 - `sectionOf` — `skills/agents/grill-to-tickets/scripts/check-tickets.mjs` — use for: reading one section of a markdown document by heading · from: grill-to-tickets-production
 - `extractBlock` — `tests/implementer-reuse-drift.test.mjs` — use for: slicing a start/end-delimited prose block out of a reference file to compare across skills · from: tests
 
