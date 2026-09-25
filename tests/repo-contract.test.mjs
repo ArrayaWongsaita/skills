@@ -391,6 +391,37 @@ describe("grill-to-tickets production records and guides", () => {
     }
   });
 
+  it("splits opencode-implement's usage_total in its guide: the main path excludes cache reads, the fallback path is the subagent's reported tokens, possibly cache-inclusive", async () => {
+    const file = "docs/guides/opencode-implement.md";
+    const guide = await readTextOrNull(file);
+    assert.ok(guide, `${file} exists`);
+
+    const line = bulletLine(guide, "การบันทึก budget:");
+    assert.ok(line, `${file} has a budget bullet`);
+    assert.match(line, /budget_estimate/, `${file} budget bullet keeps budget_estimate`);
+    assert.match(line, /จากทุก usage report บน path ที่ส่ง ticket สำเร็จ/, `${file} budget bullet sums every usage report on the path that delivered the ticket`);
+    assert.match(line, /`unknown`/, `${file} budget bullet keeps the unknown case`);
+
+    // The main path is named first and the fallback path second; each gets its own rule.
+    const split = line.indexOf("fallback path");
+    assert.notEqual(split, -1, `${file} budget bullet names the fallback path`);
+    const mainPath = line.slice(0, split);
+    const fallbackPath = line.slice(split);
+
+    assert.match(
+      mainPath,
+      /main path[\s\S]*input \+ output \+ reasoning[\s\S]*`step_finish`[\s\S]*ไม่นับ cache read/,
+      `${file} budget bullet has the main path count input + output + reasoning over every step_finish event without cache reads`,
+    );
+    assert.doesNotMatch(mainPath, /cache-inclusive/, `${file} budget bullet does not call the main path cache-inclusive`);
+    assert.match(
+      fallbackPath,
+      /subagent[\s\S]*รายงาน[\s\S]*ตามที่ให้มา[\s\S]*cache-inclusive/,
+      `${file} budget bullet has the fallback path record the subagent's reported tokens as given, possibly cache-inclusive`,
+    );
+    assert.doesNotMatch(fallbackPath, /ไม่นับ cache read/, `${file} budget bullet does not exclude cache reads on the fallback path`);
+  });
+
   it("says in the guide's no-issue-tracker bullet that the owned formats have no publish or setup step", async () => {
     const guide = await readTextOrNull("docs/guides/grill-to-tickets.md");
     assert.ok(guide, "the grill-to-tickets guide exists");
@@ -567,6 +598,44 @@ describe("grill-to-tickets production records and guides", () => {
     );
     assert.match(usage.thai, /dispatch[\s\S]*resume/, "the Thai usage_total definition sums every dispatch and every resume");
     assert.match(usage.thai, /subagent-implement[\s\S]*cache-inclusive/, "the Thai usage_total definition says subagent-implement is possibly cache-inclusive");
+
+    // opencode-implement is in both groups: its main path excludes cache reads, its native-subagent fallback path
+    // records the subagent's reported tokens as given. Each half is cut where the cache-excluding clause ends.
+    const cutAfter = (text, marker) => {
+      const at = text.indexOf(marker);
+      assert.notEqual(at, -1, `the usage_total definition says "${marker}"`);
+      return { excluding: text.slice(0, at + marker.length), reported: text.slice(at + marker.length) };
+    };
+
+    const english = cutAfter(usage.english, "cache reads excluded");
+    assert.match(english.excluding, /`agy-implement`/, "usage_total excludes cache reads for agy-implement");
+    assert.match(english.excluding, /`opencode-implement`'s main path/, "usage_total excludes cache reads for opencode-implement's main path");
+    assert.doesNotMatch(
+      english.excluding,
+      /`opencode-implement`(?!'s main path)/,
+      "usage_total does not list opencode-implement unqualified among the cache-excluding implementers",
+    );
+    assert.match(english.reported, /`subagent-implement`/, "usage_total records subagent-implement's reported tokens");
+    assert.match(
+      english.reported,
+      /`opencode-implement`'s native-subagent fallback path[\s\S]*cache-inclusive/,
+      "usage_total is possibly cache-inclusive for opencode-implement's native-subagent fallback path",
+    );
+
+    const thai = cutAfter(usage.thai, "ไม่นับ cache read");
+    assert.match(thai.excluding, /`agy-implement`/, "the Thai usage_total definition excludes cache reads for agy-implement");
+    assert.match(thai.excluding, /main path ของ `opencode-implement`/, "the Thai usage_total definition excludes cache reads for opencode-implement's main path");
+    assert.doesNotMatch(
+      thai.excluding,
+      /(?<!main path ของ )`opencode-implement`/,
+      "the Thai usage_total definition does not list opencode-implement unqualified among the cache-excluding implementers",
+    );
+    assert.match(thai.reported, /`subagent-implement`/, "the Thai usage_total definition records subagent-implement's reported tokens");
+    assert.match(
+      thai.reported,
+      /fallback path[^`]*ของ `opencode-implement`[\s\S]*cache-inclusive/,
+      "the Thai usage_total definition says opencode-implement's fallback path is possibly cache-inclusive",
+    );
   });
 
   it("keeps the upstream format names only at the licensed and assertion sites", async () => {
