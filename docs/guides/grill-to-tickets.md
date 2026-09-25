@@ -96,7 +96,7 @@ Stage 2: Design Review Gate   scrutinize (subagent ใหม่) → design-revi
    ▼
 Stage 3: Tickets      ticket-format.md             → issues/NN-<slug>.md
    ▼
-Stop: Handoff message (DAG summary + recommended implementer, commit catalog, /clear แล้ว /subagent-implement)
+Stop: Handoff message (commit catalog, /clear, DAG summary + recommended implementer แล้ว /subagent-implement)
 ```
 
 1. **Stage 0 — Grill (สัมภาษณ์และสร้างโมเดลโดเมน):**
@@ -138,11 +138,18 @@ Stop: Handoff message (DAG summary + recommended implementer, commit catalog, /c
    - warning ทุกตัวที่ checker รายงานต้องถูกบันทึกใต้ `## Ticket warnings` ใน `decisions.md` บรรทัดละหนึ่งตัว เป็น `<warning> — acknowledged` หรือ `<warning> — fixed: <change>` จึงจะถือว่า Stage 3 เสร็จ
    - รัน checker ซ้ำด้วย `--write-budget` ทุกครั้งที่ quiz ทำให้ ticket เปลี่ยน
 5. **Stop — Handoff (ส่งมอบงาน):**
-   - พิมพ์ **DAG summary** จาก checker (wave, ความกว้างสูงสุด, critical-path length) พร้อมบรรทัด `recommended implementer` ที่บอกว่า `subagent-implement`, `agy-implement` หรือ `opencode-implement` เหมาะกับ ticket set นี้ (ชื่อ skill ไม่มี slash นำหน้า)
+   - พิมพ์ข้อความ handoff ตามลำดับ: หมายเหตุเรื่อง commit → `/clear` → **DAG summary** จาก checker (wave, ความกว้างสูงสุด, critical-path length) พร้อมบรรทัด `recommended implementer` ที่บอกว่า `subagent-implement`, `agy-implement` หรือ `opencode-implement` เหมาะกับ ticket set นี้ (ชื่อ skill ไม่มี slash นำหน้า) → คำสั่ง `/subagent-implement`
    - แสดงข้อความสรุปและแนะนำขั้นตอนสำหรับเซสชันถัดไป:
      ```text
      # 1. commit เฉพาะ docs/reuse-catalog.md / pointer ใน AGENTS.md ที่เปลี่ยน (implementer เริ่มได้เฉพาะ working tree ที่สะอาด; .scratch/ อยู่ในเครื่องและถูก git ignore จึงไม่ต้อง commit)
      /clear
+     # 2. วาง DAG summary สุดท้ายจาก checker
+     wave 0: 01
+     wave 1: 02, 03
+     maximum wave width: 2
+     critical-path length: 2
+     recommended implementer: subagent-implement, agy-implement, opencode-implement
+     # 3. implement ทั้งโฟลเดอร์ใน session ใหม่
      /subagent-implement .scratch/<feature-slug>/
      # หรือ /agy-implement หรือ /opencode-implement ด้วย argument เดียวกัน
      ```

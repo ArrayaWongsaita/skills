@@ -77,12 +77,12 @@ npx skills add ArrayaWongsaita/skills --skill opencode-implement
    `/code-review` + `/scrutinize` ที่ต้องรันต่อใน context ใหม่ ไม่ push ไม่เปิด PR
 
 Seam, Context และ Budget: worker (และ fallback subagent) ใช้ `**Seam:**` ของ
-ticket แบบ **verbatim** เป็นขอบเขตเทสต์ และประกอบ **read list** ของตัวเองจาก
-`**Context:**` (spec sections และไฟล์ แยก read / change / create) พาธใน worktree
-ของ worker เขียนเป็น relative พาธนอก worktree เขียนเป็น absolute และ `status.md`
-เก็บ `budget_estimate` (ข้อความ `**Budget:**` แบบ verbatim, `none` ถ้าไม่มี)
-คู่กับ `usage_total` (token จริงรวมทุก usage report บน path ที่ส่ง ticket,
-ทั้ง main path และ fallback path)
+ticket แบบ **verbatim** เป็นขอบเขตเทสต์ ส่วน orchestrator ประกอบ **read list**
+ลงใน prompt ของ worker จาก `**Context:**` (spec sections และไฟล์ แยก read /
+change / create) พาธใน worktree ของ worker เขียนเป็น relative พาธนอก worktree
+เขียนเป็น absolute และ `status.md` เก็บ `budget_estimate` (ข้อความ `**Budget:**`
+แบบ verbatim, `none` ถ้าไม่มี) คู่กับ `usage_total` (token จริงรวมทุก usage report
+บน path ที่ส่ง ticket, ทั้ง main path และ fallback path)
 
 Run options: `--model provider/model` (ไม่มี default ระดับ skill — ถ้าไม่ระบุ
 orchestrator จะ resolve จาก `opencode` เองครั้งเดียวก่อน wave 0 แล้ว pin ไว้ทั้ง
@@ -194,13 +194,14 @@ recently modified `.scratch/*/issues/` directory).
    context. It never pushes or opens a PR.
 
 Seam, Context, and budget: the worker (and the fallback subagent, which gets the
-same scaffold) uses the ticket's `**Seam:**` **verbatim** as its test boundary
-and builds its **read list** from the ticket's `**Context:**` line (spec
-sections plus files, split into read / change / create). Paths inside the
-worker's worktree are **relative**; paths outside it are **absolute**.
-`status.md` records each ticket's `budget_estimate` (the `**Budget:**` text
-verbatim, or `none`) beside `usage_total` (the ticket's real token cost, summed
-over every usage report on the path that delivered it, main path or fallback).
+same scaffold) uses the ticket's `**Seam:**` **verbatim** as its test boundary,
+while the orchestrator builds the worker's **read list** into its prompt from the
+ticket's `**Context:**` line (spec sections plus files, split into read / change /
+create). Paths inside the worker's worktree are **relative**; paths outside it
+are **absolute**. `status.md` records each ticket's `budget_estimate` (the
+`**Budget:**` text verbatim, or `none`) beside `usage_total` (the ticket's real
+token cost, summed over every usage report on the path that delivered it, main
+path or fallback).
 
 Run options: `--model provider/model` (no skill-level default — when omitted,
 the orchestrator resolves the model once from `opencode` itself, before wave

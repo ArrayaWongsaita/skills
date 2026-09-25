@@ -152,11 +152,11 @@ and real, and every create-shared or promote symbol has one ticket that blocks
 its other users; the quiz shows the story-coverage table, the budget table, the
 DAG summary, and every warning. Each warning is logged under
 `## Ticket warnings` in `decisions.md` as `<warning> — acknowledged` or
-`<warning> — fixed: <change>`. Then the skill prints a handoff whose DAG summary
-carries the `recommended implementer` (`subagent-implement`, `agy-implement`, or
-`opencode-implement`), followed by the commit, `/clear`, and implementer
-instructions (`.scratch/` is local and git-ignored, so only a changed
-`docs/reuse-catalog.md` needs a commit; then `/clear`, then
+`<warning> — fixed: <change>`. Then the skill prints a handoff in this order: the
+commit note, `/clear`, the DAG summary carrying the `recommended implementer`
+(`subagent-implement`, `agy-implement`, or `opencode-implement`), and the
+implementer command (`.scratch/` is local and git-ignored, so only a changed
+`docs/reuse-catalog.md` needs a commit; the command is
 `/subagent-implement .scratch/<feature-slug>/` or its `agy` / `opencode`
 siblings) and stops.
 

@@ -121,9 +121,9 @@ Stop: Handoff (ส่งมอบ integration branch พร้อมคำสั
 ### Seam, Context และการบันทึก budget ของ ticket
 
 - **Seam:** worker ใช้ `**Seam:**` ของ ticket แบบ **verbatim** เป็นขอบเขตที่เขียนเทสต์ ไม่เลือก seam เอง — orchestrator ส่ง seam ที่ Planning เลือกไว้ให้ใน prompt
-- **Context:** worker สร้าง **read list** ของตัวเองจากบรรทัด `**Context:**` ของ ticket โดยแยกเป็น read / change / create; `spec §` refs กลายเป็นรายการ section ที่อ่าน และไฟล์ read-only ที่ยังไม่ถูก track ใน worktree จะถูกส่งเป็น absolute path จาก main checkout ของ project
+- **Context:** orchestrator สร้าง **read list** ลงใน prompt ของ worker จากบรรทัด `**Context:**` ของ ticket โดยแยกเป็น read / change / create (worker รับรายการนี้ไปอ่าน ไม่ได้สร้างเอง); `spec §` refs กลายเป็นรายการ section ที่อ่าน และไฟล์ read-only ที่ยังไม่ถูก track ใน worktree จะถูกส่งเป็น absolute path จาก main checkout ของ project
 - **Path rule:** พาธที่อยู่ใน worktree ของ worker เขียนเป็น relative; พาธที่อยู่นอก worktree (spec แม่, ADR, ไฟล์ read-only ที่ untracked) เขียนเป็น absolute
-- **การบันทึก budget:** `status.md` เก็บ `budget_estimate` ของแต่ละ ticket (ข้อความ `**Budget:**` แบบ **verbatim** หรือ `none` ถ้า ticket ไม่มี) คู่กับ `usage_total` ซึ่งเป็นผลรวม token จริงของ ticket นั้น (input + output + thinking/reasoning, ไม่นับ cache read) จากทุก usage report บน path ที่ส่ง ticket สำเร็จ; ถ้า harness ไม่รายงาน usage จะเป็น `unknown`
+- **การบันทึก budget:** `status.md` เก็บ `budget_estimate` ของแต่ละ ticket (ข้อความ `**Budget:**` แบบ **verbatim** หรือ `none` ถ้า ticket ไม่มี) คู่กับ `usage_total` ซึ่งเป็นผลรวม token ที่ worker รายงานของ ticket นั้น จากทุก usage report บน path ที่ส่ง ticket สำเร็จ รวมทุก dispatch และทุก resume บันทึกตามที่รายงาน และอาจรวม cache แล้ว (cache-inclusive); `verifier_usage_total` เก็บแยกสำหรับ verifier dispatch; ถ้า harness ไม่รายงาน usage จะเป็น `unknown`
 
 ---
 

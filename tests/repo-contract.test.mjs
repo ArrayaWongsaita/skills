@@ -34,6 +34,25 @@ async function textFilesUnder(dir) {
   return files;
 }
 
+function bulletLine(doc, label) {
+  return doc.split("\n").find((line) => line.startsWith(`- **${label}**`)) ?? null;
+}
+
+function assertFirstMentionOrder(text, markers, message) {
+  const flat = text.replace(/\s+/g, " ");
+  const positions = markers.map((marker) => flat.indexOf(marker));
+
+  markers.forEach((marker, index) => {
+    assert.notEqual(positions[index], -1, `${message}: names ${marker}`);
+  });
+  for (let index = 1; index < markers.length; index += 1) {
+    assert.ok(
+      positions[index - 1] < positions[index],
+      `${message}: ${markers[index - 1]} comes before ${markers[index]}`,
+    );
+  }
+}
+
 function frontmatter(text) {
   const match = text.match(/^---\n([\s\S]*?)\n---\n/);
   assert.ok(match, "SKILL.md starts with YAML frontmatter");
@@ -227,6 +246,106 @@ describe("grill-to-tickets production records and guides", () => {
         assert.match(doc, /budget_estimate/, `${file} records budget_estimate`);
         assert.match(doc, /usage_total/, `${file} records usage_total`);
       }
+    }
+  });
+
+  it("describes the grill-to-tickets handoff in the skill's order: /clear, then the DAG summary, then the implementer command", async () => {
+    const guide = await readTextOrNull("docs/guides/grill-to-tickets.md");
+    assert.ok(guide, "the grill-to-tickets guide exists");
+
+    const diagramLine = guide.match(/^Stop: Handoff message[^\n]*$/m);
+    assert.ok(diagramLine, "the guide's diagram has a Stop: Handoff message line");
+    assertFirstMentionOrder(
+      diagramLine[0],
+      ["/clear", "DAG summary", "/subagent-implement"],
+      "guide diagram line",
+    );
+
+    const step = guide.match(/^5\. \*\*Stop — Handoff[^\n]*\n([\s\S]*?)(?=\n---)/m);
+    assert.ok(step, "the guide has a Stage 5 Stop — Handoff step");
+    assertFirstMentionOrder(step[1], ["/clear", "DAG summary", "/subagent-implement"], "guide handoff step");
+    const message = step[1].match(/```text\n([\s\S]*?)```/);
+    assert.ok(message, "the guide's handoff step shows the message");
+    assertFirstMentionOrder(
+      message[1],
+      ["/clear", "recommended implementer", "/subagent-implement"],
+      "guide handoff message",
+    );
+
+    const page = await readTextOrNull("docs/skills/agents/grill-to-tickets.md");
+    assert.ok(page, "the grill-to-tickets skill page exists");
+
+    const english = page.replace(/\s+/g, " ").match(/prints a handoff.*?and stops\./);
+    assert.ok(english, "the skill page's English text describes the handoff");
+    assertFirstMentionOrder(
+      english[0],
+      ["/clear", "DAG summary", "recommended implementer", "/subagent-implement"],
+      "skill page English handoff",
+    );
+
+    const stage5 = page.match(/^5\. \*\*Stop\*\*[^\n]*$/m);
+    assert.ok(stage5, "the skill page's Thai text has a Stage 5 Stop line");
+    assertFirstMentionOrder(stage5[0], ["/clear", "DAG summary"], "skill page Thai Stage 5 line");
+  });
+
+  it("says the orchestrator builds the worker's read list into the prompt, in the guides and the skill pages", async () => {
+    for (const skill of ["subagent-implement", "agy-implement", "opencode-implement"]) {
+      const guideFile = `docs/guides/${skill}.md`;
+      const guide = await readTextOrNull(guideFile);
+      assert.ok(guide, `${guideFile} exists`);
+
+      const context = bulletLine(guide, "Context:");
+      assert.ok(context, `${guideFile} has a Context bullet`);
+      assert.match(context, /read list/, `${guideFile} Context bullet keeps the read list`);
+      assert.doesNotMatch(context, /worker\s*สร้าง|ของตัวเอง/, `${guideFile} Context bullet does not have the worker build its own read list`);
+      assert.match(
+        context,
+        /(orchestrator|implementer)[^;]*\*\*read list\*\*[^;]*prompt/,
+        `${guideFile} Context bullet has the orchestrator build the read list into the worker prompt`,
+      );
+
+      const pageFile = `docs/skills/agents/${skill}.md`;
+      const page = await readTextOrNull(pageFile);
+      assert.ok(page, `${pageFile} exists`);
+
+      const passages = page.split(/\n\s*\n/).filter((paragraph) => /^Seam, Context/.test(paragraph));
+      assert.equal(passages.length, 2, `${pageFile} has a Thai and an English Seam, Context paragraph`);
+      for (const passage of passages) {
+        const flat = passage.replace(/\s+/g, " ");
+        assert.doesNotMatch(
+          flat,
+          /ประกอบ \*\*read list\*\* ของตัวเอง|builds its \*\*read list\*\*/,
+          `${pageFile} does not have the worker build its own read list`,
+        );
+        assert.match(
+          flat,
+          /orchestrator (ประกอบ|builds)[^.]*\*\*read list\*\*/,
+          `${pageFile} has the orchestrator build the read list`,
+        );
+      }
+    }
+  });
+
+  it("records subagent-implement's usage_total as the worker's reported tokens, possibly cache-inclusive, and leaves the agy and opencode cache wording", async () => {
+    const subagent = await readTextOrNull("docs/guides/subagent-implement.md");
+    assert.ok(subagent, "the subagent-implement guide exists");
+
+    const budget = bulletLine(subagent, "การบันทึก budget:");
+    assert.ok(budget, "the subagent-implement guide has a budget bullet");
+    assert.match(budget, /usage_total/, "the budget bullet records usage_total");
+    assert.match(budget, /cache-inclusive/, "the budget bullet says the tokens are possibly cache-inclusive");
+    assert.match(budget, /dispatch/, "the budget bullet sums every dispatch");
+    assert.match(budget, /resume/, "the budget bullet sums every resume");
+    assert.match(budget, /verifier_usage_total/, "the budget bullet keeps verifier_usage_total separate");
+    assert.doesNotMatch(budget, /ไม่นับ cache read/, "the budget bullet no longer excludes cache reads");
+
+    for (const skill of ["agy-implement", "opencode-implement"]) {
+      const guide = await readTextOrNull(`docs/guides/${skill}.md`);
+      assert.ok(guide, `the ${skill} guide exists`);
+
+      const line = bulletLine(guide, "การบันทึก budget:");
+      assert.ok(line, `the ${skill} guide has a budget bullet`);
+      assert.match(line, /ไม่นับ cache read/, `the ${skill} budget bullet still excludes cache reads`);
     }
   });
 

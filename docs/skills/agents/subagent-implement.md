@@ -70,11 +70,11 @@ main agent)
    ไม่เปิด PR
 
 Seam, Context และ Budget: worker ใช้ `**Seam:**` ของ ticket แบบ **verbatim** เป็น
-ขอบเขตเทสต์ และประกอบ **read list** ของตัวเองจาก `**Context:**` (spec sections
-และไฟล์ แยก read / change / create) พาธใน worktree ของ worker เขียนเป็น relative
-พาธนอก worktree เขียนเป็น absolute และ `status.md` เก็บ `budget_estimate`
-(ข้อความ `**Budget:**` แบบ verbatim, `none` ถ้าไม่มี) คู่กับ `usage_total`
-(token จริงรวมทุก usage report บน path ที่ส่ง ticket)
+ขอบเขตเทสต์ ส่วน orchestrator ประกอบ **read list** ลงใน prompt ของ worker จาก
+`**Context:**` (spec sections และไฟล์ แยก read / change / create) พาธใน worktree
+ของ worker เขียนเป็น relative พาธนอก worktree เขียนเป็น absolute และ `status.md`
+เก็บ `budget_estimate` (ข้อความ `**Budget:**` แบบ verbatim, `none` ถ้าไม่มี)
+คู่กับ `usage_total` (token จริงรวมทุก usage report บน path ที่ส่ง ticket)
 
 sub-command: `continue` resume พร้อม Reality reconciliation, `status` / `list`
 อ่านอย่างเดียว
@@ -167,12 +167,13 @@ pins the worker subagent type for the run; `--model <id>` is a raw pass-through
    a fresh context. It never pushes or opens a PR.
 
 Seam, Context, and budget: the worker uses the ticket's `**Seam:**` **verbatim**
-as its test boundary and builds its **read list** from the ticket's
-`**Context:**` line (spec sections plus files, split into read / change /
-create). Paths inside the worker's worktree are **relative**; paths outside it
-are **absolute**. `status.md` records each ticket's `budget_estimate` (the
-`**Budget:**` text verbatim, or `none`) beside `usage_total` (the ticket's real
-token cost, summed over every usage report on the path that delivered it).
+as its test boundary, while the orchestrator builds the worker's **read list**
+into its prompt from the ticket's `**Context:**` line (spec sections plus files,
+split into read / change / create). Paths inside the worker's worktree are
+**relative**; paths outside it are **absolute**. `status.md` records each
+ticket's `budget_estimate` (the `**Budget:**` text verbatim, or `none`) beside
+`usage_total` (the ticket's real token cost, summed over every usage report on
+the path that delivered it).
 
 Sub-commands: `continue` resumes with Reality reconciliation; `status` and
 `list` are read-only.
