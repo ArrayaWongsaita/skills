@@ -41,7 +41,7 @@
 //
 // Exit codes: 0 clean, 1 errors found, 2 unusable input.
 
-import { readFile, readdir, stat, writeFile } from "node:fs/promises";
+import { chmod, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -788,6 +788,23 @@ export function findProjectRoot(dir) {
   }
 }
 
+// Tickets live under the git-ignored .scratch/, so an interrupted write must
+// not truncate one: write a temporary sibling, give it the file's mode, and
+// rename it over the file (atomic on one filesystem). The temporary name does
+// not end in .md, so a leftover is never listed as a ticket.
+async function replaceFile(target, contents) {
+  const temporary = path.join(path.dirname(target), `.${path.basename(target)}.tmp-${process.pid}`);
+  try {
+    const { mode } = await stat(target);
+    await writeFile(temporary, contents);
+    await chmod(temporary, mode & 0o7777);
+    await rename(temporary, target);
+  } catch (error) {
+    await rm(temporary, { force: true }).catch(() => {});
+    throw error;
+  }
+}
+
 export async function checkFeatureDir(dir, { writeBudget = false } = {}) {
   const projectRoot = findProjectRoot(dir);
   const spec = await readFile(path.join(dir, "spec.md"), "utf8").catch(() => null);
@@ -842,7 +859,7 @@ export async function checkFeatureDir(dir, { writeBudget = false } = {}) {
       const line = measured.get(file);
       if (!line) continue;
       const next = writeBudgetLine(text, line);
-      if (next !== text) await writeFile(path.join(issuesDir, file), next);
+      if (next !== text) await replaceFile(path.join(issuesDir, file), next);
     }
     tickets = await readTickets();
   }

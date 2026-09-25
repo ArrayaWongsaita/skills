@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { readFile, mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { readFile, readdir, stat, chmod, mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import os from "node:os";
@@ -121,6 +121,49 @@ const passing = () => [
   ticket("02", "CSV download", { blockedBy: "01", reuse: "use `buildMemberRows` · use `formatDate`", stories: "2" }),
   ticket("03", "Hide emails", { blockedBy: "01: Export members", stories: "3" }),
 ];
+
+// A temporary project for the --write-budget file-replacement tests. Ticket 01
+// has a stale Budget line and 02 has none, so --write-budget rewrites both. 03
+// already carries its measured Budget line, or, with `contextError`, cannot be
+// measured (its Context names a file that does not exist) and must be left
+// alone. The project is removed when `body` settles.
+async function withBudgetProject(body, { contextError = false } = {}) {
+  const root = await mkdtemp(path.join(os.tmpdir(), "check-tickets-replace-"));
+  const dir = path.join(root, ".scratch", "export-feature");
+  const issuesDir = path.join(dir, "issues");
+  try {
+    await mkdir(issuesDir, { recursive: true });
+    await writeFile(path.join(dir, "spec.md"), spec);
+    const tickets = [
+      ticket("01", "Export members", {
+        reuse: "create-shared `buildMemberRows`",
+        stories: "1, 1a",
+        budget: "read ~99k tokens · 9 criteria · 9 modules",
+      }),
+      ticket("02", "CSV download", {
+        blockedBy: "01",
+        reuse: "use `buildMemberRows` · use `formatDate`",
+        stories: "2",
+        context: "spec § User Stories · (new) src/csv.mjs",
+        budget: null,
+      }),
+      ticket(
+        "03",
+        "Hide emails",
+        contextError
+          ? { blockedBy: "01", stories: "3", context: "spec § User Stories · src/absent.mjs", budget: null }
+          : { blockedBy: "01", stories: "3" },
+      ),
+    ];
+    for (const { file, text } of tickets) await writeFile(path.join(issuesDir, file), text);
+    return await body({ dir, issuesDir, tickets, ticketPath: (t) => path.join(issuesDir, t.file) });
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
+const budgetLinesOf = (text) => text.split("\n").filter((line) => line.startsWith("**Budget:**"));
+const withoutBudgetLines = (text) => text.split("\n").filter((line) => !line.startsWith("**Budget:**"));
 
 describe("check-tickets", () => {
   it("reads numbered stories, lettered ones included, from the User Stories section only", () => {
@@ -1119,6 +1162,106 @@ describe("check-tickets", () => {
     } finally {
       await rm(root, { recursive: true, force: true });
     }
+  });
+
+  // --- --write-budget replaces a ticket file atomically ---
+  // Tickets live under the git-ignored .scratch/, so a write interrupted
+  // half-way must not truncate one: the new text goes to a temporary file that
+  // is renamed over the ticket, which gives the ticket a new inode.
+  it("--write-budget replaces a ticket file instead of rewriting it in place", async () => {
+    await withBudgetProject(async ({ dir, tickets, ticketPath }) => {
+      const before = await Promise.all(tickets.map(async (t) => (await stat(ticketPath(t))).ino));
+
+      const { stdout } = await run("node", [script, dir, "--write-budget"]);
+      assert.match(stdout, /result: PASS/);
+
+      for (const [index, expected] of [
+        [0, autoBudget(tickets[0].text, "spec § User Stories")],
+        [1, autoBudget(tickets[1].text, "spec § User Stories · (new) src/csv.mjs")],
+      ]) {
+        const written = await readFile(ticketPath(tickets[index]), "utf8");
+        assert.deepEqual(budgetLinesOf(written), [`**Budget:** ${expected}`]);
+        assert.deepEqual(withoutBudgetLines(written), withoutBudgetLines(tickets[index].text));
+        const after = (await stat(ticketPath(tickets[index]))).ino;
+        assert.notEqual(after, before[index], `${tickets[index].file} was rewritten in place (same inode)`);
+      }
+    });
+  });
+
+  it("--write-budget keeps the file mode of each ticket it rewrites", async () => {
+    await withBudgetProject(async ({ dir, tickets, ticketPath }) => {
+      const modes = [0o640, 0o660];
+      for (const [index, mode] of modes.entries()) {
+        await chmod(ticketPath(tickets[index]), mode);
+        assert.equal((await stat(ticketPath(tickets[index]))).mode & 0o777, mode);
+      }
+
+      const result = await checkFeatureDir(dir, { writeBudget: true });
+      assert.deepEqual(result.errors, []);
+
+      for (const [index, mode] of modes.entries()) {
+        const written = await readFile(ticketPath(tickets[index]), "utf8");
+        assert.notEqual(written, tickets[index].text, `${tickets[index].file} should have been rewritten`);
+        const kept = (await stat(ticketPath(tickets[index]))).mode & 0o777;
+        assert.equal(kept.toString(8), mode.toString(8), `${tickets[index].file} lost its mode`);
+      }
+    });
+  });
+
+  it("--write-budget leaves no temporary file in issues/", async () => {
+    await withBudgetProject(async ({ dir, issuesDir, tickets }) => {
+      const original = tickets.map((t) => t.file).sort();
+      assert.deepEqual((await readdir(issuesDir)).sort(), original);
+
+      const result = await checkFeatureDir(dir, { writeBudget: true });
+      assert.deepEqual(result.errors, []);
+
+      assert.deepEqual((await readdir(issuesDir)).sort(), original);
+    });
+  });
+
+  it("--write-budget does not touch a ticket that already has its measured Budget line", async () => {
+    await withBudgetProject(async ({ dir, tickets, ticketPath }) => {
+      const snapshot = async () =>
+        Promise.all(
+          tickets.map(async (t) => ({
+            ino: (await stat(ticketPath(t))).ino,
+            text: await readFile(ticketPath(t), "utf8"),
+          })),
+        );
+      const initial = await snapshot();
+
+      await run("node", [script, dir, "--write-budget"]);
+      const first = await snapshot();
+      // Ticket 03 arrived with its measured Budget line, so the first run left it alone.
+      assert.equal(first[2].ino, initial[2].ino, `${tickets[2].file} was replaced although nothing changed`);
+      assert.equal(first[2].text, initial[2].text);
+
+      await run("node", [script, "--write-budget", dir]);
+      const second = await snapshot();
+      for (const [index, t] of tickets.entries()) {
+        assert.equal(second[index].ino, first[index].ino, `${t.file} was replaced although nothing changed`);
+        assert.equal(second[index].text, first[index].text, `${t.file} changed on the second run`);
+      }
+    });
+  });
+
+  it("--write-budget leaves a ticket with Context errors as the same file with the same text", async () => {
+    await withBudgetProject(
+      async ({ dir, tickets, ticketPath }) => {
+        const inoBefore = (await stat(ticketPath(tickets[2]))).ino;
+
+        const result = await checkFeatureDir(dir, { writeBudget: true });
+        assert.ok(
+          result.errors.some((e) => /03-hide-emails\.md: Context path "src\/absent\.mjs" does not exist/.test(e)),
+          result.errors.join("\n"),
+        );
+
+        assert.equal((await stat(ticketPath(tickets[2]))).ino, inoBefore, "the Context-error ticket was replaced");
+        assert.equal(await readFile(ticketPath(tickets[2]), "utf8"), tickets[2].text);
+      },
+      { contextError: true },
+    );
   });
 
   // --- Warnings: an acceptance criterion that mentions a suite or tool run ---
