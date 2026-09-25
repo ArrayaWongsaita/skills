@@ -28,6 +28,12 @@ const SHARED_BLOCKS = [
     end: "this ticket alone.",
   },
   {
+    name: "worker prompt Parent spec line",
+    file: () => "references/prompt-scaffold.md",
+    start: "- Parent spec: <abs path to spec.md> — read only these sections:",
+    end: "or the sections chosen as today>",
+  },
+  {
     name: "worker prompt Context files lines",
     file: () => "references/prompt-scaffold.md",
     start: "- Context files, grouped from the ticket's `**Context:**` line:",
@@ -64,10 +70,22 @@ const SHARED_BLOCKS = [
     end: "resolves by matching the title.",
   },
   {
+    name: "planning numbering bullet",
+    file: () => "references/planning.md",
+    start: "- **Numbering consistent with a topological order.**",
+    end: "`BLOCKED (TICKET_SET_NUMBERING)` naming both.",
+  },
+  {
     name: "planning test-seam selection",
     file: () => "references/planning.md",
     start: "A ticket's `**Seam:**` line, when present, is its test seam",
     end: "rather than being implemented without a test.",
+  },
+  {
+    name: "Select a test seam step",
+    file: () => "SKILL.md",
+    start: "**Select a test seam per ticket**",
+    end: "planning rather than shipping without a test.",
   },
 ];
 
