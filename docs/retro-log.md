@@ -32,3 +32,12 @@ Misses:
 - grill-to-tickets-production · review-status.md#std-21 · 2026-09-25 · "usage_total cache semantics are restated across the glossary, three guides, three skill pages (two languages), three status-and-resume.md, the evals, and regex-pinned Thai wording; several fix commits existed only to re-align those copies — every future rewording is an N-place edit"
 History:
 - 2026-09-25 applied: added Single Source of Truth rule to CODING_STANDARDS.md
+
+
+### R-grill-to-tickets-production-04 · Standard · applied
+Remedy: write to sibling temporary files and rename atomically when modifying files in-place
+Misses:
+- grill-to-tickets-production · review-status.md#scr-1 · 2026-09-25 · "--write-budget writes ticket files in place (writeFile); tickets are git-ignored, so an interrupted write is unrecoverable — prefer temp file + rename"
+- grill-to-tickets-production · review-status.md#scr-3 · 2026-09-25 · "replaceFile (cluster 4) renames over the ticket: a read-only (0444) ticket the old writeFile refused is now replaced, and a symlinked ticket is replaced by a regular file instead of being written through"
+History:
+- 2026-09-25 applied: added Atomic File Rewrites rule to CODING_STANDARDS.md
