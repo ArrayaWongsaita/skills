@@ -121,7 +121,7 @@ function allowedUpstreamMention(file, lineNumber, line) {
     return true;
   }
   if (/trigger-evals\.json$/.test(normalized)) {
-    return lineNumber === 27;
+    return line.includes('"query": "Use to-spec to turn what we just discussed into a spec."');
   }
   if (normalized.startsWith("tests/")) {
     return /doesNotMatch|includes\(|never|no .*left|renamed from|adapted from|engineering.*SKILL|re-runs? to-/i.test(line);

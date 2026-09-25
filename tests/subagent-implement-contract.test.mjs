@@ -231,7 +231,7 @@ describe("subagent-implement skill contract", () => {
         const step = planning.match(/## \d+\. Select a test seam per ticket[\s\S]*?(?=\n## )/);
         assert.ok(step, "seam step present");
         assert.match(step[0], /\*\*Seam:\*\*/);
-        assert.match(step[0], /verbatim/i);
+        assert.match(step[0], /\*\*Seam:\*\*[\s\S]{0,120}verbatim/i, "a ticket's Seam is used verbatim");
         assert.match(step[0], /Testing Decisions/);
         assert.match(step[0], /narrowest/);
       }
@@ -239,19 +239,26 @@ describe("subagent-implement skill contract", () => {
   });
 
   describe("ticket 08 — Context drives the worker prompt", () => {
-    const PATH_RULE_DOCS = ["references/prompt-scaffold.md", "references/dispatch-contract.md"];
+    // Each doc states the path rule in one section: the scaffold's notes, the
+    // contract's dispatch section.
+    const PATH_RULE_DOCS = [
+      ["references/prompt-scaffold.md", "## Notes for the orchestrator"],
+      ["references/dispatch-contract.md", "## Dispatching a worker"],
+    ];
 
     it("the scaffold and the contract state the path rule, never absolute-everywhere", async () => {
       for (const dir of skillDirs) {
-        for (const rel of PATH_RULE_DOCS) {
+        for (const [rel, heading] of PATH_RULE_DOCS) {
           const c = await readFile(path.resolve(dir, rel), "utf8");
+          assert.ok(c.includes(heading), `${rel} has the "${heading}" section`);
+          const section = c.slice(c.indexOf(heading)).split("\n## ")[0];
           assert.doesNotMatch(
             c,
             /every path in the prompt is\s+absolute|absolute\s+paths\s+everywhere/i,
             `${rel} drops the absolute-everywhere rule`,
           );
-          assert.match(c, /relative to it|relative to this directory|inside the worker's working directory/i, `${rel} states relative paths resolve inside the working directory`);
-          assert.match(c, /outside it[\s\S]{0,200}absolute|absolute[\s\S]{0,200}outside it/i, `${rel} states paths outside the working directory are absolute`);
+          assert.match(section, /relative to it|relative to this directory|inside the worker's working directory/i, `${rel} states relative paths resolve inside the working directory`);
+          assert.match(section, /outside it[\s\S]{0,200}absolute|absolute[\s\S]{0,200}outside it/i, `${rel} states paths outside the working directory are absolute`);
           assert.match(c, /git ls-files --error-unmatch/, `${rel} names the untracked read-only test`);
           assert.match(c, /main checkout/i, `${rel} resolves an untracked read-only file in the main checkout`);
         }
@@ -538,8 +545,13 @@ describe("ticket 09 — budget_estimate and usage_total", () => {
       assert.ok(usageRow, "the token-usage row is present");
       assert.match(usageRow[0], /confirmed/i, "the token-usage row is marked confirmed");
       assert.doesNotMatch(usageRow[0], /\bbonus\b/i, "the bonus wording is gone");
-      assert.match(c, /cumulative/i, "a point to confirm asks whether a resumed report's usage is cumulative");
-      assert.match(c, /resum/i, "that point names a resume");
+      const points = c.match(/## Points to confirm[\s\S]*?(?=\n## |$)/);
+      assert.ok(points, "the Points to confirm table is present");
+      assert.match(
+        points[0],
+        /^\|[^|\n]*resum[^|\n]*usage[^|\n]*cumulative[^|\n]*\|/im,
+        "a point to confirm asks whether a resumed report's usage is cumulative",
+      );
     }
   });
 });

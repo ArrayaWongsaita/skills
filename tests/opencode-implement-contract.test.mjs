@@ -326,7 +326,7 @@ describe("opencode-implement skill contract", () => {
         const step = planning.match(/## \d+\. Select a test seam per ticket[\s\S]*?(?=\n## )/);
         assert.ok(step, "seam step present");
         assert.match(step[0], /\*\*Seam:\*\*/);
-        assert.match(step[0], /verbatim/i);
+        assert.match(step[0], /\*\*Seam:\*\*[\s\S]{0,120}verbatim/i, "a ticket's Seam is used verbatim");
         assert.match(step[0], /Testing Decisions/);
         assert.match(step[0], /narrowest/);
       }
@@ -334,19 +334,26 @@ describe("opencode-implement skill contract", () => {
   });
 
   describe("ticket 08 — Context drives the worker prompt and touch-set", () => {
-    const PATH_RULE_DOCS = ["references/prompt-scaffold.md", "references/worker-contract.md"];
+    // Each doc states the path rule in one section: the scaffold's notes, the
+    // contract's invocation section.
+    const PATH_RULE_DOCS = [
+      ["references/prompt-scaffold.md", "## Notes for the orchestrator"],
+      ["references/worker-contract.md", "## Invocation"],
+    ];
 
     it("the scaffold and the contract state the path rule, never absolute-everywhere", async () => {
       for (const dir of skillDirs) {
-        for (const rel of PATH_RULE_DOCS) {
+        for (const [rel, heading] of PATH_RULE_DOCS) {
           const c = await readFile(path.resolve(dir, rel), "utf8");
+          assert.ok(c.includes(heading), `${rel} has the "${heading}" section`);
+          const section = c.slice(c.indexOf(heading)).split("\n## ")[0];
           assert.doesNotMatch(
             c,
             /every path in the prompt is\s+absolute|absolute\s+paths\s+everywhere/i,
             `${rel} drops the absolute-everywhere rule`,
           );
-          assert.match(c, /relative to it|relative to this directory|inside the worker's working directory/i, `${rel} states relative paths resolve inside the working directory`);
-          assert.match(c, /outside it[\s\S]{0,200}absolute|absolute[\s\S]{0,200}outside it/i, `${rel} states paths outside the working directory are absolute`);
+          assert.match(section, /relative to it|relative to this directory|inside the worker's working directory/i, `${rel} states relative paths resolve inside the working directory`);
+          assert.match(section, /outside it[\s\S]{0,200}absolute|absolute[\s\S]{0,200}outside it/i, `${rel} states paths outside the working directory are absolute`);
           assert.match(c, /git ls-files --error-unmatch/, `${rel} names the untracked read-only test`);
           assert.match(c, /main checkout/i, `${rel} resolves an untracked read-only file in the main checkout`);
         }

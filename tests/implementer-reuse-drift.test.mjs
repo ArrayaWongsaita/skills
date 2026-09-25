@@ -3,9 +3,11 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-// ADR 0008 keeps one copy of the Reuse contract in each standalone implementer.
-// These blocks are the parts of that contract whose wording must match exactly;
-// the surrounding prose is free to differ per skill (serial vs wave dispatch).
+// Each standalone implementer keeps its own copy of the prose the three share
+// word for word: the Reuse contract (ADR 0008) and the ticket-format, Seam, and
+// Context blocks the reuse catalog's shared-prose rule registers here. These
+// blocks are the parts whose wording must match exactly; the surrounding prose
+// is free to differ per skill (serial vs wave dispatch).
 const IMPLEMENTERS = {
   "subagent-implement": { integration: "references/verification-and-integration.md" },
   "agy-implement": { integration: "references/worktree-integration.md" },
@@ -67,7 +69,7 @@ function firstDifference(a, b) {
   return null;
 }
 
-describe("implementer Reuse contract stays identical across skills (ADR 0008)", () => {
+describe("implementer prose shared word for word stays identical across skills (ADR 0008, reuse catalog)", () => {
   for (const block of SHARED_BLOCKS) {
     it(`${block.name} match in all three implementers`, async () => {
       const copies = {};

@@ -228,7 +228,7 @@ describe("agy-implement skill contract", () => {
         const step = planning.match(/## \d+\. Select a test seam per ticket[\s\S]*?(?=\n## )/);
         assert.ok(step, "seam step present");
         assert.match(step[0], /\*\*Seam:\*\*/);
-        assert.match(step[0], /verbatim/i);
+        assert.match(step[0], /\*\*Seam:\*\*[\s\S]{0,120}verbatim/i, "a ticket's Seam is used verbatim");
         assert.match(step[0], /Testing Decisions/);
         assert.match(step[0], /narrowest/);
       }
@@ -236,19 +236,26 @@ describe("agy-implement skill contract", () => {
   });
 
   describe("ticket 08 — Context drives the worker prompt and touch-set", () => {
-    const PATH_RULE_DOCS = ["references/prompt-scaffold.md", "references/agy-contract.md"];
+    // Each doc states the path rule in one section: the scaffold's notes, the
+    // contract's invocation section.
+    const PATH_RULE_DOCS = [
+      ["references/prompt-scaffold.md", "## Notes for the orchestrator"],
+      ["references/agy-contract.md", "## Invocation"],
+    ];
 
     it("the scaffold and the contract state the path rule, never absolute-everywhere", async () => {
       for (const dir of skillDirs) {
-        for (const rel of PATH_RULE_DOCS) {
+        for (const [rel, heading] of PATH_RULE_DOCS) {
           const c = await readFile(path.resolve(dir, rel), "utf8");
+          assert.ok(c.includes(heading), `${rel} has the "${heading}" section`);
+          const section = c.slice(c.indexOf(heading)).split("\n## ")[0];
           assert.doesNotMatch(
             c,
             /every path in the prompt is\s+absolute|absolute\s+paths\s+everywhere/i,
             `${rel} drops the absolute-everywhere rule`,
           );
-          assert.match(c, /relative to it|relative to this directory|inside the worker's working directory/i, `${rel} states relative paths resolve inside the working directory`);
-          assert.match(c, /outside it[\s\S]{0,200}absolute|absolute[\s\S]{0,200}outside it/i, `${rel} states paths outside the working directory are absolute`);
+          assert.match(section, /relative to it|relative to this directory|inside the worker's working directory/i, `${rel} states relative paths resolve inside the working directory`);
+          assert.match(section, /outside it[\s\S]{0,200}absolute|absolute[\s\S]{0,200}outside it/i, `${rel} states paths outside the working directory are absolute`);
           assert.match(c, /git ls-files --error-unmatch/, `${rel} names the untracked read-only test`);
           assert.match(c, /main checkout/i, `${rel} resolves an untracked read-only file in the main checkout`);
         }
@@ -649,9 +656,10 @@ describe("ticket 09 — budget_estimate and usage_total", () => {
       const c = await readFile(path.resolve(dir, "references/agy-contract.md"), "utf8");
       const probeTable = c.match(/## Provisional values pending validation probes[\s\S]*$/);
       assert.ok(probeTable, "validation-probe table present");
-      assert.match(probeTable[0], /--conversation/, "probe table names --conversation");
-      assert.match(probeTable[0], /cumulative/i, "probe table questions cumulativeness");
-      assert.match(probeTable[0], /resum/i, "probe table names a resume");
+      const row = probeTable[0].match(/^\|[^\n]*cumulative[^\n]*$/im);
+      assert.ok(row, "probe table questions cumulativeness");
+      assert.match(row[0], /--conversation/, "the cumulativeness row names --conversation");
+      assert.match(row[0], /resum/i, "the cumulativeness row names a resume");
     }
   });
 });
