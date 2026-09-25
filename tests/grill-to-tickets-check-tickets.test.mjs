@@ -11,14 +11,13 @@ import * as checkTicketsModule from "../skills/agents/grill-to-tickets/scripts/c
 const {
   checkFeature,
   checkFeatureDir,
+  estimateTokens,
   formatReport,
   parseReusePlan,
   parseStories,
   parseTicket,
+  sectionOf,
 } = checkTicketsModule;
-
-const sectionOf = (...args) => checkTicketsModule.sectionOf?.(...args);
-const estimateTokens = (...args) => checkTicketsModule.estimateTokens?.(...args);
 
 const script = path.resolve("skills/agents/grill-to-tickets/scripts/check-tickets.mjs");
 const run = promisify(execFile);
@@ -832,6 +831,64 @@ describe("check-tickets", () => {
     } finally {
       await rm(root, { recursive: true, force: true });
     }
+  });
+
+  it("checkFeatureDir reads a Context item that begins with spec § but is not a spec reference as a plain path, and reads spec § <heading> as a spec section only", async () => {
+    // No space after the §, so this is a file name, not a spec reference.
+    const notSpec = "spec §nospace";
+    const specRef = "spec § User Stories";
+    const body = "x".repeat(4000);
+
+    // A temporary project holding `rootFiles` at its root and a ticket 01 whose
+    // Context line is `context`; the Budget lines are measured by the test
+    // helper from those same files, so only a real disagreement is an error.
+    const check = async (context, rootFiles) => {
+      const root = await mkdtemp(path.join(os.tmpdir(), "check-tickets-specname-"));
+      const dir = path.join(root, ".scratch", "my-slug");
+      try {
+        await mkdir(path.join(dir, "issues"), { recursive: true });
+        await writeFile(path.join(dir, "spec.md"), spec);
+        for (const [name, text] of Object.entries(rootFiles)) await writeFile(path.join(root, name), text);
+
+        const t = passing();
+        t[0] = ticket("01", "Export members", {
+          reuse: "create-shared `buildMemberRows`",
+          stories: "1, 1a",
+          context,
+          files: rootFiles,
+        });
+        for (const { file, text } of t) await writeFile(path.join(dir, "issues", file), text);
+
+        const res = await checkFeatureDir(dir);
+        return { errors: res.errors, tokens: res.budgets[0].tokens };
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    };
+
+    // Control: with the file absent, the plain path does not exist.
+    const absent = await check(`spec § User Stories · ${notSpec}`, {});
+    assert.deepEqual(absent.errors, [`issues/01-export-members.md: Context path "${notSpec}" does not exist`]);
+
+    // With the file present, it exists, and its text is read into the ticket's tokens.
+    const present = await check(`spec § User Stories · ${notSpec}`, { [notSpec]: body });
+    assert.ok(
+      !present.errors.some((e) => e.includes("does not exist")),
+      `false "does not exist" for an existing file:\n${present.errors.join("\n")}`,
+    );
+    assert.deepEqual(present.errors, []);
+    assert.ok(
+      present.tokens - absent.tokens >= estimateTokens(body),
+      `the file's ${estimateTokens(body)} tokens are not counted: ${absent.tokens} without it, ${present.tokens} with it`,
+    );
+
+    // The properly written spec form is a spec section, never a file: a file of
+    // that exact name at the project root changes neither the errors nor the tokens.
+    const withoutDecoy = await check(specRef, {});
+    const withDecoy = await check(specRef, { [specRef]: body });
+    assert.deepEqual(withoutDecoy.errors, []);
+    assert.deepEqual(withDecoy.errors, []);
+    assert.equal(withDecoy.tokens, withoutDecoy.tokens);
   });
 
   // --- Budget measurement: estimateTokens and checkFeature ---

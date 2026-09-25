@@ -433,6 +433,12 @@ export function checkFeature({ spec, tickets: ticketFiles, files }) {
 
   const coverage = new Map(stories.map((id) => [id, []]));
   const pad = (n) => String(n).padStart(2, "0");
+  // A Context finding counts as a feature error and as one of the ticket's own,
+  // which is what skips that ticket's Budget "differs" check.
+  const contextErrorOf = (ticket) => (message) => {
+    errors.push(message);
+    ticket.contextErrors.push(message);
+  };
 
   for (const ticket of tickets) {
     const where = `issues/${ticket.file}`;
@@ -501,10 +507,7 @@ export function checkFeature({ spec, tickets: ticketFiles, files }) {
     }
 
     // Context validation
-    const contextError = (message) => {
-      errors.push(message);
-      ticket.contextErrors.push(message);
-    };
+    const contextError = contextErrorOf(ticket);
     const contextFields = ticket.fields.filter((f) => f.name === "Context");
     if (contextFields.length === 0) {
       contextError(`${where}: **Context:** is missing`);
@@ -553,18 +556,13 @@ export function checkFeature({ spec, tickets: ticketFiles, files }) {
   const newPathsByTicket = new Map();
   for (const ticket of tickets) {
     ticket.newPaths = new Set();
-    const contextVal = ticket.field("Context");
-    if (!contextVal) continue;
-    const items = contextVal.split("·").map((s) => s.trim()).filter(Boolean);
-    for (const item of items) {
-      const newMatch = item.match(/^\(new\)\s+(.+)$/);
-      if (newMatch) {
-        const norm = path.posix.normalize(newMatch[1].trim());
-        ticket.newPaths.add(norm);
-        const list = newPathsByTicket.get(norm) ?? [];
-        list.push(ticket);
-        newPathsByTicket.set(norm, list);
-      }
+    for (const item of contextItemsOf(ticket)) {
+      if (item.kind !== "file" || item.marker !== "new") continue;
+      const norm = path.posix.normalize(item.rawPath);
+      ticket.newPaths.add(norm);
+      const list = newPathsByTicket.get(norm) ?? [];
+      list.push(ticket);
+      newPathsByTicket.set(norm, list);
     }
   }
 
@@ -622,10 +620,7 @@ export function checkFeature({ spec, tickets: ticketFiles, files }) {
   // Validate Context items
   for (const ticket of tickets) {
     const where = `issues/${ticket.file}`;
-    const contextError = (message) => {
-      errors.push(message);
-      ticket.contextErrors.push(message);
-    };
+    const contextError = contextErrorOf(ticket);
 
     for (const item of contextItemsOf(ticket)) {
       if (item.kind === "spec") {
@@ -816,16 +811,9 @@ export async function checkFeatureDir(dir, { writeBudget = false } = {}) {
 
   const files = new Map();
   for (const { text, file } of tickets) {
-    const ticketObj = parseTicket(file, text);
-    const contextVal = ticketObj.field("Context");
-    if (!contextVal) continue;
-    const items = contextVal.split("·").map((s) => s.trim()).filter(Boolean);
-    for (const item of items) {
-      if (item.startsWith("spec §") || item.startsWith("spec\t§")) continue;
-      let rawPath = item;
-      const m = item.match(/^\((?:edit|new|from\s+\d+|edit\s+from\s+\d+)\)\s+(.+)$/);
-      if (m) rawPath = m[1];
-      const norm = path.posix.normalize(rawPath.trim());
+    for (const item of contextItemsOf(parseTicket(file, text))) {
+      if (item.kind === "spec") continue;
+      const norm = path.posix.normalize(item.rawPath);
       if (path.posix.isAbsolute(norm) || norm.startsWith("../") || norm === "..") {
         continue;
       }
