@@ -236,6 +236,18 @@ describe("subagent-implement skill contract", () => {
         assert.match(step[0], /narrowest/);
       }
     });
+
+    it("the worker prompt template's Test seam line copies a ticket's Seam verbatim, and only a ticket without one gets the planning seam", async () => {
+      for (const dir of skillDirs) {
+        const scaffold = await readFile(path.resolve(dir, "references/prompt-scaffold.md"), "utf8");
+        const template = scaffold.match(/## Template[\s\S]*?(?=\n## Notes for the orchestrator)/);
+        assert.ok(template, "prompt-scaffold.md template section present");
+        const line = template[0].match(/^- Test seam:.*$/m);
+        assert.ok(line, "the template has a Test seam line");
+        assert.match(line[0], /\*\*Seam:\*\*[^\n]{0,40}verbatim/i, "the ticket's Seam line is copied verbatim");
+        assert.match(line[0], /without one[^\n]{0,80}planning/i, "only a ticket without a Seam gets the seam chosen in planning");
+      }
+    });
   });
 
   describe("ticket 08 — Context drives the worker prompt", () => {
@@ -532,7 +544,17 @@ describe("ticket 09 — budget_estimate and usage_total", () => {
         "a BLOCKED ticket sums the path whose budget it exhausted",
       );
       assert.match(d, /`?unknown`?/, "usage_total is unknown when unreported");
-      assert.match(d, /`usage`[^\n]{0,80}(stays|stay|remains|kept)/i, "the worker's reported usage stays");
+      // The record has no `usage` field: the worker's reported subagent tokens are
+      // recorded as given, and usage_total is the one number kept for comparing tickets.
+      const paragraph = d.match(/`budget_estimate` is the ticket's Budget line[\s\S]*?(?=\n\n)/);
+      assert.ok(paragraph, "the budget_estimate / usage_total paragraph is present");
+      assert.doesNotMatch(paragraph[0], /`usage`/, "the paragraph does not refer to a usage field the record does not have");
+      assert.match(paragraph[0], /verifier_usage_total/, "the paragraph still defines verifier_usage_total");
+      assert.match(
+        paragraph[0],
+        /`usage_total`\s+is\s+the\s+one\s+number\s+kept\s+for\s+comparing\s+tickets/,
+        "usage_total is the one number kept for comparing tickets",
+      );
       assert.match(d, /possibly\s+cache-inclusive/i, "the reported tokens are noted as possibly cache-inclusive");
       assert.match(d, /no per-provider|there is no external provider/i, "keeps the no per-provider roll-up sentence");
     }

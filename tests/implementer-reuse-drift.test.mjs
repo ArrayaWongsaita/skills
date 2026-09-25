@@ -28,6 +28,12 @@ const SHARED_BLOCKS = [
     end: "this ticket alone.",
   },
   {
+    name: "worker prompt Test seam line",
+    file: () => "references/prompt-scaffold.md",
+    start: "- Test seam: <the ticket's **Seam:** line, verbatim;",
+    end: "the seam chosen in planning, 1-3 sentences>",
+  },
+  {
     name: "Seam and Context prompt rules",
     file: () => "references/prompt-scaffold.md",
     start: '- The "Test seam" line is the seam selected in Stage 0 planning; the worker',

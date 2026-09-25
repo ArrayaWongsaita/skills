@@ -572,6 +572,25 @@ describe("grill-to-tickets composite skill contract", () => {
     }
   });
 
+  it("ticket-format.md's quiz step shows Budget and the checker's tables, DAG summary, and warnings, as Stage 3 does", async () => {
+    for (const dir of skillDirs) {
+      const content = await readFile(path.resolve(dir, "references/ticket-format.md"), "utf8");
+      const from = content.indexOf("### 4. Quiz the user");
+      const to = content.indexOf("### 5.", from);
+      assert.ok(from >= 0 && to > from, "ticket-format.md has a quiz step between ### 4. and ### 5.");
+      const quiz = content.slice(from, to);
+
+      assert.match(quiz, /^- \*\*Budget\*\*:/m, "the quiz lists each ticket's Budget line");
+      assert.match(quiz, /story-coverage table/, "the quiz shows the checker's story-coverage table");
+      assert.match(quiz, /budget table/, "the quiz shows the checker's budget table");
+      assert.match(quiz, /DAG summary[\s\S]{0,80}recommended implementer/, "the quiz shows the DAG summary with the recommended implementer");
+      assert.match(quiz, /every warning/, "the quiz shows every warning");
+      assert.match(quiz, /## Ticket warnings/, "each warning is logged under ## Ticket warnings");
+      assert.match(quiz, /acknowledged[\s\S]{0,40}fixed/, "each warning is logged as acknowledged or fixed");
+      assert.match(quiz, /--write-budget/, "the checker is re-run with --write-budget after each change");
+    }
+  });
+
   it("points SKILL.md, design-review-gate, and reuse-pass at owned formats", async () => {
     for (const file of skillFiles) {
       const content = await readFile(file, "utf8");

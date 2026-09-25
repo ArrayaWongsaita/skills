@@ -68,7 +68,10 @@ Present the proposed breakdown as a numbered list. For each ticket, show:
 - **Stories**: user-story numbers delivered
 - **Seam**: the ticket's one test boundary
 - **Context**: the ticket's Read set
+- **Budget**: the ticket's measured Budget line
 - **What it delivers**: the end-to-end behaviour this ticket makes work
+
+The quiz also shows the checker's story-coverage table, budget table, DAG summary (with the recommended implementer), and every warning. Log each warning under `## Ticket warnings` in `decisions.md` as acknowledged or fixed, and re-run the checker with `--write-budget` after each change.
 
 Ask the user:
 - Does the granularity feel right? (too coarse / too fine)

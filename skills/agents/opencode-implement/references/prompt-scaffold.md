@@ -38,7 +38,7 @@ Every relative path below is relative to this directory. Paths outside it are ab
   - read: <plain and `(from NN)` paths — relative inside the worktree, absolute outside it>
   - change: <`(edit)` and `(edit from NN)` paths>
   - create: <`(new)` paths>
-- Test seam: <the seam the orchestrator assigned this ticket, 1-3 sentences>
+- Test seam: <the ticket's **Seam:** line, verbatim; for a ticket without one, the seam chosen in planning, 1-3 sentences>
 - Reuse: <the ticket's Reuse line, verbatim> — `use` and `extend` name existing
   modules to build on (grep the symbol for its file); `create-shared`,
   `create-candidate`, and `promote` build the interface the spec's Reuse Plan settles

@@ -331,6 +331,18 @@ describe("opencode-implement skill contract", () => {
         assert.match(step[0], /narrowest/);
       }
     });
+
+    it("the worker prompt template's Test seam line copies a ticket's Seam verbatim, and only a ticket without one gets the planning seam", async () => {
+      for (const dir of skillDirs) {
+        const scaffold = await readFile(path.resolve(dir, "references/prompt-scaffold.md"), "utf8");
+        const template = scaffold.match(/## Template[\s\S]*?(?=\n## Notes for the orchestrator)/);
+        assert.ok(template, "prompt-scaffold.md template section present");
+        const line = template[0].match(/^- Test seam:.*$/m);
+        assert.ok(line, "the template has a Test seam line");
+        assert.match(line[0], /\*\*Seam:\*\*[^\n]{0,40}verbatim/i, "the ticket's Seam line is copied verbatim");
+        assert.match(line[0], /without one[^\n]{0,80}planning/i, "only a ticket without a Seam gets the seam chosen in planning");
+      }
+    });
   });
 
   describe("ticket 08 — Context drives the worker prompt and touch-set", () => {

@@ -51,8 +51,9 @@ the path whose budget it exhausted (its final path); the record's `status` tells
 the two cases apart. It is `unknown` when the harness reports no usage. The
 worker's reported subagent tokens are recorded as given and noted as possibly
 cache-inclusive. `verifier_usage_total` is the same sum over the verifier
-dispatches, recorded separately. The worker's reported `usage` stays;
-`usage_total` is the one comparable number derived from it.
+dispatches, recorded separately. `usage_total` is the one number kept for
+comparing tickets — the worker's reported subagent tokens, summed as described
+above.
 
 ## `/subagent-implement status [slug]` and `/subagent-implement list`
 
