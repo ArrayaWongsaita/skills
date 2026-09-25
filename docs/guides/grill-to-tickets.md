@@ -135,10 +135,12 @@ Stop: Handoff message (commit catalog, /clear, DAG summary + recommended impleme
      node <โฟลเดอร์ของ skill>/scripts/check-tickets.mjs .scratch/<feature-slug>/ --write-budget
      ```
      สคริปต์ตรวจว่าทุก story มี ticket, `Stories` และ `Blocked by` ชี้ของที่มีจริง (blocker ต้องเลขต่ำกว่า), `Reuse` อยู่ต่อจาก `Blocked by` และใช้คำกริยาที่กำหนด, create-shared/promote ทุกตัวใน Reuse Plan มี ticket เจ้าของใบเดียวที่ block ticket อื่นที่ใช้, และ Seam/Context/Budget ครบ เป็นบรรทัดเดียว เรียงถูก และอ้างถึงของจริง แก้จนขึ้น `result: PASS` แล้วแสดงตาราง story coverage, ตาราง budget, สรุป DAG และ warning ทุกตัวใน quiz
+   - warning ที่ checker ออกให้มี 3 แบบ และไม่เปลี่ยนผล `PASS` / `FAIL`: acceptance criterion ที่พูดถึงการรัน suite หรือ tool (`npm test`, `tests pass`, `typecheck passes`, `lint passes`, `suite passes`); ticket สองใบที่แก้ path เดียวกัน (`(edit)`, `(new)` หรือ `(edit from NN)`) โดยไม่มีใบไหน block อีกใบทางอ้อม (transitively); และ feature ที่มีเกิน 15 ticket
    - warning ทุกตัวที่ checker รายงานต้องถูกบันทึกใต้ `## Ticket warnings` ใน `decisions.md` บรรทัดละหนึ่งตัว เป็น `<warning> — acknowledged` หรือ `<warning> — fixed: <change>` จึงจะถือว่า Stage 3 เสร็จ
    - รัน checker ซ้ำด้วย `--write-budget` ทุกครั้งที่ quiz ทำให้ ticket เปลี่ยน
 5. **Stop — Handoff (ส่งมอบงาน):**
    - พิมพ์ข้อความ handoff ตามลำดับ: หมายเหตุเรื่อง commit → `/clear` → **DAG summary** จาก checker (wave, ความกว้างสูงสุด, critical-path length) พร้อมบรรทัด `recommended implementer` ที่บอกว่า `subagent-implement`, `agy-implement` หรือ `opencode-implement` เหมาะกับ ticket set นี้ (ชื่อ skill ไม่มี slash นำหน้า) → คำสั่ง `/subagent-implement`
+   - `recommended implementer` เลือกจาก maximum wave width (จำนวน ticket มากสุดที่ทำพร้อมกันได้ใน wave เดียว): 1 → `subagent-implement`, 2 → ทั้งสามตัว, 3 ขึ้นไป → `agy-implement` หรือ `opencode-implement` เป็นคำแนะนำเท่านั้น คุณเป็นคนเลือกเอง
    - แสดงข้อความสรุปและแนะนำขั้นตอนสำหรับเซสชันถัดไป:
      ```text
      # 1. commit เฉพาะ docs/reuse-catalog.md / pointer ใน AGENTS.md ที่เปลี่ยน (implementer เริ่มได้เฉพาะ working tree ที่สะอาด; .scratch/ อยู่ในเครื่องและถูก git ignore จึงไม่ต้อง commit)
@@ -174,5 +176,5 @@ Stop: Handoff message (commit catalog, /clear, DAG summary + recommended impleme
 ## 5. ข้อควรระวังและคำแนะนำในการใช้งาน
 - **อย่าใช้เมื่อต้องการเขียนโค้ดทันที:** หากต้องการให้เขียนโค้ดเสร็จสรรพในรอบเดียว ควรใช้ `/engineering-workflow` แทน
 - **ติดตั้ง stage skill ให้ครบ:** หากขาด stage skill ใดใน 3 ตัวข้างต้น Preflight จะหยุดก่อนเริ่มสัมภาษณ์และบอกคำสั่งติดตั้งตัวที่ขาด
-- **ไม่ต้องตั้งค่า issue tracker:** ไฟล์ใน `.scratch/<feature-slug>/` คือ tracker ของ skill นี้ ขั้นที่ Stage 1 และ Stage 3 บอกให้ publish ไป tracker หรือให้รัน `/setup-matt-pocock-skills` จะถูกแทนด้วยการเขียนไฟล์ในเครื่อง
+- **ไม่ต้องตั้งค่า issue tracker:** ไฟล์ใน `.scratch/<feature-slug>/` คือ tracker ของ skill นี้ และรูปแบบที่ skill เป็นเจ้าของ (`references/spec-format.md`, `references/ticket-format.md`) ไม่มีขั้นตอน publish ไป tracker, ติด label หรือรัน `/setup-matt-pocock-skills`
 - **รีเซ็ต Context หลังเสร็จสิ้น:** เมื่อได้ Tickets ครบแล้ว ให้พิมพ์ `/clear` ก่อนเริ่ม implement เพื่อให้สมองของ AI ทำงานได้อย่างเต็มประสิทธิภาพที่สุด

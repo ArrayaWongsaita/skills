@@ -74,7 +74,9 @@ Seam, Context และ Budget: worker ใช้ `**Seam:**` ของ ticket �
 `**Context:**` (spec sections และไฟล์ แยก read / change / create) พาธใน worktree
 ของ worker เขียนเป็น relative พาธนอก worktree เขียนเป็น absolute และ `status.md`
 เก็บ `budget_estimate` (ข้อความ `**Budget:**` แบบ verbatim, `none` ถ้าไม่มี)
-คู่กับ `usage_total` (token จริงรวมทุก usage report บน path ที่ส่ง ticket)
+คู่กับ `usage_total` (ผลรวม token ที่ worker รายงานของ ticket จากทุก usage report
+บน path ที่ส่ง ticket รวมทุก dispatch และทุก resume บันทึกตามที่รายงาน และอาจรวม
+cache แล้ว (cache-inclusive); `verifier_usage_total` เก็บแยกสำหรับ verifier)
 
 sub-command: `continue` resume พร้อม Reality reconciliation, `status` / `list`
 อ่านอย่างเดียว
@@ -172,8 +174,10 @@ into its prompt from the ticket's `**Context:**` line (spec sections plus files,
 split into read / change / create). Paths inside the worker's worktree are
 **relative**; paths outside it are **absolute**. `status.md` records each
 ticket's `budget_estimate` (the `**Budget:**` text verbatim, or `none`) beside
-`usage_total` (the ticket's real token cost, summed over every usage report on
-the path that delivered it).
+`usage_total` (the worker's reported subagent tokens for the ticket, summed over
+every usage report, each dispatch and each resume, on the path that delivered
+it; recorded as given and possibly cache-inclusive), with `verifier_usage_total`
+kept separately for the verifier.
 
 Sub-commands: `continue` resumes with Reality reconciliation; `status` and
 `list` are read-only.

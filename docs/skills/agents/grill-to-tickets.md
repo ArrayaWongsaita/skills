@@ -40,8 +40,8 @@ npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 1. **Stage 0 — Grill**: เริ่มด้วย **Reuse survey** อ่าน `docs/reuse-catalog.md` ของ project ตรวจว่าทุกรายการยังมีอยู่จริง แล้วสำรวจเฉพาะส่วนที่ยังไม่เคยสำรวจหรือไฟล์ที่เปลี่ยนหลังวันที่ใน Coverage (ถ้ายังไม่มี catalog จะสร้างให้พร้อมเพิ่มบรรทัดชี้ใน `AGENTS.md`) ทางเลือกเรื่อง reuse เช่น ขยายของเดิมหรือสร้างใหม่ จะกลายเป็นคำถามให้คุณตัดสิน จากนั้นสัมภาษณ์แบบ design tree พร้อมทำ domain modeling เขียน `CONTEXT.md` / `adr/` ทันทีที่ term นิ่ง บันทึกทุกคำถามและคำตอบลง **Decision Log** (`decisions.md`) ก่อนถามรอบถัดไป เมื่อ frontier ว่างจะทำ **Blind-spot pass** ไล่ 9 หมวด (scope, data, flow, quality attributes, integrations, edge cases, constraints, terminology, completion signals) ช่องว่างที่เปลี่ยน spec ได้จะถูกถามเป็นรอบสุดท้ายไม่เกิน 5 ข้อ ที่เหลือเขียนเป็นสมมติฐานให้เห็น แล้วหยุดขอ confirmation
 2. **Stage 1 — Spec**: เขียน `spec.md` ตาม `spec-format.md` โดยสังเคราะห์ `decisions.md`, glossary และ ADR โดยไม่สัมภาษณ์ซ้ำ ทุกการตัดสินใจใน log ต้องอยู่ใน spec พร้อม **Reuse Plan** ที่ระบุว่าแต่ละ module จะใช้ของเดิม ขยาย สร้างเป็น shared (ต้องมีผู้ใช้ตั้งแต่ 2 ราย) สร้างเป็น candidate promote หรือแยกไว้โดยตั้งใจ
 3. **Stage 2 — Design Review Gate**: แต่ละรอบส่ง `scrutinize` ไปรันใน subagent ตัวใหม่ที่เห็นแค่ไฟล์และไม่แก้ไฟล์ใด ๆ (อ่าน spec แบบเดียวกับ implementer) แล้ว context หลัก normalize verdict เป็น `SHIP` / `FIX_THEN_SHIP` / `REWORK` / `REJECT` (`FIX_THEN_SHIP` แก้แล้วต้องไล่แก้ทุกประโยคใน spec ที่พูดเรื่องเดียวกันให้ตรงกัน) เก็บรายงานไว้ไฟล์เดียว `design-review.md` อัปเดตทุกรอบ และตรวจ **reuse lens** ทุกรอบ (ของที่ซ้ำกับ catalog, logic ที่ไม่มีเจ้าของ, shared ที่เผื่ออนาคตเกินไป)
-4. **Stage 3 — Tickets**: เมื่อได้ `SHIP` เขียน ticket ตาม `ticket-format.md` ลง `.scratch/<feature-slug>/issues/` shared module ใหม่แต่ละตัวมี ticket เจ้าของใบเดียวและ ticket ที่ใช้ต้องรอ ticket เจ้าของ ทุก ticket มีบรรทัด `**Reuse:**` (`use` / `extend` / `create-shared` / `create-candidate` / `promote`) ซึ่งไม่ใช่ acceptance criterion, `**Stories:**` บอกเลข user story ที่ ticket นั้นส่งมอบ, `**Seam:**` (ขอบเขตทดสอบเดียวจาก Testing Decisions ของ spec), `**Context:**` (Read set ของ worker: `spec §` refs และไฟล์ พร้อม marker อ่านอย่างเดียว / `(edit)` / `(new)` / `(from NN)` / `(edit from NN)`) และ `**Budget:**` (ผลวัดของ checker: read tokens, จำนวน criteria, จำนวน modules) ก่อน quiz ต้องรัน `scripts/check-tickets.mjs` พร้อม `--write-budget` ให้ผ่าน (ทุก story มี ticket, Blocked by ชี้ ticket ที่มีจริงและเลขต่ำกว่า, Reuse ถูกที่และใช้คำกริยาถูก, Seam/Context/Budget ครบ เป็นบรรทัดเดียว เรียงถูก, create-shared/promote มีเจ้าของใบเดียวที่ block ผู้ใช้รายอื่น) warning ทุกตัวต้องถูกบันทึกใต้ `## Ticket warnings` ใน `decisions.md` เป็น `<warning> — acknowledged` หรือ `<warning> — fixed: <change>` แล้วแสดงตาราง story coverage, ตาราง budget และ DAG summary ใน quiz
-5. **Stop**: บอกว่า `.scratch/` อยู่ในเครื่องและถูก git ignore (ก่อนเขียนไฟล์แรก skill จะเช็ก `git check-ignore` และเพิ่ม `.scratch/` ลง `.git/info/exclude` ให้ถ้ายังไม่ถูก ignore) จึงไม่ต้อง commit ให้ commit เฉพาะ `docs/reuse-catalog.md` ที่เปลี่ยน แล้วพิมพ์ `/clear` ตามด้วย `/subagent-implement .scratch/<feature-slug>/` (หรือ `/agy-implement` / `/opencode-implement`) โดยเลือกตัวที่แนะนำจากบรรทัด `recommended implementer` ใน DAG summary ของ checker ไม่เรียก implementer เอง
+4. **Stage 3 — Tickets**: เมื่อได้ `SHIP` เขียน ticket ตาม `ticket-format.md` ลง `.scratch/<feature-slug>/issues/` shared module ใหม่แต่ละตัวมี ticket เจ้าของใบเดียวและ ticket ที่ใช้ต้องรอ ticket เจ้าของ ทุก ticket มีบรรทัด `**Reuse:**` (`use` / `extend` / `create-shared` / `create-candidate` / `promote`) ซึ่งไม่ใช่ acceptance criterion, `**Stories:**` บอกเลข user story ที่ ticket นั้นส่งมอบ, `**Seam:**` (ขอบเขตทดสอบเดียวจาก Testing Decisions ของ spec), `**Context:**` (Read set ของ worker: `spec §` refs และไฟล์ พร้อม marker อ่านอย่างเดียว / `(edit)` / `(new)` / `(from NN)` / `(edit from NN)`) และ `**Budget:**` (ผลวัดของ checker: read tokens, จำนวน criteria, จำนวน modules) ก่อน quiz ต้องรัน `scripts/check-tickets.mjs` พร้อม `--write-budget` ให้ผ่าน (ทุก story มี ticket, Blocked by ชี้ ticket ที่มีจริงและเลขต่ำกว่า, Reuse ถูกที่และใช้คำกริยาถูก, Seam/Context/Budget ครบ เป็นบรรทัดเดียว เรียงถูก, create-shared/promote มีเจ้าของใบเดียวที่ block ผู้ใช้รายอื่น) checker ออก warning 3 แบบ (ไม่เปลี่ยนผลลัพธ์): acceptance criterion ที่พูดถึงการรัน suite หรือ tool (`npm test`, `tests pass`, `typecheck passes`, `lint passes`, `suite passes`); ticket สองใบที่แก้ path เดียวกัน (`(edit)`, `(new)` หรือ `(edit from NN)`) โดยไม่มีใบไหน block อีกใบทางอ้อม; และ feature ที่มีเกิน 15 ticket warning ทุกตัวต้องถูกบันทึกใต้ `## Ticket warnings` ใน `decisions.md` เป็น `<warning> — acknowledged` หรือ `<warning> — fixed: <change>` แล้วแสดงตาราง story coverage, ตาราง budget และ DAG summary ใน quiz
+5. **Stop**: บอกว่า `.scratch/` อยู่ในเครื่องและถูก git ignore (ก่อนเขียนไฟล์แรก skill จะเช็ก `git check-ignore` และเพิ่ม `.scratch/` ลง `.git/info/exclude` ให้ถ้ายังไม่ถูก ignore) จึงไม่ต้อง commit ให้ commit เฉพาะ `docs/reuse-catalog.md` ที่เปลี่ยน แล้วพิมพ์ `/clear` ตามด้วย `/subagent-implement .scratch/<feature-slug>/` (หรือ `/agy-implement` / `/opencode-implement`) โดยเลือกตัวที่แนะนำจากบรรทัด `recommended implementer` ใน DAG summary ของ checker (เลือกจาก maximum wave width: 1 → `subagent-implement`, 2 → ทั้งสามตัว, 3 ขึ้นไป → `agy-implement` หรือ `opencode-implement` เป็นคำแนะนำเท่านั้น) ไม่เรียก implementer เอง
 
 `REWORK` แบบ spec-level รัน Stage 1 ใหม่และอยู่ใน Stage 2 ส่วน decision-level กลับไป Stage 0 เพื่อ grill
 การตัดสินใจนั้นใหม่ โดย cycle counter ไม่ถูก reset
@@ -54,12 +54,15 @@ npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 
 ### ไฟล์ที่เกี่ยวข้อง
 
+- `references/spec-format.md` — รูปแบบ spec ที่ skill เป็นเจ้าของ ดัดแปลงจาก upstream พร้อมบรรทัดแหล่งที่มาและ MIT notice
+- `references/ticket-format.md` — รูปแบบ ticket ที่ skill เป็นเจ้าของ พร้อมฟิลด์ Seam, Context และ Budget ดัดแปลงจาก upstream พร้อมบรรทัดแหล่งที่มาและ MIT notice
+- `references/UPSTREAM-LICENSE.md` — MIT notice ของ upstream ที่รูปแบบทั้งสองแนบไว้
 - `references/decision-log.md` — รูปแบบของ Decision Log (`decisions.md`) เวลาที่ต้องเขียน และขั้นตอน `continue <feature-slug>`
 - `references/blind-spot-pass.md` — 9 หมวดที่ต้องไล่ก่อนหยุดพักท้าย Stage 0 (ดัดแปลงจาก `/clarify` ของ Spec Kit) วิธีให้คะแนน และเพดาน 5 คำถาม
 - `references/design-review-gate.md` — source เดียวของ routing table เต็ม, cycle accounting, stall detection, gate report format (SKILL.md Stage 2 เก็บแค่สรุปสั้น ๆ ต่อ verdict แล้วชี้มาที่นี่)
 - `references/reuse-pass.md` — กฎ reuse ของแต่ละ stage เริ่มจาก Reuse survey ใน Stage 0 (drift check, Coverage, bootstrap, pointer)
 - `references/reuse-catalog-template.md` — template ของ `docs/reuse-catalog.md` ที่ใช้สร้างครั้งแรก header ของไฟล์อธิบายวิธีดูแลตัวเอง
-- `scripts/check-tickets.mjs` — สคริปต์ Node (ไม่มี dependency) ตรวจ ticket ก่อน quiz: story coverage, Blocked by, Reuse field และเจ้าของ create-shared/promote พร้อมพิมพ์ตาราง story coverage (exit 0 ผ่าน, 1 มี error)
+- `scripts/check-tickets.mjs` — สคริปต์ Node (ไม่มี dependency) ตรวจ ticket ก่อน quiz: story coverage, Blocked by, Reuse field และเจ้าของ create-shared/promote พร้อมตรวจ Seam, Context และ Budget (บรรทัดเดียว เรียงถูก อ้างถึง path และ spec section จริง) เมื่อใช้ `--write-budget` จะวัดแต่ละ ticket แล้วเขียน Budget line ให้ ออก warning ที่ไม่เปลี่ยนผลลัพธ์ และพิมพ์ตาราง story coverage, ตาราง budget และ DAG summary พร้อม recommended implementer (exit 0 ผ่าน, 1 มี error, 2 อินพุตใช้ไม่ได้)
 - `evals/evals.json` — เคสพฤติกรรมในรูปแบบ benchmark ของ `skill-creator`: อย่างน้อยหนึ่งเคสต่อ routing branch ของ Design Review Gate, เคสของ Reuse survey, หนึ่งเคสต่อกลไกป้องกัน (decision log, `continue`, blind-spot pass, reviewer ใน context ใหม่, การไล่แก้หลัง `FIX_THEN_SHIP`, สคริปต์ตรวจ ticket) และเคส `quality:` ที่วัดคุณภาพของคำถาม spec และ ticket รันแบบ on-demand ไม่ได้อยู่ใน CI เวลา benchmark ให้ใช้ snapshot ของ skill เวอร์ชันก่อนหน้าเป็น baseline แบบ `old_skill` ของ `skill-creator`
 - `evals/trigger-evals.json` — กันไม่ให้ description ของ skill อ่านเหมือนเป็น model-invocable (skill นี้เป็น `disable-model-invocation`)
 
@@ -150,12 +153,17 @@ every blocker exists with a lower number, the Reuse field sits after Blocked by
 with the fixed verbs, Seam / Context / Budget are present, single-line, ordered,
 and real, and every create-shared or promote symbol has one ticket that blocks
 its other users; the quiz shows the story-coverage table, the budget table, the
-DAG summary, and every warning. Each warning is logged under
-`## Ticket warnings` in `decisions.md` as `<warning> — acknowledged` or
-`<warning> — fixed: <change>`. Then the skill prints a handoff in this order: the
-commit note, `/clear`, the DAG summary carrying the `recommended implementer`
-(`subagent-implement`, `agy-implement`, or `opencode-implement`), and the
-implementer command (`.scratch/` is local and git-ignored, so only a changed
+DAG summary, and every warning. The checker warns on an acceptance criterion
+that mentions a suite or tool run (`npm test`, `tests pass`, `typecheck passes`,
+`lint passes`, `suite passes`), on two tickets that change the same path —
+`(edit)`, `(new)`, or `(edit from NN)` — when neither transitively blocks the
+other, and on more than 15 tickets; a warning never changes the result. Each
+warning is logged under `## Ticket warnings` in `decisions.md` as
+`<warning> — acknowledged` or `<warning> — fixed: <change>`. Then the skill
+prints a handoff in this order: the commit note, `/clear`, the DAG summary
+carrying the `recommended implementer` (chosen by maximum wave width:
+1 → `subagent-implement`, 2 → all three, 3 or more → `agy-implement` or
+`opencode-implement`; advice only, you choose), and the implementer command (`.scratch/` is local and git-ignored, so only a changed
 `docs/reuse-catalog.md` needs a commit; the command is
 `/subagent-implement .scratch/<feature-slug>/` or its `agy` / `opencode`
 siblings) and stops.
@@ -188,7 +196,11 @@ siblings) and stops.
   `docs/reuse-catalog.md`, whose header makes the file self-describing
 - `scripts/check-tickets.mjs` — a dependency-free Node checker run before the
   Stage 3 quiz: story coverage, blockers, the Reuse field, and create-shared /
-  promote ownership, with a story-coverage table (exit 0 pass, 1 errors)
+  promote ownership, plus Seam, Context, and Budget (single line, ordered, real
+  paths and spec sections). With `--write-budget` it measures each ticket and
+  writes its Budget line; it warns without ever failing the result, and prints
+  the story-coverage table, the budget table, and the DAG summary with a
+  recommended implementer (exit 0 clean, 1 errors, 2 unusable input)
 - `evals/evals.json` — behavioral cases in `skill-creator`'s benchmark format:
   at least one per Design Review Gate routing branch, the Reuse survey cases, one
   per planning safeguard (decision log, `continue`, blind-spot pass, fresh
