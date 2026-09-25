@@ -3,9 +3,11 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-// ADR 0008 keeps one copy of the Reuse contract in each standalone implementer.
-// These blocks are the parts of that contract whose wording must match exactly;
-// the surrounding prose is free to differ per skill (serial vs wave dispatch).
+// Each standalone implementer keeps its own copy of the prose the three share
+// word for word: the Reuse contract (ADR 0008) and the ticket-format, Seam,
+// Context, and Budget blocks the reuse catalog's shared-prose rule registers
+// here. These blocks are the parts whose wording must match exactly; the
+// surrounding prose is free to differ per skill (serial vs wave dispatch).
 const IMPLEMENTERS = {
   "subagent-implement": { integration: "references/verification-and-integration.md" },
   "agy-implement": { integration: "references/worktree-integration.md" },
@@ -26,10 +28,64 @@ const SHARED_BLOCKS = [
     end: "this ticket alone.",
   },
   {
+    name: "worker prompt Parent spec line",
+    file: () => "references/prompt-scaffold.md",
+    start: "- Parent spec: <abs path to spec.md> — read only these sections:",
+    end: "or the sections chosen as today>",
+  },
+  {
+    name: "worker prompt Context files lines",
+    file: () => "references/prompt-scaffold.md",
+    start: "- Context files, grouped from the ticket's `**Context:**` line:",
+    end: "  - create: <`(new)` paths>",
+  },
+  {
+    name: "worker prompt Test seam line",
+    file: () => "references/prompt-scaffold.md",
+    start: "- Test seam: <the ticket's **Seam:** line, verbatim;",
+    end: "the seam chosen in planning, 1-3 sentences>",
+  },
+  {
+    name: "Seam and Context prompt rules",
+    file: () => "references/prompt-scaffold.md",
+    start: '- The "Test seam" line is the seam selected in Stage 0 planning; the worker',
+    end: "absolute path in the project root's main checkout.",
+  },
+  {
     name: "Reuse Catalog update steps",
     file: (skill) => IMPLEMENTERS[skill].integration,
     start: "1. **Path.**",
     end: "or add the entry when the module was not yet catalogued.",
+  },
+  {
+    name: "budget_estimate sentence",
+    file: () => "references/status-and-resume.md",
+    start: "`budget_estimate` is the ticket's Budget line verbatim",
+    end: "or `none` when the ticket carries none.",
+  },
+  {
+    name: "planning ticket-format parse",
+    file: () => "references/planning.md",
+    start: "Each ticket is in the `grill-to-tickets` ticket format:",
+    end: "resolves by matching the title.",
+  },
+  {
+    name: "planning numbering bullet",
+    file: () => "references/planning.md",
+    start: "- **Numbering consistent with a topological order.**",
+    end: "`BLOCKED (TICKET_SET_NUMBERING)` naming both.",
+  },
+  {
+    name: "planning test-seam selection",
+    file: () => "references/planning.md",
+    start: "A ticket's `**Seam:**` line, when present, is its test seam",
+    end: "rather than being implemented without a test.",
+  },
+  {
+    name: "Select a test seam step",
+    file: () => "SKILL.md",
+    start: "**Select a test seam per ticket**",
+    end: "planning rather than shipping without a test.",
   },
 ];
 
@@ -49,7 +105,7 @@ function firstDifference(a, b) {
   return null;
 }
 
-describe("implementer Reuse contract stays identical across skills (ADR 0008)", () => {
+describe("implementer prose shared word for word stays identical across skills (ADR 0008, reuse catalog)", () => {
   for (const block of SHARED_BLOCKS) {
     it(`${block.name} match in all three implementers`, async () => {
       const copies = {};

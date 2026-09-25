@@ -18,6 +18,14 @@ decision, including the small ones neither of them takes.
 - waiting on: answers to round 3
 - updated: 2026-09-24
 
+## Preflight
+
+### Preflight 2026-09-24
+
+- `grilling` — `.agents/skills/grilling/SKILL.md` — lock: `a1b2c3d4...`
+- `domain-modeling` — `.agents/skills/domain-modeling/SKILL.md` — lock: `e5f6a7b8...`
+- `scrutinize` — `~/.agents/skills/scrutinize/SKILL.md` — lock: `no lock entry`
+
 ## Round 1
 
 - **Q1 — <question title>** — recommended: <answer> — decided: <answer> — why: <the user's reason, when given>
@@ -26,6 +34,11 @@ decision, including the small ones neither of them takes.
 ## Round 2
 
 - **Q1 — <question title>** — recommended: <answer> — decided: open
+
+## Ticket warnings
+
+- `issues/02-csv-download.md: acceptance criterion "npm test passes" mentions a suite or tool run` — fixed: rewrote the criterion as a behavioural statement
+- `the feature has 16 tickets; split it into separate feature slugs` — acknowledged
 ```
 
 - **State** is rewritten in place. `stage` is one of `0 — Grill`, `1 — Spec`,
@@ -34,6 +47,13 @@ decision, including the small ones neither of them takes.
   confirmation, test-seam confirmation, ticket-quiz approval, or a fresh-budget
   authorization — or `nothing` while the run works. The gate's cycle count lives
   in `design-review.md` alone.
+- **Preflight** records the stage skills found and their lock values. Stage 0
+  step 1 writes the first `### Preflight <date>` entry under `## Preflight` when
+  it creates the log, and each `continue` appends another, keeping earlier entries.
+- **Ticket warnings** logs the checker's Stage 3 warnings, one line each with the
+  warning text and `— acknowledged` or `— fixed: <change>`, so a resumed run
+  knows which warnings are settled. Stage 3 is done only when every warning
+  carries one of the two suffixes.
 - **Rounds** are the log. The open round fills in its `decided:` values as the
   answers arrive; a closed round stays as written. An answer that reverses an
   earlier one is a new entry naming what it replaces (`supersedes R1 Q2`).

@@ -10,7 +10,7 @@ skills-lock.json
 
 # Installed skill copies — skills/ is the source of truth (docs/decisions/0011)
 .agents/
-.claude/skills/
+.claude/skills
 
 # Local Claude Code state; .claude/settings.json and .claude/hooks/ stay tracked
 .claude/worktrees/

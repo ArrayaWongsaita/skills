@@ -7,25 +7,26 @@ disable-model-invocation: true
 # Grill To Tickets
 
 Carry a single idea from a relentless interview through to published, ticket-ready
-work, then stop at the handoff. This skill inline-executes `grilling`,
-`domain-modeling`, `to-spec`, and `to-tickets` in sequence, with `scrutinize`
-reviewing the spec in a fresh context between them; a separate implementer run
+work, then stop at the handoff. This skill inline-executes `grilling` and
+`domain-modeling`, writes `spec.md` following [spec-format.md](references/spec-format.md),
+reviews the spec in a fresh context with `scrutinize`, and writes tickets following
+[ticket-format.md](references/ticket-format.md); a separate implementer run
 (`/subagent-implement`, `/agy-implement`, or `/opencode-implement`) picks the
 ticket directory up afterward.
 
 ```
-Preflight             locate the five stage skills (stop if one is missing)
+Preflight             locate the three stage skills (stop if one is missing)
    ▼
 Stage 0: Grill        reuse survey + grilling + domain-modeling
                       → decisions.md, CONTEXT.md, adr/, docs/reuse-catalog.md
    │ (pause: explicit confirmation, empty frontier)
    ▼
-Stage 1: Spec         to-spec                     → spec.md
+Stage 1: Spec         spec-format.md              → spec.md
    ▼
 Stage 2: Design Review Gate   scrutinize (fresh reviewer) → design-review.md   (bounded loop)
    │ (SHIP)
    ▼
-Stage 3: Tickets      to-tickets                  → issues/NN-<slug>.md
+Stage 3: Tickets      ticket-format.md            → issues/NN-<slug>.md
    ▼
 Stop: handoff message (commit catalog changes, /clear, /subagent-implement <dir>)
 ```
@@ -48,9 +49,11 @@ human invocation before starting.
 
 Stages 0, 1, and 3 run **inline**: read each stage skill's `SKILL.md` at the
 path Preflight found and follow its workflow steps directly, in this one
-continuous context window. `to-spec` and `to-tickets` are
-`disable-model-invocation: true`, so inline is their only path; `grilling` and
-`domain-modeling` run inline too, keeping the interview, the spec, and the tickets
+continuous context window. This skill follows three stage skills (`grilling`,
+`domain-modeling`, `scrutinize`) and two owned formats
+([spec-format.md](references/spec-format.md) and
+[ticket-format.md](references/ticket-format.md)). `grilling` and
+`domain-modeling` run inline, keeping the interview, the spec, and the tickets
 on one reasoning thread, where the user is.
 
 Two steps dispatch a subagent, and neither makes a decision: the Reuse survey's
@@ -58,20 +61,14 @@ fact lookup in Stage 0, and the Stage 2 reviewer. The reviewer runs `scrutinize`
 in a fresh context so it reads the spec the way the implementer will — from files
 alone, without the interview's answers to fill its gaps.
 
-This skill's local files are the tracker. Where a stage skill publishes to an
-issue tracker, applies a triage label, or sends the user to
-`/setup-matt-pocock-skills`, write the local artifact instead: `to-spec`'s spec
-becomes `spec.md`, and `to-tickets` writes `issues/<NN>-<slug>.md` files marked
-`**Status:** ready-for-agent`.
-
 This skill owns its own copy of the Design Review Gate rules and runs fully
 standalone.
 
 ## Preflight
 
 Before Stage 0, and before `continue` resumes a run, locate the `SKILL.md` of
-each stage skill — `grilling`, `domain-modeling`, `to-spec`, `scrutinize`,
-`to-tickets` — taking the first of these that exists:
+each stage skill — `grilling`, `domain-modeling`, `scrutinize` — taking the
+first of these that exists:
 
 1. `.agents/skills/<skill>/SKILL.md`
 2. `.claude/skills/<skill>/SKILL.md`
@@ -79,19 +76,25 @@ each stage skill — `grilling`, `domain-modeling`, `to-spec`, `scrutinize`,
 4. `~/.claude/skills/<skill>/SKILL.md`
 
 When any is missing, stop before Stage 0: name the missing skills and print the
-install line for each of them, then wait for the user.
+install line for each missing one, then wait for the user.
 
 ```text
 npx skills add mattpocock/skills --skill grilling
 npx skills add mattpocock/skills --skill domain-modeling
-npx skills add mattpocock/skills --skill to-spec
-npx skills add mattpocock/skills --skill to-tickets
 npx skills add thananon/9arm-skills --skill scrutinize
 ```
 
+Use `npx skills check` to check the stage skills for updates.
+
+For each skill found, record the path found and the hash its matching lock holds:
+- a skill found under `.agents/skills/` or `.claude/skills/` reads the project `skills-lock.json` → `skills.<name>.computedHash`;
+- a skill found under `~/.agents/skills/` or `~/.claude/skills/` reads `~/.agents/.skill-lock.json` → `skills.<name>.skillFolderHash`.
+
+Record the value as the lock holds it without recomputation, comparison, or warning. A missing lock file, a missing entry, or an empty value records `no lock entry`. Stage 0 step 1 writes the first dated entry under `## Preflight` in `decisions.md`; each `continue` appends another.
+
 ## Feature-Scoped Storage
 
-Store every artifact under a dedicated directory. Derive `<feature-slug>` from the
+Store every artifact under a dedicated directory; local files are the tracker. Derive `<feature-slug>` from the
 idea (lowercase alphanumeric with hyphens).
 
 ```
@@ -123,7 +126,8 @@ Run `grilling` and `domain-modeling` together as one discovery pass.
 1. **Ground in existing context.** Read the repository's root `CONTEXT.md` and
    `docs/adr/` if they exist, plus any relevant existing directory under
    `.scratch/`. Initialize `.scratch/<feature-slug>/` with its
-   `decisions.md` State.
+   `decisions.md` State and write the first `### Preflight <date>` entry under
+   `## Preflight` recording the stage skills' paths and lock hashes.
 2. **Reuse survey.** Read `docs/reuse-catalog.md`, drift-check every entry
    against the code, and survey only the gaps — areas the idea touches that
    Coverage lacks, and files changed in covered areas since their Coverage date.
@@ -157,14 +161,16 @@ Run `grilling` and `domain-modeling` together as one discovery pass.
 
 ## Stage 1 — Spec
 
-Run `to-spec` inline. Synthesize `decisions.md`, the glossary, and the ADRs
-directly into `.scratch/<feature-slug>/spec.md` using the standard sections
-(Problem Statement, Solution, User Stories, Implementation Decisions, Testing
-Decisions, Out of Scope, Further Notes). Sketch the test seams and confirm them
-with the user. Stage 0 already settled the decisions — synthesize them and keep
-the interview closed. The spec is done when every decision in the log appears in
-it — as a story, an implementation or testing decision, an out-of-scope line, or
-a further note — and every blind-spot assumption appears in Further Notes.
+Write `.scratch/<feature-slug>/spec.md` following
+[spec-format.md](references/spec-format.md). Synthesize `decisions.md`, the
+glossary, and the ADRs directly into `.scratch/<feature-slug>/spec.md` using the
+standard sections (Problem Statement, Solution, User Stories, Implementation
+Decisions, Testing Decisions, Out of Scope, Further Notes). Sketch the test
+seams and confirm them with the user. Stage 0 already settled the decisions —
+synthesize them and keep the interview closed. The spec is done when
+every decision in the log appears in it — as a story, an implementation or
+testing decision, an out-of-scope line, or a further note — and
+every blind-spot assumption appears in Further Notes.
 
 Implementation Decisions includes a `### Reuse Plan`: every reusable module the
 spec touches, by symbol, as use as-is, extend, create shared, create candidate,
@@ -192,7 +198,7 @@ Route the verdict:
   sweep the spec so every passage restating the same fact agrees with it,
   consume one cycle, re-review, stay in Stage 2.
 - **`REWORK`, spec-level** (the finding is about how the spec is written) →
-  re-run `to-spec` with the finding as added context, consume one cycle,
+  re-run Stage 1 with the finding as added context, consume one cycle,
   re-review, stay in Stage 2.
 - **`REWORK`, decision-level** (the finding traces to a decision nobody made) →
   return to Stage 0 to re-grill that one decision; the running cycle count
@@ -212,11 +218,11 @@ accounting, and gate report format live in
 
 ## Stage 3 — Tickets
 
-Once the gate returns `SHIP`, run `to-tickets` inline against the shipped
-`spec.md`. Break it into tracer-bullet vertical slices, each declaring its
-blocking edges, and write one file per ticket under
-`.scratch/<feature-slug>/issues/<NN>-<slug>.md`, numbered from `01` in dependency
-order. Every ticket carries a `**Stories:**` line after `**Reuse:**`: the spec's
+Once the gate returns `SHIP`, write tickets following
+[ticket-format.md](references/ticket-format.md) against the shipped `spec.md`.
+Break it into tracer-bullet vertical slices, each declaring its blocking edges,
+and write one file per ticket under `.scratch/<feature-slug>/issues/<NN>-<slug>.md`,
+numbered from `01` in dependency order. Every ticket carries a `**Stories:**` line after `**Reuse:**`: the spec's
 user-story numbers it delivers (`2, 5`, or a range `3-6`), or `none` for a
 prefactor.
 
@@ -228,21 +234,28 @@ a `**Reuse:**` line after `**Blocked by:**` with the fixed verbs `use`, `extend`
 acceptance criteria. Rules, and why reuse stays out of the acceptance criteria:
 [reuse-pass.md](references/reuse-pass.md) — Stage 3.
 
-**Check, then quiz.** Run the ticket checker that ships with this skill:
+**Draft, measure, fix, then quiz.** Write the draft tickets first, then run the
+ticket checker that ships with this skill with `--write-budget`, so it writes
+every ticket's Budget line from its measurement:
 
 ```text
-node <this skill's directory>/scripts/check-tickets.mjs .scratch/<feature-slug>/
+node <this skill's directory>/scripts/check-tickets.mjs .scratch/<feature-slug>/ --write-budget
 ```
 
 [check-tickets.mjs](scripts/check-tickets.mjs) verifies that every user story
 has a ticket, that Stories and Blocked by name real stories and lower-numbered
-tickets, that the Reuse field sits after Blocked by with the fixed verbs, and
-that every create-shared or promote symbol has exactly one ticket, which blocks
-every other ticket using it. Fix what it reports, then quiz the user on
-granularity and blocking edges, showing each ticket's Reuse field and the
-checker's story-coverage table. Re-run the checker after every change the quiz
-makes. Stage 3 is done when the user approves the breakdown and the checker
-prints `result: PASS`. Where Node is unavailable, apply the checks listed in the
+tickets, that the Reuse field sits after Blocked by with the fixed verbs, that
+Seam, Context, and Budget are present, single-line, in order, and real, and that
+every create-shared or promote symbol has exactly one ticket, which blocks every
+other ticket using it. Fix every error it reports, then quiz the user on
+granularity and blocking edges, showing each ticket's Reuse, Seam, Context, and
+Budget, and showing the checker's story-coverage table, budget table, DAG
+summary, and every warning. Re-run the checker after every change with `--write-budget`.
+
+Stage 3 is done when the checker prints `result: PASS`, every warning is logged
+under `## Ticket warnings` in `decisions.md` — one line per warning,
+`<warning> — acknowledged` or `<warning> — fixed: <change>` — and the user
+approves the breakdown. Where Node is unavailable, apply the checks listed in the
 script's header by hand.
 
 ## Stop — Handoff
@@ -259,6 +272,16 @@ implementers start only from a clean working tree.
 
 To keep peak reasoning for implementation, reset context:
 /clear
+
+Paste the checker's final DAG summary — its waves, maximum wave width,
+critical-path length, and recommended implementer, with the skill names carrying
+no leading slash:
+
+  wave 0: 01
+  wave 1: 02, 03
+  maximum wave width: 2
+  critical-path length: 2
+  recommended implementer: subagent-implement, agy-implement, opencode-implement
 
 Then implement the whole ticket directory in a fresh session; the implementer
 keeps docs/reuse-catalog.md current as each ticket lands:

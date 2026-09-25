@@ -5,7 +5,7 @@
       "id": 1,
       "name": "first-pass SHIP straight through the stages",
       "prompt": "/grill-to-tickets Add a \"copy shareable link\" button to the report detail page that copies the report's existing public URL to the clipboard and shows a confirmation toast. One component, no API or schema change, acceptance behavior is explicit, and no open decisions remain — treat the Stage 0 frontier as empty and already confirmed.",
-      "expected_output": "With the Stage 0 frontier already empty and confirmed, pass straight through: synthesize spec.md with to-spec (Stage 1), run scrutinize once in a fresh reviewer subagent (Stage 2), normalize its closing line to SHIP, and advance to Stage 3 to-tickets. Publish tickets under .scratch/<feature-slug>/issues/ and print the handoff: .scratch/ needs no commit, commit any docs/reuse-catalog.md change, /clear, then /subagent-implement .scratch/<feature-slug>/.",
+      "expected_output": "With the Stage 0 frontier already empty and confirmed, pass straight through: synthesize spec.md in Stage 1, run scrutinize once in a fresh reviewer subagent (Stage 2), normalize its closing line to SHIP, and advance to Stage 3 (ticket-format.md). Publish tickets under .scratch/<feature-slug>/issues/ and print the handoff: .scratch/ needs no commit, commit any docs/reuse-catalog.md change, /clear, then /subagent-implement .scratch/<feature-slug>/.",
       "expectations": [
         "Confirms the empty Stage 0 frontier, then moves through Stage 1 -> Stage 2 -> Stage 3 in order",
         "Runs scrutinize exactly once and records cycle 1 with verdict SHIP in a single .scratch/<feature-slug>/design-review.md file",
@@ -24,18 +24,18 @@
         "Normalizes the verdict to the token FIX_THEN_SHIP",
         "Edits .scratch/<feature-slug>/spec.md in place as the minimal correction to the violated invariant",
         "Consumes exactly one gate cycle and re-reviews within Stage 2",
-        "Does not re-run to-spec, return to Stage 0, or add a dependency the finding did not require"
+        "Does not re-run Stage 1, return to Stage 0, or add a dependency the finding did not require"
       ],
       "files": []
     },
     {
       "id": 3,
-      "name": "spec-level REWORK re-runs to-spec inside the gate",
+      "name": "spec-level REWORK re-runs Stage 1 inside the gate",
       "prompt": "$grill-to-tickets continue wishlist-sync. This is gate cycle 2. Stage 2 scrutinize closes with rework: the empty-state behavior was settled in Stage 0, but the spec never wrote it as a user story and the persistence seam is stated too vaguely to break into tickets. Every fact needed to fix it is already recorded in decisions.md.",
-      "expected_output": "Diagnose spec-level REWORK — a fresh writer holding decisions.md could fix the spec with no new decision. Re-run to-spec inline with the finding as added context, consume one gate cycle, and re-review. Control stays in Stage 2 and the cycle counter is not reset.",
+      "expected_output": "Diagnose spec-level REWORK — a fresh writer holding decisions.md could fix the spec with no new decision. Re-run Stage 1 inline with the finding as added context, consume one gate cycle, and re-review. Control stays in Stage 2 and the cycle counter is not reset.",
       "expectations": [
         "Records reworkKind: spec-level with reasoning that names the finding",
-        "Re-runs to-spec inline rather than returning to Stage 0",
+        "Re-runs Stage 1 inline rather than returning to Stage 0",
         "Consumes one gate cycle and re-reviews without leaving Stage 2",
         "Does not reset the cycle counter, and keeps one stable design-review.md updated in place"
       ],
@@ -44,8 +44,8 @@
     {
       "id": 4,
       "name": "decision-level REWORK returns to Stage 0 without resetting the counter",
-      "prompt": "$grill-to-tickets continue wishlist-sync. This is gate cycle 3. Stage 2 scrutinize closes with rework: the spec assumes wishlists are private to one account, but a shared-household actor has surfaced that nobody decided on. to-spec cannot synthesize a decision that was never made.",
-      "expected_output": "Diagnose decision-level REWORK — the finding traces to a decision no one has made. Return to Stage 0, re-grill only that decision (inline grilling + domain-modeling), update CONTEXT.md and adr/, then re-run to-spec and re-review. The cycle counter carries the backward transition and stays at 3.",
+      "prompt": "$grill-to-tickets continue wishlist-sync. This is gate cycle 3. Stage 2 scrutinize closes with rework: the spec assumes wishlists are private to one account, but a shared-household actor has surfaced that nobody decided on. Stage 1 cannot synthesize a decision that was never made.",
+      "expected_output": "Diagnose decision-level REWORK — the finding traces to a decision no one has made. Return to Stage 0, re-grill only that decision (inline grilling + domain-modeling), update CONTEXT.md and adr/, then re-run Stage 1 and re-review. The cycle counter carries the backward transition and stays at 3.",
       "expectations": [
         "Records reworkKind: decision-level with reasoning that it traces to an unmade decision",
         "Returns to Stage 0 and re-grills the specific decision, updating CONTEXT.md and adr/",
@@ -175,7 +175,7 @@
       "id": 14,
       "name": "undecided extend-vs-new is decision-level REWORK",
       "prompt": "$grill-to-tickets continue audit-log-view. Gate cycle 1: the spec extends `DataTable` with virtualized scrolling for 100k-row audit logs, but Stage 0 never settled whether to extend DataTable — used by 14 existing screens — or build a separate virtualized table. The survey only recorded that DataTable exists and has no virtualization.",
-      "expected_output": "The reuse lens records reuse-undecided-DataTable. A fresh writer holding decisions.md could not resolve extend-versus-new without asking, so it is decision-level REWORK: return to Stage 0, put that one question to the user with a recommended answer and log it in decisions.md as a re-grill round, then re-run to-spec and re-review, carrying the cycle counter over.",
+      "expected_output": "The reuse lens records reuse-undecided-DataTable. A fresh writer holding decisions.md could not resolve extend-versus-new without asking, so it is decision-level REWORK: return to Stage 0, put that one question to the user with a recommended answer and log it in decisions.md as a re-grill round, then re-run Stage 1 and re-review, carrying the cycle counter over.",
       "expectations": [
         "Records the finding with the stable id reuse-undecided-DataTable",
         "Diagnoses decision-level REWORK with reasoning that the trade-off was never decided",
@@ -348,10 +348,10 @@
       "id": 27,
       "name": "reviewer finding already settled in decisions.md is spec-level REWORK",
       "prompt": "$grill-to-tickets continue member-export. Gate cycle 1: the fresh reviewer closes with rework, finding that the spec never says who may export. decisions.md R1 Q1 settled it: admins only.",
-      "expected_output": "Diagnose spec-level REWORK: the decision exists in decisions.md, so a fresh writer holding the log could fix the spec without asking anyone. Re-run to-spec with the finding and R1 Q1 as added context, consume one cycle, and re-review within Stage 2. Returning to Stage 0 would re-ask a settled question.",
+      "expected_output": "Diagnose spec-level REWORK: the decision exists in decisions.md, so a fresh writer holding the log could fix the spec without asking anyone. Re-run Stage 1 with the finding and R1 Q1 as added context, consume one cycle, and re-review within Stage 2. Returning to Stage 0 would re-ask a settled question.",
       "expectations": [
         "Records reworkKind: spec-level, citing decisions.md R1 Q1 in the reasoning",
-        "Re-runs to-spec rather than returning to Stage 0",
+        "Re-runs Stage 1 rather than returning to Stage 0",
         "Asks the user nothing about who may export",
         "Consumes one cycle and re-reviews within Stage 2"
       ],
@@ -360,10 +360,10 @@
     {
       "id": 28,
       "name": "preflight stops when a stage skill is missing",
-      "prompt": "/grill-to-tickets Add CSV export to the orders list page. grilling, domain-modeling, to-spec, and to-tickets are installed under .agents/skills/, but scrutinize exists in none of .agents/skills/, .claude/skills/, ~/.agents/skills/, or ~/.claude/skills/.",
-      "expected_output": "Preflight finds four of the five stage skills and stops before Stage 0: it names scrutinize as missing, prints only its install line (npx skills add thananon/9arm-skills --skill scrutinize), and waits for the user. It creates no .scratch/<feature-slug>/ and asks no grilling question.",
+      "prompt": "/grill-to-tickets Add CSV export to the orders list page. grilling and domain-modeling are installed under .agents/skills/, but scrutinize exists in none of .agents/skills/, .claude/skills/, ~/.agents/skills/, or ~/.claude/skills/.",
+      "expected_output": "Preflight finds two of the three stage skills and stops before Stage 0: it names scrutinize as missing, prints only its install line (npx skills add thananon/9arm-skills --skill scrutinize), and waits for the user. It creates no .scratch/<feature-slug>/ and asks no grilling question.",
       "expectations": [
-        "Checks all four locations for each of the five stage skills before Stage 0",
+        "Checks all four locations for each of the three stage skills before Stage 0",
         "Names scrutinize as the missing skill",
         "Prints npx skills add thananon/9arm-skills --skill scrutinize and no install line for the skills that exist",
         "Starts neither the Reuse survey nor the interview, and creates no .scratch/<feature-slug>/"
@@ -373,20 +373,33 @@
     {
       "id": 29,
       "name": "preflight uses a globally installed stage skill",
-      "prompt": "$grill-to-tickets Add row selection to the users table. to-spec and to-tickets are under .agents/skills/; grilling, domain-modeling, and scrutinize exist only under ~/.agents/skills/.",
-      "expected_output": "Preflight resolves to-spec and to-tickets from .agents/skills/ and the other three from ~/.agents/skills/, reports nothing missing, and starts Stage 0, reading each stage skill from the path it found.",
+      "prompt": "$grill-to-tickets Add row selection to the users table. grilling and domain-modeling are under .agents/skills/; scrutinize exists only under ~/.agents/skills/.",
+      "expected_output": "Preflight resolves grilling and domain-modeling from .agents/skills/ and scrutinize from ~/.agents/skills/, reports nothing missing, and starts Stage 0, reading each stage skill from the path it found.",
       "expectations": [
-        "Finds grilling, domain-modeling, and scrutinize under ~/.agents/skills/",
+        "Finds scrutinize under ~/.agents/skills/",
         "Reports no missing skill and prints no install line",
         "Proceeds into Stage 0, reading each stage skill from its resolved path"
       ],
       "files": []
     },
     {
+      "id": 32,
+      "name": "Preflight records the lock by location",
+      "prompt": "/grill-to-tickets Add export feature. grilling is found under .agents/skills/grilling/, domain-modeling under .claude/skills/domain-modeling/, and scrutinize under ~/.agents/skills/scrutinize/. The project skills-lock.json holds computedHash values for grilling and domain-modeling. Global ~/.agents/.skill-lock.json has no entry for scrutinize.",
+      "expected_output": "Preflight resolves grilling (.agents/skills/) and domain-modeling (.claude/skills/) from the project and scrutinize (~/.agents/skills/) from home. It reads skills-lock.json computedHash for grilling and domain-modeling, and ~/.agents/.skill-lock.json for scrutinize. Because scrutinize has no entry in the global lock, Preflight records 'no lock entry'. It writes these into decisions.md under ## Preflight as ### Preflight <date> when initializing Stage 0.",
+      "expectations": [
+        "Resolves project skills against skills-lock.json computedHash",
+        "Resolves global skills against ~/.agents/.skill-lock.json skillFolderHash",
+        "Records 'no lock entry' when a lock file, entry, or value is missing",
+        "Writes the dated entry under ## Preflight in decisions.md without recomputation or warning"
+      ],
+      "files": []
+    },
+    {
       "id": 30,
-      "name": "local files replace the stage skills' tracker steps",
-      "prompt": "/grill-to-tickets continue member-export. Stage 1 starts. The project has no issue tracker configured and nobody has run /setup-matt-pocock-skills; to-spec's own instructions say to publish the spec to the issue tracker with the ready-for-agent label.",
-      "expected_output": "Treat this skill's local files as the tracker: write the spec to .scratch/member-export/spec.md, apply no label, publish nothing, and continue Stage 1 without sending the user to /setup-matt-pocock-skills.",
+      "name": "local files replace tracker: spec-format carries no tracker step",
+      "prompt": "/grill-to-tickets continue member-export. Stage 1 starts. The project has no issue tracker configured and nobody has run /setup-matt-pocock-skills; Stage 1 follows references/spec-format.md.",
+      "expected_output": "references/spec-format.md carries no tracker, label, or /setup-matt-pocock-skills step: write the spec to .scratch/member-export/spec.md, apply no label, publish nothing, and continue Stage 1 without sending the user to /setup-matt-pocock-skills.",
       "expectations": [
         "Writes the spec to .scratch/member-export/spec.md",
         "Publishes nothing to an issue tracker and applies no label",
@@ -406,6 +419,82 @@
         "Tells the user it added the local exclude",
         "Edits no tracked file and makes no commit",
         "Prints a handoff that does not ask to commit .scratch/"
+      ],
+      "files": []
+    },
+    {
+      "id": 33,
+      "name": "Budget-line mismatch fails the checker",
+      "prompt": "$grill-to-tickets continue member-export. The gate returned SHIP. Ticket 02's **Budget:** line was copied by hand, and the checker reports it differs from the measurement after ticket 02's Context gained a spec section.",
+      "expected_output": "The checker fails the run: a Budget line that differs from the measurement is an error, never a warning. Re-run node <skill-dir>/scripts/check-tickets.mjs .scratch/member-export/ --write-budget so the line is rewritten from the measurement, then continue to the quiz only once it prints result: PASS.",
+      "expectations": [
+        "Treats the differing Budget line as an error before the quiz",
+        "Re-runs the checker with --write-budget to write the measured line",
+        "Never copies or adjusts the Budget line by hand",
+        "Reaches result: PASS before quizzing"
+      ],
+      "files": []
+    },
+    {
+      "id": 34,
+      "name": "(from NN) without its blocker fails the checker",
+      "prompt": "$grill-to-tickets continue member-export. The gate returned SHIP. Ticket 03's Context lists (from 01) src/member-rows.mjs, but ticket 03's **Blocked by:** is None (can start immediately).",
+      "expected_output": "The checker fails the run: a (from 01) item requires ticket 01 to be among ticket 03's transitive blockers and to carry (new) for that path. Add 01 to ticket 03's **Blocked by:** when the file is genuinely needed, then re-run with --write-budget until result: PASS.",
+      "expectations": [
+        "Treats (from NN) without its transitive blocker as an error before the quiz",
+        "Adds the missing blocking edge rather than deleting a needed Read set item",
+        "Re-runs the checker with --write-budget and reaches result: PASS"
+      ],
+      "files": []
+    },
+    {
+      "id": 35,
+      "name": "untestable-criteria warning is acknowledged in the log",
+      "prompt": "$grill-to-tickets continue member-export. The checker prints result: PASS with one warning: issues/02-csv-download.md: acceptance criterion \"npm test passes\" mentions a suite or tool run.",
+      "expected_output": "Show the warning in the quiz and settle it before Stage 3 is done: rewrite the criterion as a testable behaviour and log the warning under ## Ticket warnings in decisions.md as `<warning> — fixed: <change>`, or keep it and log `<warning> — acknowledged`. result: PASS alone does not finish Stage 3.",
+      "expectations": [
+        "Shows every warning in the quiz",
+        "Logs the warning under ## Ticket warnings in decisions.md",
+        "Uses the — acknowledged or — fixed: <change> suffix",
+        "Does not treat result: PASS as permission to skip the warning"
+      ],
+      "files": []
+    },
+    {
+      "id": 36,
+      "name": "same-file warning adds an edge",
+      "prompt": "$grill-to-tickets continue member-export. The checker prints result: PASS with one warning: issues/01-export-members.md and issues/02-csv-download.md both change \"src/lib/rows.mjs\" and neither transitively blocks the other.",
+      "expected_output": "Resolve the warning in the quiz: if 02 consumes 01's change to src/lib/rows.mjs, add 01 to 02's **Blocked by:** and re-run the checker with --write-budget until the warning clears; if the changes are genuinely independent, keep the tickets unordered and log the warning under ## Ticket warnings as `<warning> — acknowledged`.",
+      "expectations": [
+        "Treats the same-file warning as an edge-or-acknowledge decision in the quiz",
+        "Adds the blocking edge when the later ticket consumes the earlier ticket's change",
+        "Re-runs the checker with --write-budget after the edge and confirms the warning clears",
+        "Logs the warning under ## Ticket warnings when it stays unordered"
+      ],
+      "files": []
+    },
+    {
+      "id": 37,
+      "name": "above 15 tickets proposes a split",
+      "prompt": "$grill-to-tickets continue platform-migration. The gate returned SHIP. The draft breakdown is 18 tickets, all under .scratch/platform-migration/issues/.",
+      "expected_output": "The checker prints result: PASS with the warning that the feature has 18 tickets and should be split into separate feature slugs. In the quiz, propose the split — for example platform-migration-core for the first deliverable and platform-migration-followup for the rest — and log the warning under ## Ticket warnings as `<warning> — fixed: <change>` or `<warning> — acknowledged` with the reason to keep one feature.",
+      "expectations": [
+        "Reports the above-15-tickets warning in the quiz",
+        "Proposes splitting the feature into separate feature slugs",
+        "Logs the warning under ## Ticket warnings with the fixed or acknowledged suffix"
+      ],
+      "files": []
+    },
+    {
+      "id": 38,
+      "name": "handoff recommends an implementer from the DAG",
+      "prompt": "$grill-to-tickets continue member-export. The checker's final run shows wave 0: 01, wave 1: 02, 03, 04; maximum wave width 3; critical-path length 2.",
+      "expected_output": "Print the handoff in order: commit any docs/reuse-catalog.md change, /clear, then the DAG summary — waves, maximum wave width, critical-path length, and recommended implementer — between /clear and the implementer commands, recommending agy-implement or opencode-implement for width 3 and naming the skills without a leading slash. Then /subagent-implement .scratch/member-export/ with /agy-implement and /opencode-implement as the alternatives.",
+      "expectations": [
+        "Prints the DAG summary and recommended implementer after /clear and before the implementer commands",
+        "Recommends agy-implement or opencode-implement for a maximum wave width of 3",
+        "Names the recommended skills without a leading slash",
+        "Keeps the Commit -> /clear -> /subagent-implement order"
       ],
       "files": []
     }

@@ -45,12 +45,12 @@ describe("grill-to-tickets composite skill contract", () => {
     }
   });
 
-  it("inline-executes the five child skills and hands the tickets to a later implementer run", async () => {
+  it("inline-executes the three stage skills and two owned formats and hands the tickets to a later implementer run", async () => {
     for (const file of skillFiles) {
       const content = await readFile(file, "utf8");
       assert.match(content, /inline/i, "must instruct inline execution");
-      for (const child of ["grilling", "domain-modeling", "to-spec", "scrutinize", "to-tickets"]) {
-        assert.match(content, new RegExp(child), `must name child skill ${child}`);
+      for (const item of ["grilling", "domain-modeling", "scrutinize", "spec-format", "ticket-format"]) {
+        assert.match(content, new RegExp(item), `must name stage skill or owned format ${item}`);
       }
       assert.match(
         content,
@@ -107,6 +107,7 @@ describe("grill-to-tickets composite skill contract", () => {
     for (const dir of skillDirs) {
       const log = await readFile(path.resolve(dir, "references/decision-log.md"), "utf8");
       assert.match(log, /^## State$/m, "the log carries run State");
+      assert.match(log, /^## Preflight$/m, "the log carries Preflight entries");
       assert.match(log, /waiting on/);
       assert.match(log, /decided: open/);
       assert.match(log, /before you post the next\s+round/);
@@ -359,7 +360,56 @@ describe("grill-to-tickets composite skill contract", () => {
     }
   });
 
-  it("preflights the five stage skills across install locations and keeps the tracker local", async () => {
+  it("runs Stage 3 as draft, --write-budget, fix, quiz, re-run, and settles every warning in the log", async () => {
+    for (const file of skillFiles) {
+      const content = await readFile(file, "utf8");
+      const stage3 = content.slice(content.indexOf("## Stage 3"), content.indexOf("## Stop"));
+      assert.match(
+        stage3,
+        /draft[\s\S]*--write-budget[\s\S]*fix[\s\S]*quiz/i,
+        "Stage 3 orders draft -> --write-budget -> fix errors -> quiz",
+      );
+      assert.match(
+        stage3,
+        /Re-run the checker after every change[^\n]*--write-budget/,
+        "each change is re-checked with --write-budget",
+      );
+      assert.match(
+        stage3,
+        /Reuse[\s\S]*Seam[\s\S]*Context[\s\S]*Budget[\s\S]*story-coverage\s+table[\s\S]*budget\s+table[\s\S]*DAG\s+summary[\s\S]*warning/i,
+        "the quiz shows each ticket's Reuse, Seam, Context, and Budget, the coverage and budget tables, the DAG summary, and every warning",
+      );
+      assert.match(stage3, /`result: PASS`/);
+      assert.match(stage3, /## Ticket warnings/);
+      assert.match(stage3, /— acknowledged/);
+      assert.match(stage3, /— fixed: <change>/);
+      assert.match(stage3, /user\s+approves/i);
+    }
+    for (const dir of skillDirs) {
+      const log = await readFile(path.resolve(dir, "references/decision-log.md"), "utf8");
+      assert.match(log, /^## Ticket warnings$/m, "the log carries Ticket warnings entries");
+      assert.match(log, /— acknowledged/);
+      assert.match(log, /— fixed: <change>/);
+    }
+  });
+
+  it("prints the DAG summary and recommended implementer between /clear and the implementer commands", async () => {
+    for (const file of skillFiles) {
+      const content = await readFile(file, "utf8");
+      const handoff = content.slice(content.indexOf("## Stop — Handoff"));
+      const clearIndex = handoff.indexOf("/clear");
+      const implementerIndex = handoff.indexOf("/subagent-implement");
+      assert.ok(clearIndex !== -1 && implementerIndex !== -1, "the handoff has /clear and the implementer command");
+      const between = handoff.slice(clearIndex + "/clear".length, implementerIndex);
+      assert.match(between, /DAG summary/i, "the DAG summary sits after /clear");
+      assert.match(between, /recommended implementer/i, "the recommendation sits after /clear");
+      const recommendation = between.split("\n").find((line) => /recommended implementer/i.test(line));
+      assert.ok(recommendation, "the DAG summary carries the recommendation line");
+      assert.doesNotMatch(recommendation, /\//, "the recommended skills carry no leading slash");
+    }
+  });
+
+  it("preflights the three stage skills across install locations and keeps the tracker local", async () => {
     for (const file of skillFiles) {
       const content = await readFile(file, "utf8");
       const preflight = content.slice(content.indexOf("## Preflight"), content.indexOf("## Feature-Scoped Storage"));
@@ -376,15 +426,20 @@ describe("grill-to-tickets composite skill contract", () => {
       for (const [source, skill] of [
         ["mattpocock/skills", "grilling"],
         ["mattpocock/skills", "domain-modeling"],
-        ["mattpocock/skills", "to-spec"],
-        ["mattpocock/skills", "to-tickets"],
         ["thananon/9arm-skills", "scrutinize"],
       ]) {
         assert.ok(preflight.includes(`npx skills add ${source} --skill ${skill}`), `install line for ${skill}`);
       }
+      assert.ok(!preflight.includes("to-spec"), "no install line for to-spec");
+      assert.ok(!preflight.includes("to-tickets"), "no install line for to-tickets");
+      assert.match(preflight, /skills-lock\.json/);
+      assert.match(preflight, /computedHash/);
+      assert.match(preflight, /~\/\.agents\/\.skill-lock\.json/);
+      assert.match(preflight, /skillFolderHash/);
+      assert.match(preflight, /no lock entry/);
+      assert.match(preflight, /npx skills check/);
       assert.match(content, /at the\s+path Preflight found/);
       assert.match(content, /local files are the tracker/);
-      assert.match(content, /`\/setup-matt-pocock-skills`, write the local artifact instead/);
     }
   });
 
@@ -431,5 +486,170 @@ describe("grill-to-tickets composite skill contract", () => {
     assert.match(guide, /^## ภาษาไทย \/ Thai\s*$/m);
     assert.match(guide, /^## English \/ ภาษาอังกฤษ\s*$/m);
     assert.match(guide, /npx skills add ArrayaWongsaita\/skills --skill grill-to-tickets/);
+  });
+
+  it("owns spec-format.md adapted from to-spec with upstream source line and license", async () => {
+    for (const dir of skillDirs) {
+      const specFormatPath = path.resolve(dir, "references/spec-format.md");
+      await fileExists(specFormatPath);
+      const content = await readFile(specFormatPath, "utf8");
+
+      // Opens with source line naming mattpocock/skills, skill path, computedHash as sha256 folder hash
+      const firstLine = content.split("\n")[0];
+      assert.match(firstLine, /mattpocock\/skills/);
+      assert.match(firstLine, /skills\/engineering\/to-spec\/SKILL\.md/);
+      assert.match(firstLine, /3fa1a0695d4ea242fae9e569e4d22aa1788623197abb33bfadafae7315789bbf/);
+      assert.match(firstLine, /sha256 folder hash/);
+      assert.match(firstLine, /\[UPSTREAM-LICENSE\.md\]\(UPSTREAM-LICENSE\.md\)/);
+
+      // UPSTREAM-LICENSE.md exists and contains upstream MIT notice verbatim
+      const licensePath = path.resolve(dir, "references/UPSTREAM-LICENSE.md");
+      await fileExists(licensePath);
+      const license = await readFile(licensePath, "utf8");
+      assert.match(license, /^MIT License\s+Copyright \(c\) 2026 Matt Pocock/m);
+      assert.match(license, /Permission is hereby granted, free of charge/);
+
+      // Process & template
+      assert.match(content, /explore/i);
+      assert.match(content, /seam/i);
+      for (const section of [
+        "Problem Statement",
+        "Solution",
+        "User Stories",
+        "Implementation Decisions",
+        "Testing Decisions",
+        "Out of Scope",
+        "Further Notes",
+      ]) {
+        assert.match(content, new RegExp(`## ${section}`));
+      }
+      assert.match(content, /### Reuse Plan/);
+      assert.match(content, /every decision in the log|every logged decision/i);
+      assert.match(content, /blind-spot assumption/i);
+      assert.match(content, /heading.*never.*repeat|unique/i);
+      assert.match(content, /bold lines/i);
+      assert.match(content, /### Changed tests and wording/);
+
+      // No tracker, label, or /setup-matt-pocock-skills
+      assert.doesNotMatch(content, /tracker/i);
+      assert.doesNotMatch(content, /ready-for-agent/i);
+      assert.doesNotMatch(content, /\/setup-matt-pocock-skills/);
+    }
+  });
+
+  it("owns ticket-format.md adapted from to-tickets with upstream source line and license", async () => {
+    for (const dir of skillDirs) {
+      const ticketFormatPath = path.resolve(dir, "references/ticket-format.md");
+      await fileExists(ticketFormatPath);
+      const content = await readFile(ticketFormatPath, "utf8");
+
+      // Opens with source line naming mattpocock/skills, skill path, computedHash as sha256 folder hash
+      const firstLine = content.split("\n")[0];
+      assert.match(firstLine, /mattpocock\/skills/);
+      assert.match(firstLine, /skills\/engineering\/to-tickets\/SKILL\.md/);
+      assert.match(firstLine, /bf5e6ebcb4f1272de0c188d5b3901f265a03d1fa9935a21a7a56938e21e2e761/);
+      assert.match(firstLine, /sha256 folder hash/);
+      assert.match(firstLine, /\[UPSTREAM-LICENSE\.md\]\(UPSTREAM-LICENSE\.md\)/);
+
+      // Process & vertical slices
+      assert.match(content, /vertical slice/i);
+      assert.match(content, /prefactor/i);
+      assert.match(content, /expand–contract|expand-contract/i);
+      assert.match(content, /quiz/i);
+      assert.match(content, /# <NN>:/);
+      assert.match(content, /\*\*What to build:\*\*/);
+      assert.match(content, /\*\*Blocked by:\*\*/);
+
+      // Acceptance criteria rules
+      assert.match(content, /suite.*typecheck.*lint.*not acceptance criteria|not acceptance criteria/i);
+      assert.match(content, /testable statement/i);
+      assert.match(content, /no file paths|avoid specific file paths/i);
+
+      // No tracker, label, or /setup-matt-pocock-skills
+      assert.doesNotMatch(content, /tracker/i);
+      assert.doesNotMatch(content, /triage label/i);
+      assert.doesNotMatch(content, /\/setup-matt-pocock-skills/);
+    }
+  });
+
+  it("ticket-format.md's quiz step shows Budget and the checker's tables, DAG summary, and warnings, as Stage 3 does", async () => {
+    for (const dir of skillDirs) {
+      const content = await readFile(path.resolve(dir, "references/ticket-format.md"), "utf8");
+      const from = content.indexOf("### 4. Quiz the user");
+      const to = content.indexOf("### 5.", from);
+      assert.ok(from >= 0 && to > from, "ticket-format.md has a quiz step between ### 4. and ### 5.");
+      const quiz = content.slice(from, to);
+
+      assert.match(quiz, /^- \*\*Budget\*\*:/m, "the quiz lists each ticket's Budget line");
+      assert.match(quiz, /story-coverage table/, "the quiz shows the checker's story-coverage table");
+      assert.match(quiz, /budget table/, "the quiz shows the checker's budget table");
+      assert.match(quiz, /DAG summary[\s\S]{0,80}recommended implementer/, "the quiz shows the DAG summary with the recommended implementer");
+      assert.match(quiz, /every warning/, "the quiz shows every warning");
+      assert.match(quiz, /## Ticket warnings/, "each warning is logged under ## Ticket warnings");
+      assert.match(quiz, /acknowledged[\s\S]{0,40}fixed/, "each warning is logged as acknowledged or fixed");
+      assert.match(quiz, /--write-budget/, "the checker is re-run with --write-budget after each change");
+    }
+  });
+
+  it("points SKILL.md, design-review-gate, and reuse-pass at owned formats", async () => {
+    for (const file of skillFiles) {
+      const content = await readFile(file, "utf8");
+
+      // Intro and diagram
+      assert.match(content, /spec-format\.md/);
+      assert.match(content, /ticket-format\.md/);
+      assert.match(content, /locate the three stage skills/);
+      assert.doesNotMatch(content, /five stage skills/);
+
+      // Inline Execution
+      const inlineSection = content.slice(content.indexOf("## Inline Execution"), content.indexOf("## Preflight"));
+      assert.match(inlineSection, /Stages 0, 1, and 3 run \*\*inline\*\*/);
+      assert.match(inlineSection, /at the\s+path Preflight found/);
+      for (const skill of ["grilling", "domain-modeling", "scrutinize"]) {
+        assert.match(inlineSection, new RegExp(skill));
+      }
+      assert.match(inlineSection, /spec-format\.md/);
+      assert.match(inlineSection, /ticket-format\.md/);
+      assert.doesNotMatch(inlineSection, /tracker/i);
+
+      // Feature-Scoped Storage carries "local files are the tracker"
+      const storageSection = content.slice(content.indexOf("## Feature-Scoped Storage"), content.indexOf("## Stage 0"));
+      assert.match(storageSection, /local files are the tracker/);
+
+      // Stage 1 follows spec-format.md
+      const stage1 = content.slice(content.indexOf("## Stage 1"), content.indexOf("## Stage 2"));
+      assert.match(stage1, /spec-format\.md/);
+      assert.match(stage1, /every\s+decision in the log appears in it/);
+      assert.match(stage1, /### Reuse Plan/);
+
+      // Stage 2 rework names Stage 1
+      const stage2 = content.slice(content.indexOf("## Stage 2"), content.indexOf("## Stage 3"));
+      assert.match(stage2, /re-run Stage 1/);
+      assert.doesNotMatch(stage2, /re-run `?to-spec`?/);
+
+      // Stage 3 follows ticket-format.md
+      const stage3 = content.slice(content.indexOf("## Stage 3"), content.indexOf("## Stop"));
+      assert.match(stage3, /ticket-format\.md/);
+      assert.match(stage3, /Re-run the checker after every change/);
+      assert.match(stage3, /story-coverage table/);
+      assert.match(stage3, /`result: PASS`/);
+    }
+
+    for (const dir of skillDirs) {
+      // design-review-gate.md
+      const gate = await readFile(path.resolve(dir, "references/design-review-gate.md"), "utf8");
+      assert.match(gate, /Stage 3 \(`ticket-format\.md`\)/);
+      assert.match(gate, /re-run Stage 1 inline/);
+      assert.match(gate, /Stage 1 cannot/);
+      assert.match(gate, /re-run Stage 1 and re-review/);
+      assert.match(gate, /re-run Stage 1 with the finding/);
+      assert.doesNotMatch(gate, /`to-spec`/);
+      assert.doesNotMatch(gate, /`to-tickets`/);
+
+      // reuse-pass.md line 99
+      const reusePass = await readFile(path.resolve(dir, "references/reuse-pass.md"), "utf8");
+      assert.match(reusePass, /`spec-format\.md`'s rule/);
+      assert.doesNotMatch(reusePass, /`to-spec`'s rule/);
+    }
   });
 });

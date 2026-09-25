@@ -8,7 +8,7 @@
 
 ## 1. subagent-implement คืออะไรและมีไว้สำหรับทำอะไร?
 
-`subagent-implement` เป็น **Implementation Orchestrator Skill** ที่รับชุด Tickets ที่ผ่านการวางแผนและตรวจสอบมาแล้วจาก `grill-to-tickets` (หรือ `to-tickets`) ในโฟลเดอร์ `.scratch/<feature-slug>/issues/` แล้วนำมาขับเคลื่อนให้กลายเป็นโค้ดจริงที่ทำงานได้
+`subagent-implement` เป็น **Implementation Orchestrator Skill** ที่รับชุด Tickets ที่ผ่านการวางแผนและตรวจสอบมาแล้วจาก `grill-to-tickets` ในโฟลเดอร์ `.scratch/<feature-slug>/issues/` แล้วนำมาขับเคลื่อนให้กลายเป็นโค้ดจริงที่ทำงานได้
 
 ### จุดประสงค์หลักและคุณสมบัติเด่น
 1. **รักษา Context ของ Main Agent ให้สะอาดและบาง (Preserve Main Agent Context):**
@@ -115,6 +115,15 @@ Stop: Handoff (ส่งมอบ integration branch พร้อมคำสั
      ```text
      /review-to-pr
      ```
+
+---
+
+### Seam, Context และการบันทึก budget ของ ticket
+
+- **Seam:** worker ใช้ `**Seam:**` ของ ticket แบบ **verbatim** เป็นขอบเขตที่เขียนเทสต์ ไม่เลือก seam เอง — orchestrator ส่ง seam ที่ Planning เลือกไว้ให้ใน prompt
+- **Context:** orchestrator สร้าง **read list** ลงใน prompt ของ worker จากบรรทัด `**Context:**` ของ ticket โดยแยกเป็น read / change / create (worker รับรายการนี้ไปอ่าน ไม่ได้สร้างเอง); `spec §` refs กลายเป็นรายการ section ที่อ่าน และไฟล์ read-only ที่ยังไม่ถูก track ใน worktree จะถูกส่งเป็น absolute path จาก main checkout ของ project
+- **Path rule:** พาธที่อยู่ใน worktree ของ worker เขียนเป็น relative; พาธที่อยู่นอก worktree (spec แม่, ADR, ไฟล์ read-only ที่ untracked) เขียนเป็น absolute
+- **การบันทึก budget:** `status.md` เก็บ `budget_estimate` ของแต่ละ ticket (ข้อความ `**Budget:**` แบบ **verbatim** หรือ `none` ถ้า ticket ไม่มี) คู่กับ `usage_total` ซึ่งเป็นผลรวม token ที่ worker รายงานของ ticket นั้น จากทุก usage report บน path ที่ส่ง ticket สำเร็จ รวมทุก dispatch และทุก resume บันทึกตามที่รายงาน และอาจรวม cache แล้ว (cache-inclusive); `verifier_usage_total` เก็บแยกสำหรับ verifier dispatch; ถ้า harness ไม่รายงาน usage จะเป็น `unknown`
 
 ---
 

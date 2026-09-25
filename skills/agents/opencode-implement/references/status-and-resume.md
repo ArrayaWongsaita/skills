@@ -10,9 +10,9 @@ A ticket becomes `BLOCKED` when:
   `--opencode-only` / `--no-fallback`);
 - the ticket is genuinely too large even for the resolved model's context
   window and `--opencode-only` / `--no-fallback` is set
-  (`TICKET_TOO_LARGE_FOR_CONTEXT` — a rare runtime edge case, not a
-  planning-time prediction, now that there is no context-budget estimate at
-  Stage 0);
+  (`TICKET_TOO_LARGE_FOR_CONTEXT` — a rare runtime edge case; the Budget line
+  makes it rarer without ruling it out, and it was never a planning-time
+  prediction);
 - its integration conflict encodes a design decision
   (`INTEGRATION_DESIGN_CONFLICT`).
 
@@ -65,9 +65,10 @@ or → `BLOCKED`). It holds:
   escalated — `sessionID`s are recorded either way, for debugging),
   `attempts` (verification-failure retries against whichever path currently
   holds the ticket), `opencode_retries` (`opencode`-process-failure retries
-  on the main path), `worker_branch`, `commit`, and `usage` (that ticket's
-  token usage on whichever path built it); plus a `catalog` note when a Reuse
-  Catalog entry was skipped because its symbol was not in the changed files
+  on the main path), `worker_branch`, `commit`, `usage` (that ticket's
+  token usage on whichever path built it), `budget_estimate`, and
+  `usage_total`; plus a `catalog` note when a Reuse Catalog entry was skipped
+  because its symbol was not in the changed files
 - the **integration branch ref** (name and current commit)
 - **cumulative usage split by path** — `tokens.main` (the `opencode` path,
   real spend against the resolved model) and `tokens.fallback` (the native
@@ -76,6 +77,19 @@ or → `BLOCKED`). It holds:
   since a worker now builds the whole ticket in one dispatch rather than a
   chain of sub-steps, and the main path spends real money instead of running
   at `cost: 0`
+
+`budget_estimate` is the ticket's Budget line verbatim — its `**Budget:**`
+field's text — or `none` when the ticket carries none. `usage_total` is the sum
+of every usage report on the **path that delivered the ticket** — the main
+`opencode` path or the native-subagent fallback — summed per invocation: every
+dispatch and every resume, because none is confirmed cumulative. For a
+`BLOCKED` ticket it is the sum over the path whose budget it exhausted (its
+final path); the record's `status` tells the two cases apart. It is `unknown`
+when the path reports no usage. Derive it from the ticket's existing `usage`:
+on the main path, `input + output + reasoning` over every `step_finish` event
+of every run — cache reads excluded; on the fallback path, the subagent's
+reported tokens. Existing `usage` fields stay; `usage_total` is the one
+comparable number derived from them.
 
 There is no per-turn state-header block. `status.md` is the whole record; a
 crash or a closed session loses nothing.

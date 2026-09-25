@@ -12,10 +12,10 @@ deprecated alias for one release, see below).
 ## Triggers
 
 1. **`TICKET_TOO_LARGE_FOR_CONTEXT`** — the ticket is genuinely too large even
-   for the resolved model's context window. With no planning-time
-   context-budget estimate to predict this in advance, it now surfaces only at
-   runtime, and is a **rare edge case** rather than the common case it once
-   was.
+   for the resolved model's context window. The Budget line makes this rarer —
+   an oversized ticket is visible in its measured read tokens before dispatch —
+   without ruling it out: it stays a **rare runtime edge case** rather than the
+   common case it once was.
 2. **Verification budget exhausted** — the ticket failed the verification gate
    `MAX_TICKET_ATTEMPTS = 3` times on the main `opencode` path.
 3. **`opencode` failures exhausted** — `opencode` failed (error event, non-zero

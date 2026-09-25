@@ -35,12 +35,24 @@ verifying → verified → integrated, or → BLOCKED). It holds:
 - the **wave table**: each wave, its tickets, and each ticket's serial/parallel
   disposition
 - per ticket: `status`, `conversation_id`, `model`, `attempts`,
-  `failover_attempts`, `worker_branch`, `commit`, and `usage`; plus a `catalog`
-  note when a Reuse Catalog entry was skipped because its symbol was not in the
-  changed files
+  `failover_attempts`, `worker_branch`, `commit`, `usage`, `budget_estimate`,
+  and `usage_total`; plus a `catalog` note when a Reuse Catalog entry was
+  skipped because its symbol was not in the changed files
 - the **integration branch ref** (name and current commit)
 - **cumulative per-provider usage** — input / output / thinking / cache-read /
   total tokens summed per provider across the run
+
+`budget_estimate` is the ticket's Budget line verbatim — its `**Budget:**`
+field's text — or `none` when the ticket carries none. `usage_total` is the sum
+of every usage report on the **path that delivered the ticket** — every model
+the ticket failed over to, so failover models included — summed per
+invocation: every dispatch and every resume, because none is confirmed
+cumulative. For a `BLOCKED` ticket it is the sum over the path whose budget it
+exhausted (its final path); the record's `status` tells the two cases apart. It
+is `unknown` when the envelope reports no usage. Derive it from the ticket's
+existing `usage` as `input_tokens + output_tokens + thinking_tokens` over each
+envelope — cache reads excluded. Existing `usage` fields stay; `usage_total` is
+the one comparable number derived from them.
 
 There is no per-turn state-header block. `status.md` is the whole record; a crash
 or a closed session loses nothing.

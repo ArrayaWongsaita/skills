@@ -180,7 +180,7 @@ integrates immediately, without waiting for its wave-mates or for the wave
 itself to close out.
 
 A wide-refactor expand–contract sequence is just ordered waves here:
-`to-tickets` stratifies it into waves (expand | migrate batches | contract),
-and this gate runs the full suite at every per-ticket integration and at every
-wave boundary — so it stays green step to step, with no wide-refactor-specific
-handling.
+`grill-to-tickets` stratifies it into waves (expand | migrate batches |
+contract), and this gate runs the full suite at every per-ticket integration and
+at every wave boundary — so it stays green step to step, with no
+wide-refactor-specific handling.

@@ -123,5 +123,85 @@ describe("subagent-implement eval suite contract", () => {
         assert.ok(hay(re), `no eval case covers: ${label}`);
       }
     });
+
+    it("covers the ticket Seam rule — verbatim when present, today's rule otherwise", async () => {
+      const { evals } = await evalsJson();
+      const hay = (re) => evals.some((e) => re.test(e.name) || re.test(e.expected_output));
+      assert.ok(
+        hay(/[Ss]eam[\s\S]{0,200}verbatim|verbatim[\s\S]{0,100}[Ss]eam/),
+        "a ticket's Seam is used verbatim as its test seam",
+      );
+      assert.ok(
+        hay(/without[^\n]{0,30}[Ss]eam|predates the new fields/i),
+        "a ticket without Seam, Context, or Budget runs as today",
+      );
+    });
+
+    it("covers the ticket Context rule — its spec refs drive the read list and an untracked read-only file comes from the main checkout", async () => {
+      const { evals } = await evalsJson();
+      const contextCase = evals.find(
+        (e) =>
+          /\*\*Context:\*\*/.test(e.prompt) &&
+          /read[- ]only[- ]sections|read only these sections|read list/i.test(e.expected_output) &&
+          /untracked/i.test(e.expected_output) &&
+          /main checkout/i.test(e.expected_output),
+      );
+      assert.ok(
+        contextCase,
+        "an eval case has Context drive the worker's read list and passes an untracked read-only file from the main checkout",
+      );
+      assert.match(
+        contextCase.expected_output,
+        /read[\s\S]{0,80}change[\s\S]{0,80}create/i,
+        "the case groups Context files as read, change, and create",
+      );
+    });
+
+    it("keeps every (from NN) and (edit from NN) Context item on a lower-numbered blocker, consistent across the prompt, the expected output, and the expectations", async () => {
+      const { evals } = await evalsJson();
+      const fromToken = /\((?:edit )?from (\d+)\)/g;
+      let checked = 0;
+      for (const item of evals) {
+        const contextStart = item.prompt.indexOf("**Context:**");
+        if (contextStart === -1) continue;
+        const promptTokens = [...item.prompt.slice(contextStart).matchAll(fromToken)];
+        if (promptTokens.length === 0) continue;
+        checked += 1;
+        const carrier = item.prompt.match(/\bTicket (\d+)\b[^*]*?carries \*\*Context:\*\*/);
+        assert.ok(carrier, `case ${item.id} names the ticket that carries the Context`);
+        for (const [token, blocker] of promptTokens) {
+          assert.ok(
+            Number(blocker) >= 1 && Number(blocker) < Number(carrier[1]),
+            `case ${item.id}: ${token} must name a ticket numbered from 01 and lower than ticket ${carrier[1]}`,
+          );
+        }
+        const promptItems = new Set(promptTokens.map(([token]) => token));
+        for (const [token] of item.expected_output.matchAll(fromToken)) {
+          assert.ok(
+            promptItems.has(token),
+            `case ${item.id}: expected_output names ${token}, which no Context item in the prompt carries`,
+          );
+        }
+        assert.ok(
+          item.expectations.some((line) => /\b(edit|new|from)\b[\s\S]*relative to the worktree/i.test(line)),
+          `case ${item.id}: an expectation says edit, new, and from paths are written relative to the worktree`,
+        );
+      }
+      assert.ok(checked >= 1, "an eval case carries a Context line with a (from NN) or (edit from NN) item");
+    });
+
+    it("covers per-ticket budget_estimate and usage_total, including a BLOCKED ticket", async () => {
+      const { evals } = await evalsJson();
+      const hay = (re) => evals.some((e) => re.test(e.name) || re.test(e.expected_output));
+      assert.ok(hay(/budget_estimate/), "records budget_estimate");
+      assert.ok(hay(/usage_total/), "records usage_total");
+      assert.ok(hay(/verifier_usage_total/), "records verifier_usage_total separately");
+      assert.ok(hay(/unknown/), "usage_total is unknown when unreported");
+      const blocked = evals.find(
+        (e) => /BLOCKED/.test(e.expected_output) && /usage_total/.test(e.expected_output),
+      );
+      assert.ok(blocked, "a BLOCKED ticket records usage_total on the path whose budget it exhausted");
+      assert.match(blocked.expected_output, /path whose budget|final path|exhausted/i);
+    });
   });
 });

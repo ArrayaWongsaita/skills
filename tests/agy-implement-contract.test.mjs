@@ -192,6 +192,118 @@ describe("agy-implement skill contract", () => {
     });
   });
 
+  describe("ticket 07 — grill-to-tickets ticket format and Seam rule", () => {
+    it("calls the input the grill-to-tickets ticket format, never the to-tickets local format", async () => {
+      for (const dir of skillDirs) {
+        const docs = await joinDocs(dir, "planning.md", "worktree-integration.md");
+        assert.match(docs, /the `grill-to-tickets` ticket format/);
+        assert.doesNotMatch(docs, /(?<!-)to-tickets/);
+      }
+    });
+
+    it("lists every ticket header field in the ticket-format block", async () => {
+      for (const dir of skillDirs) {
+        const planning = await readFile(path.resolve(dir, "references/planning.md"), "utf8");
+        const block = planning.match(/## 2\. Parse the ticket format[\s\S]*?(?=\n## )/);
+        assert.ok(block, "planning.md §2 ticket-format block present");
+        for (const field of [
+          "**What to build:**",
+          "**Blocked by:**",
+          "**Reuse:**",
+          "**Stories:**",
+          "**Seam:**",
+          "**Context:**",
+          "**Budget:**",
+          "**Status:**",
+          "- [ ]",
+        ]) {
+          assert.ok(block[0].includes(field), `ticket-format block lists ${field}`);
+        }
+      }
+    });
+
+    it("uses a ticket's Seam verbatim and today's rule otherwise", async () => {
+      for (const dir of skillDirs) {
+        const planning = await readFile(path.resolve(dir, "references/planning.md"), "utf8");
+        const step = planning.match(/## \d+\. Select a test seam per ticket[\s\S]*?(?=\n## )/);
+        assert.ok(step, "seam step present");
+        assert.match(step[0], /\*\*Seam:\*\*/);
+        assert.match(step[0], /\*\*Seam:\*\*[\s\S]{0,120}verbatim/i, "a ticket's Seam is used verbatim");
+        assert.match(step[0], /Testing Decisions/);
+        assert.match(step[0], /narrowest/);
+      }
+    });
+
+    it("the worker prompt template's Test seam line copies a ticket's Seam verbatim, and only a ticket without one gets the planning seam", async () => {
+      for (const dir of skillDirs) {
+        const scaffold = await readFile(path.resolve(dir, "references/prompt-scaffold.md"), "utf8");
+        const template = scaffold.match(/## Template[\s\S]*?(?=\n## Notes for the orchestrator)/);
+        assert.ok(template, "prompt-scaffold.md template section present");
+        const line = template[0].match(/^- Test seam:.*$/m);
+        assert.ok(line, "the template has a Test seam line");
+        assert.match(line[0], /\*\*Seam:\*\*[^\n]{0,40}verbatim/i, "the ticket's Seam line is copied verbatim");
+        assert.match(line[0], /without one[^\n]{0,80}planning/i, "only a ticket without a Seam gets the seam chosen in planning");
+      }
+    });
+  });
+
+  describe("ticket 08 — Context drives the worker prompt and touch-set", () => {
+    // Each doc states the path rule in one section: the scaffold's notes, the
+    // contract's invocation section.
+    const PATH_RULE_DOCS = [
+      ["references/prompt-scaffold.md", "## Notes for the orchestrator"],
+      ["references/agy-contract.md", "## Invocation"],
+    ];
+
+    it("the scaffold and the contract state the path rule, never absolute-everywhere", async () => {
+      for (const dir of skillDirs) {
+        for (const [rel, heading] of PATH_RULE_DOCS) {
+          const c = await readFile(path.resolve(dir, rel), "utf8");
+          assert.ok(c.includes(heading), `${rel} has the "${heading}" section`);
+          const section = c.slice(c.indexOf(heading)).split("\n## ")[0];
+          assert.doesNotMatch(
+            c,
+            /every path in the prompt is\s+absolute|absolute\s+paths\s+everywhere/i,
+            `${rel} drops the absolute-everywhere rule`,
+          );
+          assert.match(section, /relative to it|relative to this directory|inside the worker's working directory/i, `${rel} states relative paths resolve inside the working directory`);
+          assert.match(section, /outside it[\s\S]{0,200}absolute|absolute[\s\S]{0,200}outside it/i, `${rel} states paths outside the working directory are absolute`);
+          assert.match(c, /git ls-files --error-unmatch/, `${rel} names the untracked read-only test`);
+          assert.match(c, /main checkout/i, `${rel} resolves an untracked read-only file in the main checkout`);
+        }
+      }
+    });
+
+    it("Context fills the read-only-sections list and groups its files as read, change, and create", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/prompt-scaffold.md"), "utf8");
+        const notes = c.slice(c.indexOf("## Notes for the orchestrator"));
+        assert.match(notes, /\*\*Context:\*\*/, "the notes rule names Context");
+        assert.match(notes, /`spec §` refs[\s\S]{0,160}read only these sections|read only these sections[\s\S]{0,160}`spec §` refs/i, "spec refs become the read-only-sections list");
+        assert.match(notes, /read[\s\S]{0,80}change[\s\S]{0,80}create/i, "files are grouped read, change, and create");
+        assert.match(notes, /\(from NN\)/);
+        assert.match(notes, /\(edit\)/);
+        assert.match(notes, /\(edit from NN\)/);
+        assert.match(notes, /\(new\)/);
+        assert.match(notes, /without a context[\s\S]{0,160}today's|today's[\s\S]{0,160}without a context/i, "without Context, today's judgement applies");
+      }
+    });
+
+    it("planning.md §5 takes the touch-set from Context and estimates as today otherwise", async () => {
+      for (const dir of skillDirs) {
+        const planning = await readFile(path.resolve(dir, "references/planning.md"), "utf8");
+        const step = planning.match(/## 5\.[\s\S]*?(?=\n## )/);
+        assert.ok(step, "planning.md §5 present");
+        assert.match(step[0], /\*\*Context:\*\*/);
+        assert.match(step[0], /\(edit\)/);
+        assert.match(step[0], /\(new\)/);
+        assert.match(step[0], /\(edit from NN\)/);
+        assert.match(step[0], /estimate/i, "keeps the estimate for a ticket without Context");
+        assert.match(step[0], /advisory/i, "stays an advisory hint");
+      }
+    });
+  });
+
   describe("ticket 03 — single-ticket execution", () => {
     const refs = [
       "references/agy-contract.md",
@@ -508,5 +620,58 @@ describe("agy-implement skill contract", () => {
       assert.match(content, /re-open each invalidated ticket file/);
       assert.match(content, /un-tick/);
     });
+  });
+});
+
+describe("ticket 09 — budget_estimate and usage_total", () => {
+  it("status.md records budget_estimate and usage_total per ticket with the path, per-invocation, BLOCKED, and unknown rules", async () => {
+    for (const dir of skillDirs) {
+      const d = await readFile(path.resolve(dir, "references/status-and-resume.md"), "utf8");
+      const record = d.match(/- per ticket:[\s\S]*?(?=\n- the \*\*integration branch ref)/i);
+      assert.ok(record, "per-ticket record present");
+      assert.match(record[0], /budget_estimate/, "per-ticket record gains budget_estimate");
+      assert.match(record[0], /usage_total/, "per-ticket record gains usage_total");
+      assert.match(
+        d,
+        /budget_estimate[\s\S]{0,160}Budget line[\s\S]{0,80}verbatim|Budget line[\s\S]{0,80}verbatim[\s\S]{0,160}budget_estimate/i,
+        "budget_estimate is the Budget line verbatim",
+      );
+      assert.match(d, /`?none`?[\s\S]{0,160}budget_estimate|budget_estimate[\s\S]{0,200}`?none`?/i, "budget_estimate is none without a Budget line");
+      assert.match(
+        d,
+        /path that delivered[\s\S]{0,200}(failover|every model)/i,
+        "the delivering path covers every failover model",
+      );
+      assert.match(
+        d,
+        /every (dispatch|invocation)[\s\S]{0,80}resume/i,
+        "usage_total is summed per invocation, every dispatch and resume",
+      );
+      assert.match(
+        d,
+        /BLOCKED[\s\S]{0,240}path whose budget[\s\S]{0,160}exhausted|path whose budget[\s\S]{0,160}exhausted[\s\S]{0,240}BLOCKED/i,
+        "a BLOCKED ticket sums the path whose budget it exhausted",
+      );
+      assert.match(d, /`?unknown`?/, "usage_total is unknown when unreported");
+      assert.match(d, /existing `?usage`?[^\n]{0,80}(stays|stay|remain|kept)/i, "existing usage fields stay");
+      assert.match(
+        d,
+        /input_tokens\s*\+\s*output_tokens\s*\+\s*thinking_tokens/,
+        "derives usage_total from input + output + thinking tokens",
+      );
+      assert.match(d, /envelope/i, "the derivation runs over each envelope");
+    }
+  });
+
+  it("agy-contract.md's validation-probe table asks whether a --conversation resume's usage is cumulative", async () => {
+    for (const dir of skillDirs) {
+      const c = await readFile(path.resolve(dir, "references/agy-contract.md"), "utf8");
+      const probeTable = c.match(/## Provisional values pending validation probes[\s\S]*$/);
+      assert.ok(probeTable, "validation-probe table present");
+      const row = probeTable[0].match(/^\|[^\n]*cumulative[^\n]*$/im);
+      assert.ok(row, "probe table questions cumulativeness");
+      assert.match(row[0], /--conversation/, "the cumulativeness row names --conversation");
+      assert.match(row[0], /resum/i, "the cumulativeness row names a resume");
+    }
   });
 });

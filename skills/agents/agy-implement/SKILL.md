@@ -82,7 +82,7 @@ Follow [references/planning.md](references/planning.md). In short:
 
 1. **Resolve the target** and load every ticket, the parent `spec.md`, the
    feature `CONTEXT.md` / `adr/`, and the repo's own ADRs.
-2. **Parse** every ticket in the `to-tickets` local format.
+2. **Parse** every ticket in the `grill-to-tickets` ticket format.
 3. **Build and validate the dependency DAG** — acyclic, every blocker resolvable,
    numbering consistent with a topological order. A cycle, a missing blocker, or
    inconsistent numbering **halts the run before any other work**, naming the
@@ -96,10 +96,11 @@ Follow [references/planning.md](references/planning.md). In short:
    DI container, root schema, migrations directory, `package.json`, lockfiles, CI
    config, shared config). The user decides at approval; the integration gate is
    the correctness guarantee.
-6. **Select a test seam per ticket** from the parent spec's Testing Decisions
-   where they constrain it, otherwise the narrowest public boundary that
-   exercises the ticket's acceptance criteria. A ticket no isolated test can
-   exercise returns to planning rather than shipping without a test.
+6. **Select a test seam per ticket** — the ticket's own `**Seam:**` line where
+   it has one, otherwise from the parent spec's Testing Decisions where they
+   constrain it, then the narrowest public boundary that exercises the ticket's
+   acceptance criteria. A ticket no isolated test can exercise returns to
+   planning rather than shipping without a test.
 7. **Emit the Plan** — a wave table plus, per ticket: wave, estimated touch-set,
    serial/parallel proposal and reason, overlap flags, test seam, and retry
    budgets. The Plan has **no model column**. Pause for explicit approval, and

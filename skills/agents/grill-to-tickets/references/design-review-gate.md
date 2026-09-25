@@ -70,7 +70,7 @@ No paraphrasing, no intermediate synonyms. `SHIP` is the only passing verdict.
 
 ### `SHIP`
 
-Close the gate. Advance to Stage 3 (`to-tickets`) against the reviewed `spec.md`.
+Close the gate. Advance to Stage 3 (`ticket-format.md`) against the reviewed `spec.md`.
 
 ### `FIX_THEN_SHIP`
 
@@ -95,19 +95,19 @@ absent user story, an ambiguous boundary, an implementation decision stated too
 vaguely to break into tickets. Every fact needed to fix it was already settled in
 Stage 0.
 
-Route: re-run `to-spec` inline with the finding as added context. Consume one
+Route: re-run Stage 1 inline with the finding as added context. Consume one
 cycle. Re-review. Control stays in Stage 2.
 
 ### `REWORK` — decision-level
 
-The finding traces to **a decision no one has made** — `to-spec` cannot
+The finding traces to **a decision no one has made** — Stage 1 cannot
 synthesize it from `decisions.md` because Stage 0 never resolved it. A
 new actor appeared, a trade-off was skipped, a constraint surfaced that changes
 the approach.
 
 Route: return to Stage 0 and re-grill that specific decision (inline `grilling` +
 `domain-modeling`), logging the round in `decisions.md` and updating
-`CONTEXT.md` / `adr/` as it resolves, then re-run `to-spec` and re-review.
+`CONTEXT.md` / `adr/` as it resolves, then re-run Stage 1 and re-review.
 
 The cycle counter **carries over**. A backward transition to Stage 0 never resets
 it — decision-level rework spends the same six-cycle budget as everything else.
@@ -153,7 +153,7 @@ stall rule can see a repeat:
 | `reuse-duplicate-<symbol>` | the spec creates something the catalog already has | `FIX_THEN_SHIP` — change it to use or extend the catalogued module |
 | `reuse-unowned-<shape>` | logic two or more stories need, with no create-shared entry | `FIX_THEN_SHIP` — add a create-shared entry with its interface and consumers |
 | `reuse-speculative-<symbol>` | a create-shared entry below the create-shared bar | `FIX_THEN_SHIP` — downgrade it to create candidate |
-| `reuse-plan-missing` | the spec has no Reuse Plan although the survey settled the facts | `REWORK`, spec-level — re-run `to-spec` with the finding |
+| `reuse-plan-missing` | the spec has no Reuse Plan although the survey settled the facts | `REWORK`, spec-level — re-run Stage 1 with the finding |
 | `reuse-undecided-<symbol>` | extend-vs-new, or share-vs-separate, is a genuine trade-off nobody decided | `REWORK`, decision-level — return to Stage 0 for that one question |
 
 The create-shared bar and the Reuse Plan categories live in

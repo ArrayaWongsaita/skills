@@ -30,8 +30,12 @@ Agent(
 
 The worker's working directory is its worktree, already on the worker branch
 `subagent-implement/<feature-slug>/<NN>` — see the confirmed-behavior note
-below on what commit it's actually cut from. Every path in the prompt is
-absolute.
+below on what commit it's actually cut from. Paths in the prompt follow the
+path rule: a path inside that working directory is written relative to it; a
+path outside it — the parent `spec.md`, an ADR, an untracked read-only Context
+file — is absolute. A read-only path that `git ls-files --error-unmatch` does
+not match is untracked, so it resolves by absolute path in the project root's
+main checkout.
 
 **Confirmed (not "cut from integration HEAD" as originally assumed):** the
 worktree's git base is a **fixed commit for the whole environment**, not the
@@ -43,9 +47,8 @@ prompt after the first ticket must therefore open with an explicit sync
 step — merge (or cherry-pick) the current integration branch's tip into the
 worktree before doing anything else — rather than assuming the checkout
 already reflects prior tickets' work. Untracked `.scratch/<feature-slug>/`
-content is unaffected by this: it is present in every worktree regardless of
-the git base, so spec/CONTEXT/ADR/ticket files are always reachable by
-absolute path.
+content is unaffected by this: spec/CONTEXT/ADR/ticket files are passed by
+absolute path in the main checkout, not read from the worktree.
 
 ## Resolving the worker agent
 
@@ -112,5 +115,6 @@ references rather than the workflow:
 | `isolation: "worktree"` keeps a worktree that has commits, and its path + branch are recoverable by the orchestrator | dispatch a worker that commits, then locate the worktree and branch from the orchestrator |
 | ~~the worktree is cut from the orchestrator's current HEAD at dispatch~~ | **CONFIRMED FALSE.** Two dispatches, different orchestrator checkouts, both landed on the same fixed base commit. See the confirmed-behavior note above — every prompt past ticket 1 needs its own sync-onto-integration-tip step. |
 | `SendMessage` resumes a backgrounded worker with its context intact | resume one worker with a follow-up, confirm it still has the ticket context |
-| the final report carries token usage | inspect one completed worker's result; if present, roll it into `status.md` as a bonus |
+| the final report carries token usage | **CONFIRMED.** The completion notification's usage block carries the subagent's tokens; sum it per invocation into `status.md`'s `usage_total` |
+| a resumed worker's usage report is cumulative | resume one worker and compare the follow-up's usage block with the first; `usage_total` sums each invocation, so a cumulative figure would double-count |
 | `Explore` reads deeply enough to summarise a test diff | run one verifier; if its reading is too shallow, switch the verifier to `general-purpose` instructed to write nothing |

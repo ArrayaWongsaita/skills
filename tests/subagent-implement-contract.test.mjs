@@ -195,6 +195,115 @@ describe("subagent-implement skill contract", () => {
     });
   });
 
+  describe("grill-to-tickets ticket format and Seam rule", () => {
+    it("calls the input the grill-to-tickets ticket format, never the to-tickets local format", async () => {
+      for (const dir of skillDirs) {
+        const docs = await joinDocs(dir, "planning.md");
+        assert.match(docs, /the `grill-to-tickets` ticket format/);
+        assert.doesNotMatch(docs, /(?<!-)to-tickets/);
+      }
+    });
+
+    it("lists every ticket header field in the ticket-format block", async () => {
+      for (const dir of skillDirs) {
+        const planning = await readFile(path.resolve(dir, "references/planning.md"), "utf8");
+        const block = planning.match(/## 2\. Parse the ticket format[\s\S]*?(?=\n## )/);
+        assert.ok(block, "planning.md §2 ticket-format block present");
+        for (const field of [
+          "**What to build:**",
+          "**Blocked by:**",
+          "**Reuse:**",
+          "**Stories:**",
+          "**Seam:**",
+          "**Context:**",
+          "**Budget:**",
+          "**Status:**",
+          "- [ ]",
+        ]) {
+          assert.ok(block[0].includes(field), `ticket-format block lists ${field}`);
+        }
+      }
+    });
+
+    it("uses a ticket's Seam verbatim and today's rule otherwise", async () => {
+      for (const dir of skillDirs) {
+        const planning = await readFile(path.resolve(dir, "references/planning.md"), "utf8");
+        const step = planning.match(/## \d+\. Select a test seam per ticket[\s\S]*?(?=\n## )/);
+        assert.ok(step, "seam step present");
+        assert.match(step[0], /\*\*Seam:\*\*/);
+        assert.match(step[0], /\*\*Seam:\*\*[\s\S]{0,120}verbatim/i, "a ticket's Seam is used verbatim");
+        assert.match(step[0], /Testing Decisions/);
+        assert.match(step[0], /narrowest/);
+      }
+    });
+
+    it("the worker prompt template's Test seam line copies a ticket's Seam verbatim, and only a ticket without one gets the planning seam", async () => {
+      for (const dir of skillDirs) {
+        const scaffold = await readFile(path.resolve(dir, "references/prompt-scaffold.md"), "utf8");
+        const template = scaffold.match(/## Template[\s\S]*?(?=\n## Notes for the orchestrator)/);
+        assert.ok(template, "prompt-scaffold.md template section present");
+        const line = template[0].match(/^- Test seam:.*$/m);
+        assert.ok(line, "the template has a Test seam line");
+        assert.match(line[0], /\*\*Seam:\*\*[^\n]{0,40}verbatim/i, "the ticket's Seam line is copied verbatim");
+        assert.match(line[0], /without one[^\n]{0,80}planning/i, "only a ticket without a Seam gets the seam chosen in planning");
+      }
+    });
+  });
+
+  describe("ticket 08 — Context drives the worker prompt", () => {
+    // Each doc states the path rule in one section: the scaffold's notes, the
+    // contract's dispatch section.
+    const PATH_RULE_DOCS = [
+      ["references/prompt-scaffold.md", "## Notes for the orchestrator"],
+      ["references/dispatch-contract.md", "## Dispatching a worker"],
+    ];
+
+    it("the scaffold and the contract state the path rule, never absolute-everywhere", async () => {
+      for (const dir of skillDirs) {
+        for (const [rel, heading] of PATH_RULE_DOCS) {
+          const c = await readFile(path.resolve(dir, rel), "utf8");
+          assert.ok(c.includes(heading), `${rel} has the "${heading}" section`);
+          const section = c.slice(c.indexOf(heading)).split("\n## ")[0];
+          assert.doesNotMatch(
+            c,
+            /every path in the prompt is\s+absolute|absolute\s+paths\s+everywhere/i,
+            `${rel} drops the absolute-everywhere rule`,
+          );
+          assert.match(section, /relative to it|relative to this directory|inside the worker's working directory/i, `${rel} states relative paths resolve inside the working directory`);
+          assert.match(section, /outside it[\s\S]{0,200}absolute|absolute[\s\S]{0,200}outside it/i, `${rel} states paths outside the working directory are absolute`);
+          assert.match(c, /git ls-files --error-unmatch/, `${rel} names the untracked read-only test`);
+          assert.match(c, /main checkout/i, `${rel} resolves an untracked read-only file in the main checkout`);
+        }
+      }
+    });
+
+    it("Context fills the read-only-sections list and groups its files as read, change, and create", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/prompt-scaffold.md"), "utf8");
+        const notes = c.slice(c.indexOf("## Notes for the orchestrator"));
+        assert.match(notes, /\*\*Context:\*\*/, "the notes rule names Context");
+        assert.match(notes, /`spec §` refs[\s\S]{0,160}read only these sections|read only these sections[\s\S]{0,160}`spec §` refs/i, "spec refs become the read-only-sections list");
+        assert.match(notes, /read[\s\S]{0,80}change[\s\S]{0,80}create/i, "files are grouped read, change, and create");
+        assert.match(notes, /\(from NN\)/);
+        assert.match(notes, /\(edit\)/);
+        assert.match(notes, /\(edit from NN\)/);
+        assert.match(notes, /\(new\)/);
+        assert.match(notes, /without a context[\s\S]{0,160}today's|today's[\s\S]{0,160}without a context/i, "without Context, today's judgement applies");
+      }
+    });
+
+    it("the Working directory placeholder names the harness-made worktree without an absolute path", async () => {
+      for (const dir of skillDirs) {
+        const c = await readFile(path.resolve(dir, "references/prompt-scaffold.md"), "utf8");
+        const section = c.match(/## Working directory[\s\S]*?(?=\n## )/);
+        assert.ok(section, "Working directory section present");
+        assert.doesNotMatch(section[0], /absolute path to this worker's git worktree/i);
+        assert.match(section[0], /your current working directory/i);
+        assert.match(section[0], /worktree the harness created/i);
+      }
+    });
+  });
+
   describe("Stage 1 — dispatch, verify, integrate", () => {
     it("dispatch-contract.md documents the Agent-tool call and the agent/model resolution", async () => {
       for (const dir of skillDirs) {
@@ -406,5 +515,65 @@ describe("subagent-implement skill contract", () => {
       assert.match(content, /re-open each invalidated ticket file/);
       assert.match(content, /un-tick/);
     });
+  });
+});
+
+describe("ticket 09 — budget_estimate and usage_total", () => {
+  it("status.md records budget_estimate and usage_total per ticket with the path, per-invocation, BLOCKED, and unknown rules", async () => {
+    for (const dir of skillDirs) {
+      const d = await readFile(path.resolve(dir, "references/status-and-resume.md"), "utf8");
+      const record = d.match(/- per ticket:[\s\S]*?(?=\n- the \*\*integration branch ref)/i);
+      assert.ok(record, "per-ticket record present");
+      assert.match(record[0], /budget_estimate/, "per-ticket record gains budget_estimate");
+      assert.match(record[0], /usage_total/, "per-ticket record gains usage_total");
+      assert.match(record[0], /verifier_usage_total/, "per-ticket record gains verifier_usage_total");
+      assert.match(
+        d,
+        /budget_estimate[\s\S]{0,160}Budget line[\s\S]{0,80}verbatim|Budget line[\s\S]{0,80}verbatim[\s\S]{0,160}budget_estimate/i,
+        "budget_estimate is the Budget line verbatim",
+      );
+      assert.match(d, /`?none`?[\s\S]{0,160}budget_estimate|budget_estimate[\s\S]{0,200}`?none`?/i, "budget_estimate is none without a Budget line");
+      assert.match(
+        d,
+        /path that delivered[\s\S]{0,160}every (dispatch|invocation)[\s\S]{0,80}resume/i,
+        "usage_total sums the delivering path per invocation, every dispatch and resume",
+      );
+      assert.match(
+        d,
+        /BLOCKED[\s\S]{0,240}path whose budget[\s\S]{0,160}exhausted|path whose budget[\s\S]{0,160}exhausted[\s\S]{0,240}BLOCKED/i,
+        "a BLOCKED ticket sums the path whose budget it exhausted",
+      );
+      assert.match(d, /`?unknown`?/, "usage_total is unknown when unreported");
+      // The record has no `usage` field: the worker's reported subagent tokens are
+      // recorded as given, and usage_total is the one number kept for comparing tickets.
+      const paragraph = d.match(/`budget_estimate` is the ticket's Budget line[\s\S]*?(?=\n\n)/);
+      assert.ok(paragraph, "the budget_estimate / usage_total paragraph is present");
+      assert.doesNotMatch(paragraph[0], /`usage`/, "the paragraph does not refer to a usage field the record does not have");
+      assert.match(paragraph[0], /verifier_usage_total/, "the paragraph still defines verifier_usage_total");
+      assert.match(
+        paragraph[0],
+        /`usage_total`\s+is\s+the\s+one\s+number\s+kept\s+for\s+comparing\s+tickets/,
+        "usage_total is the one number kept for comparing tickets",
+      );
+      assert.match(d, /possibly\s+cache-inclusive/i, "the reported tokens are noted as possibly cache-inclusive");
+      assert.match(d, /no per-provider|there is no external provider/i, "keeps the no per-provider roll-up sentence");
+    }
+  });
+
+  it("dispatch-contract.md confirms the token-usage row and questions a resumed report's cumulativeness", async () => {
+    for (const dir of skillDirs) {
+      const c = await readFile(path.resolve(dir, "references/dispatch-contract.md"), "utf8");
+      const usageRow = c.match(/\|[^\n|]*final report carries token usage[^\n|]*\|[^\n]*\|/i);
+      assert.ok(usageRow, "the token-usage row is present");
+      assert.match(usageRow[0], /confirmed/i, "the token-usage row is marked confirmed");
+      assert.doesNotMatch(usageRow[0], /\bbonus\b/i, "the bonus wording is gone");
+      const points = c.match(/## Points to confirm[\s\S]*?(?=\n## |$)/);
+      assert.ok(points, "the Points to confirm table is present");
+      assert.match(
+        points[0],
+        /^\|[^|\n]*resum[^|\n]*usage[^|\n]*cumulative[^|\n]*\|/im,
+        "a point to confirm asks whether a resumed report's usage is cumulative",
+      );
+    }
   });
 });

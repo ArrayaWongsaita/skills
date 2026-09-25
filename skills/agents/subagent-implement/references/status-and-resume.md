@@ -32,14 +32,28 @@ verifying → verified → integrated, or → BLOCKED). It holds:
 - the **ticket table**: every ticket in dependency order, its blockers, and its
   current status
 - per ticket: `status`, `subagent_id`, `agent_type`, `model`, `attempts`,
-  `worker_branch`, `commit`; plus a `catalog` note when a Reuse Catalog entry
-  was skipped because its symbol was not in the changed files
+  `worker_branch`, `commit`, `budget_estimate`, `usage_total`, and
+  `verifier_usage_total`; plus a `catalog` note when a Reuse Catalog entry was
+  skipped because its symbol was not in the changed files
 - the **integration branch ref** (name and current commit)
 
-There is no per-provider usage roll-up — there is no external provider. There is
-no per-turn state-header block; `status.md` is the whole record, and a crash or a
-closed session loses nothing. If a worker's final report turns out to carry token
-usage, a cumulative total may be recorded as a bonus, but it gates nothing.
+There is no per-provider usage roll-up — there is no external provider. The
+per-ticket `usage_total` is the cost record, so there is no per-turn state-header
+block; `status.md` is the whole record, and a crash or a closed session loses
+nothing.
+
+`budget_estimate` is the ticket's Budget line verbatim — its `**Budget:**`
+field's text — or `none` when the ticket carries none. `usage_total` is the sum
+of every usage report on the **path that delivered the ticket**, over that
+path's own workers, summed per invocation — every dispatch and every resume,
+because none is confirmed cumulative. For a `BLOCKED` ticket it is the sum over
+the path whose budget it exhausted (its final path); the record's `status` tells
+the two cases apart. It is `unknown` when the harness reports no usage. The
+worker's reported subagent tokens are recorded as given and noted as possibly
+cache-inclusive. `verifier_usage_total` is the same sum over the verifier
+dispatches, recorded separately. `usage_total` is the one number kept for
+comparing tickets — the worker's reported subagent tokens, summed as described
+above.
 
 ## `/subagent-implement status [slug]` and `/subagent-implement list`
 

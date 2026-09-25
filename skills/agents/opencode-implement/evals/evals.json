@@ -539,6 +539,72 @@
         "Performs no catalog step at integration"
       ],
       "files": []
+    },
+    {
+      "id": 47,
+      "name": "a ticket's Seam is used verbatim as its test seam",
+      "prompt": "/opencode-implement .scratch/seam-demo/ — ticket 01 carries **Seam:** the checkFeature boundary over an in-memory ticket set; ticket 02 has no Seam line but the parent spec's Testing Decisions name a seam for its area. Present the Plan and show ticket 01's worker prompt Test seam section.",
+      "expected_output": "Ticket 01's test seam is its own **Seam:** line used verbatim — ticket 01's prompt Test seam section carries that boundary, not a re-derived one. Ticket 02 falls back to today's rule: the parent spec's Testing Decisions seam for its area, otherwise the narrowest public boundary that exercises its acceptance criteria.",
+      "expectations": [
+        "Uses ticket 01's **Seam:** line verbatim in its worker prompt's Test seam section",
+        "Does not re-derive or narrow a seam for a ticket that carries one",
+        "Falls back for ticket 02 to the Testing Decisions seam, then the narrowest public boundary",
+        "Shows each ticket's resulting seam in the Plan"
+      ],
+      "files": []
+    },
+    {
+      "id": 48,
+      "name": "a ticket without the new Seam, Context, or Budget fields runs as today",
+      "prompt": "/opencode-implement .scratch/legacy-demo/ — every ticket predates the new fields: no ticket carries Seam, Context, or Budget. Present the Plan and run wave 0.",
+      "expected_output": "The missing fields change nothing: the orchestrator selects each seam by today's rule — the parent spec's Testing Decisions where they constrain it, otherwise the narrowest public boundary — computes waves and touch-sets as before, and builds each worker prompt from the ticket and spec text by today's judgement.",
+      "expectations": [
+        "Treats a ticket without Seam, Context, or Budget exactly as before the fields existed",
+        "Selects seams from the parent spec's Testing Decisions, narrowing to the narrowest public boundary",
+        "Computes waves and touch-sets from the ticket text as today",
+        "Runs wave 0 without asking the user to add the missing fields"
+      ],
+      "files": []
+    },
+    {
+      "id": 49,
+      "name": "Context drives the worker's read list and an untracked read-only file comes from the main checkout",
+      "prompt": "/opencode-implement .scratch/graph-export/ with an approved Plan. Ticket 02 (blocked by 01, which creates `src/features/export/export-format.ts` and `src/features/export/register-export.ts`) carries **Context:** spec § Implementation Decisions › Export format · docs/decisions/0014-export-format.md · .scratch/graph-export/export-notes.md · (edit) src/features/export/build-export.ts · (from 01) src/features/export/export-format.ts · (edit from 01) src/features/export/register-export.ts · (new) src/features/export/export-index.ts. .scratch/graph-export/export-notes.md is not tracked by git. Show ticket 02's Plan touch-set and its worker prompt Context you need section.",
+      "expected_output": "Ticket 02's Plan touch-set is the Context line's (edit), (new), and (edit from 01) files as given, still only an advisory hint. The read only these sections list is the ticket's spec § refs, so the worker reads the Export format section rather than the whole spec. docs/decisions/0014-export-format.md is tracked, so it is written relative to the worktree. .scratch/graph-export/export-notes.md is an untracked read-only Context file, so it is passed by its absolute path in the project root's main checkout — git ls-files --error-unmatch does not match it. The Context files are grouped as read, change, and create: read lists the tracked path, the untracked path, and the (from 01) path; change lists the (edit) and (edit from 01) paths; create lists the (new) path. The (edit), (new), (from 01), and (edit from 01) paths are written relative to the worktree.",
+      "expectations": [
+        "Takes the Plan touch-set from the Context line's edit, new, and edit-from files",
+        "Builds the read only these sections list from the ticket's spec § refs",
+        "Passes the untracked read-only file by its absolute path in the main checkout",
+        "Groups the Context files as read, change, and create",
+        "Writes every edit, new, and from path relative to the worktree"
+      ],
+      "files": []
+    },
+    {
+      "id": 50,
+      "name": "records budget_estimate and usage_total from step_finish events or the fallback",
+      "prompt": "/opencode-implement .scratch/graph-export/ with an approved Plan. Ticket 01 carries **Budget:** read ~12k tokens · 6 criteria · 3 modules. Its main-path run emits three step_finish events with tokens {input: 9000, output: 700, reasoning: 300}, {input: 5000, output: 400, reasoning: 100}, {input: 2000, output: 100, reasoning: 50}; a verification-failure resume emits one more. Show ticket 01's status.md record after integration.",
+      "expected_output": "The record carries budget_estimate: read ~12k tokens · 6 criteria · 3 modules — the Budget line verbatim — and usage_total: input + output + reasoning over every step_finish event of every run on the main path, cache reads excluded, summed per invocation because none is confirmed cumulative. On the fallback path the same field records the subagent's reported tokens. The existing usage field stays; usage_total is the one comparable number derived from it.",
+      "expectations": [
+        "Records budget_estimate as the Budget line verbatim",
+        "Derives the main-path usage_total as input + output + reasoning over every step_finish event of every run",
+        "Sums every dispatch and resume because none is confirmed cumulative",
+        "Records the fallback subagent's reported tokens on the fallback path"
+      ],
+      "files": []
+    },
+    {
+      "id": 51,
+      "name": "a BLOCKED ticket sums usage_total over the path whose budget it exhausted",
+      "prompt": "/opencode-implement .scratch/graph-export/ --opencode-only. Ticket 02 carries **Budget:** read ~9k tokens · 4 criteria · 2 modules. It is BLOCKED (TICKET_TOO_LARGE_FOR_CONTEXT) on the main path after two runs and a resume. Show ticket 02's status.md record.",
+      "expected_output": "The record's status is BLOCKED (TICKET_TOO_LARGE_FOR_CONTEXT) and usage_total sums every usage report on the path whose budget it exhausted — the main opencode path, its final path — as input + output + reasoning over every step_finish event of every run, cache reads excluded, per invocation. budget_estimate is ticket 02's Budget line verbatim: read ~9k tokens · 4 criteria · 2 modules. The record's status tells the delivered and BLOCKED cases apart, and usage_total is unknown when the path reports no usage.",
+      "expectations": [
+        "Sums usage_total over the path whose budget the BLOCKED ticket exhausted",
+        "Derives the sum from step_finish input + output + reasoning",
+        "Records budget_estimate as the Budget line verbatim",
+        "Records usage_total as unknown when the path reports no usage"
+      ],
+      "files": []
     }
   ]
 }

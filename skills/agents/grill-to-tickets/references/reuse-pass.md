@@ -96,7 +96,7 @@ and removed; areas surveyed; bootstrap and pointer, when they happened.
 
 Write `### Reuse Plan` under the spec's Implementation Decisions. Name every
 module by its bare symbol — greppable, and free of file paths, keeping
-`to-spec`'s rule. Each reusable module the spec touches lands in exactly one
+`spec-format.md`'s rule. Each reusable module the spec touches lands in exactly one
 category:
 
 - **Use as-is** — `symbol` → the user stories that use it.

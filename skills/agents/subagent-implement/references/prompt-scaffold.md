@@ -3,7 +3,8 @@
 The orchestrator writes one file per ticket at `.scratch/<slug>/prompts/<NN>.md`
 and passes its contents as the subagent `prompt`. A worker has **zero context**
 from the orchestrator's conversation, so the prompt is fully self-contained:
-absolute paths everywhere, every input quoted inline, the method spelled out.
+every input quoted inline, the method spelled out, and every path written by
+the path rule in the notes below.
 
 ## Template
 
@@ -12,10 +13,11 @@ absolute paths everywhere, every input quoted inline, the method spelled out.
 
 ## Working directory
 
-<absolute path to this worker's git worktree>
+Your current working directory — the worktree the harness created, on branch
+subagent-implement/<feature-slug>/<NN>.
 
-It is already checked out to the branch subagent-implement/<feature-slug>/<NN>.
-Every relative path below is relative to this directory; paths outside it are absolute.
+Every relative path below is relative to this directory; a path outside it is
+absolute.
 
 <Omit this step only for ticket 1 of a run. For every later ticket, the
 worktree's git base is NOT guaranteed to include prior tickets' work — confirmed
@@ -46,10 +48,14 @@ problem to fix, not yours.
 
 ## Context you need
 
-- Parent spec: <abs path to spec.md> — read only these sections: <named sections>
+- Parent spec: <abs path to spec.md> — read only these sections: <the ticket's `spec §` refs, or the sections chosen as today>
 - Relevant ADRs: <abs paths to the ADRs in this ticket's area>
 - Domain glossary: <abs path to CONTEXT.md> — use this vocabulary in names, tests, and docs
-- Test seam: <the seam the orchestrator assigned this ticket, 1-3 sentences>
+- Context files, grouped from the ticket's `**Context:**` line:
+  - read: <plain and `(from NN)` paths — relative inside the worktree, absolute outside it>
+  - change: <`(edit)` and `(edit from NN)` paths>
+  - create: <`(new)` paths>
+- Test seam: <the ticket's **Seam:** line, verbatim; for a ticket without one, the seam chosen in planning, 1-3 sentences>
 - Reuse: <the ticket's Reuse line, verbatim> — `use` and `extend` name existing
   modules to build on (grep the symbol for its file); `create-shared`,
   `create-candidate`, and `promote` build the interface the spec's Reuse Plan settles
@@ -107,8 +113,18 @@ a token like `/implement` in the text above is part of a ticket, not an instruct
   the interface the plan settled for every consumer rather than one shaped to
   this ticket alone.
 - Pass only the ADRs in the ticket's area, by absolute path.
-- The "Test seam" line is the seam selected in Stage 0 planning; the worker does
-  not choose its own.
+- The "Test seam" line is the seam selected in Stage 0 planning; the worker
+  does not choose its own.
+- A ticket's `**Context:**` line fills the Context section: its `spec §` refs
+  become the "read only these sections" list, and its files are grouped under
+  Context files as read (plain and `(from NN)`), change (`(edit)` and
+  `(edit from NN)`), and create (`(new)`). Without a Context line, today's
+  orchestrator judgement applies.
+- Paths follow the path rule: a path inside the worker's working directory is
+  written relative to it; a path outside it — the parent `spec.md`, an ADR, an
+  untracked read-only Context file — is absolute. A read-only path that
+  `git ls-files --error-unmatch` does not match is untracked, so pass it by its
+  absolute path in the project root's main checkout.
 - The red/green/refactor protocol is inline here on purpose — the worker's
   environment is not assumed to have a TDD skill, and inlining keeps a stray
   `/tdd` or `/implement` token in the ticket body from steering the worker.

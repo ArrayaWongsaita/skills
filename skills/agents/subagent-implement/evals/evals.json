@@ -469,6 +469,71 @@
         "Keeps the read-only Reuse Catalog line"
       ],
       "files": []
+    },
+    {
+      "id": 38,
+      "name": "a ticket's Seam is used verbatim as its test seam",
+      "prompt": "/subagent-implement .scratch/seam-demo/ — ticket 01 carries **Seam:** the checkFeature boundary over an in-memory ticket set; ticket 02 has no Seam line but the parent spec's Testing Decisions name a seam for its area. Present the Plan.",
+      "expected_output": "Ticket 01's test seam is its own **Seam:** line used verbatim — the orchestrator does not re-derive it or narrow it. Ticket 02 falls back to today's rule: the parent spec's Testing Decisions seam for its area, otherwise the narrowest public boundary that exercises its acceptance criteria. The Plan shows each ticket's seam.",
+      "expectations": [
+        "Uses ticket 01's **Seam:** line verbatim as that ticket's test seam",
+        "Does not re-derive or narrow a seam for a ticket that carries one",
+        "Falls back for ticket 02 to the Testing Decisions seam, then the narrowest public boundary",
+        "Shows the resulting seam per ticket in the Plan"
+      ],
+      "files": []
+    },
+    {
+      "id": 39,
+      "name": "a ticket without the new Seam, Context, or Budget fields runs as today",
+      "prompt": "/subagent-implement .scratch/legacy-demo/ — every ticket predates the new fields: no ticket carries Seam, Context, or Budget. Present the Plan and run ticket 01.",
+      "expected_output": "The missing fields change nothing: the orchestrator selects each seam by today's rule — the parent spec's Testing Decisions where they constrain it, otherwise the narrowest public boundary — and composes the worker prompt from the ticket and spec text by today's judgement.",
+      "expectations": [
+        "Treats a ticket without Seam, Context, or Budget exactly as before the fields existed",
+        "Selects seams from the parent spec's Testing Decisions, narrowing to the narrowest public boundary",
+        "Composes the worker prompt from the ticket and spec text as today",
+        "Runs ticket 01 without asking the user to add the missing fields"
+      ],
+      "files": []
+    },
+    {
+      "id": 40,
+      "name": "Context drives the worker's read list and an untracked read-only file comes from the main checkout",
+      "prompt": "/subagent-implement .scratch/graph-export/ with an approved Plan. Ticket 02 (blocked by 01, which creates `src/features/export/export-format.ts` and `src/features/export/register-export.ts`) carries **Context:** spec § Implementation Decisions › Export format · docs/decisions/0014-export-format.md · .scratch/graph-export/export-notes.md · (edit) src/features/export/build-export.ts · (from 01) src/features/export/export-format.ts · (edit from 01) src/features/export/register-export.ts · (new) src/features/export/export-index.ts. .scratch/graph-export/export-notes.md is not tracked by git. Show ticket 02's worker prompt Context you need section.",
+      "expected_output": "The read only these sections list is ticket 02's spec § refs, so the worker reads the Export format section rather than the whole spec. docs/decisions/0014-export-format.md is tracked, so it is written relative to the worktree. .scratch/graph-export/export-notes.md is an untracked read-only Context file, so it is passed by its absolute path in the project root's main checkout — git ls-files --error-unmatch does not match it. The Context files are grouped as read, change, and create: read lists the tracked path, the untracked path, and the (from 01) path; change lists the (edit) and (edit from 01) paths; create lists the (new) path. The (edit), (new), (from 01), and (edit from 01) paths are written relative to the worktree.",
+      "expectations": [
+        "Builds the read only these sections list from the ticket's spec § refs",
+        "Passes the untracked read-only file by its absolute path in the main checkout",
+        "Groups the Context files as read, change, and create",
+        "Writes every edit, new, and from path relative to the worktree"
+      ],
+      "files": []
+    },
+    {
+      "id": 41,
+      "name": "records budget_estimate and usage_total per ticket, with a separate verifier total",
+      "prompt": "/subagent-implement .scratch/graph-export/ with an approved Plan. Ticket 01 carries **Budget:** read ~12k tokens · 6 criteria · 3 modules. Its worker reports subagent tokens on the first dispatch and again on one verification-failure resume; the verifier reports its own tokens. Show ticket 01's status.md record after integration.",
+      "expected_output": "The record carries budget_estimate: read ~12k tokens · 6 criteria · 3 modules — the Budget line verbatim — and usage_total: the worker's reported subagent tokens summed per invocation over the path that delivered ticket 01, so both the dispatch and the resume count because none is confirmed cumulative. The worker's reported tokens are recorded as given and noted as possibly cache-inclusive. verifier_usage_total is recorded separately. The worker's reported usage stays; usage_total is the one comparable number derived from it.",
+      "expectations": [
+        "Records budget_estimate as the Budget line verbatim",
+        "Sums usage_total per invocation over the path that delivered the ticket",
+        "Notes the worker's reported tokens as possibly cache-inclusive",
+        "Records verifier_usage_total separately"
+      ],
+      "files": []
+    },
+    {
+      "id": 42,
+      "name": "a BLOCKED ticket sums usage_total over the path whose budget it exhausted",
+      "prompt": "/subagent-implement .scratch/graph-export/ with an approved Plan. Ticket 02 carries **Budget:** read ~9k tokens · 4 criteria · 2 modules. It is BLOCKED (TICKET_VERIFICATION_FAILED) after three verification failures, and the harness reported no usage on its final dispatch. Show ticket 02's status.md record.",
+      "expected_output": "The record's status is BLOCKED (TICKET_VERIFICATION_FAILED) and usage_total sums every usage report on the path whose budget it exhausted — ticket 02's final path — over each dispatch and resume of that path. budget_estimate is ticket 02's Budget line verbatim: read ~9k tokens · 4 criteria · 2 modules. The record's status tells the delivered and BLOCKED cases apart, and usage_total is unknown when the harness reports no usage.",
+      "expectations": [
+        "Sums usage_total over the path whose budget the BLOCKED ticket exhausted",
+        "Records budget_estimate as the Budget line verbatim",
+        "Lets the record's status tell the delivered and BLOCKED cases apart",
+        "Records usage_total as unknown when the harness reports no usage"
+      ],
+      "files": []
     }
   ]
 }

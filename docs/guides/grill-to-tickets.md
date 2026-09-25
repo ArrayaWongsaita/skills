@@ -20,15 +20,20 @@
 
 ## 2. การพึ่งพา Skill อื่น (Dependencies) และการติดตั้ง
 
-`grill-to-tickets` เป็น Composite Skill ที่ทำงานโดยการสั่งรันแบบ **Inline Execution** (อ่านข้อกำหนดและทำตามขั้นตอนในบริบทเดียวกัน) ซึ่งพึ่งพา Sub-skills ดังต่อไปนี้:
+`grill-to-tickets` เป็น Composite Skill ที่ทำงานโดยการสั่งรันแบบ **Inline Execution** (อ่านข้อกำหนดและทำตามขั้นตอนในบริบทเดียวกัน) skill นี้ **owns รูปแบบ spec และ ticket เป็นของตัวเอง** แทนการพึ่งพา skill ที่เขียนสองรูปแบบนั้น:
+
+| ไฟล์รูปแบบที่ skill เป็นเจ้าของ | ที่มา | ใช้ในขั้นตอน |
+| :--- | :--- | :--- |
+| `references/spec-format.md` | ดัดแปลงจาก skill เขียน spec ของ `mattpocock/skills` พร้อมแนบ `references/UPSTREAM-LICENSE.md` | Stage 1 — เขียน `spec.md` ตามหัวข้อมาตรฐาน |
+| `references/ticket-format.md` | ดัดแปลงจาก skill แตก ticket ของ `mattpocock/skills` พร้อมแนบ `references/UPSTREAM-LICENSE.md` | Stage 3 — เขียน ticket ลง `issues/NN-<slug>.md` |
+
+และมี **stage skill** ที่ติดตั้งแยกอีก 3 ตัว ซึ่งเป็นวิธีทำงาน (method) ที่ skill นี้ทำตามแบบ inline:
 
 | ชื่อ Skill ที่พึ่งพา | เจ้าของ / Repository | หน้าที่ใน Workflow |
 | :--- | :--- | :--- |
 | **`grilling`** | `mattpocock/skills` | สัมภาษณ์ขุดคุ้ยความต้องการและทางเลือกในการออกแบบ (Stage 0) |
 | **`domain-modeling`** | `mattpocock/skills` | กำหนดคำศัพท์เฉพาะทาง, Ubiquitous Language และบันทึก ADR (Stage 0) |
-| **`to-spec`** | `mattpocock/skills` | สังเคราะห์ผลการตัดสินใจออกมาเป็นไฟล์ข้อกำหนด `spec.md` (Stage 1) |
 | **`scrutinize`** | `thananon/9arm-skills` | ตรวจสอบคุณภาพและช่องโหว่ของ Spec ใน Design Review Gate (Stage 2) |
-| **`to-tickets`** | `mattpocock/skills` | แตก Spec ออกเป็น vertical tracer-bullet tickets (Stage 3) |
 
 ### คำสั่งติดตั้งทั้งหมด
 
@@ -38,15 +43,13 @@
 # 1. ติดตั้งตัว skill หลัก (grill-to-tickets)
 npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 
-# 2. ติดตั้ง skills ที่พึ่งพา (Dependencies)
+# 2. ติดตั้ง stage skills ที่พึ่งพา (Dependencies)
 npx skills add mattpocock/skills --skill grilling
 npx skills add mattpocock/skills --skill domain-modeling
-npx skills add mattpocock/skills --skill to-spec
-npx skills add mattpocock/skills --skill to-tickets
 npx skills add thananon/9arm-skills --skill scrutinize
 ```
 
-ตอนเริ่ม (และตอน `continue`) skill จะทำ **Preflight** หา `SKILL.md` ของ skill ย่อยทั้ง 5 ตัวตามลำดับ `.agents/skills/` → `.claude/skills/` → `~/.agents/skills/` → `~/.claude/skills/` จึงใช้ได้ทั้งแบบติดตั้งใน project และแบบ global (`-g`) ถ้าขาดตัวไหนจะหยุดก่อน Stage 0 และพิมพ์คำสั่งติดตั้งเฉพาะตัวที่ขาด
+ตอนเริ่ม (และตอน `continue`) skill จะทำ **Preflight** หา `SKILL.md` ของ stage skill ทั้ง 3 ตัวตามลำดับ `.agents/skills/` → `.claude/skills/` → `~/.agents/skills/` → `~/.claude/skills/` จึงใช้ได้ทั้งแบบติดตั้งใน project และแบบ global (`-g`) ถ้าขาดตัวไหนจะหยุดก่อน Stage 0 และพิมพ์คำสั่งติดตั้งเฉพาะตัวที่ขาด สำหรับแต่ละตัวที่เจอ Preflight จะบันทึก path ที่เจอและค่า hash ที่ lock ของมันถืออยู่ (`skills-lock.json` ของ project หรือ `~/.agents/.skill-lock.json`) ตามที่ lock เขียนไว้ โดยไม่คำนวณหรือเทียบใหม่ ถ้าต้องเช็ก update ของ stage skill ใช้ `npx skills check`
 
 ---
 
@@ -86,14 +89,14 @@ docs/reuse-catalog.md
 Stage 0: Grill        reuse survey + grilling + domain-modeling  → CONTEXT.md, adr/, docs/reuse-catalog.md
    │ (หยุดรอการยืนยันจากผู้ใช้เมื่อคำถามหมด)
    ▼
-Stage 1: Spec         to-spec                     → spec.md
+Stage 1: Spec         spec-format.md               → spec.md
    ▼
-Stage 2: Design Review Gate   scrutinize          → design-review.md   (จำกัดงบ 6 รอบ)
+Stage 2: Design Review Gate   scrutinize (subagent ใหม่) → design-review.md   (จำกัดงบ 6 รอบ)
    │ (เมื่อผลเป็น SHIP)
    ▼
-Stage 3: Tickets      to-tickets                  → issues/NN-<slug>.md
+Stage 3: Tickets      ticket-format.md             → issues/NN-<slug>.md
    ▼
-Stop: Handoff message (commit ไฟล์วางแผน, /clear แล้ว /subagent-implement)
+Stop: Handoff message (commit catalog, /clear, DAG summary + recommended implementer แล้ว /subagent-implement)
 ```
 
 1. **Stage 0 — Grill (สัมภาษณ์และสร้างโมเดลโดเมน):**
@@ -106,7 +109,7 @@ Stop: Handoff message (commit ไฟล์วางแผน, /clear แล้�
    - **Blind-spot pass:** เมื่อไม่เหลือคำถามใน frontier จะไล่เช็ค 9 หมวดที่การสัมภาษณ์อาจไม่เคยแตะ (scope, data, flow, quality attributes เช่น performance/security, integrations, edge cases, constraints, terminology, completion signals) ให้คะแนนแต่ละหมวดเป็น `clear` / `partial` / `missing` / `n/a` ช่องว่างที่จะเปลี่ยน spec ได้กลายเป็นคำถามรอบสุดท้ายไม่เกิน 5 ข้อ ที่เหลือเขียนเป็นสมมติฐานให้เห็นชัด (ดัดแปลงจาก `/clarify` ของ GitHub Spec Kit)
    - เมื่อตัดสินใจครบแล้ว จะสรุปคำศัพท์ การตัดสินใจ ตาราง blind-spot พร้อมสมมติฐาน และการเปลี่ยนแปลงของ catalog แล้วหยุดรอคำยืนยันจากผู้ใช้ก่อนก้าวต่อไป
 2. **Stage 1 — Spec (จัดทำเอกสารข้อกำหนด):**
-   - รวบรวมผลการตัดสินใจจาก `decisions.md`, `CONTEXT.md` และ `adr/` มาเขียนเป็น `spec.md` ตามหัวข้อมาตรฐาน พร้อมกำหนด Test Seams (รอยต่อสำหรับทดสอบ) ทุกการตัดสินใจใน log ต้องปรากฏใน spec
+   - รวบรวมผลการตัดสินใจจาก `decisions.md`, `CONTEXT.md` และ `adr/` มาเขียนเป็น `spec.md` ตาม `references/spec-format.md` ซึ่งเป็นรูปแบบที่ skill เป็นเจ้าของเอง พร้อมกำหนด Test Seams (รอยต่อสำหรับทดสอบ) ทุกการตัดสินใจใน log ต้องปรากฏใน spec
    - ใต้ Implementation Decisions มี **Reuse Plan** บอกว่าแต่ละ module จะ ใช้ของเดิม / ขยายของเดิม / สร้างเป็น shared (พร้อม interface และผู้ใช้ที่ระบุชื่อ) / สร้างเป็น candidate / promote candidate / แยกไว้โดยตั้งใจ
    - เกณฑ์สร้าง shared: ต้องมีผู้ใช้จริงตั้งแต่ 2 story ขึ้นไป (หรือ caller เดิม 1 + story 1 หรือคุณยืนยันว่ามีฟีเจอร์ถัดไปใช้แน่) ถ้าไม่ถึงให้เป็น candidate ที่ออกแบบให้ดึงออกมาได้ภายหลัง
 3. **Stage 2 — Design Review Gate (ตรวจสอบการออกแบบ):**
@@ -126,16 +129,29 @@ Stop: Handoff message (commit ไฟล์วางแผน, /clear แล้�
      ```
    - เรื่อง reuse ห้ามเขียนเป็น acceptance checkbox เพราะ implementer ต้องมี test ใหม่รองรับทุก criterion ข้อ "ใช้ X" เขียน test ไม่ได้ ticket จะ verify ไม่ผ่านจนติด `BLOCKED`
    - ทุก ticket มีบรรทัด `**Stories:**` ต่อจาก `**Reuse:**` บอกเลข user story ใน spec ที่ ticket นั้นส่งมอบ เช่น `2, 5` หรือช่วง `3-6` (ticket prefactor ใช้ `none`)
-   - ก่อน quiz ให้รันสคริปต์ตรวจ ticket ที่มากับ skill:
+   - ทุก ticket มีบรรทัด `**Seam:**` (ขอบเขตทดสอบเดียวจาก Testing Decisions ของ spec), `**Context:**` (Read set ของ worker: `spec §` refs และไฟล์ พร้อม marker อ่านอย่างเดียว / `(edit)` / `(new)` / `(from NN)` / `(edit from NN)`) และ `**Budget:**` (ผลวัดของ checker: read tokens, จำนวน criteria, จำนวน modules) เรียงต่อจาก `**Stories:**` ตามลำดับ Seam → Context → Budget
+   - ก่อน quiz ให้รันสคริปต์ตรวจ ticket ที่มากับ skill พร้อม `--write-budget` เพื่อให้มันเขียน Budget line จากผลวัด:
      ```bash
-     node <โฟลเดอร์ของ skill>/scripts/check-tickets.mjs .scratch/<feature-slug>/
+     node <โฟลเดอร์ของ skill>/scripts/check-tickets.mjs .scratch/<feature-slug>/ --write-budget
      ```
-     สคริปต์ตรวจว่าทุก story มี ticket, `Stories` และ `Blocked by` ชี้ของที่มีจริง (blocker ต้องเลขต่ำกว่า), `Reuse` อยู่ต่อจาก `Blocked by` และใช้คำกริยาที่กำหนด, create-shared/promote ทุกตัวใน Reuse Plan มี ticket เจ้าของใบเดียวที่ block ticket อื่นที่ใช้ แก้จนขึ้น `result: PASS` แล้วแสดงตาราง story coverage ใน quiz และรันซ้ำทุกครั้งที่ quiz ทำให้ ticket เปลี่ยน
+     สคริปต์ตรวจว่าทุก story มี ticket, `Stories` และ `Blocked by` ชี้ของที่มีจริง (blocker ต้องเลขต่ำกว่า), `Reuse` อยู่ต่อจาก `Blocked by` และใช้คำกริยาที่กำหนด, create-shared/promote ทุกตัวใน Reuse Plan มี ticket เจ้าของใบเดียวที่ block ticket อื่นที่ใช้, และ Seam/Context/Budget ครบ เป็นบรรทัดเดียว เรียงถูก และอ้างถึงของจริง แก้จนขึ้น `result: PASS` แล้วแสดงตาราง story coverage, ตาราง budget, สรุป DAG และ warning ทุกตัวใน quiz
+   - warning ที่ checker ออกให้มี 3 แบบ และไม่เปลี่ยนผล `PASS` / `FAIL`: acceptance criterion ที่พูดถึงการรัน suite หรือ tool (`npm test`, `tests pass`, `typecheck passes`, `lint passes`, `suite passes`); ticket สองใบที่แก้ path เดียวกัน (`(edit)`, `(new)` หรือ `(edit from NN)`) โดยไม่มีใบไหน block อีกใบทางอ้อม (transitively); และ feature ที่มีเกิน 15 ticket
+   - warning ทุกตัวที่ checker รายงานต้องถูกบันทึกใต้ `## Ticket warnings` ใน `decisions.md` บรรทัดละหนึ่งตัว เป็น `<warning> — acknowledged` หรือ `<warning> — fixed: <change>` จึงจะถือว่า Stage 3 เสร็จ
+   - รัน checker ซ้ำด้วย `--write-budget` ทุกครั้งที่ quiz ทำให้ ticket เปลี่ยน
 5. **Stop — Handoff (ส่งมอบงาน):**
+   - พิมพ์ข้อความ handoff ตามลำดับ: หมายเหตุเรื่อง commit → `/clear` → **DAG summary** จาก checker (wave, ความกว้างสูงสุด, critical-path length) พร้อมบรรทัด `recommended implementer` ที่บอกว่า `subagent-implement`, `agy-implement` หรือ `opencode-implement` เหมาะกับ ticket set นี้ (ชื่อ skill ไม่มี slash นำหน้า) → คำสั่ง `/subagent-implement`
+   - `recommended implementer` เลือกจาก maximum wave width (จำนวน ticket มากสุดที่ทำพร้อมกันได้ใน wave เดียว): 1 → `subagent-implement`, 2 → ทั้งสามตัว, 3 ขึ้นไป → `agy-implement` หรือ `opencode-implement` เป็นคำแนะนำเท่านั้น คุณเป็นคนเลือกเอง
    - แสดงข้อความสรุปและแนะนำขั้นตอนสำหรับเซสชันถัดไป:
      ```text
      # 1. commit เฉพาะ docs/reuse-catalog.md / pointer ใน AGENTS.md ที่เปลี่ยน (implementer เริ่มได้เฉพาะ working tree ที่สะอาด; .scratch/ อยู่ในเครื่องและถูก git ignore จึงไม่ต้อง commit)
      /clear
+     # 2. วาง DAG summary สุดท้ายจาก checker
+     wave 0: 01
+     wave 1: 02, 03
+     maximum wave width: 2
+     critical-path length: 2
+     recommended implementer: subagent-implement, agy-implement, opencode-implement
+     # 3. implement ทั้งโฟลเดอร์ใน session ใหม่
      /subagent-implement .scratch/<feature-slug>/
      # หรือ /agy-implement หรือ /opencode-implement ด้วย argument เดียวกัน
      ```
@@ -159,6 +175,6 @@ Stop: Handoff message (commit ไฟล์วางแผน, /clear แล้�
 
 ## 5. ข้อควรระวังและคำแนะนำในการใช้งาน
 - **อย่าใช้เมื่อต้องการเขียนโค้ดทันที:** หากต้องการให้เขียนโค้ดเสร็จสรรพในรอบเดียว ควรใช้ `/engineering-workflow` แทน
-- **ติดตั้ง Skills ที่พึ่งพาให้ครบ:** หากขาด skill ใดใน 5 ตัวข้างต้น Preflight จะหยุดก่อนเริ่มสัมภาษณ์และบอกคำสั่งติดตั้งตัวที่ขาด
-- **ไม่ต้องตั้งค่า issue tracker:** ไฟล์ใน `.scratch/<feature-slug>/` คือ tracker ของ skill นี้ ขั้นที่ `to-spec` / `to-tickets` บอกให้ publish ไป tracker หรือให้รัน `/setup-matt-pocock-skills` จะถูกแทนด้วยการเขียนไฟล์ในเครื่อง
+- **ติดตั้ง stage skill ให้ครบ:** หากขาด stage skill ใดใน 3 ตัวข้างต้น Preflight จะหยุดก่อนเริ่มสัมภาษณ์และบอกคำสั่งติดตั้งตัวที่ขาด
+- **ไม่ต้องตั้งค่า issue tracker:** ไฟล์ใน `.scratch/<feature-slug>/` คือ tracker ของ skill นี้ และรูปแบบที่ skill เป็นเจ้าของ (`references/spec-format.md`, `references/ticket-format.md`) ไม่มีขั้นตอน publish ไป tracker, ติด label หรือรัน `/setup-matt-pocock-skills`
 - **รีเซ็ต Context หลังเสร็จสิ้น:** เมื่อได้ Tickets ครบแล้ว ให้พิมพ์ `/clear` ก่อนเริ่ม implement เพื่อให้สมองของ AI ทำงานได้อย่างเต็มประสิทธิภาพที่สุด
