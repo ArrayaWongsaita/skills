@@ -157,6 +157,39 @@ describe("subagent-implement eval suite contract", () => {
       );
     });
 
+    it("keeps every (from NN) and (edit from NN) Context item on a lower-numbered blocker, consistent across the prompt, the expected output, and the expectations", async () => {
+      const { evals } = await evalsJson();
+      const fromToken = /\((?:edit )?from (\d+)\)/g;
+      let checked = 0;
+      for (const item of evals) {
+        const contextStart = item.prompt.indexOf("**Context:**");
+        if (contextStart === -1) continue;
+        const promptTokens = [...item.prompt.slice(contextStart).matchAll(fromToken)];
+        if (promptTokens.length === 0) continue;
+        checked += 1;
+        const carrier = item.prompt.match(/\bTicket (\d+)\b[^*]*?carries \*\*Context:\*\*/);
+        assert.ok(carrier, `case ${item.id} names the ticket that carries the Context`);
+        for (const [token, blocker] of promptTokens) {
+          assert.ok(
+            Number(blocker) >= 1 && Number(blocker) < Number(carrier[1]),
+            `case ${item.id}: ${token} must name a ticket numbered from 01 and lower than ticket ${carrier[1]}`,
+          );
+        }
+        const promptItems = new Set(promptTokens.map(([token]) => token));
+        for (const [token] of item.expected_output.matchAll(fromToken)) {
+          assert.ok(
+            promptItems.has(token),
+            `case ${item.id}: expected_output names ${token}, which no Context item in the prompt carries`,
+          );
+        }
+        assert.ok(
+          item.expectations.some((line) => /\b(edit|new|from)\b[\s\S]*relative to the worktree/i.test(line)),
+          `case ${item.id}: an expectation says edit, new, and from paths are written relative to the worktree`,
+        );
+      }
+      assert.ok(checked >= 1, "an eval case carries a Context line with a (from NN) or (edit from NN) item");
+    });
+
     it("covers per-ticket budget_estimate and usage_total, including a BLOCKED ticket", async () => {
       const { evals } = await evalsJson();
       const hay = (re) => evals.some((e) => re.test(e.name) || re.test(e.expected_output));
