@@ -4,10 +4,10 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 // Each standalone implementer keeps its own copy of the prose the three share
-// word for word: the Reuse contract (ADR 0008) and the ticket-format, Seam, and
-// Context blocks the reuse catalog's shared-prose rule registers here. These
-// blocks are the parts whose wording must match exactly; the surrounding prose
-// is free to differ per skill (serial vs wave dispatch).
+// word for word: the Reuse contract (ADR 0008) and the ticket-format, Seam,
+// Context, and Budget blocks the reuse catalog's shared-prose rule registers
+// here. These blocks are the parts whose wording must match exactly; the
+// surrounding prose is free to differ per skill (serial vs wave dispatch).
 const IMPLEMENTERS = {
   "subagent-implement": { integration: "references/verification-and-integration.md" },
   "agy-implement": { integration: "references/worktree-integration.md" },
@@ -28,6 +28,12 @@ const SHARED_BLOCKS = [
     end: "this ticket alone.",
   },
   {
+    name: "worker prompt Context files lines",
+    file: () => "references/prompt-scaffold.md",
+    start: "- Context files, grouped from the ticket's `**Context:**` line:",
+    end: "  - create: <`(new)` paths>",
+  },
+  {
     name: "worker prompt Test seam line",
     file: () => "references/prompt-scaffold.md",
     start: "- Test seam: <the ticket's **Seam:** line, verbatim;",
@@ -44,6 +50,12 @@ const SHARED_BLOCKS = [
     file: (skill) => IMPLEMENTERS[skill].integration,
     start: "1. **Path.**",
     end: "or add the entry when the module was not yet catalogued.",
+  },
+  {
+    name: "budget_estimate sentence",
+    file: () => "references/status-and-resume.md",
+    start: "`budget_estimate` is the ticket's Budget line verbatim",
+    end: "or `none` when the ticket carries none.",
   },
   {
     name: "planning ticket-format parse",
