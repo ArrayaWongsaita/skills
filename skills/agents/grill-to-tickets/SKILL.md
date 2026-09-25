@@ -15,7 +15,7 @@ reviews the spec in a fresh context with `scrutinize`, and writes tickets follow
 ticket directory up afterward.
 
 ```
-Preflight             locate the five stage skills (stop if one is missing)
+Preflight             locate the three stage skills (stop if one is missing)
    ▼
 Stage 0: Grill        reuse survey + grilling + domain-modeling
                       → decisions.md, CONTEXT.md, adr/, docs/reuse-catalog.md

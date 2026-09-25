@@ -579,7 +579,8 @@ describe("grill-to-tickets composite skill contract", () => {
       // Intro and diagram
       assert.match(content, /spec-format\.md/);
       assert.match(content, /ticket-format\.md/);
-      assert.match(content, /locate the five stage skills/);
+      assert.match(content, /locate the three stage skills/);
+      assert.doesNotMatch(content, /five stage skills/);
 
       // Inline Execution
       const inlineSection = content.slice(content.indexOf("## Inline Execution"), content.indexOf("## Preflight"));
