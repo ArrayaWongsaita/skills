@@ -37,6 +37,18 @@ const SHARED_BLOCKS = [
     start: "1. **Path.**",
     end: "or add the entry when the module was not yet catalogued.",
   },
+  {
+    name: "planning ticket-format parse",
+    file: () => "references/planning.md",
+    start: "Each ticket is in the `grill-to-tickets` ticket format:",
+    end: "resolves by matching the title.",
+  },
+  {
+    name: "planning test-seam selection",
+    file: () => "references/planning.md",
+    start: "A ticket's `**Seam:**` line, when present, is its test seam",
+    end: "rather than being implemented without a test.",
+  },
 ];
 
 function extractBlock(content, start, end) {
