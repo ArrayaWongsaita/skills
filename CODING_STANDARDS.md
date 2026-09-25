@@ -10,3 +10,8 @@ Project rules and conventions.
 ## File System Mutations
 
 - **Atomic File Rewrites**: When a script modifies or rewrites existing files in-place (especially in git-ignored scratch directories), write the new contents to a sibling temporary file (e.g. `.<file>.tmp-<pid>`) and atomically rename it (`fs.renameSync`) over the target file, preserving permissions and ensuring temporary files are removed on abort or failure.
+
+
+## Contract Tests
+
+- **Scoped Assertions**: Contract tests must assert against sliced sections or specific AST structures (catalog Rule 5), never whole files. Do not hardcode exact line numbers (`lineNumber === 27`) when matching content, and ensure regexes test distinguishing tokens rather than generic words that vacuously match surrounding boilerplate.
