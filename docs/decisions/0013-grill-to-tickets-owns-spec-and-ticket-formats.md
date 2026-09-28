@@ -1,6 +1,6 @@
 # ADR 0013: grill-to-tickets owns the spec and ticket formats
 
-- Status / สถานะ: Accepted / ยอมรับแล้ว
+- Status / สถานะ: Superseded by ADR 0015 / ถูกแทนที่โดย ADR 0015 (was: Accepted / ยอมรับแล้ว)
 - Date / วันที่: 2026-09-25
 - Amends / แก้ไขบริบทของ: ADR 0003
 
