@@ -1,6 +1,6 @@
 # ADR 0004: agy-implement is a standalone skill, not wired into engineering-workflow
 
-- Status / สถานะ: Accepted / ยอมรับแล้ว
+- Status / สถานะ: Superseded by ADR 0015 / ถูกแทนที่โดย ADR 0015 (was: Accepted / ยอมรับแล้ว)
 - Date / วันที่: 2026-09-02
 
 ## Context / บริบท

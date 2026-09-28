@@ -1,6 +1,6 @@
 # ADR 0002: One orchestrator over installed engineering skills
 
-- Status / สถานะ: Accepted / ยอมรับแล้ว
+- Status / สถานะ: Superseded by ADR 0015 / ถูกแทนที่โดย ADR 0015 (was: Accepted / ยอมรับแล้ว)
 - Date / วันที่: 2026-08-26
 
 ## Context / บริบท
