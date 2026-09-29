@@ -37,6 +37,10 @@ function localSkillLinks(markdown) {
     .filter((target) => target && !target.startsWith("#") && !/^[a-z][a-z0-9+.-]*:/i.test(target));
 }
 
+function assertPattern(text, pattern, message) {
+  assert.ok(pattern.test(text), message ?? `expected text to match ${pattern}`);
+}
+
 describe("grill-to-tickets composite skill contract", () => {
   const canonicalDir = "skills/agents/grill-to-tickets";
   const skillDirs = [canonicalDir];
@@ -181,7 +185,8 @@ describe("grill-to-tickets composite skill contract", () => {
       assert.match(stage2, /edits nothing/);
       assert.match(stage2, /\(references\/design-review-gate\.md\) — Reviewer/);
       assert.match(content, /Stages 0, 1, and 3 run \*\*inline\*\*/);
-      assert.match(content, /One step dispatches a subagent/);
+      assertPattern(content, /Two steps dispatch a subagent, and neither decides/, "both review steps dispatch and neither decides");
+      assertPattern(content, /Stage 2 design reviewer[\s\S]*Stage 3\.5 ticket reviewer/, "the sentences after the inline statement name both reviewers");
     }
     for (const dir of skillDirs) {
       const gate = await readFile(path.resolve(dir, "references/design-review-gate.md"), "utf8");
@@ -697,6 +702,78 @@ describe("grill-to-tickets composite skill contract", () => {
         /adds no new cycle, verdict, or\s+finding type/i,
         "the scenario question leaves the existing cycles, verdicts, and finding types unchanged",
       );
+    }
+  });
+
+  it("runs Stage 3.5 once after a passing check and before the quiz, with the whole-token skip flag", async () => {
+    const skill = await readFile(path.resolve(canonicalDir, "SKILL.md"), "utf8");
+    const invocation = markdownSection(skill, "Invocation");
+    const stage2 = markdownSection(skill, "Stage 2 — Design Review Gate");
+    const stage3 = markdownSection(skill, "Stage 3 — Tickets");
+    const stage35 = stage3.slice(stage3.indexOf("Stage 3.5"), stage3.indexOf("Stage 3.5") + 2500);
+    const gate = await readFile(path.resolve(canonicalDir, "references/design-review-gate.md"), "utf8");
+
+    assertPattern(stage35, /Stage 3\.5\s+[—–-] Ticket review/i, "Stage 3 labels the step Stage 3.5 — Ticket review");
+    assert.ok(stage3.indexOf("Stage 3.5") > stage3.indexOf("Fix every error"), "review follows error fixes");
+    assertPattern(stage35, /run one review before the quiz/i, "Stage 3.5 precedes the quiz");
+    assert.doesNotMatch(skill, /^## Stage 3\.5\b/m, "Stage 3.5 stays within Stage 3");
+    assertPattern(stage35, /after the checker prints `result: PASS`[\s\S]*run one review before the quiz/i, "Stage 3.5 runs once after a passing check and before the quiz");
+    assertPattern(stage35, /one fresh reviewer/, "Stage 3.5 dispatches one fresh reviewer");
+    assertPattern(invocation, /`--ticket-review 0`[\s\S]*whole token[\s\S]*other value[^\n]*absent/i, "the invocation paragraph documents exact skip-flag matching");
+    assertPattern(stage35, /`--ticket-review 0`[\s\S]*whole token[\s\S]*other value[^\n]*absent/i, "Stage 3.5 documents exact skip-flag matching");
+    assertPattern(stage35, /absent flag[^\n]*runs the review\s+once/i, "an absent flag runs the review once");
+    assertPattern(stage35, /no subagent[\s\S]*main context[\s\S]*`reviewer: inline`/i, "no-subagent harnesses run inline and record the reviewer");
+    assert.doesNotMatch(stage2, /--ticket-review/);
+    assert.doesNotMatch(gate, /--ticket-review/);
+  });
+
+  it("briefs a read-only ambiguity review with READY or ASK and a missing-verdict fallback", async () => {
+    const review = await readFile(path.resolve(canonicalDir, "references/ticket-review.md"), "utf8");
+
+    for (const pathText of [
+      "issues/",
+      "spec.md",
+      "Context",
+      ".scratch/<feature-slug>/CONTEXT.md",
+      ".scratch/<feature-slug>/adr/",
+      "docs/glossary.md",
+      "docs/decisions/",
+    ]) {
+      assert.ok(review.includes(pathText), `review brief names ${pathText}`);
+    }
+    assert.doesNotMatch(review, /tracker/i);
+    assertPattern(review, /one fresh reviewer/, "the brief assigns one fresh reviewer");
+    assertPattern(review, /edits nothing/, "the reviewer edits nothing");
+    assertPattern(review, /every file named in the tickets' `\*\*Context:\*\*`\s+lines/i, "the reviewer reads every Context-named file");
+    assertPattern(review, /fresh worker holding only that\s+ticket and what its\s+Context line lists[\s\S]*could start without asking anyone/i, "the brief asks whether a fresh worker can start");
+    assertPattern(review, /glossary, ADRs, and spec text outside the Context-named\s+sections[\s\S]{0,80}only to understand terms/i, "extra context explains terms without filling worker gaps");
+    assertPattern(review, /one line per ticket/i, "the reviewer returns one line per ticket");
+    assertPattern(review, /`NN READY` or `NN ASK: <question>`/, "the brief pins its one-line return format");
+    assertPattern(review, /ticket with no line in the\s+return is treated as `ASK` with the question `the\s+reviewer returned no verdict`/i, "a missing verdict becomes ASK with the stated question");
+    assertPattern(review, /exactly the verdicts `READY` or `ASK`/, "the verdicts are exactly READY and ASK");
+    assertPattern(review, /ambiguity only[\s\S]*sets no limit/i, "review reads for ambiguity and sets no limit");
+    assertPattern(review, /ambiguity-only form of the\s+readiness dry-run that ADR 0014 deferred/i, "the brief identifies its ADR 0014 relationship");
+  });
+
+  it("puts each ASK beside Seam, Context, and Budget and leaves its resolution to the person", async () => {
+    const skill = await readFile(path.resolve(canonicalDir, "SKILL.md"), "utf8");
+    const stage3 = markdownSection(skill, "Stage 3 — Tickets");
+    const format = await readFile(path.resolve(canonicalDir, "references/ticket-format.md"), "utf8");
+    const quizStart = format.indexOf("### 4. Quiz the user");
+    const quizEnd = format.indexOf("### 5.", quizStart);
+    const formatQuiz = format.slice(quizStart, quizEnd);
+
+    for (const [label, quiz] of [["Stage 3", stage3], ["ticket-format.md", formatQuiz]]) {
+      assertPattern(quiz, /each `ASK` question[\s\S]{0,200}Seam[\s\S]{0,100}Context[\s\S]{0,100}Budget/i, `${label} places ASK with ticket context`);
+      assertPattern(quiz, /person decides[^\n]*fix or acknowledge/i, `${label} leaves the choice to the person`);
+      assertPattern(quiz, /main\s+thread[\s\S]{0,80}waits?[\s\S]{0,80}seen/i, `${label} shows ASK before any fix`);
+      assertPattern(quiz, /checker[^\n]*`--write-budget`/i, `${label} re-runs the budget-writing checker`);
+      assertPattern(quiz, /second review[^\n]*only when the person asks/i, `${label} requires the person to ask for another review`);
+    }
+    for (const [label, quiz] of [["Stage 3", stage3], ["ticket-format.md", formatQuiz]]) {
+      assertPattern(quiz, /`ASK` lines\s+name tickets as\s+numbered at review time/i, `${label} keeps review-time numbers`);
+      assertPattern(quiz, /ticket[\s\S]{0,80}quiz removes[\s\S]{0,80}`— acknowledged`/i, `${label} acknowledges a removed ticket`);
+      assertPattern(quiz, /tickets? (?:the )?quiz\s+creates[\s\S]{0,100}join a review only after the person\s+asks/i, `${label} leaves new tickets outside this review`);
     }
   });
 });

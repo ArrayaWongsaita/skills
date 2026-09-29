@@ -45,6 +45,9 @@ Add `--review N` to the idea to answer the Stage 2 review question up front — 
 is the most rounds of design review to run, and `--review 0` skips the review.
 Without the flag, Stage 2 asks.
 
+Match `--ticket-review 0` as whole tokens to skip Stage 3.5. Only
+that exact value skips; any other value is treated as absent.
+
 Codex policy is declared in `agents/openai.yaml` (`allow_implicit_invocation: false`).
 Claude Code installations rely on `disable-model-invocation: true`. Require explicit
 human invocation before starting.
@@ -60,9 +63,12 @@ continuous context window. This skill follows three stage skills (`grilling`,
 `domain-modeling` run inline, keeping the interview, the spec, and the tickets
 on one reasoning thread, where the user is.
 
-One step dispatches a subagent, and it makes no decision: the Stage 2 reviewer. The
-reviewer runs `scrutinize` in a fresh context so it reads the spec the way the implementer will — from files
-alone, without the interview's answers to fill its gaps.
+Two steps dispatch a subagent, and neither decides: the Stage 2 design reviewer
+and the Stage 3.5 ticket reviewer. The Stage 2 reviewer runs `scrutinize` in a
+fresh context so it reads the spec the way the implementer will, from files
+alone. The Stage 3.5 reviewer follows the read-only brief in
+[ticket-review.md](references/ticket-review.md) and reports a verdict for each
+ticket; the main thread keeps the decisions for both reviews.
 
 This skill owns its own copy of the Design Review Gate rules and runs fully
 standalone.
@@ -231,6 +237,27 @@ tickets, that Seam, Context, and Budget are present, single-line, in order, and 
 granularity and blocking edges, showing each ticket's Seam, Context, and
 Budget, and showing the checker's story-coverage table, budget table, DAG
 summary, and every warning. Re-run the checker after every change with `--write-budget`.
+
+**Stage 3.5 — Ticket review.** After the checker prints `result: PASS` and
+ticket errors are fixed, run one review before the quiz. Match
+`--ticket-review 0` as whole tokens; that exact value skips the
+review, and any other value is treated as absent. An absent flag runs the review
+once. Dispatch one fresh reviewer subagent and follow the brief in
+[ticket-review.md](references/ticket-review.md); the reviewer is read-only. When
+the harness offers no subagent, run the review in the main context and record
+`reviewer: inline`.
+
+The review returns `NN READY` or `NN ASK: <question>` for each ticket. Treat
+each ticket with no return line as `ASK: the reviewer returned no verdict`.
+Show each `ASK` question beside its ticket's Seam, Context, and Budget in the
+quiz. The person decides whether to fix or acknowledge each question. The main
+thread waits until the person has seen and decided on the question before
+applying a fix, and fixes a ticket only when
+the person chooses fix. After each fix, re-run the checker with `--write-budget`;
+a second review starts only when the person asks. `ASK` lines name tickets as
+numbered at review time; when the quiz removes a ticket, give its line the
+`— acknowledged` suffix. The review set closes at review time. Tickets the quiz
+creates join a review only after the person asks for another review.
 
 Stage 3 is done when the checker prints `result: PASS`, every warning is logged
 under `## Ticket warnings` in `decisions.md` — one line per warning,

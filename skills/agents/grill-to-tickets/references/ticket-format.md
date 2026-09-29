@@ -68,9 +68,20 @@ Present the proposed breakdown as a numbered list. For each ticket, show:
 - **Seam**: the ticket's one test boundary
 - **Context**: the ticket's Read set
 - **Budget**: the ticket's measured Budget line
+- **Review**: place each `ASK` question alongside that ticket's Seam, Context, and Budget; show a `READY` verdict for each ready ticket
 - **What it delivers**: the end-to-end behaviour this ticket makes work
 
 The quiz also shows the checker's story-coverage table, budget table, DAG summary (with the recommended implementer), and every warning. Log each warning under `## Ticket warnings` in `decisions.md` as acknowledged or fixed, and re-run the checker with `--write-budget` after each change.
+
+For each `ASK`, the person decides whether to fix or acknowledge the question.
+The main thread waits until the person has seen and decided on the question
+before applying a fix, and fixes a ticket only when the person chooses fix.
+After each fix, re-run the checker with
+`--write-budget`; a second review starts only when the person asks. `ASK` lines
+name tickets as numbered at review time. When the quiz removes a
+ticket, give its `ASK` line the `— acknowledged` suffix. The review set closes
+at review time. Tickets the quiz creates join a review only after the person
+asks for another review.
 
 Ask the user:
 - Does the granularity feel right? (too coarse / too fine)
