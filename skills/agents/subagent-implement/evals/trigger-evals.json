@@ -1,0 +1,54 @@
+[
+  {
+    "query": "/subagent-implement .scratch/subtitle-preferences/",
+    "should_trigger": true
+  },
+  {
+    "query": "$subagent-implement subtitle-preferences",
+    "should_trigger": true
+  },
+  {
+    "query": "/subagent-implement continue wishlist-sync",
+    "should_trigger": true
+  },
+  {
+    "query": "/subagent-implement status",
+    "should_trigger": true
+  },
+  {
+    "query": "$subagent-implement list",
+    "should_trigger": true
+  },
+  {
+    "query": "/subagent-implement --agent feature-dev .scratch/wishlist-sync/",
+    "should_trigger": true
+  },
+  {
+    "query": "/subagent-implement",
+    "should_trigger": true
+  },
+  {
+    "query": "Please implement the tickets in .scratch/wishlist-sync/issues/ using subagents so my context stays small.",
+    "should_trigger": false
+  },
+  {
+    "query": "Implement this ticket set for me.",
+    "should_trigger": false
+  },
+  {
+    "query": "Run /implement on the first ticket.",
+    "should_trigger": false
+  },
+  {
+    "query": "Use engineering-workflow to drive these tickets to code.",
+    "should_trigger": false
+  },
+  {
+    "query": "Use agy-implement to spread these tickets across providers.",
+    "should_trigger": false
+  },
+  {
+    "query": "Dispatch each ticket to its own subagent and integrate the results.",
+    "should_trigger": false
+  }
+]

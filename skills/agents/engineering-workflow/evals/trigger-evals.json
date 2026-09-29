@@ -1,0 +1,34 @@
+[
+  {
+    "query": "$engineering-workflow add subtitle preferences to the video player",
+    "should_trigger": true
+  },
+  {
+    "query": "/engineering-workflow continue refund-idempotency-91ab23cd",
+    "should_trigger": true
+  },
+  {
+    "query": "$engineering-workflow status",
+    "should_trigger": true
+  },
+  {
+    "query": "$engineering-workflow list",
+    "should_trigger": true
+  },
+  {
+    "query": "Please implement a wishlist feature.",
+    "should_trigger": false
+  },
+  {
+    "query": "Use grill-with-docs on these artifact references.",
+    "should_trigger": false
+  },
+  {
+    "query": "Review this diff for correctness.",
+    "should_trigger": false
+  },
+  {
+    "query": "Run a disposable experiment to compare these two SQLite locking modes.",
+    "should_trigger": false
+  }
+]
