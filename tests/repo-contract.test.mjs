@@ -208,6 +208,26 @@ describe("grill-to-tickets production records and guides", () => {
     assert.match(doc, /no longer arrive automatically/i);
   });
 
+  it("records ADR 0017: reuse is removed and the user bounds the design review", async () => {
+    const doc = await readTextOrNull("docs/decisions/0017-drop-reuse-and-let-the-user-bound-the-design-review.md");
+    assert.ok(doc, "ADR 0017 exists under docs/decisions/");
+    assert.match(doc, /^# ADR 0017: Drop reuse, and let the user bound the design review$/m);
+    assert.match(doc, /- Status \/ สถานะ: Accepted/);
+    assert.match(doc, /- Supersedes \/ แทนที่: ADR 0008/);
+    for (const heading of ["Context / บริบท", "Decision / การตัดสินใจ", "Consequences / ผลที่ตามมา", "Rejected alternatives / ทางเลือกที่ไม่เลือก"]) {
+      assert.match(doc, new RegExp(`^## ${heading}$`, "m"), `ADR 0017 has ## ${heading}`);
+    }
+
+    const adr8 = await readTextOrNull("docs/decisions/0008-reuse-catalog-cross-skill-contract.md");
+    assert.match(adr8, /Superseded by ADR 0017/, "ADR 0008 is marked Superseded by ADR 0017");
+    const adr10 = await readTextOrNull("docs/decisions/0010-grill-to-tickets-fresh-context-design-review.md");
+    assert.match(adr10, /ADR 0017 replaces only the fixed six-cycle bound/, "ADR 0010 notes that only its bound is replaced");
+  });
+
+  it("no longer holds a reuse catalog", async () => {
+    assert.equal(await readTextOrNull("docs/reuse-catalog.md"), null, "docs/reuse-catalog.md is removed");
+  });
+
   it("records ADR 0014: tickets are measured before they are limited", async () => {
     const doc = await readTextOrNull("docs/decisions/0014-measure-tickets-before-limiting-them.md");
 
