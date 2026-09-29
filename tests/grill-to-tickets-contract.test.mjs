@@ -635,4 +635,49 @@ describe("grill-to-tickets composite skill contract", () => {
       assert.doesNotMatch(gate, /`to-tickets`/);
     }
   });
+
+  it("derives ticket acceptance criteria from delivered-story scenarios without checker comparison", async () => {
+    for (const dir of skillDirs) {
+      const ticketFormat = await readFile(path.resolve(dir, "references/ticket-format.md"), "utf8");
+      const rulesStart = ticketFormat.indexOf("#### Rules for ticket contents and acceptance criteria");
+      const rulesEnd = ticketFormat.indexOf("### 4. Quiz the user", rulesStart);
+      assert.ok(rulesStart >= 0 && rulesEnd > rulesStart, "ticket-format.md has its criteria rules section");
+      const rules = ticketFormat.slice(rulesStart, rulesEnd);
+
+      assert.match(
+        rules,
+        /criteria derive from the scenarios of the stories (?:this ticket|the ticket) delivers/i,
+        "criteria derive from scenarios belonging to the stories a ticket delivers",
+      );
+      assert.match(
+        rules,
+        /checker does not compare (?:acceptance )?criteria with scenarios/i,
+        "the checker does not compare criteria with scenarios",
+      );
+    }
+  });
+
+  it("adds the conditional scenario-testability question to the Stage 2 Reviewer brief without changing review outcomes", async () => {
+    for (const dir of skillDirs) {
+      const gate = await readFile(path.resolve(dir, "references/design-review-gate.md"), "utf8");
+      const reviewer = markdownSection(gate, "Reviewer");
+      assert.ok(reviewer, "design-review-gate.md has a Reviewer section");
+
+      assert.match(
+        reviewer,
+        /when the spec carries scenarios[\s\S]{0,200}ask whether each\s+scenario is testable at a seam named in Testing Decisions/i,
+        "the scenario question applies when the spec carries scenarios",
+      );
+      assert.match(
+        reviewer,
+        /when the spec\s+carries no scenarios[\s\S]{0,100}omit (?:this|that) question/i,
+        "the brief omits the scenario question when the spec has no scenarios",
+      );
+      assert.match(
+        reviewer,
+        /adds no new cycle, verdict, or\s+finding type/i,
+        "the scenario question leaves the existing cycles, verdicts, and finding types unchanged",
+      );
+    }
+  });
 });

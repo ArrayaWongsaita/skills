@@ -39,6 +39,7 @@ Wide refactors are the exception to vertical slicing. A wide refactor is one mec
 
 - **Acceptance criteria:**
   - Suite, typecheck, and lint runs are already part of every implementer's verification, so they are not acceptance criteria. Every criterion must map to an observable, testable behaviour or outcome.
+  - Ticket acceptance criteria derive from the scenarios of the stories the ticket delivers. The checker does not compare criteria with scenarios.
   - Documentation obligations are written as testable statements (for example, "the guide describes X").
 - **No file paths in What to build or criteria:** Avoid specific file paths or code snippets in What to build and the acceptance criteria; they go stale quickly. Context is the one place a ticket names paths. Exception: inlined prototype snippets encoding a decision more precisely than prose can.
 - **Stories:** Every ticket carries a `**Stories:**` line directly after `**Blocked by:**` listing the spec's user-story numbers it delivers, or `none` for a prefactor.

@@ -44,6 +44,10 @@ a fresh one every cycle, with read access to the repository, and brief it with:
   exist.
 - **Task:** run the `scrutinize` skill's workflow — its `SKILL.md` at the path
   Preflight found — on `spec.md`, tracing its claims through the real code.
+- **Scenario question:** when the spec carries scenarios, ask whether each
+  scenario is testable at a seam named in Testing Decisions. When the spec
+  carries no scenarios, omit this question. It adds no new cycle, verdict, or
+  finding type.
 - **Prior findings,** from cycle 2 on: the previous cycle's blocking findings,
   one line each with its id, to report as resolved or still present under the
   same id.
