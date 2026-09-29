@@ -1,4 +1,7 @@
 {
+  "skillOverrides": {
+    "engineering-workflow": "user-invocable-only"
+  },
   "hooks": {
     "PreToolUse": [
       {
