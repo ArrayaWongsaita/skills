@@ -155,11 +155,6 @@ describe("retro-to-remedies eval suite contract", () => {
         hay(/std-4.*proposed decline/i),
         "case for std-4 -> proposed decline",
       );
-      // a reuse convention -> Reuse Catalog Rule
-      assert.ok(
-        hay(/reuse convention.*Reuse Catalog Rule|reuse convention.*Rule/i),
-        "case for a reuse convention -> Reuse Catalog Rule",
-      );
       // an evidence-free Remedy dropped
       assert.ok(
         hay(/evidence-free.*dropped|no evidence.*dropped/i),

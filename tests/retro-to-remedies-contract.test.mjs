@@ -330,9 +330,9 @@ describe("retro-to-remedies skill contract", () => {
         // (2) Mechanical miss -> Check
         assert.match(c, /Mechanical miss[\s\S]*?Check|Check[\s\S]*?Mechanical miss/i);
 
-        // (3) Judgement miss -> Standard, or a Reuse Catalog Rule for a reuse convention
+        // (3) Judgement miss -> Standard
         assert.match(c, /Judgement miss[\s\S]*?Standard/i);
-        assert.match(c, /Reuse Catalog.*Rule.*reuse convention|reuse convention.*Reuse Catalog.*Rule/i);
+        assert.doesNotMatch(c, /Reuse Catalog/);
 
         // (4) navigation effort -> Pointer
         assert.match(c, /navigation.*Pointer|Pointer.*navigation/i);
@@ -352,10 +352,10 @@ describe("retro-to-remedies skill contract", () => {
         // Destinations table
         assert.match(c, /\|.*Remedy kind.*\|.*Destination.*\|/);
         assert.match(c, /\|.*Check.*\|.*handed off:.*(test|lint|hook|CI).*/i);
-        assert.match(c, /\|.*Standard.*\|.*CODING_STANDARDS\.md.*Reuse Catalog.*Rule.*/i);
+        assert.match(c, /\|.*Standard.*\|.*CODING_STANDARDS\.md.*/i);
         assert.match(c, /\|.*Pointer.*\|.*AGENTS\.md.*CLAUDE\.md.*/i);
         assert.match(c, /\|.*Skill fix.*\|.*handed off:.*\/grill-to-tickets.*Upstream feedback.*/i);
-        assert.match(c, /\|.*Prune.*\|.*AGENTS\.md.*CLAUDE\.md.*CODING_STANDARDS\.md.*Reuse Catalog.*/i);
+        assert.match(c, /\|.*Prune.*\|.*AGENTS\.md.*CLAUDE\.md.*CODING_STANDARDS\.md.*/i);
         assert.match(c, /\|.*Access.*\|.*handed off:.*config.*tooling.*/i);
 
         // Prune limitation
@@ -475,9 +475,7 @@ describe("retro-to-remedies skill contract", () => {
         assert.match(c, /short header/i);
         assert.match(c, /created.*absent|when absent.*created|absent.*created/i);
 
-        // Standard for reuse convention into Reuse Catalog's Rules
-        assert.match(c, /reuse convention/i);
-        assert.match(c, /Reuse Catalog.*Rule|Rules.*Reuse Catalog/i);
+        assert.doesNotMatch(c, /reuse convention|Reuse Catalog/i);
 
         // Pointer into AGENTS.md, else CLAUDE.md, else a new AGENTS.md
         assert.match(c, /Pointer/i);

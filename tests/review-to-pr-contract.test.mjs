@@ -650,18 +650,13 @@ describe("review-to-pr skill contract", () => {
     });
   });
 
-  describe("Reuse Catalog", () => {
-    it("the Standards axis reviews against docs/reuse-catalog.md as a documented standard", async () => {
+  describe("no reuse catalog", () => {
+    it("the Standards axis names no reuse catalog among its sources", async () => {
       for (const dir of skillDirs) {
-        const c = await readFile(path.resolve(dir, "references/review-loop.md"), "utf8");
-        assert.match(c, /When the repository has\s+`docs\/reuse-catalog\.md`, name it among the standards sources/);
-        assert.match(c, /duplicates a catalogued one[\s\S]{0,120}documented-standard violation/);
-        assert.match(c, /cite the\s+catalog line/);
-        assert.match(c, /`code-review`\s+itself stays unchanged/);
-        assert.match(c, /Reuse Catalog finding[\s\S]{0,120}blocker when it has a\s+concrete consequence/);
-      }
-      for (const body of await skillBodies()) {
-        assert.match(body, /Standards axis also reviews against it as a documented standard/);
+        for (const file of ["SKILL.md", "references/review-loop.md"]) {
+          const c = await readFile(path.resolve(dir, file), "utf8");
+          assert.doesNotMatch(c, /reuse-catalog|Reuse Catalog/, `${file} carries no Reuse Catalog`);
+        }
       }
     });
   });

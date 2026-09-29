@@ -128,10 +128,7 @@ branch, and makes no fix. In short:
 Follow [references/review-loop.md](references/review-loop.md). Run `code-review`
 inline against the review point pinned in Stage 0 — the **Standards axis** and
 the **Spec axis** as parallel sub-agents, reported side by side, neither reranked
-nor merged. When the repository has a Reuse Catalog (`docs/reuse-catalog.md`),
-the Standards axis also reviews against it as a documented standard, so a new
-module duplicating a catalogued one — or code bypassing a catalog Rule — is a
-cited violation. Normalize each finding to blocking or non-blocking by the
+nor merged. Normalize each finding to blocking or non-blocking by the
 `gates.md` "Code normalization" rule, and record every finding in the ledger.
 Route on the result: any blocker → Stage 2; none → Stage 3.
 

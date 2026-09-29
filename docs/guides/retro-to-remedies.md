@@ -14,7 +14,7 @@
 
 `retro-to-remedies` เข้ามาอ่าน Primary sources เหล่านั้น และแปลงสิ่งที่ผิดพลาด (Misses) ให้เป็นมาตรการแก้ไข (Remedies) ที่ชัดเจน 6 ชนิด:
 1. **Check**: สร้างกฎตรวจสอบแบบอัตโนมัติ (deterministic check เช่น test, lint rule, CI job) สำหรับ Mechanical miss
-2. **Standard**: บันทึกมาตรฐานใหม่ลงใน `CODING_STANDARDS.md` หรือ Reuse Catalog สำหรับ Judgement miss
+2. **Standard**: บันทึกมาตรฐานใหม่ลงใน `CODING_STANDARDS.md` สำหรับ Judgement miss
 3. **Pointer**: เพิ่มการนำทางเอกสารลงใน `AGENTS.md`
 4. **Skill fix**: ปรับปรุงคำสั่งของ skill ที่มีข้อผิดพลาด
 5. **Prune**: ลบคำสั่งหรือเอกสารที่หมดอายุและไม่ส่งผลต่อพฤติกรรมของ agent
@@ -100,10 +100,10 @@ Stage 1 ทำหน้าที่นำ Misses ทั้งหมดมาป�
 - **กฎการจำแนกตามลำดับ (Ordered Rule)**: จำแนกประเภท Remedy ตามกฎ 6 ข้อตามลำดับ:
   1. หากการทำตามคำสั่งของ skill ตรงตัวทำให้เกิด Miss เพราะคำสั่งผิดหรือล้าสมัย → **Skill fix** (แต่หาก agent เบี่ยงเบนจากคำสั่งที่ถูกต้อง จะตกไปยังกฎข้อถัดไปเพื่อสร้าง Check)
   2. กฎตายตัวสามารถตรวจจับได้ (Mechanical miss) → **Check** (test, lint rule, hook, CI)
-  3. ต้องใช้การตัดสินใจเจตนาของมนุษย์ (Judgement miss) → **Standard** ใน `CODING_STANDARDS.md` หรือกฎใน Reuse Catalog สำหรับ reuse convention
+  3. ต้องใช้การตัดสินใจเจตนาของมนุษย์ (Judgement miss) → **Standard** ใน `CODING_STANDARDS.md`
   4. ใช้ความพยายามในการค้นหาเอกสาร/ไฟล์ → **Pointer** ใน `AGENTS.md`
   5. ขาดแคลนข้อมูลที่เข้าถึงไม่ได้ (เช่น logs, permission) → **Access**
-  6. คำสั่งในโปรเจกต์หมดอายุหรือไม่ส่งผล → **Prune** (จำกัดเฉพาะ `AGENTS.md`, `CLAUDE.md`, `CODING_STANDARDS.md` และ Reuse Catalog)
+  6. คำสั่งในโปรเจกต์หมดอายุหรือไม่ส่งผล → **Prune** (จำกัดเฉพาะ `AGENTS.md`, `CLAUDE.md`, และ `CODING_STANDARDS.md`)
 - **การหาเส้นทางของ Skill Fix (Skill Fix Routing)**:
   - ตรวจสอบลำดับ lock: เริ่มจาก `skills-lock.json` ของโปรเจกต์ หากไม่พบจึงค้นหาจาก `~/.agents/.skill-lock.json` ส่วนกลาง
   - การทดสอบความเป็น library ของตนเอง (Own-Library Test): หาก source ตรงกับ `retro-to-remedies` หรือไฟล์ `SKILL.md` อยู่ภายใต้ไดเรกทอรี `skills/` ของ repository นี้ ถือเป็น own library
@@ -125,9 +125,9 @@ Stage 1 ทำหน้าที่นำ Misses ทั้งหมดมาป�
 เมื่อผู้ใช้เลือกคำตอบในรายงาน Retro report เรียบร้อยแล้ว Stage 2 จะดำเนินการดังนี้:
 - **การทำงานต่อและการข้ามรายการ (Resuming and Skip Rule)**: หากเป็นการ resume ใน Stage 2 จะข้าม Remedy ที่มี commit SHA บันทึกไว้แล้ว และทำการ commit เฉพาะ Remedy ที่ยังไม่ได้ commit เท่านั้น
 - **การนำ Text remedies ไปปรับใช้ตามปลายทาง**:
-  - **Standard**: บันทึกลง `CODING_STANDARDS.md` (หากยังไม่มีไฟล์ จะสร้างขึ้นมาใหม่พร้อม short header) หรือลงในหมวด Rules ของ Reuse Catalog หากเป็น reuse convention
+  - **Standard**: บันทึกลง `CODING_STANDARDS.md` (หากยังไม่มีไฟล์ จะสร้างขึ้นมาใหม่พร้อม short header)
   - **Pointer**: บันทึกบรรทัดนำทางลงใน `AGENTS.md` (หากไม่มีให้ลง `CLAUDE.md`, หากไม่มีทั้งคู่ให้สร้าง `AGENTS.md` ใหม่)
-  - **Prune**: ลบบรรทัดคำสั่งที่ล้าสมัยออกจาก instruction file ที่ถืออยู่ (`AGENTS.md`, `CLAUDE.md`, `CODING_STANDARDS.md`, หรือ Reuse Catalog)
+  - **Prune**: ลบบรรทัดคำสั่งที่ล้าสมัยออกจาก instruction file ที่ถืออยู่ (`AGENTS.md`, `CLAUDE.md`, หรือ `CODING_STANDARDS.md`)
 - **กฎ 1 Commit ต่อ 1 Remedy และการบันทึก Retro Log**: commit การเปลี่ยนแปลง Text remedies แต่ละข้อที่อนุมัติลงบน working branch แยกจากกันเป็น `chore(retro): <remedy>` (สามรายการที่อนุมัติจะได้ 3 commits) พร้อมกับ entry ของ Remedy นั้นใน `docs/retro-log.md` ใน commit เดียวกัน และบันทึก SHA ของแต่ละ commit กลับลงในรายงาน Retro report ส่วนผลลัพธ์อื่นๆ ทั้งหมดจะถูก commit ใน commit สุดท้าย `chore(retro): log <feature-slug>`
 - **รัน Check Scripts หนึ่งรอบ**: รัน script ตรวจสอบที่มีอยู่ในโปรเจกต์ (`validate`, `check`, `lint`, `test`) อย่างละหนึ่งรอบ หากมีคำสั่งใดล้มเหลว (ผลเป็นสีแดง) จะหยุดทำงานทันทีก่อนเข้าสู่ handoff พร้อมระบุชื่อคำสั่งที่ล้มเหลวและ commit ที่ตามหลัง
 - **การส่งมอบ (Handoff)**: แสดง ready-to-run prompt สำหรับ Code remedies (เช่น `/grill-to-tickets` สำหรับ Check, Skill fix, Access) ที่ตอบรับด้วย `hand off` (รายการเหล่านี้จะไม่ถูก apply หรือ commit ในรอบนี้) จากนั้นพิมพ์ `/pr-to-dev` เป็นขั้นตอนถัดไป โดยการรันจะไม่ทำการ `git push`, ไม่เปิด pull request, และเปิด GitHub issue เฉพาะเมื่อผู้ใช้ร้องขออย่างชัดเจนเท่านั้น

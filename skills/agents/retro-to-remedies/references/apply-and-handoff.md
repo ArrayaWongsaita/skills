@@ -9,12 +9,11 @@ Apply each approved Text remedy (`apply`) directly at its assigned destination:
 - **Standard**:
   - Apply into `CODING_STANDARDS.md`.
   - When `CODING_STANDARDS.md` is absent from the project, it is created with a short header (e.g. `# Coding Standards\n\nProject rules and conventions.`) before appending the new standard rule.
-  - When the Standard represents a reuse convention, apply it into the Reuse Catalog's Rules section (for example in `docs/reuse-catalog.md`).
 - **Pointer**:
   - Apply into `AGENTS.md`, else `CLAUDE.md`, else a new `AGENTS.md`.
   - Add one navigation line identifying the document and specifying when agents must read it.
 - **Prune**:
-  - Removed from the project instruction file holding it (`AGENTS.md`, `CLAUDE.md`, `CODING_STANDARDS.md`, or the Reuse Catalog's Rules).
+  - Removed from the project instruction file holding it (`AGENTS.md`, `CLAUDE.md`, or `CODING_STANDARDS.md`).
   - An instruction inside a skill is not pruned here; it routes as a Skill fix.
 
 ## One-Commit-per-Remedy Rule

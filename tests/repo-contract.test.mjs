@@ -547,7 +547,7 @@ describe("grill-to-tickets production records and guides", () => {
     assertWarningsAndRecommendation("the skill page's English text", { warnings: flatEnglish, recommendation: flatEnglish }, english);
   });
 
-  it("defines Seam, Read set, Budget line, and usage_total in the glossary, after the Reuse Field row", async () => {
+  it("defines Seam, Read set, Budget line, and usage_total in the glossary, after the Workflow State row", async () => {
     const glossary = await readTextOrNull("docs/glossary.md");
     assert.ok(glossary, "the glossary exists");
 
@@ -558,12 +558,12 @@ describe("grill-to-tickets production records and guides", () => {
     }
 
     const lines = glossary.split("\n");
-    const reuseField = lines.indexOf(tableRow(glossary, "Reuse Field"));
+    const anchor = lines.indexOf(tableRow(glossary, "Workflow State"));
     const retro = lines.indexOf(tableRow(glossary, "Retro"));
-    assert.notEqual(reuseField, -1, "the glossary keeps its Reuse Field row");
+    assert.notEqual(anchor, -1, "the glossary keeps its Workflow State row");
     for (const [term, row] of Object.entries(rows)) {
       const index = lines.indexOf(row);
-      assert.ok(index > reuseField && index < retro, `the ${term} row sits between the Reuse Field row and the Retro rows`);
+      assert.ok(index > anchor && index < retro, `the ${term} row sits between the Workflow State row and the Retro rows`);
     }
 
     // A Definition cell is the English definition, " / ", then the Thai one.
