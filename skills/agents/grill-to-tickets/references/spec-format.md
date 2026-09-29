@@ -20,8 +20,6 @@ Avoid specific file paths or code snippets in the spec prose. They go stale quic
 - A `### Changed tests and wording` subsection under Testing Decisions lists existing tests and prose that the change contradicts by path and line. Outside this subsection, omit file paths.
 - If a prototype produced a snippet that encodes a decision more precisely than prose can (state machine, reducer, schema, type shape), inline it within the relevant decision and note briefly that it came from a prototype. Trim to the decision-rich parts, not a working demo.
 
-Under Implementation Decisions, include a `### Reuse Plan` subsection: name every reusable module the spec touches, by bare symbol, categorized as use as-is, extend, create shared, create candidate, promote, or kept separate on purpose, following [reuse-pass.md](reuse-pass.md).
-
 ## Spec Template
 
 ```markdown
@@ -56,15 +54,6 @@ A list of implementation decisions that were made. This can include:
 - Specific interactions
 
 Omit file paths and code snippets here (except inlined prototype snippets).
-
-### Reuse Plan
-
-- **Use as-is:** `symbol` → stories
-- **Extend:** `symbol` — interface changes; existing callers unchanged → stories
-- **Create shared:** `symbol(args): ReturnType` — invariants; error modes — consumers: stories — use for: purpose
-- **Create candidate:** `symbol(args)` — plausible second use — use for: purpose
-- **Promote:** `symbol` — new consumer → stories
-- **Kept separate on purpose:** pair of look-alike modules and why they change for different reasons
 
 ## Testing Decisions
 

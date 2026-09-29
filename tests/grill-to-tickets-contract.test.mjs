@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { readFile, access } from "node:fs/promises";
+import { readFile, access, readdir } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
 
@@ -121,68 +121,6 @@ describe("grill-to-tickets composite skill contract", () => {
     }
   });
 
-  it("runs a Stage 0 Reuse survey against the project's Reuse Catalog", async () => {
-    for (const file of skillFiles) {
-      const content = await readFile(file, "utf8");
-      assert.match(content, /Stage 0[\s\S]*Reuse survey[\s\S]*Relentless interview/, "survey runs before the interview");
-      assert.match(content, /docs\/reuse-catalog\.md/);
-      assert.match(content, /drift-check/i);
-      assert.match(content, /Coverage/);
-      assert.match(content, /\(references\/reuse-pass\.md\)/);
-      assert.match(content, /catalog changes/i, "the Stage 0 pause reports catalog changes");
-    }
-    for (const dir of skillDirs) {
-      const pass = await readFile(path.resolve(dir, "references/reuse-pass.md"), "utf8");
-      assert.match(pass, /exists now/i, "catalog lists only code that exists");
-      assert.match(pass, /drift-check/i);
-      assert.match(pass, /git log --since=<date> --first-parent --diff-merges=first-parent --name-only/);
-      assert.match(pass, /Explore-type subagent/);
-      assert.match(pass, /Bootstrap/);
-      assert.match(pass, /AGENTS\.md[\s\S]{0,80}CLAUDE\.md/, "pointer goes to AGENTS.md, else CLAUDE.md");
-      assert.match(pass, /numbered question with a\s+recommended answer/);
-
-      const template = await readFile(path.resolve(dir, "references/reuse-catalog-template.md"), "utf8");
-      assert.match(template, /every line describes code that exists now/i);
-      assert.match(template, /- `symbol` — `path\/to\/file` — use for:/);
-      for (const heading of ["Where shared code lives", "Rules", "Shared", "Candidates", "Coverage"]) {
-        assert.match(template, new RegExp(`^## ${heading}$`, "m"), `template has ## ${heading}`);
-      }
-    }
-  });
-
-  it("writes a Reuse Plan in the spec and reviews it through the gate's reuse lens", async () => {
-    for (const file of skillFiles) {
-      const content = await readFile(file, "utf8");
-      assert.match(content, /Stage 1[\s\S]*### Reuse Plan[\s\S]*Stage 2/, "Stage 1 writes the Reuse Plan");
-      assert.match(content, /Stage 2[\s\S]*reuse lens/i, "Stage 2 applies the reuse lens");
-    }
-    for (const dir of skillDirs) {
-      const pass = await readFile(path.resolve(dir, "references/reuse-pass.md"), "utf8");
-      for (const category of [
-        "Use as-is",
-        "Extend",
-        "Create shared",
-        "Create candidate",
-        "Promote",
-        "Kept separate on purpose",
-      ]) {
-        assert.match(pass, new RegExp(`\\*\\*${category}\\*\\*`), `Reuse Plan category ${category}`);
-      }
-      assert.match(pass, /create-shared bar/i);
-      assert.match(pass, /two or more user stories/);
-      assert.match(pass, /confirmed in Stage 0 that a named upcoming feature/);
-      assert.match(pass, /designed for\s+extraction/i);
-
-      const gate = await readFile(path.resolve(dir, "references/design-review-gate.md"), "utf8");
-      assert.match(gate, /## Reuse lens/);
-      for (const id of ["reuse-duplicate-", "reuse-unowned-", "reuse-speculative-", "reuse-undecided-"]) {
-        assert.match(gate, new RegExp(id), `gate carries finding id ${id}`);
-      }
-      assert.match(gate, /reuse-duplicate-[^\n]*FIX_THEN_SHIP/);
-      assert.match(gate, /reuse-undecided-[^\n]*decision-level/);
-    }
-  });
-
   it("runs a blind-spot pass over fixed categories before the Stage 0 pause", async () => {
     for (const file of skillFiles) {
       const content = await readFile(file, "utf8");
@@ -223,7 +161,7 @@ describe("grill-to-tickets composite skill contract", () => {
       assert.match(stage2, /edits nothing/);
       assert.match(stage2, /\(references\/design-review-gate\.md\) — Reviewer/);
       assert.match(content, /Stages 0, 1, and 3 run \*\*inline\*\*/);
-      assert.match(content, /Two steps dispatch a subagent/);
+      assert.match(content, /One step dispatches a subagent/);
     }
     for (const dir of skillDirs) {
       const gate = await readFile(path.resolve(dir, "references/design-review-gate.md"), "utf8");
@@ -314,42 +252,34 @@ describe("grill-to-tickets composite skill contract", () => {
     }
   });
 
-  it("prints the catalog commit, /clear, then directory-implementer handoff", async () => {
+  it("carries no reuse contract: no survey, catalog, Reuse Plan, Reuse field, or reuse lens", async () => {
+    for (const dir of skillDirs) {
+      const refs = (await readdir(path.resolve(dir, "references"))).filter((f) => f.endsWith(".md"));
+      for (const file of ["SKILL.md", ...refs.map((f) => `references/${f}`)]) {
+        const c = await readFile(path.resolve(dir, file), "utf8");
+        assert.doesNotMatch(c, /reuse-catalog|Reuse Catalog|Reuse Plan|Reuse survey|reuse lens|\*\*Reuse:\*\*|reuse-pass/i, `${file} carries no reuse contract`);
+      }
+      for (const gone of ["references/reuse-pass.md", "references/reuse-catalog-template.md"]) {
+        await assert.rejects(access(path.resolve(dir, gone)), `${gone} is removed`);
+      }
+      const check = await readFile(path.resolve(dir, "scripts/check-tickets.mjs"), "utf8");
+      assert.doesNotMatch(check, /Reuse Plan|REUSE_VERBS|parseReusePlan/, "the checker no longer validates reuse");
+    }
+  });
+
+  it("prints /clear, then the directory-implementer handoff", async () => {
     for (const file of skillFiles) {
       const content = await readFile(file, "utf8");
       const handoff = content.slice(content.indexOf("## Stop — Handoff"));
-      assert.match(handoff, /\.scratch\/ is local and git-ignored[\s\S]*Commit any\s+change to docs\/reuse-catalog\.md[\s\S]*clean\s+working tree/);
+      assert.match(handoff, /\.scratch\/ is local and git-ignored[\s\S]*clean\s+working tree/);
+      assert.doesNotMatch(handoff, /catalog/i, "the handoff has no catalog-commit step");
       assert.match(handoff, /\/clear/);
       assert.match(handoff, /\/subagent-implement \.scratch\/<feature-slug>\//);
       assert.match(handoff, /\/agy-implement[\s\S]{0,40}\/opencode-implement/);
       assert.ok(
-        handoff.indexOf("Commit") < handoff.indexOf("/clear") &&
-          handoff.indexOf("/clear") < handoff.indexOf("/subagent-implement"),
-        "catalog commit, then /clear, then the implementer",
+        handoff.indexOf("/clear") < handoff.indexOf("/subagent-implement"),
+        "/clear, then the implementer",
       );
-    }
-  });
-
-  it("carries reuse into tickets: one owner per shared module and a Reuse field", async () => {
-    for (const file of skillFiles) {
-      const content = await readFile(file, "utf8");
-      const stage3 = content.slice(content.indexOf("## Stage 3"), content.indexOf("## Stop"));
-      assert.match(stage3, /owner\s+ticket/i);
-      assert.match(stage3, /\*\*Reuse:\*\*/);
-      for (const verb of ["use", "extend", "create-shared", "create-candidate", "promote"]) {
-        assert.match(stage3, new RegExp(`\`${verb}\``), `Stage 3 names the verb ${verb}`);
-      }
-      assert.match(stage3, /out of the\s+acceptance criteria/i);
-    }
-    for (const dir of skillDirs) {
-      const pass = await readFile(path.resolve(dir, "references/reuse-pass.md"), "utf8");
-      const stage3 = pass.slice(pass.indexOf("## Stage 3"));
-      assert.match(stage3, /exactly one \*\*owner ticket\*\*/);
-      assert.match(stage3, /`Blocked by`/);
-      assert.match(stage3, /directly after `\*\*Blocked by:\*\*`/);
-      assert.match(stage3, /`\*\*Reuse:\*\* none`/);
-      assert.match(stage3, /map every acceptance criterion to a new test/);
-      assert.match(stage3, /Check before the quiz/);
     }
   });
 
@@ -357,19 +287,12 @@ describe("grill-to-tickets composite skill contract", () => {
     for (const file of skillFiles) {
       const content = await readFile(file, "utf8");
       const stage3 = content.slice(content.indexOf("## Stage 3"), content.indexOf("## Stop"));
-      assert.match(stage3, /`\*\*Stories:\*\*` line after `\*\*Reuse:\*\*`/);
+      assert.match(stage3, /`\*\*Stories:\*\*` line after `\*\*Blocked by:\*\*`/);
       assert.match(stage3, /node <this skill's directory>\/scripts\/check-tickets\.mjs \.scratch\/<feature-slug>\//);
       assert.match(stage3, /\(scripts\/check-tickets\.mjs\)/);
       assert.match(stage3, /story-coverage table/);
       assert.match(stage3, /Re-run the checker after every change/);
       assert.match(stage3, /`result: PASS`/, "Stage 3 ends on a passing check");
-    }
-    for (const dir of skillDirs) {
-      const pass = await readFile(path.resolve(dir, "references/reuse-pass.md"), "utf8");
-      const check = pass.slice(pass.indexOf("### Check before the quiz"));
-      assert.match(check, /scripts\/check-tickets\.mjs/);
-      assert.match(check, /no reuse statement sits among the acceptance criteria/);
-      assert.match(pass, /one module per bullet, its symbol first and in backticks/);
     }
   });
 
@@ -389,8 +312,8 @@ describe("grill-to-tickets composite skill contract", () => {
       );
       assert.match(
         stage3,
-        /Reuse[\s\S]*Seam[\s\S]*Context[\s\S]*Budget[\s\S]*story-coverage\s+table[\s\S]*budget\s+table[\s\S]*DAG\s+summary[\s\S]*warning/i,
-        "the quiz shows each ticket's Reuse, Seam, Context, and Budget, the coverage and budget tables, the DAG summary, and every warning",
+        /Seam[\s\S]*Context[\s\S]*Budget[\s\S]*story-coverage\s+table[\s\S]*budget\s+table[\s\S]*DAG\s+summary[\s\S]*warning/i,
+        "the quiz shows each ticket's Seam, Context, and Budget, the coverage and budget tables, the DAG summary, and every warning",
       );
       assert.match(stage3, /`result: PASS`/);
       assert.match(stage3, /## Ticket warnings/);
@@ -536,7 +459,7 @@ describe("grill-to-tickets composite skill contract", () => {
       ]) {
         assert.match(content, new RegExp(`## ${section}`));
       }
-      assert.match(content, /### Reuse Plan/);
+      assert.doesNotMatch(content, /### Reuse Plan/);
       assert.match(content, /every decision in the log|every logged decision/i);
       assert.match(content, /blind-spot assumption/i);
       assert.match(content, /heading.*never.*repeat|unique/i);
@@ -604,7 +527,7 @@ describe("grill-to-tickets composite skill contract", () => {
     }
   });
 
-  it("points SKILL.md, design-review-gate, and reuse-pass at owned formats", async () => {
+  it("points SKILL.md and design-review-gate at owned formats", async () => {
     for (const file of skillFiles) {
       const content = await readFile(file, "utf8");
 
@@ -633,7 +556,6 @@ describe("grill-to-tickets composite skill contract", () => {
       const stage1 = content.slice(content.indexOf("## Stage 1"), content.indexOf("## Stage 2"));
       assert.match(stage1, /spec-format\.md/);
       assert.match(stage1, /every\s+decision in the log appears in it/);
-      assert.match(stage1, /### Reuse Plan/);
 
       // Stage 2 rework names Stage 1
       const stage2 = content.slice(content.indexOf("## Stage 2"), content.indexOf("## Stage 3"));
@@ -655,14 +577,9 @@ describe("grill-to-tickets composite skill contract", () => {
       assert.match(gate, /re-run Stage 1 inline/);
       assert.match(gate, /Stage 1 cannot/);
       assert.match(gate, /re-run Stage 1 and re-review/);
-      assert.match(gate, /re-run Stage 1 with the finding/);
+      assert.match(gate, /re-run Stage 1 inline with the finding/);
       assert.doesNotMatch(gate, /`to-spec`/);
       assert.doesNotMatch(gate, /`to-tickets`/);
-
-      // reuse-pass.md line 99
-      const reusePass = await readFile(path.resolve(dir, "references/reuse-pass.md"), "utf8");
-      assert.match(reusePass, /`spec-format\.md`'s rule/);
-      assert.doesNotMatch(reusePass, /`to-spec`'s rule/);
     }
   });
 });

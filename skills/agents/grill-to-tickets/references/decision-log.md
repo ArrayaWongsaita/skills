@@ -58,8 +58,6 @@ decision, including the small ones neither of them takes.
 - **Rounds** are the log. The open round fills in its `decided:` values as the
   answers arrive; a closed round stays as written. An answer that reverses an
   earlier one is a new entry naming what it replaces (`supersedes R1 Q2`).
-- A reuse choice put to the user is a question like any other and is logged. A
-  survey fact that settled itself belongs in the catalog, not here.
 - A decision-level `REWORK` appends its round under the heading
   `## Round N — re-grill for <finding id> (gate cycle K)`.
 - The blind-spot pass writes its table, stated assumptions included, under

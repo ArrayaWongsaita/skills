@@ -41,10 +41,9 @@ a fresh one every cycle, with read access to the repository, and brief it with:
 
 - **Paths:** `spec.md`, `decisions.md`, `CONTEXT.md`, and `adr/` under
   `.scratch/<feature-slug>/`; the root `CONTEXT.md` and `docs/adr/` when they
-  exist; `docs/reuse-catalog.md`.
+  exist.
 - **Task:** run the `scrutinize` skill's workflow — its `SKILL.md` at the path
-  Preflight found — on `spec.md`, tracing its claims through the real code, with
-  the reuse lens below.
+  Preflight found — on `spec.md`, tracing its claims through the real code.
 - **Prior findings,** from cycle 2 on: the previous cycle's blocking findings,
   one line each with its id, to report as resolved or still present under the
   same id.
@@ -88,7 +87,7 @@ invariant, verify the evidence, and make the smallest correct edit **directly to
 to install Redis.
 
 Then **sweep** the spec: a fact is often stated in more than one section — a
-story, an implementation decision, the Reuse Plan, a further note — and a fix to
+story, an implementation decision, a further note — and a fix to
 one leaves the others stating the old version. Search `spec.md` for the fact's
 key terms (the symbol, flag, value, or behaviour you changed) and bring every
 restatement in line. The sweep is done when a search for the old wording finds
@@ -163,22 +162,3 @@ ask once: add more rounds, or go on to Stage 3.
   current cycle.
 
 `REJECT` is not part of this exit: it stops the run at once.
-
-## Reuse lens
-
-Every cycle, the reviewer reads `spec.md` with its Reuse Plan and the project's
-`docs/reuse-catalog.md`, and `scrutinize`'s mandatory "use something that
-already exists" pass is pointed at both. Reuse findings carry stable ids so the
-stall rule can see a repeat:
-
-| finding id | condition | route |
-| --- | --- | --- |
-| `reuse-duplicate-<symbol>` | the spec creates something the catalog already has | `FIX_THEN_SHIP` — change it to use or extend the catalogued module |
-| `reuse-unowned-<shape>` | logic two or more stories need, with no create-shared entry | `FIX_THEN_SHIP` — add a create-shared entry with its interface and consumers |
-| `reuse-speculative-<symbol>` | a create-shared entry below the create-shared bar | `FIX_THEN_SHIP` — downgrade it to create candidate |
-| `reuse-plan-missing` | the spec has no Reuse Plan although the survey settled the facts | `REWORK`, spec-level — re-run Stage 1 with the finding |
-| `reuse-undecided-<symbol>` | extend-vs-new, or share-vs-separate, is a genuine trade-off nobody decided | `REWORK`, decision-level — return to Stage 0 for that one question |
-
-The create-shared bar and the Reuse Plan categories live in
-[reuse-pass.md](reuse-pass.md). Budget, stall detection, and the verdict
-vocabulary apply to reuse findings unchanged.

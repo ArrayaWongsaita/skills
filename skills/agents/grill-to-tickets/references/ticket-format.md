@@ -41,8 +41,7 @@ Wide refactors are the exception to vertical slicing. A wide refactor is one mec
   - Suite, typecheck, and lint runs are already part of every implementer's verification, so they are not acceptance criteria. Every criterion must map to an observable, testable behaviour or outcome.
   - Documentation obligations are written as testable statements (for example, "the guide describes X").
 - **No file paths in What to build or criteria:** Avoid specific file paths or code snippets in What to build and the acceptance criteria; they go stale quickly. Context is the one place a ticket names paths. Exception: inlined prototype snippets encoding a decision more precisely than prose can.
-- **Reuse:** Every ticket carries a `**Reuse:**` line directly after `**Blocked by:**` with the fixed verbs `use`, `extend`, `create-shared`, `create-candidate`, `promote`, or `none`, following [reuse-pass.md](reuse-pass.md). Keep reuse out of the acceptance criteria.
-- **Stories:** Every ticket carries a `**Stories:**` line directly after `**Reuse:**` listing the spec's user-story numbers it delivers, or `none` for a prefactor.
+- **Stories:** Every ticket carries a `**Stories:**` line directly after `**Blocked by:**` listing the spec's user-story numbers it delivers, or `none` for a prefactor.
 - **Seam:** Every ticket carries a `**Seam:**` line directly after `**Stories:**` naming one test boundary, taken from the spec's Testing Decisions. It must be a single non-empty line.
 - **Context:** Every ticket carries a `**Context:**` line directly after `**Seam:**` listing the spec sections and repository files the worker needs. It must be a single line; Context items never wrap. Items are separated by ` · ` and come in six forms:
   - `spec § <ref>` — a spec section. `<ref>` is either a heading's text, or `<ancestor> › … › <heading>` to name a heading whose ancestors include the given ones, in order, not necessarily directly.
@@ -64,7 +63,6 @@ Wide refactors are the exception to vertical slicing. A wide refactor is one mec
 Present the proposed breakdown as a numbered list. For each ticket, show:
 - **Title**: short descriptive name
 - **Blocked by**: which other tickets (if any) must complete first
-- **Reuse**: the ticket's reuse line
 - **Stories**: user-story numbers delivered
 - **Seam**: the ticket's one test boundary
 - **Context**: the ticket's Read set
@@ -92,7 +90,6 @@ Write one file per ticket under `.scratch/<feature-slug>/issues/<NN>-<slug>.md`,
 **What to build:** the end-to-end behaviour this ticket makes work, from the user's perspective, not a layer-by-layer implementation list.
 
 **Blocked by:** the numbers of the tickets that gate this one, or "None (can start immediately)".
-**Reuse:** use / extend / create-shared / create-candidate / promote (or none)
 **Stories:** user-story numbers delivered (or none)
 **Seam:** one test boundary from the spec's Testing Decisions
 **Context:** spec § <ref> · path/to/file · (edit) path/to/file · (new) path/to/file · (from NN) path/to/file · (edit from NN) path/to/file

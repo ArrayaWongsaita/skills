@@ -13,7 +13,6 @@ const {
   checkFeatureDir,
   estimateTokens,
   formatReport,
-  parseReusePlan,
   parseStories,
   parseTicket,
   sectionOf,
@@ -35,12 +34,6 @@ const spec = `# Spec
 ## Implementation Decisions
 
 4. Not a story: this list belongs to another section
-
-### Reuse Plan
-
-- **Use as-is:** \`formatDate\` → story 2
-- **Create shared:** \`buildMemberRows(members): Row[]\` — pure — consumers: stories 1, 2
-- **Promote:** none
 
 ## Testing Decisions
 `;
@@ -88,7 +81,7 @@ function ticket(
   title,
   {
     blockedBy = "None (can start immediately)",
-    reuse = "none",
+    reuse = null,
     stories = "none",
     seam = "test boundary",
     context = "spec § User Stories",
@@ -116,8 +109,8 @@ function ticket(
 }
 
 const passing = () => [
-  ticket("01", "Export members", { reuse: "create-shared `buildMemberRows`", stories: "1, 1a" }),
-  ticket("02", "CSV download", { blockedBy: "01", reuse: "use `buildMemberRows` · use `formatDate`", stories: "2" }),
+  ticket("01", "Export members", { stories: "1, 1a" }),
+  ticket("02", "CSV download", { blockedBy: "01", stories: "2" }),
   ticket("03", "Hide emails", { blockedBy: "01: Export members", stories: "3" }),
 ];
 
@@ -135,13 +128,11 @@ async function withBudgetProject(body, { contextError = false } = {}) {
     await writeFile(path.join(dir, "spec.md"), spec);
     const tickets = [
       ticket("01", "Export members", {
-        reuse: "create-shared `buildMemberRows`",
         stories: "1, 1a",
         budget: "read ~99k tokens · 9 criteria · 9 modules",
       }),
       ticket("02", "CSV download", {
         blockedBy: "01",
-        reuse: "use `buildMemberRows` · use `formatDate`",
         stories: "2",
         context: "spec § User Stories · (new) src/csv.mjs",
         budget: null,
@@ -175,6 +166,18 @@ describe("check-tickets", () => {
     assert.deepEqual([...result.coverage], [["1", [1]], ["1a", [1]], ["2", [2]], ["3", [3]]]);
   });
 
+  it("ignores a leftover Reuse line without an error or a warning", () => {
+    const withLeftover = [
+      ticket("01", "Export members", { reuse: "create-shared `buildMemberRows`", stories: "1, 1a" }),
+      ticket("02", "CSV download", { blockedBy: "01", reuse: "use `buildMemberRows` · reuse `formatDate`", stories: "2" }),
+      ticket("03", "Hide emails", { blockedBy: "01: Export members", reuse: "not a verb", stories: "3" }),
+    ];
+    const result = checkFeature({ spec, tickets: withLeftover });
+    assert.deepEqual(result.errors, []);
+    assert.deepEqual(result.warnings, []);
+    assert.deepEqual(result.coverage, checkFeature({ spec, tickets: passing() }).coverage);
+  });
+
   it("flags a story no ticket delivers and a ticket naming a story the spec lacks", () => {
     const tickets = passing();
     tickets[2] = ticket("03", "Hide emails", { blockedBy: "01", stories: "9" });
@@ -186,7 +189,7 @@ describe("check-tickets", () => {
   it("expands a story range and notes a ticket that delivers no story", () => {
     const tickets = [
       ticket("01", "Prefactor rows"),
-      ticket("02", "Everything", { blockedBy: "01", reuse: "create-shared `buildMemberRows`", stories: "1-3" }),
+      ticket("02", "Everything", { blockedBy: "01", stories: "1-3" }),
     ];
     const result = checkFeature({ spec, tickets });
     assert.deepEqual(result.errors, []);
@@ -196,7 +199,7 @@ describe("check-tickets", () => {
 
   it("requires Blocked by entries to exist and to be lower-numbered", () => {
     const tickets = passing();
-    tickets[0] = ticket("01", "Export members", { blockedBy: "02", reuse: "none", stories: "1, 1a" });
+    tickets[0] = ticket("01", "Export members", { blockedBy: "02", stories: "1, 1a" });
     tickets[1] = ticket("02", "CSV download", { blockedBy: "07", stories: "2" });
     const { errors } = checkFeature({ spec, tickets });
     assert.ok(errors.some((e) => /01-export-members\.md: Blocked by 02; a blocker must have a lower number/.test(e)));
@@ -209,65 +212,6 @@ describe("check-tickets", () => {
     assert.deepEqual(checkFeature({ spec, tickets }).errors, []);
     tickets[2] = ticket("03", "Hide emails", { blockedBy: "Import members", stories: "3" });
     assert.ok(checkFeature({ spec, tickets }).errors.some((e) => /Blocked by "Import members" matches no ticket/.test(e)));
-  });
-
-  it("requires Reuse directly after Blocked by, with only the fixed verbs", () => {
-    const tickets = passing();
-    tickets[1] = ticket("02", "CSV download", { blockedBy: "01", reuse: null, stories: "2" });
-    tickets[2] = ticket("03", "Hide emails", { blockedBy: "01", reuse: "reuse `maskEmail`", stories: "3" });
-    const { errors } = checkFeature({ spec, tickets });
-    assert.ok(errors.some((e) => /02-csv-download\.md: \*\*Reuse:\*\* is missing/.test(e)));
-    assert.ok(errors.some((e) => /03-hide-emails\.md: Reuse "reuse" is not a Reuse verb/.test(e)));
-
-    const misplaced = passing();
-    misplaced[2] = ticket("03", "Hide emails", { blockedBy: "01", reuse: null, stories: "3", extra: "**Reuse:** none\n" });
-    assert.ok(
-      checkFeature({ spec, tickets: misplaced }).errors.some((e) => /must come directly after \*\*Blocked by:\*\*/.test(e)),
-    );
-  });
-
-  it("gives each create-shared symbol one owner that blocks every other ticket using it", () => {
-    const twoOwners = passing();
-    twoOwners[1] = ticket("02", "CSV download", { blockedBy: "01", reuse: "create-shared `buildMemberRows`", stories: "2" });
-    assert.ok(
-      checkFeature({ spec, tickets: twoOwners }).errors.some((e) =>
-        /create-shared `buildMemberRows` appears on tickets 01, 02/.test(e),
-      ),
-    );
-
-    const unblocked = passing();
-    unblocked[2] = ticket("03", "Hide emails", { reuse: "use `buildMemberRows`", stories: "3" });
-    assert.ok(
-      checkFeature({ spec, tickets: unblocked }).errors.some((e) =>
-        /03-hide-emails\.md: uses `buildMemberRows`, so it must list its create-shared ticket 01/.test(e),
-      ),
-    );
-  });
-
-  it("reads the Reuse Plan's create-shared and promote entries by symbol", () => {
-    const plan = parseReusePlan(spec.replace("- **Promote:** none", "- **Promote:** `useMemberFilters` → story 3"));
-    assert.deepEqual(plan, { "create-shared": ["buildMemberRows"], promote: ["useMemberFilters"] });
-  });
-
-  it("requires a ticket for every create-shared and promote entry in the Reuse Plan", () => {
-    const tickets = passing();
-    tickets[0] = ticket("01", "Export members", { stories: "1, 1a" });
-    tickets[1] = ticket("02", "CSV download", { blockedBy: "01", reuse: "use `formatDate`", stories: "2" });
-    const { errors } = checkFeature({ spec, tickets });
-    assert.ok(
-      errors.includes('Reuse Plan create-shared `buildMemberRows` has no ticket carrying "create-shared `buildMemberRows`"'),
-      errors.join("\n"),
-    );
-  });
-
-  it("applies the same ownership rule to promote", () => {
-    const tickets = [
-      ticket("01", "Promote row builder", { reuse: "promote `buildRows`", stories: "1, 1a" }),
-      ticket("02", "CSV download", { reuse: "use `buildRows`", stories: "2, 3" }),
-    ];
-    assert.ok(
-      checkFeature({ spec, tickets }).errors.some((e) => /uses `buildRows`, so it must list its promote ticket 01/.test(e)),
-    );
   });
 
   it("rejects badly named ticket files and headings that disagree with them", () => {
@@ -348,20 +292,19 @@ describe("check-tickets", () => {
   it("checkFeature errors on Seam missing, empty, repeated, out of order, or followed directly by non-field line", () => {
     // Missing
     const missing = passing();
-    missing[0] = ticket("01", "Export members", { reuse: "create-shared `buildMemberRows`", stories: "1, 1a", seam: null });
+    missing[0] = ticket("01", "Export members", { stories: "1, 1a", seam: null });
     const resMissing = checkFeature({ spec, tickets: missing });
     assert.ok(resMissing.errors.some((e) => /01-export-members\.md: \*\*Seam:\*\* is missing/.test(e)), resMissing.errors.join("\n"));
 
     // Empty
     const empty = passing();
-    empty[0] = ticket("01", "Export members", { reuse: "create-shared `buildMemberRows`", stories: "1, 1a", seam: "   " });
+    empty[0] = ticket("01", "Export members", { stories: "1, 1a", seam: "   " });
     const resEmpty = checkFeature({ spec, tickets: empty });
     assert.ok(resEmpty.errors.some((e) => /01-export-members\.md: \*\*Seam:\*\* is empty/.test(e)), resEmpty.errors.join("\n"));
 
     // Repeated
     const repeated = passing();
     repeated[0] = ticket("01", "Export members", {
-      reuse: "create-shared `buildMemberRows`",
       stories: "1, 1a",
       extra: "**Seam:** duplicate seam boundary\n",
     });
@@ -379,7 +322,6 @@ describe("check-tickets", () => {
         "",
         "**Blocked by:** None (can start immediately)",
         "",
-        "**Reuse:** create-shared `buildMemberRows`",
         "",
         "**Seam:** test boundary",
         "",
@@ -409,7 +351,6 @@ describe("check-tickets", () => {
         "",
         "**Blocked by:** None (can start immediately)",
         "",
-        "**Reuse:** create-shared `buildMemberRows`",
         "",
         "**Stories:** 1, 1a",
         "",
@@ -433,20 +374,19 @@ describe("check-tickets", () => {
   it("checkFeature errors on Context missing, empty, repeated, out of order, or followed directly by non-field line", () => {
     // Missing
     const missing = passing();
-    missing[0] = ticket("01", "Export members", { reuse: "create-shared `buildMemberRows`", stories: "1, 1a", context: null });
+    missing[0] = ticket("01", "Export members", { stories: "1, 1a", context: null });
     const resMissing = checkFeature({ spec, tickets: missing });
     assert.ok(resMissing.errors.some((e) => /01-export-members\.md: \*\*Context:\*\* is missing/.test(e)), resMissing.errors.join("\n"));
 
     // Empty
     const empty = passing();
-    empty[0] = ticket("01", "Export members", { reuse: "create-shared `buildMemberRows`", stories: "1, 1a", context: "   " });
+    empty[0] = ticket("01", "Export members", { stories: "1, 1a", context: "   " });
     const resEmpty = checkFeature({ spec, tickets: empty });
     assert.ok(resEmpty.errors.some((e) => /01-export-members\.md: \*\*Context:\*\* is empty/.test(e)), resEmpty.errors.join("\n"));
 
     // Repeated
     const repeated = passing();
     repeated[0] = ticket("01", "Export members", {
-      reuse: "create-shared `buildMemberRows`",
       stories: "1, 1a",
       extra: "**Context:** spec § User Stories\n",
     });
@@ -464,7 +404,6 @@ describe("check-tickets", () => {
         "",
         "**Blocked by:** None (can start immediately)",
         "",
-        "**Reuse:** create-shared `buildMemberRows`",
         "",
         "**Stories:** 1, 1a",
         "",
@@ -494,7 +433,6 @@ describe("check-tickets", () => {
         "",
         "**Blocked by:** None (can start immediately)",
         "",
-        "**Reuse:** create-shared `buildMemberRows`",
         "",
         "**Stories:** 1, 1a",
         "",
@@ -588,7 +526,6 @@ describe("check-tickets", () => {
   it("checkFeature errors on missing and ambiguous spec § refs", () => {
     const tickets = passing();
     tickets[0] = ticket("01", "Export members", {
-      reuse: "create-shared `buildMemberRows`",
       stories: "1, 1a",
       context: "spec § Missing Section",
     });
@@ -611,7 +548,6 @@ describe("check-tickets", () => {
     // Plain absent
     const tPlain = passing();
     tPlain[0] = ticket("01", "Export members", {
-      reuse: "create-shared `buildMemberRows`",
       stories: "1, 1a",
       context: "spec § User Stories · src/absent.mjs",
     });
@@ -624,7 +560,6 @@ describe("check-tickets", () => {
     // (edit) absent
     const tEdit = passing();
     tEdit[0] = ticket("01", "Export members", {
-      reuse: "create-shared `buildMemberRows`",
       stories: "1, 1a",
       context: "spec § User Stories · (edit) src/absent.mjs",
     });
@@ -637,7 +572,6 @@ describe("check-tickets", () => {
     // (new) already existing
     const tNew = passing();
     tNew[0] = ticket("01", "Export members", {
-      reuse: "create-shared `buildMemberRows`",
       stories: "1, 1a",
       context: "spec § User Stories · (new) src/exists.mjs",
     });
@@ -651,13 +585,11 @@ describe("check-tickets", () => {
   it("checkFeature errors when two tickets mark the same path (new)", () => {
     const tickets = passing();
     tickets[0] = ticket("01", "Export members", {
-      reuse: "create-shared `buildMemberRows`",
       stories: "1, 1a",
       context: "spec § User Stories · (new) src/dup.mjs",
     });
     tickets[1] = ticket("02", "CSV download", {
       blockedBy: "01",
-      reuse: "use `buildMemberRows` · use `formatDate`",
       stories: "2",
       context: "spec § User Stories · (new) src/dup.mjs",
     });
@@ -672,7 +604,6 @@ describe("check-tickets", () => {
     // Absolute
     const tAbs = passing();
     tAbs[0] = ticket("01", "Export members", {
-      reuse: "create-shared `buildMemberRows`",
       stories: "1, 1a",
       context: "spec § User Stories · /var/log/app.log",
     });
@@ -685,7 +616,6 @@ describe("check-tickets", () => {
     // Escapes root
     const tEscape = passing();
     tEscape[0] = ticket("01", "Export members", {
-      reuse: "create-shared `buildMemberRows`",
       stories: "1, 1a",
       context: "spec § User Stories · ../escape.mjs",
     });
@@ -698,7 +628,6 @@ describe("check-tickets", () => {
     // Directory
     const tDir = passing();
     tDir[0] = ticket("01", "Export members", {
-      reuse: "create-shared `buildMemberRows`",
       stories: "1, 1a",
       context: "spec § User Stories · src",
     });
@@ -714,7 +643,6 @@ describe("check-tickets", () => {
     const tMissingNN = passing();
     tMissingNN[1] = ticket("02", "CSV download", {
       blockedBy: "01",
-      reuse: "use `buildMemberRows` · use `formatDate`",
       stories: "2",
       context: "spec § User Stories · (from 99) src/created.mjs",
     });
@@ -727,7 +655,6 @@ describe("check-tickets", () => {
     // NN is not a transitive blocker
     const tNotBlocker = passing();
     tNotBlocker[0] = ticket("01", "Export members", {
-      reuse: "create-shared `buildMemberRows`",
       stories: "1, 1a",
       context: "spec § User Stories · (new) src/created.mjs",
     });
@@ -746,14 +673,12 @@ describe("check-tickets", () => {
     // NN lacks (new) for that path (e.g. NN marks it (edit))
     const tLacksNew = passing();
     tLacksNew[0] = ticket("01", "Export members", {
-      reuse: "create-shared `buildMemberRows`",
       stories: "1, 1a",
       context: "spec § User Stories · (edit) src/created.mjs",
       files: { "src/created.mjs": "content" },
     });
     tLacksNew[1] = ticket("02", "CSV download", {
       blockedBy: "01",
-      reuse: "use `buildMemberRows` · use `formatDate`",
       stories: "2",
       context: "spec § User Stories · (from 01) src/created.mjs",
     });
@@ -770,13 +695,11 @@ describe("check-tickets", () => {
     // Same checks for (edit from NN)
     const tEditFrom = passing();
     tEditFrom[0] = ticket("01", "Export members", {
-      reuse: "create-shared `buildMemberRows`",
       stories: "1, 1a",
       context: "spec § User Stories · (new) src/created.mjs",
     });
     tEditFrom[1] = ticket("02", "CSV download", {
       blockedBy: "01",
-      reuse: "use `buildMemberRows` · use `formatDate`",
       stories: "2",
       context: "spec § User Stories · (edit from 01) src/created.mjs",
     });
@@ -787,7 +710,6 @@ describe("check-tickets", () => {
   it("checkFeature normalises paths with path.posix.normalize and counts missing file as null", () => {
     const tickets = passing();
     tickets[0] = ticket("01", "Export members", {
-      reuse: "create-shared `buildMemberRows`",
       stories: "1, 1a",
       context: "spec § User Stories · ./src/foo/../utils.mjs",
       files: { "src/utils.mjs": "export const x = 1;" },
@@ -808,7 +730,6 @@ describe("check-tickets", () => {
 
       const t = passing();
       t[0] = ticket("01", "Export members", {
-        reuse: "create-shared `buildMemberRows`",
         stories: "1, 1a",
         context: "spec § User Stories · src/code.mjs",
         files: { "src/code.mjs": "console.log(1);" },
@@ -852,7 +773,6 @@ describe("check-tickets", () => {
 
         const t = passing();
         t[0] = ticket("01", "Export members", {
-          reuse: "create-shared `buildMemberRows`",
           stories: "1, 1a",
           context,
           files: rootFiles,
@@ -921,7 +841,6 @@ describe("check-tickets", () => {
       "# 01: Measure",
       "",
       "**Blocked by:** none",
-      "**Reuse:** none",
       "**Stories:** 1",
       "**Seam:** test boundary",
       "**Context:** spec § User Stories · src/read.mjs · (edit) src/edit.mjs",
@@ -934,7 +853,6 @@ describe("check-tickets", () => {
       "# 02: Create",
       "",
       "**Blocked by:** 01",
-      "**Reuse:** none",
       "**Stories:** 1",
       "**Seam:** test boundary",
       "**Context:** spec § User Stories · (new) lib/created.mjs",
@@ -946,7 +864,6 @@ describe("check-tickets", () => {
       "# 03: Edit created",
       "",
       "**Blocked by:** 02",
-      "**Reuse:** none",
       "**Stories:** 1",
       "**Seam:** test boundary",
       "**Context:** spec § User Stories · (edit from 02) lib/created.mjs",
@@ -984,7 +901,6 @@ describe("check-tickets", () => {
   it("checkFeature errors on a Budget line that is missing, repeated, out of order, or followed by a non-field line", () => {
     const missing = passing();
     missing[0] = ticket("01", "Export members", {
-      reuse: "create-shared `buildMemberRows`",
       stories: "1, 1a",
       budget: null,
     });
@@ -996,7 +912,6 @@ describe("check-tickets", () => {
 
     const empty = passing();
     empty[0] = ticket("01", "Export members", {
-      reuse: "create-shared `buildMemberRows`",
       stories: "1, 1a",
       budget: "",
     });
@@ -1008,7 +923,6 @@ describe("check-tickets", () => {
 
     const repeated = passing();
     repeated[0] = ticket("01", "Export members", {
-      reuse: "create-shared `buildMemberRows`",
       stories: "1, 1a",
       extra: "**Budget:** read ~1k tokens · 1 criteria · 1 modules\n",
     });
@@ -1025,7 +939,6 @@ describe("check-tickets", () => {
         "# 01: Export members",
         "",
         "**Blocked by:** None (can start immediately)",
-        "**Reuse:** create-shared `buildMemberRows`",
         "**Stories:** 1, 1a",
         "**Seam:** test boundary",
         "**Budget:** read ~1k tokens · 1 criteria · 1 modules",
@@ -1048,7 +961,6 @@ describe("check-tickets", () => {
         "# 01: Export members",
         "",
         "**Blocked by:** None (can start immediately)",
-        "**Reuse:** create-shared `buildMemberRows`",
         "**Stories:** 1, 1a",
         "**Seam:** test boundary",
         "**Context:** spec § User Stories",
@@ -1069,7 +981,6 @@ describe("check-tickets", () => {
   it("checkFeature errors on a malformed, unmeasured, or differing Budget line, but skips differs for Context errors", () => {
     const malformed = passing();
     malformed[0] = ticket("01", "Export members", {
-      reuse: "create-shared `buildMemberRows`",
       stories: "1, 1a",
       budget: "about twenty thousand tokens",
     });
@@ -1081,7 +992,6 @@ describe("check-tickets", () => {
 
     const unmeasured = passing();
     unmeasured[0] = ticket("01", "Export members", {
-      reuse: "create-shared `buildMemberRows`",
       stories: "1, 1a",
       budget: "unmeasured",
     });
@@ -1093,7 +1003,6 @@ describe("check-tickets", () => {
 
     const stale = passing();
     stale[0] = ticket("01", "Export members", {
-      reuse: "create-shared `buildMemberRows`",
       stories: "1, 1a",
       budget: "read ~99k tokens · 1 criteria · 0 modules",
     });
@@ -1107,7 +1016,6 @@ describe("check-tickets", () => {
 
     const contextErrors = passing();
     contextErrors[0] = ticket("01", "Export members", {
-      reuse: "create-shared `buildMemberRows`",
       stories: "1, 1a",
       context: "spec § User Stories · src/absent.mjs",
       budget: "read ~99k tokens · 1 criteria · 0 modules",
@@ -1130,13 +1038,11 @@ describe("check-tickets", () => {
 
       const tickets = passing();
       tickets[0] = ticket("01", "Export members", {
-        reuse: "create-shared `buildMemberRows`",
         stories: "1, 1a",
         budget: "read ~99k tokens · 9 criteria · 9 modules",
       });
       tickets[1] = ticket("02", "CSV download", {
         blockedBy: "01",
-        reuse: "use `buildMemberRows` · use `formatDate`",
         stories: "2",
         context: "spec § User Stories · (new) src/csv.mjs",
         budget: null,
@@ -1189,7 +1095,6 @@ describe("check-tickets", () => {
 
       const tickets = passing();
       tickets[0] = ticket("01", "Export members", {
-        reuse: "create-shared `buildMemberRows`",
         stories: "1, 1a",
         budget: null,
       });
@@ -1361,7 +1266,7 @@ describe("check-tickets", () => {
     const files = { "src/shared.mjs": "export const shared = 1;\n" };
     const edit = "spec § User Stories · (edit) src/shared.mjs";
     const unordered = [
-      ticket("01", "Export members", { reuse: "create-shared `buildMemberRows`", stories: "1, 1a", context: edit, files }),
+      ticket("01", "Export members", { stories: "1, 1a", context: edit, files }),
       ticket("02", "CSV download", { stories: "2", context: edit, files }),
       ticket("03", "Hide emails", { stories: "3" }),
     ];
@@ -1373,7 +1278,7 @@ describe("check-tickets", () => {
 
     // A direct edge between the pair ends the warning.
     const ordered = [
-      ticket("01", "Export members", { reuse: "create-shared `buildMemberRows`", stories: "1, 1a", context: edit, files }),
+      ticket("01", "Export members", { stories: "1, 1a", context: edit, files }),
       ticket("02", "CSV download", { blockedBy: "01", stories: "2", context: edit, files }),
       ticket("03", "Hide emails", { stories: "3" }),
     ];
@@ -1381,7 +1286,7 @@ describe("check-tickets", () => {
 
     // A transitive edge counts too: 03 is blocked by 02, which is blocked by 01.
     const transitive = [
-      ticket("01", "Export members", { reuse: "create-shared `buildMemberRows`", stories: "1, 1a", context: edit, files }),
+      ticket("01", "Export members", { stories: "1, 1a", context: edit, files }),
       ticket("02", "CSV download", { blockedBy: "01", stories: "2", context: edit, files }),
       ticket("03", "Hide emails", { blockedBy: "02", stories: "3", context: edit, files }),
     ];
@@ -1390,7 +1295,6 @@ describe("check-tickets", () => {
     // One ticket naming the path twice is not two tickets changing it.
     const twice = [
       ticket("01", "Export members", {
-        reuse: "create-shared `buildMemberRows`",
         stories: "1, 1a",
         context: "spec § User Stories · (edit) src/shared.mjs · (edit) src/shared.mjs",
         files,
@@ -1417,7 +1321,6 @@ describe("check-tickets", () => {
 
     const editFrom = [
       ticket("01", "Export members", {
-        reuse: "create-shared `buildMemberRows`",
         stories: "1, 1a",
         context: "spec § User Stories · (new) src/created.mjs",
       }),
