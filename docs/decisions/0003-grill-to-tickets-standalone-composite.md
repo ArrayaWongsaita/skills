@@ -1,6 +1,6 @@
 # ADR 0003: grill-to-tickets is a standalone composite, not a refactor of grill-with-docs
 
-- Status / สถานะ: Superseded by ADR 0015 / ถูกแทนที่โดย ADR 0015 (was: Accepted / ยอมรับแล้ว; context amended by ADR 0009 (`grill-with-docs` restored to upstream); decision 1 amended by ADR 0013 (the spec and ticket formats are owned references, no longer followed skills))
+- Status / สถานะ: Accepted / ยอมรับแล้ว; context amended by ADR 0009 (`grill-with-docs` restored to upstream); decision 1 amended by ADR 0013 (the spec and ticket formats are owned references, no longer followed skills)
 - Date / วันที่: 2026-08-31
 
 ## Context / บริบท

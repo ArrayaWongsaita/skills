@@ -4,7 +4,7 @@
 
 ## Status / สถานะ
 
-Superseded by ADR 0015 / ถูกแทนที่โดย ADR 0015 (was: Accepted / ยอมรับแล้ว)
+Accepted / ยอมรับแล้ว
 
 ยอมรับแล้ว — `review-to-pr` เป็น skill มาตรฐานแบบ standalone ไม่ผูกกับ
 `engineering-workflow`

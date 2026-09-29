@@ -4,7 +4,7 @@
 
 ## Status / สถานะ
 
-Superseded by ADR 0015 / ถูกแทนที่โดย ADR 0015 (was: Accepted / ยอมรับแล้ว)
+Accepted / ยอมรับแล้ว
 
 ยอมรับแล้ว — `retro-to-remedies` เป็น skill แบบ standalone ตั้งอยู่ระหว่าง `review-to-pr` และ `pr-to-dev`
 
