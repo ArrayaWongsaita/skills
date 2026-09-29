@@ -112,7 +112,8 @@ describe("grill-to-tickets composite skill contract", () => {
       assert.match(log, /decided: open/);
       assert.match(log, /before you post the next\s+round/);
       assert.match(log, /^## Resume — `continue <feature-slug>`$/m);
-      assert.match(log, /cycle count from `design-review\.md`/, "one source of truth for the gate cycle count");
+      assert.match(log, /maximum and rounds used from State/, "resume reads the gate maximum and rounds used");
+      assert.match(log, /never refill spent rounds/, "resume keeps spent rounds spent");
 
       const gate = await readFile(path.resolve(dir, "references/design-review-gate.md"), "utf8");
       assert.match(gate, /this finding and `decisions\.md` to a fresh writer/);
@@ -272,13 +273,25 @@ describe("grill-to-tickets composite skill contract", () => {
     }
   });
 
-  it("bounds the design review gate: six cycles, stall, no counter reset, human authorization", async () => {
-    for (const file of skillFiles) {
-      const content = await readFile(file, "utf8");
-      assert.match(content, /\b(6|six)\b/i);
-      assert.match(content, /stall/i);
-      assert.match(content, /human authoriz/i);
-      assert.match(content, /carries over|never reset/i);
+  it("bounds the design review gate by the user's rounds, not a fixed budget", async () => {
+    for (const dir of skillDirs) {
+      const skill = await readFile(path.resolve(dir, "SKILL.md"), "utf8");
+      const gate = await readFile(path.resolve(dir, "references/design-review-gate.md"), "utf8");
+      for (const content of [skill, gate]) {
+        assert.match(content, /at most\s+how many rounds/i, "Stage 2 asks for a maximum number of rounds");
+        assert.match(content, /(propose|Propose)\s+(\*\*)?3/, "the proposed default is 3");
+        assert.match(content, /`0` skips the review/, "0 skips the review");
+        assert.match(content, /--review N/, "--review N answers the entry question");
+        assert.match(content, /stall/i);
+        assert.match(content, /add\s+(more\s+)?rounds/i);
+        assert.match(content, /Known\s+unresolved\s+review\s+findings/);
+        assert.match(content, /carries over|never reset/i);
+        assert.doesNotMatch(content, /\bsix[- ]cycle|cycle 6|\b6 cycles|human authoriz|fresh budget/i, "no fixed six-cycle bound remains");
+      }
+      assert.match(gate, /Go on\*\* is the default/, "going on is the default at the exit");
+      assert.match(gate, /there is no default\s+number/, "added rounds have no default number");
+      assert.match(gate, /`maxRounds`[\s\S]*`roundsUsed`/, "the report records the maximum and rounds used");
+      assert.match(gate, /`REJECT` is not part of this exit: it stops the run at once/);
     }
   });
 

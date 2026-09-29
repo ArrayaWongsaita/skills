@@ -26,7 +26,7 @@ npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 
 - มี idea ใหม่และอยากได้ spec + ticket ที่ผ่าน design review ก่อนเริ่มเขียนโค้ด
 - อยากให้ขั้น discovery, spec และ ticket อยู่ใน context window เดียวเพื่อรักษาคุณภาพการคิด
-- ต้องการ design review gate ที่มี budget จำกัด (6 รอบ), ตรวจจับ stall และแยก rework สองแบบ
+- ต้องการ design review gate ที่ผู้ใช้กำหนดจำนวนรอบเอง (default 3, `--review N`, 0 คือข้าม), ตรวจจับ stall และแยก rework สองแบบ
 
 ### ไม่ควรใช้เมื่อไร
 
@@ -98,7 +98,7 @@ tool). No issue tracker is needed: the files under `.scratch/` are the tracker.
 - You have a fresh idea and want a design-reviewed spec plus tickets before any code.
 - You want discovery, specification, and ticket breakdown to share one context
   window so reasoning stays sharp across the whole planning pass.
-- You want a design-review gate with a hard six-cycle budget, stall detection, and
+- You want a design-review gate whose rounds you choose (default 3, `--review N`, 0 skips), stall detection, and
   a spec-level / decision-level rework split.
 
 ### Do not use it when
@@ -134,8 +134,9 @@ unowned, and speculative shared modules. Each Design Review Gate cycle dispatche
 `scrutinize` to a fresh, read-only reviewer subagent that sees the files and not
 the interview, so it reads the spec the way the implementer will (ADR 0010); the
 main thread normalizes each verdict into `SHIP`, `FIX_THEN_SHIP`, `REWORK`, or
-`REJECT`, keeps one stable `design-review.md` report, and bounds itself to six cycles with early
-stops for stalls and a required human authorization on budget exhaustion. A
+`REJECT`, keeps one stable `design-review.md` report, and bounds itself to the rounds the user chose
+(asked once on entering Stage 2, or `--review N`), and on exhaustion or a stall asks
+whether to add rounds or go on to Stage 3, going on by default with the open findings recorded. A
 `FIX_THEN_SHIP` fix is followed by a sweep that aligns every other passage of the
 spec restating the same fact. A spec-level `REWORK` re-runs Stage 1 without leaving the gate; a decision-level
 `REWORK` returns to Stage 0 to re-grill, and the cycle counter carries over. On

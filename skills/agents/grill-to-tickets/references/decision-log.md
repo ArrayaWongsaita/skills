@@ -44,9 +44,10 @@ decision, including the small ones neither of them takes.
 - **State** is rewritten in place. `stage` is one of `0 — Grill`, `1 — Spec`,
   `2 — Design Review Gate`, `3 — Tickets`, or `done`. `waiting on` names the one
   thing the run needs from the user next — a round's answers, Stage 0
-  confirmation, test-seam confirmation, ticket-quiz approval, or a fresh-budget
-  authorization — or `nothing` while the run works. The gate's cycle count lives
-  in `design-review.md` alone.
+  confirmation, test-seam confirmation, ticket-quiz approval, the review entry
+  question, or the add-rounds choice — or `nothing` while the run works. In Stage 2, State also carries
+  `review: <used>/<max> rounds` (or `review: skipped`), the user's answer to
+  the entry question.
 - **Preflight** records the stage skills found and their lock values. Stage 0
   step 1 writes the first `### Preflight <date>` entry under `## Preflight` when
   it creates the log, and each `continue` appends another, keeping earlier entries.
@@ -80,7 +81,8 @@ A round is closed when every question in it carries a `decided:` other than
 
 1. Read `decisions.md`, State first, then `CONTEXT.md`, `adr/`, and whichever of
    `spec.md`, `design-review.md`, and `issues/` exist.
-2. Take the gate cycle count from `design-review.md`.
+2. Take the gate's maximum and rounds used from State and `design-review.md`;
+   never ask the entry question again and never refill spent rounds.
 3. Resume at the recorded `stage` and `waiting on`. When the run waits on a
    round, re-post that round's open questions. Every logged decision is settled:
    a question returns only when a gate finding reopens it.

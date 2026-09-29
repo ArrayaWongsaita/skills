@@ -69,27 +69,27 @@
     },
     {
       "id": 6,
-      "name": "stall stops early before the budget is spent",
-      "prompt": "$grill-to-tickets continue payments-ledger. Gate cycles 2 and 3 both return the same single blocking finding — the reconciliation window is undefined — with no new and no resolved findings between them.",
-      "expected_output": "Detect the stall — the same blocking finding survived two consecutive cycles with no new and no resolved findings — and stop before cycle 6. Report the stalled finding, the spec fingerprints reviewed, and why no progress is possible.",
+      "name": "stall stops early and asks add-rounds-or-continue",
+      "prompt": "$grill-to-tickets continue payments-ledger. The user chose at most 5 rounds. Gate cycles 2 and 3 both return the same single blocking finding — the reconciliation window is undefined — with no new and no resolved findings between them.",
+      "expected_output": "Detect the stall — the same blocking finding survived two consecutive cycles with no new and no resolved findings — and stop before round 5. Report the stalled finding and why no progress is possible, then ask once whether to add rounds or go on to Stage 3, with going on as the default.",
       "expectations": [
-        "Stops before the six-cycle gate budget is exhausted",
-        "Reports the repeated blocking finding and the spec fingerprints reviewed each cycle",
-        "Explains why no progress is possible rather than looping mechanically",
-        "Does not advance to Stage 3"
+        "Stops before the user's maximum of five rounds is spent",
+        "Reports the repeated blocking finding and why no progress is possible rather than looping mechanically",
+        "Asks whether to add rounds or go on to Stage 3, with going on as the default",
+        "Does not advance to Stage 3 before the user's answer"
       ],
       "files": []
     },
     {
       "id": 7,
-      "name": "budget exhaustion at cycle 6 requires human authorization",
-      "prompt": "$grill-to-tickets continue payments-ledger. Gate cycle 6 has just completed and the verdict is still not SHIP — a mix of FIX_THEN_SHIP and REWORK across the six cycles, with findings still open.",
-      "expected_output": "Stop at 6/6. Report budget exhaustion with the unresolved findings and the per-cycle history, and state that a fresh six-cycle budget needs explicit human authorization and a materially different approach.",
+      "name": "budget exhaustion asks to add rounds or go on",
+      "prompt": "$grill-to-tickets continue payments-ledger. The user chose at most 3 rounds. Round 3 has just completed and the verdict is still not SHIP, with two blocking findings open.",
+      "expected_output": "Stop at 3/3. Report the unresolved findings and the per-cycle history, then ask once whether to add rounds (the user names the number; no default number) or go on to Stage 3. Going on is the default; when the user goes on, write the open findings to design-review.md and to the spec's Further Notes under 'Known unresolved review findings'.",
       "expectations": [
-        "Records six completed cycles and never starts cycle 7 automatically",
-        "Reports budget exhaustion with the unresolved findings and the per-cycle history",
-        "States that a fresh budget requires explicit human authorization",
-        "Does not advance to Stage 3 ticket breakdown without a SHIP verdict"
+        "Records three completed rounds and never starts a fourth automatically",
+        "Reports the unresolved findings and the per-cycle history",
+        "Asks whether to add rounds or go on, treats going on as the default, and gives no default number of added rounds",
+        "On going on, records the open findings in design-review.md and under 'Known unresolved review findings' in the spec's Further Notes"
       ],
       "files": []
     },
@@ -495,6 +495,44 @@
         "Recommends agy-implement or opencode-implement for a maximum wave width of 3",
         "Names the recommended skills without a leading slash",
         "Keeps the Commit -> /clear -> /subagent-implement order"
+      ],
+      "files": []
+    },
+    {
+      "id": 39,
+      "name": "Stage 2 entry asks once for a review round count",
+      "prompt": "$grill-to-tickets Add CSV export to the members table. Stage 1 has just written spec.md.",
+      "expected_output": "Before the first review, ask once whether to review and at most how many rounds, proposing 3 (0 skips the review). Write the maximum into decisions.md State and do not ask again in this run.",
+      "expectations": [
+        "Asks the review question once before dispatching any reviewer",
+        "Proposes 3 rounds and states that 0 skips the review",
+        "Records the answer in decisions.md State",
+        "Does not ask the question again after a FIX_THEN_SHIP cycle"
+      ],
+      "files": []
+    },
+    {
+      "id": 40,
+      "name": "--review flag answers the entry question up front",
+      "prompt": "$grill-to-tickets Add CSV export to the members table --review 2",
+      "expected_output": "Take a maximum of 2 rounds from the flag, ask no entry question at Stage 2, and record the maximum in decisions.md State. With --review 0 the review is skipped and the run goes from Stage 1 to Stage 3, recording that the gate was skipped.",
+      "expectations": [
+        "Does not ask the review entry question",
+        "Records a maximum of 2 rounds in State",
+        "Treats --review 0 as skipping Stage 2 and records that it was skipped",
+        "Falls back to asking when the value is missing or not a non-negative integer"
+      ],
+      "files": []
+    },
+    {
+      "id": 41,
+      "name": "continue resumes with rounds spent kept spent",
+      "prompt": "/grill-to-tickets continue wishlist-sync. decisions.md State says review: 2/3 rounds; design-review.md holds two completed cycles.",
+      "expected_output": "Resume in Stage 2 with a maximum of 3 and 2 rounds used, without asking the entry question and without refilling the budget. Only one more review may run before the exhaustion question.",
+      "expectations": [
+        "Reads the maximum and rounds used from State and design-review.md",
+        "Does not ask the review entry question again",
+        "Runs at most one more round before the add-rounds-or-continue question"
       ],
       "files": []
     }

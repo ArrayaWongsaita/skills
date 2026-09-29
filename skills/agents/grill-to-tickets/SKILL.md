@@ -23,7 +23,7 @@ Stage 0: Grill        reuse survey + grilling + domain-modeling
    ▼
 Stage 1: Spec         spec-format.md              → spec.md
    ▼
-Stage 2: Design Review Gate   scrutinize (fresh reviewer) → design-review.md   (bounded loop)
+Stage 2: Design Review Gate   scrutinize (fresh reviewer) → design-review.md   (user-bounded loop)
    │ (SHIP)
    ▼
 Stage 3: Tickets      ticket-format.md            → issues/NN-<slug>.md
@@ -40,6 +40,10 @@ Explicit invocation only:
 - Resume a run: `/grill-to-tickets continue <feature-slug>` (or `$grill-to-tickets
   continue <feature-slug>`) — pick up from the Decision Log's State, as
   [decision-log.md](references/decision-log.md) — Resume describes.
+
+Add `--review N` to the idea to answer the Stage 2 review question up front — `N`
+is the most rounds of design review to run, and `--review 0` skips the review.
+Without the flag, Stage 2 asks.
 
 Codex policy is declared in `agents/openai.yaml` (`allow_implicit_invocation: false`).
 Claude Code installations rely on `disable-model-invocation: true`. Require explicit
@@ -180,7 +184,14 @@ each new shared module. Categories, the create-shared bar, and an example:
 
 ## Stage 2 — Design Review Gate
 
-Each cycle, dispatch a fresh reviewer subagent that runs `scrutinize` against
+Enter with one question, asked once: *"Do you want a design review, and at most
+how many rounds?"* Propose **3**; `0` skips the review and goes on to Stage 3. A
+valid `--review N` answers it and nothing is asked; a missing or invalid value
+falls back to asking. Write the maximum and the rounds used into `decisions.md`
+State, so `continue` resumes without asking again and without refilling the
+budget. A round is one completed review.
+
+Each round, dispatch a fresh reviewer subagent that runs `scrutinize` against
 `spec.md` from files alone and edits nothing — its brief is in
 [design-review-gate.md](references/design-review-gate.md) — Reviewer. The main
 thread keeps the rest: normalize the reviewer's closing verdict to exactly one of
@@ -209,11 +220,14 @@ Route the verdict:
 State which `REWORK` kind you diagnosed, and why, in the gate report so the
 spec-level and decision-level paths stay visibly distinguished.
 
-The gate is bounded to six cycles. A stall — the same blocking finding surviving
-two consecutive cycles with no new or resolved findings — stops the loop early;
-so does cycle 6 closing without `SHIP`, and a fresh budget then needs explicit
-human authorization. Full routing table, the reuse lens, stall detection, cycle
-accounting, and gate report format live in
+The gate is bounded by the user's maximum. When the last round closes without
+`SHIP`, or a stall — the same blocking finding surviving two consecutive rounds
+with no new or resolved findings — stops the loop early, ask once: add more
+rounds (the user names the number; there is no default number) or go on to
+Stage 3. The default is to go on, with the open blocking findings recorded in
+`design-review.md` and under "Known unresolved review findings" in the spec's
+Further Notes. `REJECT` still stops the run. Full routing table, the reuse lens,
+stall detection, round accounting, and gate report format live in
 [design-review-gate.md](references/design-review-gate.md).
 
 ## Stage 3 — Tickets

@@ -11,8 +11,8 @@ import path from "node:path";
 // `disable-model-invocation`, so real trigger tuning is moot). This contract
 // covers what scripts/validate-skills.mjs cannot: the
 // one-case-per-routing-branch requirement, one case per planning safeguard and
-// per output-quality dimension, and cycle-budget drift between the skill prose
-// and the evals. Benchmark the suite with skill-creator against a snapshot of
+// per output-quality dimension, and drift between the skill prose's
+// user-bounded review gate and the evals. Benchmark the suite with skill-creator against a snapshot of
 // the previous skill version as the old_skill baseline.
 
 async function fileExists(filePath) {
@@ -29,8 +29,6 @@ const skillDir = path.resolve(canonicalDir, "..");
 const evalsJson = () => readJson(path.resolve(canonicalDir, "evals.json"));
 const triggerJson = () => readJson(path.resolve(canonicalDir, "trigger-evals.json"));
 
-const NUMBER_WORDS = { two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9 };
-const spell = (n) => Object.keys(NUMBER_WORDS).find((w) => NUMBER_WORDS[w] === n);
 
 describe("grill-to-tickets eval suite contract", () => {
   it("ships trigger-evals.json and evals.json", async () => {
@@ -72,7 +70,7 @@ describe("grill-to-tickets eval suite contract", () => {
       { label: "decision-level REWORK", match: /decision-level/i },
       { label: "REJECT", match: /\bREJECT\b/ },
       { label: "stall", match: /stall/i },
-      { label: "budget exhaustion", match: /budget exhaustion|fresh .*budget|human authoriz/i },
+      { label: "budget exhaustion", match: /budget exhaustion|add rounds/i },
     ];
 
     it("declares skill_name grill-to-tickets and at least one case per routing branch", async () => {
@@ -162,28 +160,26 @@ describe("grill-to-tickets eval suite contract", () => {
       }
     });
 
-    it("keeps the gate cycle budget in sync across the reference, SKILL.md, and the budget case", async () => {
-      const gate = await readFile(path.join(skillDir, "references/design-review-gate.md"), "utf8");
-      const m = gate.match(/gate budget:?\s*(\d+|two|three|four|five|six|seven|eight|nine)\s*cycles/i);
-      assert.ok(m, "design-review-gate.md must state 'Gate budget: N cycles'");
-      const budget = Number(m[1]) || NUMBER_WORDS[m[1].toLowerCase()];
-      assert.ok(budget >= 1, `parsed a cycle budget (${budget})`);
-      const both = new RegExp(`\\b(${budget}|${spell(budget)})\\b`, "i");
+    it("covers the review entry question, the --review flag, and resume with rounds kept spent", async () => {
+      const { evals } = await evalsJson();
+      const cases = [
+        { label: "entry question", match: /entry asks once|review round count/i },
+        { label: "--review flag", match: /--review/ },
+        { label: "resume keeps rounds spent", match: /rounds spent kept spent/i },
+      ];
+      for (const c of cases) {
+        assert.ok(evals.some((e) => c.match.test(e.name)), `no eval case covers ${c.label}`);
+      }
+    });
 
-      const skill = await readFile(path.join(skillDir, "SKILL.md"), "utf8");
-      assert.match(
-        skill,
-        new RegExp(`\\b(${budget}|${spell(budget)})\\b[\\s-]*cycle`, "i"),
-        `SKILL.md must reference the ${budget}-cycle gate budget`,
-      );
-
+    it("keeps the exhaustion case in line with the user-bounded gate", async () => {
       const budgetCase = (await evalsJson()).evals.find((e) => /budget exhaustion/i.test(e.name));
       assert.ok(budgetCase, "a budget-exhaustion eval case is required");
-      const haystack = `${budgetCase.name} ${budgetCase.expected_output} ${budgetCase.expectations.join(" ")}`;
-      assert.ok(
-        both.test(haystack),
-        `the budget eval case must assert the same ${budget}-cycle budget`,
-      );
+      const haystack = `${budgetCase.expected_output} ${budgetCase.expectations.join(" ")}`;
+      assert.match(haystack, /add rounds/i);
+      assert.match(haystack, /go on/i);
+      assert.match(haystack, /Known unresolved review findings/);
+      assert.doesNotMatch(haystack, /\bsix\b|human authoriz|fresh (six-cycle )?budget/i);
     });
   });
 });

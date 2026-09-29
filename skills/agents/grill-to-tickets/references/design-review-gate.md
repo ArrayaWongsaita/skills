@@ -12,7 +12,7 @@ updates it in place; never write a new file per retry.
 
 Record per cycle:
 
-- `cycle` — 1-based cycle number
+- `cycle` — 1-based cycle number (a cycle is a round: one completed review)
 - `reviewer` — `subagent`, or `inline` when the harness offered no subagent
 - `reviewedSpecRef` — a fingerprint (hash or git blob) of the `spec.md` reviewed
 - `verdict` — one of `SHIP`, `FIX_THEN_SHIP`, `REWORK`, `REJECT`
@@ -24,6 +24,14 @@ Record per cycle:
 - `specEdits` — every `spec.md` location changed this cycle: the fix, and each
   restatement the sweep aligned
 - `validationCommands` — anything run to check the finding
+
+Once, at the head of the report, record the gate's budget and end:
+
+- `maxRounds` — the maximum the user chose (raised when the user adds rounds)
+- `roundsUsed` — completed cycles so far
+- `ended` — how the gate closed: `SHIP`, `skipped` (the user chose 0), `stall`,
+  `exhausted`, or `REJECT`, plus the user's choice when it asked: `added <N>`
+  or `went on`
 
 ## Reviewer
 
@@ -110,7 +118,7 @@ Route: return to Stage 0 and re-grill that specific decision (inline `grilling` 
 `CONTEXT.md` / `adr/` as it resolves, then re-run Stage 1 and re-review.
 
 The cycle counter **carries over**. A backward transition to Stage 0 never resets
-it — decision-level rework spends the same six-cycle budget as everything else.
+it — decision-level rework spends the same budget as everything else.
 
 ### Distinguishing the two
 
@@ -128,18 +136,33 @@ a `REJECT` — a fresh attempt is a human decision, not an automatic transition.
 
 ## Budget and early stops
 
-**Gate budget: six cycles.** Only a completed `scrutinize` review consumes a
-cycle. Editing `spec.md` between reviews does not.
+**Entry question.** On entering Stage 2, ask once whether to review and at most
+how many rounds. Propose 3. `0` skips the review: record `ended: skipped` and go
+on to Stage 3. `--review N` on the invocation answers it and nothing is asked; a
+missing or invalid value falls back to asking. Write `maxRounds` and
+`roundsUsed` into `decisions.md` State, so `continue` resumes with both and
+rounds spent stay spent.
+
+**Round accounting.** Only a completed `scrutinize` review consumes a round.
+Editing `spec.md` between reviews does not.
 
 **Stall.** If the same blocking finding survives two consecutive cycles with no
-new and no resolved findings, stop before the budget is spent. Report the stalled
-finding, the specs reviewed, and why no progress is possible. Do not keep
+new and no resolved findings, stop before the budget is spent and take the exit
+below, naming the stalled finding and why no progress is possible. Do not keep
 mechanically re-reviewing.
 
-**Budget exhaustion.** If cycle 6 completes without `SHIP`, stop. Report budget
-exhaustion with the unresolved findings and the per-cycle history. A fresh
-six-cycle budget requires explicit human authorization and a materially different
-approach — never start cycle 7 automatically.
+**Exit: exhaustion or stall.** When cycle `maxRounds` completes without `SHIP`,
+or a stall fires, report the unresolved findings and the per-cycle history, then
+ask once: add more rounds, or go on to Stage 3.
+
+- **Go on** is the default. Write the unresolved blocking findings to this
+  report and to the spec's Further Notes under "Known unresolved review
+  findings", record `ended: exhausted` or `stall` with `went on`, and advance.
+- **Add rounds:** the user names the number every time; there is no default
+  number. Raise `maxRounds` by it, record `added <N>`, and continue from the
+  current cycle.
+
+`REJECT` is not part of this exit: it stops the run at once.
 
 ## Reuse lens
 
