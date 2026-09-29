@@ -36,8 +36,7 @@ verifying → verified → integrated, or → BLOCKED). It holds:
   disposition
 - per ticket: `status`, `conversation_id`, `model`, `attempts`,
   `failover_attempts`, `worker_branch`, `commit`, `usage`, `budget_estimate`,
-  and `usage_total`; plus a `catalog` note when a Reuse Catalog entry was
-  skipped because its symbol was not in the changed files
+  and `usage_total`
 - the **integration branch ref** (name and current commit)
 - **cumulative per-provider usage** — input / output / thinking / cache-read /
   total tokens summed per provider across the run

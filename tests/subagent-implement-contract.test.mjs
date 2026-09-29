@@ -212,7 +212,6 @@ describe("subagent-implement skill contract", () => {
         for (const field of [
           "**What to build:**",
           "**Blocked by:**",
-          "**Reuse:**",
           "**Stories:**",
           "**Seam:**",
           "**Context:**",
@@ -386,38 +385,23 @@ describe("subagent-implement skill contract", () => {
     });
   });
 
-  describe("Reuse Catalog", () => {
-    it("the worker prompt carries the Reuse line, a read-only catalog pointer, and the Reuse Plan rule", async () => {
+  describe("reuse is not part of the contract", () => {
+    it("no worker prompt, integration step, or planning field mentions the Reuse Catalog, Reuse Plan, or Reuse field", async () => {
       for (const dir of skillDirs) {
-        const c = await readFile(path.resolve(dir, "references/prompt-scaffold.md"), "utf8");
-        assert.match(c, /- Reuse: <the ticket's Reuse line, verbatim>/);
-        assert.match(c, /- Reuse Catalog: <abs path to docs\/reuse-catalog\.md> — read-only for you/);
-        assert.match(c, /only when the target repository has\s+`docs\/reuse-catalog\.md`/);
-        assert.match(c, /any verb other than `use`[\s\S]{0,120}Reuse\s+Plan/);
-        assert.match(c, /gets `none`/);
+        const refs = (await readdir(path.resolve(dir, "references"))).filter((f) => f.endsWith(".md"));
+        for (const file of ["SKILL.md", ...refs.map((f) => `references/${f}`)]) {
+          const c = await readFile(path.resolve(dir, file), "utf8");
+          assert.doesNotMatch(c, /\*\*Reuse:\*\*|Reuse Catalog|Reuse Plan|reuse-catalog|Reuse line/, `${file} carries no reuse contract`);
+        }
       }
     });
 
-    it("integration writes catalog entries from text inside the ticket's squash commit", async () => {
+    it("a ticket that still carries a Reuse line is planned like one without", async () => {
       for (const dir of skillDirs) {
-        const c = await readFile(path.resolve(dir, "references/verification-and-integration.md"), "utf8");
-        const section = c.slice(c.indexOf("## Reuse Catalog update"));
-        assert.match(section, /between `git merge --squash` and\s+`git commit`/);
-        for (const verb of ["create-shared", "create-candidate", "extend", "promote"]) {
-          assert.match(section, new RegExp(`\`${verb}\``), `handles ${verb}`);
-        }
-        assert.match(section, /Grep the bare symbol/);
-        assert.match(section, /Reuse Plan entry/);
-        assert.match(section, /not found in changed files/);
-        assert.match(section, /reads no code/);
-        assert.match(section, /only writer during a run/);
-        assert.match(section, /Coverage dates stay/);
-        assert.match(section, /no catalog file, skip/i);
-      }
-      for (const body of await skillBodies()) {
-        assert.match(body, /\*\*Reuse:\*\*/);
-        assert.match(body, /docs\/reuse-catalog\.md/);
-        assert.match(body, /update the Reuse\s+Catalog from text/);
+        const planning = await readFile(path.resolve(dir, "references/planning.md"), "utf8");
+        const block = planning.match(/## 2\. Parse the ticket format[\s\S]*?(?=\n## )/);
+        assert.ok(block, "planning.md §2 ticket-format block present");
+        assert.doesNotMatch(block[0], /Reuse/, "the parsed header fields do not include Reuse");
       }
     });
   });

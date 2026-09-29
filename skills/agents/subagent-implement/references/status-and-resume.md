@@ -33,8 +33,7 @@ verifying → verified → integrated, or → BLOCKED). It holds:
   current status
 - per ticket: `status`, `subagent_id`, `agent_type`, `model`, `attempts`,
   `worker_branch`, `commit`, `budget_estimate`, `usage_total`, and
-  `verifier_usage_total`; plus a `catalog` note when a Reuse Catalog entry was
-  skipped because its symbol was not in the changed files
+  `verifier_usage_total`
 - the **integration branch ref** (name and current commit)
 
 There is no per-provider usage roll-up — there is no external provider. The

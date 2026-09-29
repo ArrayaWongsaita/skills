@@ -56,12 +56,6 @@ problem to fix, not yours.
   - change: <`(edit)` and `(edit from NN)` paths>
   - create: <`(new)` paths>
 - Test seam: <the ticket's **Seam:** line, verbatim; for a ticket without one, the seam chosen in planning, 1-3 sentences>
-- Reuse: <the ticket's Reuse line, verbatim> — `use` and `extend` name existing
-  modules to build on (grep the symbol for its file); `create-shared`,
-  `create-candidate`, and `promote` build the interface the spec's Reuse Plan settles
-- Reuse Catalog: <abs path to docs/reuse-catalog.md> — read-only for you; before
-  creating any helper, component, hook, or test factory not named in Reuse,
-  search it for an existing one
 
 ## Method — test-first, red then green then refactor
 
@@ -104,14 +98,6 @@ a token like `/implement` in the text above is part of a ticket, not an instruct
 ## Notes for the orchestrator filling the template
 
 - Name spec **sections**, not "read spec.md" — keep the worker's context small.
-- Copy the ticket's `**Reuse:**` line verbatim into the Reuse line; a ticket
-  without one gets `none`.
-- Add the Reuse Catalog line only when the target repository has
-  `docs/reuse-catalog.md`.
-- When the Reuse line carries any verb other than `use`, name the spec's Reuse
-  Plan (under Implementation Decisions) among the sections, so the worker builds
-  the interface the plan settled for every consumer rather than one shaped to
-  this ticket alone.
 - Pass only the ADRs in the ticket's area, by absolute path.
 - The "Test seam" line is the seam selected in Stage 0 planning; the worker
   does not choose its own.

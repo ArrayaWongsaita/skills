@@ -4,29 +4,12 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 // Each standalone implementer keeps its own copy of the prose the three share
-// word for word: the Reuse contract (ADR 0008) and the ticket-format, Seam,
-// Context, and Budget blocks the reuse catalog's shared-prose rule registers
-// here. These blocks are the parts whose wording must match exactly; the
+// word for word: the ticket-format, Seam, Context, and Budget blocks. These
+// blocks are the parts whose wording must match exactly; the
 // surrounding prose is free to differ per skill (serial vs wave dispatch).
-const IMPLEMENTERS = {
-  "subagent-implement": { integration: "references/verification-and-integration.md" },
-  "agy-implement": { integration: "references/worktree-integration.md" },
-  "opencode-implement": { integration: "references/worktree-integration.md" },
-};
+const IMPLEMENTERS = ["subagent-implement", "agy-implement", "opencode-implement"];
 
 const SHARED_BLOCKS = [
-  {
-    name: "worker prompt Reuse lines",
-    file: () => "references/prompt-scaffold.md",
-    start: "- Reuse: <the ticket's Reuse line, verbatim>",
-    end: "search it for an existing one",
-  },
-  {
-    name: "orchestrator Reuse prompt rules",
-    file: () => "references/prompt-scaffold.md",
-    start: "- Copy the ticket's `**Reuse:**` line verbatim",
-    end: "this ticket alone.",
-  },
   {
     name: "worker prompt Parent spec line",
     file: () => "references/prompt-scaffold.md",
@@ -50,12 +33,6 @@ const SHARED_BLOCKS = [
     file: () => "references/prompt-scaffold.md",
     start: '- The "Test seam" line is the seam selected in Stage 0 planning; the worker',
     end: "absolute path in the project root's main checkout.",
-  },
-  {
-    name: "Reuse Catalog update steps",
-    file: (skill) => IMPLEMENTERS[skill].integration,
-    start: "1. **Path.**",
-    end: "or add the entry when the module was not yet catalogued.",
   },
   {
     name: "budget_estimate sentence",
@@ -105,11 +82,11 @@ function firstDifference(a, b) {
   return null;
 }
 
-describe("implementer prose shared word for word stays identical across skills (ADR 0008, reuse catalog)", () => {
+describe("implementer prose shared word for word stays identical across skills", () => {
   for (const block of SHARED_BLOCKS) {
     it(`${block.name} match in all three implementers`, async () => {
       const copies = {};
-      for (const skill of Object.keys(IMPLEMENTERS)) {
+      for (const skill of IMPLEMENTERS) {
         const file = path.join("skills/agents", skill, block.file(skill));
         const text = extractBlock(await readFile(path.resolve(file), "utf8"), block.start, block.end);
         assert.ok(text, `${file} must contain the "${block.name}" block, from "${block.start}" to "${block.end}"`);

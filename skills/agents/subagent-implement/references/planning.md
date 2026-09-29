@@ -33,7 +33,6 @@ Each ticket is in the `grill-to-tickets` ticket format:
 **What to build:** <end-to-end behaviour>
 
 **Blocked by:** <numbers/titles>, or "None (can start immediately)"
-**Reuse:** <catalog verbs and symbols>, or "none"
 **Stories:** <story numbers>
 **Seam:** <one test boundary>
 **Context:** <spec section refs and files>
