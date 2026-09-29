@@ -12,7 +12,7 @@
 
 ### จุดประสงค์หลักและคุณสมบัติเด่น
 1. **จบกระบวนการวางแผนในคำสั่งเดียว:** ครอบคลุมตั้งแต่วิเคราะห์ความต้องการจนได้ Tickets ที่สมบูรณ์
-2. **รักษา Context Window:** กระบวนการสัมภาษณ์, จัดทำ Spec และแตก Ticket จะรันอยู่บน reasoning thread เดียวกันแบบต่อเนื่อง ยกเว้นการรีวิว spec ที่แยกไปรันใน subagent ตัวใหม่เพื่อให้มองแบบคนนอก จากนั้นจะ **หยุดส่งมอบงาน (Handoff)** ทันทีที่ออก Tickets เสร็จ โดยไม่ลงมือเขียนโค้ด (Implement) เอง เพื่อให้เซสชันถัดไปที่ต้องเขียนโค้ดเริ่มต้นด้วย Context ที่สดใหม่และสะอาด
+2. **รักษา Context Window:** กระบวนการสัมภาษณ์, จัดทำ Spec, เขียน Ticket และตัดสินใจใน quiz จะรันบน reasoning thread เดียวกัน มี 2 ขั้นตอนที่ dispatch subagent: Stage 2 ส่ง `scrutinize` รีวิว spec ใน context ใหม่ ส่วน Stage 3 ส่ง fresh reviewer ทำ Ticket review เพื่อหา ambiguity ใน ticket จากนั้น skill จะ **หยุดส่งมอบงาน (Handoff)** โดยไม่ลงมือเขียนโค้ด (Implement) เอง เพื่อให้เซสชันถัดไปเริ่มด้วย Context ที่สดใหม่
 3. **มี Design Review Gate ในตัว:** ผู้ใช้กำหนดขอบเขตการรีวิวเอง (เสนอ 3 รอบ, 0 คือข้าม, หรือใช้ `--review N`); ดูกติกาเรื่องทางออกเมื่อหมดรอบหรือติดขัดได้ที่ [สัญญา Design Review Gate](../../skills/agents/grill-to-tickets/references/design-review-gate.md)
 4. **Standalone โดยสมบูรณ์:** มีกติกาและกลไกของตัวเอง ไม่แตะต้องหรือแก้ไข skill ต้นทางภายนอก
 
@@ -70,6 +70,7 @@ Skill นี้ถูกตั้งค่าแบบ Explicit Invocation (ต�
 ├── adr/                # บันทึกการตัดสินใจทางสถาปัตยกรรม (NNNN-<slug>.md)
 ├── spec.md             # เอกสารข้อกำหนดของฟีเจอร์ (Specification)
 ├── design-review.md    # รายงานผลการตรวจสอบ Design Review Gate
+├── manifest.json       # snapshot จาก checker: spec fingerprint, DAG และข้อมูล ticket ตอนวางแผน
 └── issues/             # รายการ tickets ที่พร้อมพัฒนา (NN-<slug>.md)
 ```
 
@@ -79,12 +80,12 @@ Skill นี้ถูกตั้งค่าแบบ Explicit Invocation (ต�
 Stage 0: Grill        grilling + domain-modeling  → CONTEXT.md, adr/
    │ (หยุดรอการยืนยันจากผู้ใช้เมื่อคำถามหมด)
    ▼
-Stage 1: Spec         spec-format.md               → spec.md
+Stage 1: Spec         spec-format.md               → spec.md (Scenario ใต้ทุก user story)
    ▼
 Stage 2: Design Review Gate   scrutinize (subagent ใหม่) → design-review.md   (ผู้ใช้กำหนดจำนวนรอบ)
    │ (เมื่อผลเป็น SHIP)
    ▼
-Stage 3: Tickets      ticket-format.md             → issues/NN-<slug>.md
+Stage 3: Tickets      ticket-format.md + checker   → issues/NN-<slug>.md + manifest.json + Ticket review
    ▼
 Stop: Handoff message (/clear, DAG summary + recommended implementer แล้ว /subagent-implement)
 ```
@@ -97,7 +98,7 @@ Stop: Handoff message (/clear, DAG summary + recommended implementer แล้�
    - **Blind-spot pass:** เมื่อไม่เหลือคำถามใน frontier จะไล่เช็ค 9 หมวดที่การสัมภาษณ์อาจไม่เคยแตะ (scope, data, flow, quality attributes เช่น performance/security, integrations, edge cases, constraints, terminology, completion signals) ให้คะแนนแต่ละหมวดเป็น `clear` / `partial` / `missing` / `n/a` ช่องว่างที่จะเปลี่ยน spec ได้กลายเป็นคำถามรอบสุดท้ายไม่เกิน 5 ข้อ ที่เหลือเขียนเป็นสมมติฐานให้เห็นชัด (ดัดแปลงจาก `/clarify` ของ GitHub Spec Kit)
    - เมื่อตัดสินใจครบแล้ว จะสรุปคำศัพท์ การตัดสินใจ ตาราง blind-spot พร้อมสมมติฐาน แล้วหยุดรอคำยืนยันจากผู้ใช้ก่อนก้าวต่อไป
 2. **Stage 1 — Spec (จัดทำเอกสารข้อกำหนด):**
-   - รวบรวมผลการตัดสินใจจาก `decisions.md`, `CONTEXT.md` และ `adr/` มาเขียนเป็น `spec.md` ตาม `references/spec-format.md` ซึ่งเป็นรูปแบบที่ skill เป็นเจ้าของเอง พร้อมกำหนด Test Seams (รอยต่อสำหรับทดสอบ) ทุกการตัดสินใจใน log ต้องปรากฏใน spec
+   - รวบรวมผลการตัดสินใจจาก `decisions.md`, `CONTEXT.md` และ `adr/` มาเขียนเป็น `spec.md` ตาม `references/spec-format.md` ซึ่งเป็นรูปแบบที่ skill เป็นเจ้าของเอง พร้อมกำหนด Test Seams (รอยต่อสำหรับทดสอบ) และเขียน Scenario แบบบรรทัดเดียว `Scenario: given … when … then …` ใต้ทุก user story ใหม่ หนึ่ง story มีได้หลาย Scenario; ทุกการตัดสินใจใน log ต้องปรากฏใน spec
 3. **Stage 2 — Design Review Gate (ตรวจสอบการออกแบบ):**
    - แต่ละรอบส่ง `scrutinize` ไปรันใน **subagent ตัวใหม่** ที่เห็นแค่ไฟล์ (`spec.md`, `decisions.md`, `CONTEXT.md`, `adr/` และ repo) ไม่เห็นบทสนทนา จึงอ่าน spec แบบเดียวกับที่ implementer จะอ่าน และไม่แก้ไฟล์ใด ๆ ส่วน context หลักเป็นคน normalize verdict แก้ spec และนับ cycle (เหตุผลอยู่ใน ADR 0010)
    - สรุปผลการตรวจ `spec.md` เป็น 1 ใน 4 ผลลัพธ์:
@@ -107,18 +108,21 @@ Stop: Handoff message (/clear, DAG summary + recommended implementer แล้�
      - `REJECT`: สถาปัตยกรรมหรือทิศทางไม่ผ่าน ➔ หยุดทำงานเพื่อให้มนุษย์ตัดสินใจ
 4. **Stage 3 — Tickets (แตกชิ้นงานย่อย):**
    - หลัง `SHIP`, การข้ามด้วย `0`, หรือผู้ใช้เลือกไปต่อหลังหมดรอบ/ติด stall ให้นำ `spec.md` มาแตกเป็น Tracer-bullet vertical slices เก็บไว้ใน `issues/<NN>-<slug>.md` เรียงตามลำดับ Dependency
-   - ทุก ticket มีบรรทัด `**Stories:**` ต่อจาก `**Blocked by:**` บอกเลข user story ใน spec ที่ ticket นั้นส่งมอบ เช่น `2, 5` หรือช่วง `3-6` (ticket prefactor ใช้ `none`)
+   - ทุก ticket มีบรรทัด `**Stories:**` ต่อจาก `**Blocked by:**` บอกเลข user story ใน spec ที่ ticket นั้นส่งมอบ เช่น `2, 5` หรือช่วง `3-6` (ticket prefactor ใช้ `none`) โดย acceptance criteria ของ ticket มาจาก Scenario ของ story ที่ ticket ส่งมอบ
    - ทุก ticket มีบรรทัด `**Seam:**` (ขอบเขตทดสอบเดียวจาก Testing Decisions ของ spec), `**Context:**` (Read set ของ worker: `spec §` refs และไฟล์ พร้อม marker อ่านอย่างเดียว / `(edit)` / `(new)` / `(from NN)` / `(edit from NN)`) และ `**Budget:**` (ผลวัดของ checker: read tokens, จำนวน criteria, จำนวน modules) เรียงต่อจาก `**Stories:**` ตามลำดับ Seam → Context → Budget
    - ก่อน quiz ให้รันสคริปต์ตรวจ ticket ที่มากับ skill พร้อม `--write-budget` เพื่อให้มันเขียน Budget line จากผลวัด:
      ```bash
      node <โฟลเดอร์ของ skill>/scripts/check-tickets.mjs .scratch/<feature-slug>/ --write-budget
      ```
-     สคริปต์ตรวจว่าทุก story มี ticket, `Stories` และ `Blocked by` ชี้ของที่มีจริง (blocker ต้องเลขต่ำกว่า), และ Seam/Context/Budget ครบ เป็นบรรทัดเดียว เรียงถูก และอ้างถึงของจริง แก้จนขึ้น `result: PASS` แล้วแสดงตาราง story coverage, ตาราง budget, สรุป DAG และ warning ทุกตัวใน quiz
+     สคริปต์ตรวจว่า Scenario ที่ใช้มี `given`, `when`, `then` เรียงตามลำดับและทุก story มี Scenario; spec เก่าที่ไม่มี Scenario ผ่านพร้อม warning ส่วน Scenario ที่ขาดหรือผิดรูปแบบเป็น error ตรวจต่อว่าทุก story มี ticket, `Stories` และ `Blocked by` ชี้ของที่มีจริง (blocker ต้องเลขต่ำกว่า), และ Seam/Context/Budget ครบ เป็นบรรทัดเดียว เรียงถูก และอ้างถึงของจริง ทุกครั้งที่ `--write-budget` จบด้วย PASS จะเขียน `.scratch/<feature-slug>/manifest.json` ซึ่งเป็น snapshot ที่สร้างจาก spec fingerprint, DAG และ planning facts ของ ticket ไม่มี Status หรือ timestamp แก้จนขึ้น `result: PASS` แล้วแสดงตาราง story coverage, ตาราง budget, สรุป DAG และ warning ทุกตัวใน quiz
+   - **Ticket review (Stage 3.5):** หลัง checker พิมพ์ PASS และก่อน quiz ส่ง fresh reviewer ไปอ่าน ticket set กับไฟล์ที่ระบุใน `**Context:**` ของแต่ละ ticket แล้วให้ verdict `READY` หรือ `ASK: <คำถามที่ worker ใหม่ต้องถาม>` ครบทุกใบ รีวิวนี้ตรวจเฉพาะ ambiguity ไม่ใช่ Budget check และไม่ตั้ง limit; ค่าเริ่มต้นทำหนึ่งครั้ง ส่วน `--ticket-review 0` ใช้ข้ามได้
+     - แสดงคำถาม `ASK` ข้าง `Seam`, `Context` และ `Budget` ใน quiz ให้คนตัดสินใจว่าจะ fix หรือ acknowledge แล้ว main thread รัน checker ด้วย `--write-budget` ซ้ำและบันทึกผลใน `## Ticket review` ของ `decisions.md`
+     - `continue` อ่าน State `ticket review: done` หรือ `skipped` เพื่อไม่เริ่มซ้ำ; review รอบสองเริ่มเมื่อผู้ใช้ขอเท่านั้น
    - warning ที่ checker ออกให้มี 3 แบบ และไม่เปลี่ยนผล `PASS` / `FAIL`: acceptance criterion ที่พูดถึงการรัน suite หรือ tool (`npm test`, `tests pass`, `typecheck passes`, `lint passes`, `suite passes`); ticket สองใบที่แก้ path เดียวกัน (`(edit)`, `(new)` หรือ `(edit from NN)`) โดยไม่มีใบไหน block อีกใบทางอ้อม (transitively); และ feature ที่มีเกิน 15 ticket
    - warning ทุกตัวที่ checker รายงานต้องถูกบันทึกใต้ `## Ticket warnings` ใน `decisions.md` บรรทัดละหนึ่งตัว เป็น `<warning> — acknowledged` หรือ `<warning> — fixed: <change>` จึงจะถือว่า Stage 3 เสร็จ
    - รัน checker ซ้ำด้วย `--write-budget` ทุกครั้งที่ quiz ทำให้ ticket เปลี่ยน
 5. **Stop — Handoff (ส่งมอบงาน):**
-   - พิมพ์ข้อความ handoff ตามลำดับ: `/clear` → **DAG summary** จาก checker (wave, ความกว้างสูงสุด, critical-path length) พร้อมบรรทัด `recommended implementer` ที่บอกว่า `subagent-implement`, `agy-implement` หรือ `opencode-implement` เหมาะกับ ticket set นี้ (ชื่อ skill ไม่มี slash นำหน้า) → คำสั่ง `/subagent-implement`
+   - พิมพ์ข้อความ handoff ตามลำดับ: `/clear` → **DAG summary** จาก checker (wave, ความกว้างสูงสุด, critical-path length) → บรรทัด `.scratch/<feature-slug>/manifest.json` (เมื่อ checker run สุดท้ายเขียน manifest สำเร็จ) → บรรทัด `recommended implementer` ที่บอกว่า `subagent-implement`, `agy-implement` หรือ `opencode-implement` เหมาะกับ ticket set นี้ (ชื่อ skill ไม่มี slash นำหน้า) → คำสั่ง `/subagent-implement`
    - `recommended implementer` เลือกจาก maximum wave width (จำนวน ticket มากสุดที่ทำพร้อมกันได้ใน wave เดียว): 1 → `subagent-implement`, 2 → ทั้งสามตัว, 3 ขึ้นไป → `agy-implement` หรือ `opencode-implement` เป็นคำแนะนำเท่านั้น คุณเป็นคนเลือกเอง
    - แสดงข้อความสรุปและแนะนำขั้นตอนสำหรับเซสชันถัดไป:
      ```text
@@ -129,6 +133,7 @@ Stop: Handoff message (/clear, DAG summary + recommended implementer แล้�
      wave 1: 02, 03
      maximum wave width: 2
      critical-path length: 2
+     manifest: .scratch/<feature-slug>/manifest.json
      recommended implementer: subagent-implement, agy-implement, opencode-implement
      # 3. implement ทั้งโฟลเดอร์ใน session ใหม่
      /subagent-implement .scratch/<feature-slug>/
