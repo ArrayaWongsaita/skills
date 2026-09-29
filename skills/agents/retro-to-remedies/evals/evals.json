@@ -181,20 +181,6 @@
       ]
     },
     {
-      "id": 14,
-      "name": "classification reuse convention yields Reuse Catalog Rule",
-      "prompt": "/retro-to-remedies shared-components-feature",
-      "expected_output": "A Miss concerning an architectural component reuse convention is classified under rule 3 as a judgement miss but routes specifically to a Reuse Catalog Rule.",
-      "expectations": [
-        "Identifies reuse convention in review findings",
-        "Applies rule 3 to route reuse convention to the Reuse Catalog's Rules rather than general coding standards",
-        "Specifies docs/reuse-catalog.md as target destination"
-      ],
-      "files": [
-        "evals/fixtures/opencode-implement-hosted-model/review-status.md"
-      ]
-    },
-    {
       "id": 15,
       "name": "evidence bar ensures an evidence-free Remedy is dropped",
       "prompt": "/retro-to-remedies speculative-run",
@@ -556,7 +542,3 @@
     }
   ]
 }
-
-
-
-

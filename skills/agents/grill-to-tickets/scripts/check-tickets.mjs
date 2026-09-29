@@ -7,8 +7,6 @@
 // - every numbered story under spec.md's "## User Stories" has a ticket;
 // - every ticket's **Stories:** names only stories the spec defines;
 // - every **Blocked by:** entry names an existing, lower-numbered ticket;
-// - every ticket has **Reuse:** directly after **Blocked by:**, using only the
-//   fixed verbs;
 // - every ticket has **Seam:** directly after **Stories:**;
 // - every ticket has **Context:** directly after **Seam:**;
 // - every **Seam:** and **Context:** is a single non-empty line with no non-field line directly after it;
@@ -33,11 +31,7 @@
 //   no transitive edge between them warn, as does a feature above 15 tickets;
 // - warnings never change the result;
 // - the DAG summary lists each wave's tickets, the maximum wave width, the
-//   critical-path length, and the implementer those recommend;
-// - every create-shared and promote entry in spec.md's "### Reuse Plan" has a
-//   ticket carrying that verb for its symbol;
-// - each create-shared or promote symbol has exactly one ticket, and every
-//   other ticket naming that symbol lists it in **Blocked by:**.
+//   critical-path length, and the implementer those recommend.
 //
 // Exit codes: 0 clean, 1 errors found, 2 unusable input.
 
@@ -45,8 +39,6 @@ import { chmod, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/p
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-const REUSE_VERBS = new Set(["use", "extend", "create-shared", "create-candidate", "promote"]);
-const OWNING_VERBS = ["create-shared", "promote"];
 const TICKET_FILE = /^(\d{2,})-[a-z0-9][a-z0-9-]*\.md$/;
 const STORY_ID = /^\d+[a-z]?$/;
 const SUITE_RUN =
@@ -63,21 +55,6 @@ export function parseStories(spec) {
     if (story) stories.push(story[1]);
   }
   return stories;
-}
-
-// The Reuse Plan's owning entries, one module per bullet:
-// "- **Create shared:** `buildRows(report): Row[]` — ..." → buildRows.
-export function parseReusePlan(spec) {
-  const plan = { "create-shared": [], promote: [] };
-  const lines = spec.split("\n");
-  const start = lines.findIndex((line) => /^### Reuse Plan\s*$/.test(line));
-  if (start === -1) return plan;
-  for (const line of lines.slice(start + 1)) {
-    if (/^#{1,3} /.test(line)) break;
-    const entry = line.match(/^\s*[-*]\s+\*\*(Create shared|Promote):\*\*\s*`([A-Za-z_$][\w$.]*)/);
-    if (entry) plan[entry[1] === "Promote" ? "promote" : "create-shared"].push(entry[2]);
-  }
-  return plan;
 }
 
 export function sectionOf(spec, ref) {
@@ -311,23 +288,6 @@ function parseBlockedBy(value, tickets) {
   return { refs, unresolved: [] };
 }
 
-function parseReuse(value) {
-  if (/^none\b/i.test(value)) return { items: [], problems: [] };
-  const items = [];
-  const problems = [];
-  for (const raw of value.split("·").map((s) => s.trim()).filter(Boolean)) {
-    const item = raw.match(/^(\S+)\s+`([^`]+)`/);
-    if (!item) {
-      problems.push(`"${raw}" is not <verb> \`symbol\``);
-    } else if (!REUSE_VERBS.has(item[1])) {
-      problems.push(`"${item[1]}" is not a Reuse verb (${[...REUSE_VERBS].join(", ")})`);
-    } else {
-      items.push({ verb: item[1], symbol: item[2] });
-    }
-  }
-  return { items, problems };
-}
-
 function parseStoryRefs(value, stories) {
   if (/^none\b/i.test(value)) return { refs: [], problems: [] };
   const refs = [];
@@ -457,20 +417,6 @@ export function checkFeature({ spec, tickets: ticketFiles, files }) {
         }
         ticket.blockers.add(ref);
       }
-    }
-
-    const reuse = ticket.field("Reuse");
-    ticket.reuse = [];
-    if (reuse === undefined) {
-      errors.push(`${where}: **Reuse:** is missing (write "**Reuse:** none" when it has no reuse action)`);
-    } else {
-      const blockedIndex = ticket.fields.findIndex((f) => f.name === "Blocked by");
-      if (blockedIndex !== -1 && ticket.fields[blockedIndex + 1]?.name !== "Reuse") {
-        errors.push(`${where}: **Reuse:** must come directly after **Blocked by:**`);
-      }
-      const { items, problems } = parseReuse(reuse);
-      for (const problem of problems) errors.push(`${where}: Reuse ${problem}`);
-      ticket.reuse = items;
     }
 
     const storyField = ticket.field("Stories");
@@ -724,40 +670,6 @@ export function checkFeature({ spec, tickets: ticketFiles, files }) {
       const [, n, c, m] = match.map(Number);
       if (n !== Math.round(measured.tokens / 1000) || c !== measured.criteria || m !== measured.modules) {
         errors.push(`${where}: **Budget:** ${value} differs from the measurement (${measured.line})`);
-      }
-    }
-  }
-
-  const plan = parseReusePlan(spec ?? "");
-  for (const verb of OWNING_VERBS) {
-    for (const symbol of plan[verb]) {
-      const carried = tickets.some((t) => t.reuse.some((i) => i.verb === verb && i.symbol === symbol));
-      if (!carried) errors.push(`Reuse Plan ${verb} \`${symbol}\` has no ticket carrying "${verb} \`${symbol}\`"`);
-    }
-  }
-
-  for (const verb of OWNING_VERBS) {
-    const owners = new Map();
-    for (const ticket of tickets) {
-      for (const item of ticket.reuse.filter((i) => i.verb === verb)) {
-        owners.set(item.symbol, [...(owners.get(item.symbol) ?? []), ticket]);
-      }
-    }
-    for (const [symbol, owning] of owners) {
-      if (owning.length > 1) {
-        const list = owning.map((t) => pad(t.number)).join(", ");
-        errors.push(`${verb} \`${symbol}\` appears on tickets ${list}; exactly one ticket may carry it`);
-        continue;
-      }
-      const owner = owning[0];
-      for (const ticket of tickets) {
-        if (ticket === owner) continue;
-        const names = ticket.reuse.some((i) => i.symbol === symbol && (i.verb === "use" || i.verb === "extend"));
-        if (names && !ticket.blockers.has(owner.number)) {
-          errors.push(
-            `issues/${ticket.file}: uses \`${symbol}\`, so it must list its ${verb} ticket ${pad(owner.number)} in Blocked by`,
-          );
-        }
       }
     }
   }

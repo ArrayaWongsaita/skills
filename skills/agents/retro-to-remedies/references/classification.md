@@ -15,7 +15,7 @@ Classify each Miss by the first matching rule in the following order:
 
 1. **Skill fix**: Following a skill's instructions as written produced the Miss, because they are wrong or outdated. An agent that departed from correct instructions falls to the rules below instead (most often a Check that makes the departure fail fast).
 2. **Check**: A fixed rule could have caught it (Mechanical miss) — such as a syntactic pattern, a banned API, an import shape, or a file-location rule.
-3. **Standard**: It needed a reader of intent (Judgement miss) — recorded in `CODING_STANDARDS.md`, or a Reuse Catalog Rule for a reuse convention.
+3. **Standard**: It needed a reader of intent (Judgement miss) — recorded in `CODING_STANDARDS.md`.
 4. **Pointer**: The agent spent navigation effort finding a document or file.
 5. **Access**: The agent lacked unreachable information it could not reach (such as server logs or credentials).
 6. **Prune**: A project instruction had no effect or has gone stale.
@@ -25,13 +25,13 @@ Classify each Miss by the first matching rule in the following order:
 | Remedy kind | Destination |
 | --- | --- |
 | Check | handed off: test, lint rule, hook, or CI job in the project |
-| Standard | `CODING_STANDARDS.md` (created when absent); reuse conventions in the Reuse Catalog's Rules |
+| Standard | `CODING_STANDARDS.md` (created when absent) |
 | Pointer | `AGENTS.md`, else `CLAUDE.md`, else a new `AGENTS.md` |
 | Skill fix | handed off: own library → `/grill-to-tickets` prompt; other source → Upstream feedback |
-| Prune | the project instruction file holding it: `AGENTS.md`, `CLAUDE.md`, `CODING_STANDARDS.md`, or the Reuse Catalog's Rules (an instruction inside a skill is a Skill fix) |
+| Prune | the project instruction file holding it: `AGENTS.md`, `CLAUDE.md`, or `CODING_STANDARDS.md` (an instruction inside a skill is a Skill fix) |
 | Access | handed off: config or tooling in the project |
 
-Prune is limited strictly to project instruction files (`AGENTS.md`, `CLAUDE.md`, `CODING_STANDARDS.md`, and the Reuse Catalog's Rules). An instruction inside a skill is a Skill fix.
+Prune is limited strictly to project instruction files (`AGENTS.md`, `CLAUDE.md`, and `CODING_STANDARDS.md`). An instruction inside a skill is a Skill fix.
 
 ## Evidence Bar and Merging
 

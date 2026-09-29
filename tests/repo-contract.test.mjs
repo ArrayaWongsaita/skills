@@ -4,6 +4,7 @@ import { access, readFile, readdir } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
 import { discoverSkills, renderIndex } from "../scripts/generate-skill-index.mjs";
+import { markdownHeaderBlock, markdownHeadings } from "./helpers/markdown-contract.mjs";
 
 async function fileExists(path) {
   await access(path, constants.R_OK);
@@ -206,6 +207,30 @@ describe("grill-to-tickets production records and guides", () => {
 
     // Trade-off
     assert.match(doc, /no longer arrive automatically/i);
+  });
+
+  it("records ADR 0017: reuse is removed and the user bounds the design review", async () => {
+    const doc = await readTextOrNull("docs/decisions/0017-drop-reuse-and-let-the-user-bound-the-design-review.md");
+    assert.ok(doc, "ADR 0017 exists under docs/decisions/");
+    const headings = markdownHeadings(doc).map(({ title }) => title);
+    assert.equal(headings[0], "ADR 0017: Drop reuse, and let the user bound the design review");
+    const header = markdownHeaderBlock(doc);
+    assert.match(header, /^- Status \/ สถานะ: Accepted/m);
+    assert.match(header, /^- Supersedes \/ แทนที่: ADR 0008/m);
+    for (const heading of ["Context / บริบท", "Decision / การตัดสินใจ", "Consequences / ผลที่ตามมา", "Rejected alternatives / ทางเลือกที่ไม่เลือก"]) {
+      assert.ok(headings.includes(heading), `ADR 0017 has ## ${heading}`);
+    }
+
+    const adr8 = await readTextOrNull("docs/decisions/0008-reuse-catalog-cross-skill-contract.md");
+    assert.ok(adr8, "ADR 0008 exists");
+    assert.match(markdownHeaderBlock(adr8), /^- Status \/ สถานะ: Superseded by ADR 0017/m, "ADR 0008 is marked Superseded by ADR 0017");
+    const adr10 = await readTextOrNull("docs/decisions/0010-grill-to-tickets-fresh-context-design-review.md");
+    assert.ok(adr10, "ADR 0010 exists");
+    assert.match(markdownHeaderBlock(adr10), /ADR 0017 replaces only the fixed six-cycle bound/, "ADR 0010 notes that only its bound is replaced");
+  });
+
+  it("no longer holds a reuse catalog", async () => {
+    assert.equal(await readTextOrNull("docs/reuse-catalog.md"), null, "docs/reuse-catalog.md is removed");
   });
 
   it("records ADR 0014: tickets are measured before they are limited", async () => {
@@ -547,7 +572,7 @@ describe("grill-to-tickets production records and guides", () => {
     assertWarningsAndRecommendation("the skill page's English text", { warnings: flatEnglish, recommendation: flatEnglish }, english);
   });
 
-  it("defines Seam, Read set, Budget line, and usage_total in the glossary, after the Reuse Field row", async () => {
+  it("defines Seam, Read set, Budget line, and usage_total in the glossary, after the Workflow State row", async () => {
     const glossary = await readTextOrNull("docs/glossary.md");
     assert.ok(glossary, "the glossary exists");
 
@@ -558,12 +583,12 @@ describe("grill-to-tickets production records and guides", () => {
     }
 
     const lines = glossary.split("\n");
-    const reuseField = lines.indexOf(tableRow(glossary, "Reuse Field"));
+    const anchor = lines.indexOf(tableRow(glossary, "Workflow State"));
     const retro = lines.indexOf(tableRow(glossary, "Retro"));
-    assert.notEqual(reuseField, -1, "the glossary keeps its Reuse Field row");
+    assert.notEqual(anchor, -1, "the glossary keeps its Workflow State row");
     for (const [term, row] of Object.entries(rows)) {
       const index = lines.indexOf(row);
-      assert.ok(index > reuseField && index < retro, `the ${term} row sits between the Reuse Field row and the Retro rows`);
+      assert.ok(index > anchor && index < retro, `the ${term} row sits between the Workflow State row and the Retro rows`);
     }
 
     // A Definition cell is the English definition, " / ", then the Thai one.

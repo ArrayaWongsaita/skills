@@ -12,7 +12,7 @@ updates it in place; never write a new file per retry.
 
 Record per cycle:
 
-- `cycle` — 1-based cycle number
+- `cycle` — 1-based cycle number (a cycle is a round: one completed review)
 - `reviewer` — `subagent`, or `inline` when the harness offered no subagent
 - `reviewedSpecRef` — a fingerprint (hash or git blob) of the `spec.md` reviewed
 - `verdict` — one of `SHIP`, `FIX_THEN_SHIP`, `REWORK`, `REJECT`
@@ -25,6 +25,14 @@ Record per cycle:
   restatement the sweep aligned
 - `validationCommands` — anything run to check the finding
 
+Once, at the head of the report, record the gate's budget and end:
+
+- `maxRounds` — the maximum the user chose (raised when the user adds rounds)
+- `roundsUsed` — completed cycles so far
+- `ended` — how the gate closed: `SHIP`, `skipped` (the user chose 0), `stall`,
+  `exhausted`, or `REJECT`, plus the user's choice when it asked: `added <N>`
+  or `went on`
+
 ## Reviewer
 
 Each cycle's review runs in a new subagent, so it reads the spec the way the
@@ -33,10 +41,9 @@ a fresh one every cycle, with read access to the repository, and brief it with:
 
 - **Paths:** `spec.md`, `decisions.md`, `CONTEXT.md`, and `adr/` under
   `.scratch/<feature-slug>/`; the root `CONTEXT.md` and `docs/adr/` when they
-  exist; `docs/reuse-catalog.md`.
+  exist.
 - **Task:** run the `scrutinize` skill's workflow — its `SKILL.md` at the path
-  Preflight found — on `spec.md`, tracing its claims through the real code, with
-  the reuse lens below.
+  Preflight found — on `spec.md`, tracing its claims through the real code.
 - **Prior findings,** from cycle 2 on: the previous cycle's blocking findings,
   one line each with its id, to report as resolved or still present under the
   same id.
@@ -80,7 +87,7 @@ invariant, verify the evidence, and make the smallest correct edit **directly to
 to install Redis.
 
 Then **sweep** the spec: a fact is often stated in more than one section — a
-story, an implementation decision, the Reuse Plan, a further note — and a fix to
+story, an implementation decision, a further note — and a fix to
 one leaves the others stating the old version. Search `spec.md` for the fact's
 key terms (the symbol, flag, value, or behaviour you changed) and bring every
 restatement in line. The sweep is done when a search for the old wording finds
@@ -110,7 +117,7 @@ Route: return to Stage 0 and re-grill that specific decision (inline `grilling` 
 `CONTEXT.md` / `adr/` as it resolves, then re-run Stage 1 and re-review.
 
 The cycle counter **carries over**. A backward transition to Stage 0 never resets
-it — decision-level rework spends the same six-cycle budget as everything else.
+it — decision-level rework spends the same budget as everything else.
 
 ### Distinguishing the two
 
@@ -128,34 +135,30 @@ a `REJECT` — a fresh attempt is a human decision, not an automatic transition.
 
 ## Budget and early stops
 
-**Gate budget: six cycles.** Only a completed `scrutinize` review consumes a
-cycle. Editing `spec.md` between reviews does not.
+**Entry question.** On entering Stage 2, ask once whether to review and at most
+how many rounds. Propose 3. `0` skips the review: record `ended: skipped` and go
+on to Stage 3. `--review N` on the invocation answers it and nothing is asked; a
+missing or invalid value falls back to asking. Write `maxRounds` and
+`roundsUsed` into `decisions.md` State, so `continue` resumes with both and
+rounds spent stay spent.
+
+**Round accounting.** Only a completed `scrutinize` review consumes a round.
+Editing `spec.md` between reviews does not.
 
 **Stall.** If the same blocking finding survives two consecutive cycles with no
-new and no resolved findings, stop before the budget is spent. Report the stalled
-finding, the specs reviewed, and why no progress is possible. Do not keep
+new and no resolved findings, stop before the budget is spent and take the exit
+below, naming the stalled finding and why no progress is possible. Do not keep
 mechanically re-reviewing.
 
-**Budget exhaustion.** If cycle 6 completes without `SHIP`, stop. Report budget
-exhaustion with the unresolved findings and the per-cycle history. A fresh
-six-cycle budget requires explicit human authorization and a materially different
-approach — never start cycle 7 automatically.
+**Exit: exhaustion or stall.** When cycle `maxRounds` completes without `SHIP`,
+or a stall fires, report the unresolved findings and the per-cycle history, then
+ask once: add more rounds, or go on to Stage 3.
 
-## Reuse lens
+- **Go on** is the default. Write the unresolved blocking findings to this
+  report and to the spec's Further Notes under "Known unresolved review
+  findings", record `ended: exhausted` or `stall` with `went on`, and advance.
+- **Add rounds:** the user names the number every time; there is no default
+  number. Raise `maxRounds` by it, record `added <N>`, and continue from the
+  current cycle.
 
-Every cycle, the reviewer reads `spec.md` with its Reuse Plan and the project's
-`docs/reuse-catalog.md`, and `scrutinize`'s mandatory "use something that
-already exists" pass is pointed at both. Reuse findings carry stable ids so the
-stall rule can see a repeat:
-
-| finding id | condition | route |
-| --- | --- | --- |
-| `reuse-duplicate-<symbol>` | the spec creates something the catalog already has | `FIX_THEN_SHIP` — change it to use or extend the catalogued module |
-| `reuse-unowned-<shape>` | logic two or more stories need, with no create-shared entry | `FIX_THEN_SHIP` — add a create-shared entry with its interface and consumers |
-| `reuse-speculative-<symbol>` | a create-shared entry below the create-shared bar | `FIX_THEN_SHIP` — downgrade it to create candidate |
-| `reuse-plan-missing` | the spec has no Reuse Plan although the survey settled the facts | `REWORK`, spec-level — re-run Stage 1 with the finding |
-| `reuse-undecided-<symbol>` | extend-vs-new, or share-vs-separate, is a genuine trade-off nobody decided | `REWORK`, decision-level — return to Stage 0 for that one question |
-
-The create-shared bar and the Reuse Plan categories live in
-[reuse-pass.md](reuse-pass.md). Budget, stall detection, and the verdict
-vocabulary apply to reuse findings unchanged.
+`REJECT` is not part of this exit: it stops the run at once.

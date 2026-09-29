@@ -13,7 +13,7 @@
 ### จุดประสงค์หลักและคุณสมบัติเด่น
 1. **จบกระบวนการวางแผนในคำสั่งเดียว:** ครอบคลุมตั้งแต่วิเคราะห์ความต้องการจนได้ Tickets ที่สมบูรณ์
 2. **รักษา Context Window:** กระบวนการสัมภาษณ์, จัดทำ Spec และแตก Ticket จะรันอยู่บน reasoning thread เดียวกันแบบต่อเนื่อง ยกเว้นการรีวิว spec ที่แยกไปรันใน subagent ตัวใหม่เพื่อให้มองแบบคนนอก จากนั้นจะ **หยุดส่งมอบงาน (Handoff)** ทันทีที่ออก Tickets เสร็จ โดยไม่ลงมือเขียนโค้ด (Implement) เอง เพื่อให้เซสชันถัดไปที่ต้องเขียนโค้ดเริ่มต้นด้วย Context ที่สดใหม่และสะอาด
-3. **มี Design Review Gate ในตัว:** มีระบบตรวจคัดกรอง Spec ด้วย `scrutinize` ที่จำกัดงบประมาณไม่เกิน 6 รอบ, ตรวจจับการติดขัด (Stall detection) และแยกทางแก้แบบ Spec-level ออกจาก Decision-level อย่างชัดเจน
+3. **มี Design Review Gate ในตัว:** ผู้ใช้กำหนดขอบเขตการรีวิวเอง (เสนอ 3 รอบ, 0 คือข้าม, หรือใช้ `--review N`); ดูกติกาเรื่องทางออกเมื่อหมดรอบหรือติดขัดได้ที่ [สัญญา Design Review Gate](../../skills/agents/grill-to-tickets/references/design-review-gate.md)
 4. **Standalone โดยสมบูรณ์:** มีกติกาและกลไกของตัวเอง ไม่แตะต้องหรือแก้ไข skill ต้นทางภายนอก
 
 ---
@@ -73,77 +73,56 @@ Skill นี้ถูกตั้งค่าแบบ Explicit Invocation (ต�
 └── issues/             # รายการ tickets ที่พร้อมพัฒนา (NN-<slug>.md)
 ```
 
-มีไฟล์ระดับ project เพียงไฟล์เดียวที่อยู่นอก `.scratch/` และใช้ต่อข้ามฟีเจอร์ คือ **Reuse Catalog** `docs/reuse-catalog.md` (พร้อมบรรทัดชี้ไปหาใน `AGENTS.md` หรือ `CLAUDE.md`) ซึ่งเก็บรายการโค้ดที่ใช้ซ้ำได้ของ project เพื่อให้รอบถัดไปสำรวจเฉพาะส่วนที่เปลี่ยน:
-```text
-docs/reuse-catalog.md
-├── Where shared code lives   # shared code อยู่ที่ไหน
-├── Rules                     # กฎการใช้ เช่น "แสดงเงินด้วย formatCurrency"
-├── Shared                    # รายการใน shared layer: `symbol` — `path` — use for: ...
-├── Candidates                # โค้ดที่น่าจะ reuse ได้แต่ยังมีผู้ใช้รายเดียว
-└── Coverage                  # ส่วนที่สำรวจแล้ว และวันที่สำรวจล่าสุด
-```
-
 ### ขั้นตอนการทำงาน 4 ลำดับขั้น
 
 ```text
-Stage 0: Grill        reuse survey + grilling + domain-modeling  → CONTEXT.md, adr/, docs/reuse-catalog.md
+Stage 0: Grill        grilling + domain-modeling  → CONTEXT.md, adr/
    │ (หยุดรอการยืนยันจากผู้ใช้เมื่อคำถามหมด)
    ▼
 Stage 1: Spec         spec-format.md               → spec.md
    ▼
-Stage 2: Design Review Gate   scrutinize (subagent ใหม่) → design-review.md   (จำกัดงบ 6 รอบ)
+Stage 2: Design Review Gate   scrutinize (subagent ใหม่) → design-review.md   (ผู้ใช้กำหนดจำนวนรอบ)
    │ (เมื่อผลเป็น SHIP)
    ▼
 Stage 3: Tickets      ticket-format.md             → issues/NN-<slug>.md
    ▼
-Stop: Handoff message (commit catalog, /clear, DAG summary + recommended implementer แล้ว /subagent-implement)
+Stop: Handoff message (/clear, DAG summary + recommended implementer แล้ว /subagent-implement)
 ```
 
 1. **Stage 0 — Grill (สัมภาษณ์และสร้างโมเดลโดเมน):**
    - สำรวจบริบทเดิมใน repo (`CONTEXT.md`, `docs/adr/`)
-   - **Reuse survey:** อ่าน `docs/reuse-catalog.md` ตรวจว่าทุกรายการยังมีอยู่จริง (drift check) แล้วสำรวจเฉพาะส่วนที่ไม่อยู่ใน Coverage และไฟล์ที่เปลี่ยนหลังวันที่ใน Coverage ผลที่เจอเขียนกลับลง catalog ถ้ายังไม่มี catalog จะสร้างจาก template พร้อมเพิ่มบรรทัดชี้ใน `AGENTS.md` (หรือ `CLAUDE.md`)
-   - ทางเลือกเรื่อง reuse ที่ต้องตัดสินจริง เช่น ขยายของเดิมหรือสร้างใหม่ จะถูกถามเป็นคำถามพร้อมคำตอบแนะนำ
    - สัมภาษณ์ถามตอบทีละประเด็นโดยมีตัวเลือกแนะนำ (ใช้ `grilling`)
    - ทุกรอบคำถามถูกบันทึกลง `decisions.md` ตอนถาม และบันทึกคำตอบก่อนถามรอบถัดไป เพื่อให้การตัดสินใจไม่หายเมื่อ context ถูก compact หรือ `/clear`
    - บันทึกคำศัพท์ลง `CONTEXT.md` และบันทึกการตัดสินใจยากๆ ลง `adr/` ทันที (ใช้ `domain-modeling`)
    - **Blind-spot pass:** เมื่อไม่เหลือคำถามใน frontier จะไล่เช็ค 9 หมวดที่การสัมภาษณ์อาจไม่เคยแตะ (scope, data, flow, quality attributes เช่น performance/security, integrations, edge cases, constraints, terminology, completion signals) ให้คะแนนแต่ละหมวดเป็น `clear` / `partial` / `missing` / `n/a` ช่องว่างที่จะเปลี่ยน spec ได้กลายเป็นคำถามรอบสุดท้ายไม่เกิน 5 ข้อ ที่เหลือเขียนเป็นสมมติฐานให้เห็นชัด (ดัดแปลงจาก `/clarify` ของ GitHub Spec Kit)
-   - เมื่อตัดสินใจครบแล้ว จะสรุปคำศัพท์ การตัดสินใจ ตาราง blind-spot พร้อมสมมติฐาน และการเปลี่ยนแปลงของ catalog แล้วหยุดรอคำยืนยันจากผู้ใช้ก่อนก้าวต่อไป
+   - เมื่อตัดสินใจครบแล้ว จะสรุปคำศัพท์ การตัดสินใจ ตาราง blind-spot พร้อมสมมติฐาน แล้วหยุดรอคำยืนยันจากผู้ใช้ก่อนก้าวต่อไป
 2. **Stage 1 — Spec (จัดทำเอกสารข้อกำหนด):**
    - รวบรวมผลการตัดสินใจจาก `decisions.md`, `CONTEXT.md` และ `adr/` มาเขียนเป็น `spec.md` ตาม `references/spec-format.md` ซึ่งเป็นรูปแบบที่ skill เป็นเจ้าของเอง พร้อมกำหนด Test Seams (รอยต่อสำหรับทดสอบ) ทุกการตัดสินใจใน log ต้องปรากฏใน spec
-   - ใต้ Implementation Decisions มี **Reuse Plan** บอกว่าแต่ละ module จะ ใช้ของเดิม / ขยายของเดิม / สร้างเป็น shared (พร้อม interface และผู้ใช้ที่ระบุชื่อ) / สร้างเป็น candidate / promote candidate / แยกไว้โดยตั้งใจ
-   - เกณฑ์สร้าง shared: ต้องมีผู้ใช้จริงตั้งแต่ 2 story ขึ้นไป (หรือ caller เดิม 1 + story 1 หรือคุณยืนยันว่ามีฟีเจอร์ถัดไปใช้แน่) ถ้าไม่ถึงให้เป็น candidate ที่ออกแบบให้ดึงออกมาได้ภายหลัง
 3. **Stage 2 — Design Review Gate (ตรวจสอบการออกแบบ):**
-   - แต่ละรอบส่ง `scrutinize` ไปรันใน **subagent ตัวใหม่** ที่เห็นแค่ไฟล์ (`spec.md`, `decisions.md`, `CONTEXT.md`, `adr/`, reuse catalog และ repo) ไม่เห็นบทสนทนา จึงอ่าน spec แบบเดียวกับที่ implementer จะอ่าน และไม่แก้ไฟล์ใด ๆ ส่วน context หลักเป็นคน normalize verdict แก้ spec และนับ cycle (เหตุผลอยู่ใน ADR 0010)
+   - แต่ละรอบส่ง `scrutinize` ไปรันใน **subagent ตัวใหม่** ที่เห็นแค่ไฟล์ (`spec.md`, `decisions.md`, `CONTEXT.md`, `adr/` และ repo) ไม่เห็นบทสนทนา จึงอ่าน spec แบบเดียวกับที่ implementer จะอ่าน และไม่แก้ไฟล์ใด ๆ ส่วน context หลักเป็นคน normalize verdict แก้ spec และนับ cycle (เหตุผลอยู่ใน ADR 0010)
    - สรุปผลการตรวจ `spec.md` เป็น 1 ใน 4 ผลลัพธ์:
      - `SHIP`: ผ่านเกณฑ์ ➔ ไปยัง Stage 3
-     - `FIX_THEN_SHIP`: มีจุดต้องแก้ไขเล็กน้อย ➔ ปรับแก้ใน `spec.md` แล้วค้นทั้ง spec หาทุกประโยคที่พูดเรื่องเดียวกัน (story, implementation decision, Reuse Plan, further notes) แก้ให้ตรงกันจนค้นคำเดิมไม่เจอ แล้วจึงตรวจซ้ำ
+     - `FIX_THEN_SHIP`: มีจุดต้องแก้ไขเล็กน้อย ➔ ปรับแก้ใน `spec.md` แล้วค้นทั้ง spec หาทุกประโยคที่พูดเรื่องเดียวกัน (story, implementation decision, further notes) แก้ให้ตรงกันจนค้นคำเดิมไม่เจอ แล้วจึงตรวจซ้ำ
      - `REWORK`: ร่าง spec ไม่ชัดเจน (Spec-level) ให้แก้ spec หรือมีประเด็นที่ยังไม่ได้ตัดสินใจ (Decision-level) ให้กลับไปสัมภาษณ์ใหม่ใน Stage 0
      - `REJECT`: สถาปัตยกรรมหรือทิศทางไม่ผ่าน ➔ หยุดทำงานเพื่อให้มนุษย์ตัดสินใจ
-   - ทุกรอบตรวจ **reuse lens** ด้วย: spec สร้างของที่ catalog มีอยู่แล้ว, logic ที่หลาย story ใช้แต่ไม่มีเจ้าของ, หรือ shared ที่มีผู้ใช้ไม่ถึงเกณฑ์ ➔ `FIX_THEN_SHIP` ส่วนทางเลือกขยาย-หรือ-สร้างใหม่ที่ยังไม่มีใครตัดสิน ➔ `REWORK` แบบ decision-level
 4. **Stage 3 — Tickets (แตกชิ้นงานย่อย):**
-   - เมื่อผ่านเกณฑ์ `SHIP` จะนำ `spec.md` มาแตกเป็น Tracer-bullet vertical slices เก็บไว้ใน `issues/<NN>-<slug>.md` เรียงตามลำดับ Dependency
-   - shared module ใหม่แต่ละตัวมี **ticket เจ้าของ (owner ticket)** เพียงใบเดียว คือ vertical slice แรกที่ใช้ ticket อื่นที่ใช้ต้องรอ ticket เจ้าของ (Blocked by) จึงไม่มีทางเขียนซ้ำกันแม้รัน parallel ส่วน promote จะกลายเป็น prefactor ticket
-   - ทุก ticket มีบรรทัด `**Reuse:**` ต่อจาก `**Blocked by:**` ใช้คำกริยาตายตัว `use` / `extend` / `create-shared` / `create-candidate` / `promote` (หรือ `none`) เช่น
-     ```markdown
-     **Reuse:** use `formatCurrency` · create-shared `buildReportRows`
-     ```
-   - เรื่อง reuse ห้ามเขียนเป็น acceptance checkbox เพราะ implementer ต้องมี test ใหม่รองรับทุก criterion ข้อ "ใช้ X" เขียน test ไม่ได้ ticket จะ verify ไม่ผ่านจนติด `BLOCKED`
-   - ทุก ticket มีบรรทัด `**Stories:**` ต่อจาก `**Reuse:**` บอกเลข user story ใน spec ที่ ticket นั้นส่งมอบ เช่น `2, 5` หรือช่วง `3-6` (ticket prefactor ใช้ `none`)
+   - หลัง `SHIP`, การข้ามด้วย `0`, หรือผู้ใช้เลือกไปต่อหลังหมดรอบ/ติด stall ให้นำ `spec.md` มาแตกเป็น Tracer-bullet vertical slices เก็บไว้ใน `issues/<NN>-<slug>.md` เรียงตามลำดับ Dependency
+   - ทุก ticket มีบรรทัด `**Stories:**` ต่อจาก `**Blocked by:**` บอกเลข user story ใน spec ที่ ticket นั้นส่งมอบ เช่น `2, 5` หรือช่วง `3-6` (ticket prefactor ใช้ `none`)
    - ทุก ticket มีบรรทัด `**Seam:**` (ขอบเขตทดสอบเดียวจาก Testing Decisions ของ spec), `**Context:**` (Read set ของ worker: `spec §` refs และไฟล์ พร้อม marker อ่านอย่างเดียว / `(edit)` / `(new)` / `(from NN)` / `(edit from NN)`) และ `**Budget:**` (ผลวัดของ checker: read tokens, จำนวน criteria, จำนวน modules) เรียงต่อจาก `**Stories:**` ตามลำดับ Seam → Context → Budget
    - ก่อน quiz ให้รันสคริปต์ตรวจ ticket ที่มากับ skill พร้อม `--write-budget` เพื่อให้มันเขียน Budget line จากผลวัด:
      ```bash
      node <โฟลเดอร์ของ skill>/scripts/check-tickets.mjs .scratch/<feature-slug>/ --write-budget
      ```
-     สคริปต์ตรวจว่าทุก story มี ticket, `Stories` และ `Blocked by` ชี้ของที่มีจริง (blocker ต้องเลขต่ำกว่า), `Reuse` อยู่ต่อจาก `Blocked by` และใช้คำกริยาที่กำหนด, create-shared/promote ทุกตัวใน Reuse Plan มี ticket เจ้าของใบเดียวที่ block ticket อื่นที่ใช้, และ Seam/Context/Budget ครบ เป็นบรรทัดเดียว เรียงถูก และอ้างถึงของจริง แก้จนขึ้น `result: PASS` แล้วแสดงตาราง story coverage, ตาราง budget, สรุป DAG และ warning ทุกตัวใน quiz
+     สคริปต์ตรวจว่าทุก story มี ticket, `Stories` และ `Blocked by` ชี้ของที่มีจริง (blocker ต้องเลขต่ำกว่า), และ Seam/Context/Budget ครบ เป็นบรรทัดเดียว เรียงถูก และอ้างถึงของจริง แก้จนขึ้น `result: PASS` แล้วแสดงตาราง story coverage, ตาราง budget, สรุป DAG และ warning ทุกตัวใน quiz
    - warning ที่ checker ออกให้มี 3 แบบ และไม่เปลี่ยนผล `PASS` / `FAIL`: acceptance criterion ที่พูดถึงการรัน suite หรือ tool (`npm test`, `tests pass`, `typecheck passes`, `lint passes`, `suite passes`); ticket สองใบที่แก้ path เดียวกัน (`(edit)`, `(new)` หรือ `(edit from NN)`) โดยไม่มีใบไหน block อีกใบทางอ้อม (transitively); และ feature ที่มีเกิน 15 ticket
    - warning ทุกตัวที่ checker รายงานต้องถูกบันทึกใต้ `## Ticket warnings` ใน `decisions.md` บรรทัดละหนึ่งตัว เป็น `<warning> — acknowledged` หรือ `<warning> — fixed: <change>` จึงจะถือว่า Stage 3 เสร็จ
    - รัน checker ซ้ำด้วย `--write-budget` ทุกครั้งที่ quiz ทำให้ ticket เปลี่ยน
 5. **Stop — Handoff (ส่งมอบงาน):**
-   - พิมพ์ข้อความ handoff ตามลำดับ: หมายเหตุเรื่อง commit → `/clear` → **DAG summary** จาก checker (wave, ความกว้างสูงสุด, critical-path length) พร้อมบรรทัด `recommended implementer` ที่บอกว่า `subagent-implement`, `agy-implement` หรือ `opencode-implement` เหมาะกับ ticket set นี้ (ชื่อ skill ไม่มี slash นำหน้า) → คำสั่ง `/subagent-implement`
+   - พิมพ์ข้อความ handoff ตามลำดับ: `/clear` → **DAG summary** จาก checker (wave, ความกว้างสูงสุด, critical-path length) พร้อมบรรทัด `recommended implementer` ที่บอกว่า `subagent-implement`, `agy-implement` หรือ `opencode-implement` เหมาะกับ ticket set นี้ (ชื่อ skill ไม่มี slash นำหน้า) → คำสั่ง `/subagent-implement`
    - `recommended implementer` เลือกจาก maximum wave width (จำนวน ticket มากสุดที่ทำพร้อมกันได้ใน wave เดียว): 1 → `subagent-implement`, 2 → ทั้งสามตัว, 3 ขึ้นไป → `agy-implement` หรือ `opencode-implement` เป็นคำแนะนำเท่านั้น คุณเป็นคนเลือกเอง
    - แสดงข้อความสรุปและแนะนำขั้นตอนสำหรับเซสชันถัดไป:
      ```text
-     # 1. commit เฉพาะ docs/reuse-catalog.md / pointer ใน AGENTS.md ที่เปลี่ยน (implementer เริ่มได้เฉพาะ working tree ที่สะอาด; .scratch/ อยู่ในเครื่องและถูก git ignore จึงไม่ต้อง commit)
+     # 1. .scratch/ อยู่ในเครื่องและถูก git ignore จึงไม่ต้อง commit (implementer เริ่มได้เฉพาะ working tree ที่สะอาด)
      /clear
      # 2. วาง DAG summary สุดท้ายจาก checker
      wave 0: 01
@@ -155,7 +134,6 @@ Stop: Handoff message (commit catalog, /clear, DAG summary + recommended impleme
      /subagent-implement .scratch/<feature-slug>/
      # หรือ /agy-implement หรือ /opencode-implement ด้วย argument เดียวกัน
      ```
-   - implementer ทั้งสามตัวส่งบรรทัด Reuse ให้ worker และอัปเดต `docs/reuse-catalog.md` เมื่อแต่ละ ticket เข้า branch
 
 ---
 

@@ -1,6 +1,6 @@
 # ADR 0008: Reuse Catalog is a cross-skill contract
 
-- Status / สถานะ: Accepted / ยอมรับแล้ว
+- Status / สถานะ: Superseded by ADR 0017 / ถูกแทนที่โดย ADR 0017 (was: Accepted / ยอมรับแล้ว)
 - Date / วันที่: 2026-09-23
 
 ## Context / บริบท

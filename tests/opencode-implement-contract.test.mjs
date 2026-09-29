@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile, access, readdir } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
+import { assertSkillMarkdownSectionsDoNotMatch } from "./helpers/markdown-contract.mjs";
 
 // The reference set SKILL.md links, the guide's Related files list, and the
 // references/ directory must agree. One source of truth for the three checks.
@@ -307,7 +308,6 @@ describe("opencode-implement skill contract", () => {
         for (const field of [
           "**What to build:**",
           "**Blocked by:**",
-          "**Reuse:**",
           "**Stories:**",
           "**Seam:**",
           "**Context:**",
@@ -1090,47 +1090,21 @@ describe("opencode-implement skill contract", () => {
     });
   });
 
-  describe("Reuse Catalog", () => {
-    it("the whole-ticket prompt carries the Reuse line, a read-only catalog pointer, and the Reuse Plan rule", async () => {
-      for (const dir of skillDirs) {
-        const c = await readFile(path.resolve(dir, "references/prompt-scaffold.md"), "utf8");
-        assert.match(c, /- Reuse: <the ticket's Reuse line, verbatim>/);
-        assert.match(c, /- Reuse Catalog: <abs path to docs\/reuse-catalog\.md> — read-only for you/);
-        assert.match(c, /only when the target repository has\s+`docs\/reuse-catalog\.md`/);
-        assert.match(c, /any verb other than `use`[\s\S]{0,120}Reuse\s+Plan/);
-        assert.match(c, /gets `none`/);
-      }
+  describe("reuse is not part of the contract", () => {
+    it("no worker prompt, integration step, or planning field mentions the Reuse Catalog, Reuse Plan, or Reuse field", async () => {
+      await assertSkillMarkdownSectionsDoNotMatch(
+        skillDirs,
+        /\*\*Reuse:\*\*|Reuse Catalog|Reuse Plan|reuse-catalog|Reuse line/,
+        "worker-facing Markdown carries no reuse contract",
+      );
     });
 
-    it("the fallback subagent inherits the Reuse lines through the same scaffold", async () => {
+    it("a ticket that still carries a Reuse line is planned like one without", async () => {
       for (const dir of skillDirs) {
-        const c = await readFile(path.resolve(dir, "references/fallback.md"), "utf8");
-        assert.match(c, /same template[\s\S]{0,80}Reuse line/);
-        assert.match(c, /nothing\s+about reuse changes on escalation/);
-      }
-    });
-
-    it("per-ticket integration writes catalog entries serially inside each ticket's squash commit", async () => {
-      for (const dir of skillDirs) {
-        const c = await readFile(path.resolve(dir, "references/worktree-integration.md"), "utf8");
-        assert.ok(c.includes("## Reuse Catalog update"), "catalog update section present");
-        const section = c.slice(c.indexOf("## Reuse Catalog update"));
-        assert.match(section, /`git merge --squash` and `git commit`/);
-        assert.match(section, /fallback subagent/);
-        assert.match(section, /workers only\s+read the catalog/);
-        for (const verb of ["create-shared", "create-candidate", "extend", "promote"]) {
-          assert.match(section, new RegExp(`\`${verb}\``), `handles ${verb}`);
-        }
-        assert.match(section, /Grep the bare symbol/);
-        assert.match(section, /not found in changed files/);
-        assert.match(section, /reads no code/);
-        assert.match(section, /Coverage dates stay/);
-        assert.match(section, /no catalog file, skip/i);
-      }
-      for (const body of await skillBodies()) {
-        assert.match(body, /\*\*Reuse:\*\*/);
-        assert.match(body, /docs\/reuse-catalog\.md/);
-        assert.match(body, /catalog's only writer while wave-mates only read it/);
+        const planning = await readFile(path.resolve(dir, "references/planning.md"), "utf8");
+        const block = planning.match(/## 2\. Parse the ticket format[\s\S]*?(?=\n## )/);
+        assert.ok(block, "planning.md §2 ticket-format block present");
+        assert.doesNotMatch(block[0], /Reuse/, "the parsed header fields do not include Reuse");
       }
     });
   });
