@@ -35,6 +35,14 @@ decision, including the small ones neither of them takes.
 
 - **Q1 — <question title>** — recommended: <answer> — decided: open
 
+## Ticket review
+
+- reviewer: subagent
+- 01 READY
+- 02 ASK: <question> — resolved: <change>
+- 03 ASK: <question> — acknowledged
+- review skipped
+
 ## Ticket warnings
 
 - `issues/02-csv-download.md: acceptance criterion "npm test passes" mentions a suite or tool run` — fixed: rewrote the criterion as a behavioural statement
@@ -47,7 +55,15 @@ decision, including the small ones neither of them takes.
   confirmation, test-seam confirmation, ticket-quiz approval, the review entry
   question, or the add-rounds choice — or `nothing` while the run works. In Stage 2, State also carries
   `review: <used>/<max> rounds` (or `review: skipped`), the user's answer to
-  the entry question.
+  the entry question. It also carries `ticket review: pending`, `done`, or
+  `skipped`; Stage 0 step 1 writes `skipped` when `--ticket-review 0` is present
+  and `pending` otherwise, and the key becomes `done` after the review.
+- **Ticket review** records one reviewer line, either `- reviewer: subagent` or
+  `- reviewer: inline`, followed by one line per ticket: `- NN READY` or
+  `- NN ASK: <question>`. An open ASK line has no suffix; when settled, that
+  same line carries `— resolved: <change>` or `— acknowledged`. A skipped
+  review records `- review skipped` as its only Ticket review entry, alongside
+  the State key.
 - **Preflight** records the stage skills found and their lock values. Stage 0
   step 1 writes the first `### Preflight <date>` entry under `## Preflight` when
   it creates the log, and each `continue` appends another, keeping earlier entries.
@@ -77,8 +93,10 @@ A round is closed when every question in it carries a `decided:` other than
 
 ## Resume — `continue <feature-slug>`
 
-1. Read `decisions.md`, State first, then `CONTEXT.md`, `adr/`, and whichever of
-   `spec.md`, `design-review.md`, and `issues/` exist.
+1. Read `decisions.md`, State first, and its `## Ticket review` section to
+   recover verdicts and ASK questions that are still open; then read
+   `CONTEXT.md`, `adr/`, and whichever of `spec.md`, `design-review.md`, and
+   `issues/` exist.
 2. Take the gate's maximum and rounds used from State and `design-review.md`;
    never ask the entry question again and never refill spent rounds.
 3. Resume at the recorded `stage` and `waiting on`. When the run waits on a
@@ -87,3 +105,10 @@ A round is closed when every question in it carries a `decided:` other than
 4. With no `decisions.md` — a run begun before the log existed — rebuild State
    from the artifacts present, tell the user which decisions survive only as
    spec text, and start the log from there.
+5. A `ticket review` State key wins over any invocation flag. An explicit
+   `--ticket-review 0` turns `pending` into `skipped`; a `done` review stays
+   `done` with every flag, and a `skipped` review stays `skipped`. A State with
+   no `ticket review` key takes the invocation's flag and otherwise runs the
+   review once. Keep the review State and `## Ticket review` entries together:
+   a `done` State keeps its verdicts, each open ASK stays open until resolved or
+   acknowledged, and a `skipped` State keeps the review skipped.

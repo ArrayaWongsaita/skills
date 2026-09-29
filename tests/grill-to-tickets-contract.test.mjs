@@ -727,6 +727,65 @@ describe("grill-to-tickets composite skill contract", () => {
     assert.doesNotMatch(gate, /--ticket-review/);
   });
 
+  it("initializes and resumes the ticket-review State from the log", async () => {
+    const skill = await readFile(path.resolve(canonicalDir, "SKILL.md"), "utf8");
+    const stage0 = markdownSection(skill, "Stage 0 — Grill");
+    const stage0Step1 = stage0.slice(stage0.indexOf("1. **Ground"), stage0.indexOf("2. **Relentless"));
+    const log = await readFile(path.resolve(canonicalDir, "references/decision-log.md"), "utf8");
+    const resume = markdownSection(log, "Resume — `continue <feature-slug>`");
+
+    assertPattern(stage0Step1, /creates `decisions\.md`[\s\S]*`ticket review: skipped`[\s\S]*`ticket review: pending`/,
+      "Stage 0 initializes the review State from the skip flag");
+    assertPattern(log, /State[\s\S]*`ticket review: pending`, `done`, or\s+`skipped`[\s\S]*key becomes `done` after the review/i,
+      "the log defines the review State values and completion transition");
+    assertPattern(resume, /State key wins over (?:any|all) invocation flags?/i,
+      "a saved review State takes precedence over invocation flags");
+    assertPattern(resume, /explicit\s+`--ticket-review 0` turns `pending` into `skipped`/,
+      "an explicit zero skips a pending review");
+    assertPattern(resume, /`done` review stays[\s\S]{0,100}`done` with every flag/,
+      "an explicit zero leaves a done review done");
+    assertPattern(resume, /State with\s+no `ticket review` key[\s\S]*invocation's flag[\s\S]*otherwise runs the\s+review once/i,
+      "an older State follows the invocation flag and defaults to one review");
+  });
+
+  it("logs ticket-review verdicts and resumes open questions without changing done or skipped State", async () => {
+    const log = await readFile(path.resolve(canonicalDir, "references/decision-log.md"), "utf8");
+    const ticketReview = markdownSection(log, "Format");
+    const resume = markdownSection(log, "Resume — `continue <feature-slug>`");
+
+    assertPattern(ticketReview, /^- reviewer: subagent$/m,
+      "the review log records its reviewer");
+    assertPattern(ticketReview, /reviewer line, either `- reviewer: subagent` or\s+`- reviewer: inline`/i,
+      "the reviewer line allows inline review");
+    assertPattern(ticketReview, /- NN READY/,
+      "the review log has one READY line per ticket");
+    assertPattern(ticketReview, /- NN ASK: <question>/,
+      "the review log records each ASK question");
+    assertPattern(ticketReview, /ASK: <question>[\s\S]{0,120}— resolved: <change>/,
+      "a resolved ASK records its change");
+    assertPattern(ticketReview, /ASK: <question>[\s\S]{0,120}— acknowledged/,
+      "an acknowledged ASK records its resolution");
+    assertPattern(ticketReview, /- review skipped/,
+      "a skipped review has a log line");
+    assertPattern(resume, /read[\s\S]*## Ticket review[\s\S]*ASK questions? (?:that are )?still open/i,
+      "resume reads verdicts to recover open ASK questions");
+    assertPattern(resume, /`done` review stays[\s\S]*`skipped` review stays[\s\S]*`skipped`/i,
+      "resume preserves completed and skipped reviews");
+  });
+
+  it("requires settled ticket-review state and a successful final checker before Stage 3 is done", async () => {
+    const skill = await readFile(path.resolve(canonicalDir, "SKILL.md"), "utf8");
+    const stage3 = markdownSection(skill, "Stage 3 — Tickets");
+    const body = skill.replace(/^---\n[\s\S]*?\n---\n/, "");
+
+    assertPattern(stage3, /Stage 3 is done when[\s\S]*`ticket review`\s+State[\s\S]*`done` or\s+`skipped`[\s\S]*every `ASK` line[\s\S]*— resolved:[\s\S]*— acknowledged[\s\S]*either the last checker run exits 0 or, where Node is unavailable,\s+the by-hand checks listed in the script's header pass/i,
+      "Stage 3 completion requires the review and ASK resolutions plus a successful checker or passing manual checks");
+    assertPattern(stage3, /After a manifest write\s+failure,[\s\S]*report the failure[\s\S]*re-run the checker before finishing Stage 3/i,
+      "Stage 3 reports a manifest failure and checks again before completion");
+    assert.doesNotMatch(body, /\bNever\b/i, "the skill states completion rules positively");
+    assert.doesNotMatch(body, /\bDo not\b/i, "the skill states completion rules positively");
+  });
+
   it("briefs a read-only ambiguity review with READY or ASK and a missing-verdict fallback", async () => {
     const review = await readFile(path.resolve(canonicalDir, "references/ticket-review.md"), "utf8");
 

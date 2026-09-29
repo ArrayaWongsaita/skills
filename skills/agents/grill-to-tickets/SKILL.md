@@ -128,9 +128,10 @@ Run `grilling` and `domain-modeling` together as one discovery pass.
 
 1. **Ground in existing context.** Read the repository's root `CONTEXT.md` and
    `docs/adr/` if they exist, plus any relevant existing directory under
-   `.scratch/`. Initialize `.scratch/<feature-slug>/` with its
-   `decisions.md` State and write the first `### Preflight <date>` entry under
-   `## Preflight` recording the stage skills' paths and lock hashes.
+   `.scratch/`. When Stage 0 step 1 creates `decisions.md`, initialize its State
+   with `ticket review: skipped` for `--ticket-review 0` or
+   `ticket review: pending` otherwise. Write the first `### Preflight <date>`
+   entry under `## Preflight` recording the stage skills' paths and lock hashes.
 2. **Relentless interview (inline `grilling`).** Map decisions as a design tree.
    Work the tree in rounds across the frontier — every decision whose
    prerequisites are settled. Number each question and give a recommended answer.
@@ -259,11 +260,14 @@ numbered at review time; when the quiz removes a ticket, give its line the
 `— acknowledged` suffix. The review set closes at review time. Tickets the quiz
 creates join a review only after the person asks for another review.
 
-Stage 3 is done when the checker prints `result: PASS`, every warning is logged
-under `## Ticket warnings` in `decisions.md` — one line per warning,
-`<warning> — acknowledged` or `<warning> — fixed: <change>` — and the user
-approves the breakdown. Where Node is unavailable, apply the checks listed in the
-script's header by hand.
+Stage 3 is done when every warning is logged under `## Ticket warnings` in
+`decisions.md` — one line per warning, `<warning> — acknowledged` or
+`<warning> — fixed: <change>` —, the `ticket review` State is `done` or
+`skipped`, every `ASK` line under `## Ticket review` carries
+`— resolved: <change>` or `— acknowledged`, and the user approves the
+breakdown, and either the last checker run exits 0 or, where Node is unavailable,
+the by-hand checks listed in the script's header pass. After a manifest write
+failure, report the failure and re-run the checker before finishing Stage 3.
 
 ## Stop — Handoff
 
