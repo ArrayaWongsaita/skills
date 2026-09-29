@@ -156,7 +156,8 @@ glossary, and the ADRs directly into `.scratch/<feature-slug>/spec.md` using the
 standard sections (Problem Statement, Solution, User Stories, Implementation
 Decisions, Testing Decisions, Out of Scope, Further Notes). Sketch the test
 seams and confirm them with the user. Stage 0 already settled the decisions —
-synthesize them and keep the interview closed. The spec is done when
+synthesize them and keep the interview closed. For every new spec, write at
+least one `Scenario:` line under every story. The spec is done when
 every decision in the log appears in it — as a story, an implementation or
 testing decision, an out-of-scope line, or a further note — and
 every blind-spot assumption appears in Further Notes.

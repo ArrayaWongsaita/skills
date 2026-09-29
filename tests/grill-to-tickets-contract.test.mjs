@@ -501,6 +501,31 @@ describe("grill-to-tickets composite skill contract", () => {
     }
   });
 
+  it("requires a one-line Scenario under every story in new specs", async () => {
+    for (const dir of skillDirs) {
+      const format = await readFile(path.resolve(dir, "references/spec-format.md"), "utf8");
+      assert.match(format, /Every new spec carries at least one `Scenario:` line under every story\./i);
+      assert.match(format, /A\s+Scenario is one line\./i);
+      const templateStart = format.indexOf("## Spec Template");
+      const templateFenceStart = format.indexOf("```", templateStart);
+      const templateFenceEnd = format.indexOf("```", templateFenceStart + 3);
+      const template = format.slice(templateFenceStart, templateFenceEnd);
+      assert.match(template, /^\s+Scenario: given <precondition> when <action> then <outcome>$/m);
+
+      const skill = await readFile(path.resolve(dir, "SKILL.md"), "utf8");
+      const stage1 = skill.slice(skill.indexOf("## Stage 1"), skill.indexOf("## Stage 2"));
+      assert.match(stage1, /For every new spec, write at\s+least one `Scenario:` line under every story\./i);
+
+      const checker = await readFile(path.resolve(dir, "scripts/check-tickets.mjs"), "utf8");
+      const header = checker.slice(0, checker.indexOf("import {"));
+      assert.match(header, /new specs carry one or more Scenario lines under every story/i);
+      assert.match(header, /a spec with[\s\S]*no Scenario line[\s\S]*warns/i);
+      assert.match(header, /whole words given, when, then/i);
+      assert.match(header, /outside a story,[\s\S]*indentation, then keyword/i);
+      assert.match(header, /multiple Scenario lines under one story/i);
+    }
+  });
+
   it("owns ticket-format.md adapted from to-tickets with upstream source line and license", async () => {
     for (const dir of skillDirs) {
       const ticketFormatPath = path.resolve(dir, "references/ticket-format.md");

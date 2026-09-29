@@ -26,9 +26,13 @@ const spec = `# Spec
 ## User Stories
 
 1. As an admin, I want to export members, so that I can audit them
+   Scenario: given an admin requests an export when export is available then the members are included
 1a. As an admin, I want the export to include roles, so that I can review access
+   Scenario: given an export includes members when roles are enabled then each role is included
 2. As an admin, I want a CSV file, so that I can open it anywhere
+   Scenario: given an admin requests a CSV when records exist then the CSV can be opened
 3. As a member, I want my email hidden from non-admins, so that it stays private
+   Scenario: given a non-admin views a member when the profile is shown then the email is hidden
    - a nested note that is not a story
 
 ## Implementation Decisions
@@ -50,15 +54,19 @@ function countTokens(text) {
   return Math.ceil(ascii / 4) + nonAscii;
 }
 
+function withoutScenarios(source) {
+  return source.replace(/^[ \t]+Scenario:.*(?:\n|$)/gm, "");
+}
+
 // The Budget line the checker should measure for a ticket fixture.
-function autoBudget(text, context, files = {}) {
+function autoBudget(text, context, files = {}, specContent = spec) {
   const sources = [text.split("\n").filter((line) => !line.startsWith("**Budget:**")).join("\n")];
   const modules = new Set();
   let allowance = 0;
   for (const item of (context ?? "").split("·").map((s) => s.trim()).filter(Boolean)) {
     const specRef = item.match(/^spec\s+§\s+(.+)$/);
     if (specRef) {
-      const section = sectionOf(spec, specRef[1]);
+      const section = sectionOf(specContent, specRef[1]);
       if (section?.text) sources.push(section.text);
       continue;
     }
@@ -88,6 +96,7 @@ function ticket(
     budget,
     files = {},
     extra = "",
+    specText = spec,
   } = {},
 ) {
   const lines = [`# ${number}: ${title}`, "", "**What to build:** something end to end.", ""];
@@ -103,7 +112,7 @@ function ticket(
   const insertAt = contextIndex === -1 ? lines.length : contextIndex + 1;
   const withBudget = [...lines];
   withBudget.splice(insertAt, 0, "**Budget:** placeholder");
-  const line = budget ?? autoBudget(withBudget.join("\n"), context, files);
+  const line = budget ?? autoBudget(withBudget.join("\n"), context, files, specText);
   withBudget[insertAt] = `**Budget:** ${line}`;
   return { file, text: withBudget.join("\n") };
 }
@@ -112,6 +121,12 @@ const passing = () => [
   ticket("01", "Export members", { stories: "1, 1a" }),
   ticket("02", "CSV download", { blockedBy: "01", stories: "2" }),
   ticket("03", "Hide emails", { blockedBy: "01: Export members", stories: "3" }),
+];
+
+const passingFor = (specText) => [
+  ticket("01", "Export members", { stories: "1, 1a", specText }),
+  ticket("02", "CSV download", { blockedBy: "01", stories: "2", specText }),
+  ticket("03", "Hide emails", { blockedBy: "01: Export members", stories: "3", specText }),
 ];
 
 // A temporary project for the --write-budget file-replacement tests. Ticket 01
@@ -163,7 +178,95 @@ describe("check-tickets", () => {
   it("passes a ticket set that covers every story and keeps every rule", () => {
     const result = checkFeature({ spec, tickets: passing() });
     assert.deepEqual(result.errors, []);
+    assert.deepEqual(result.warnings, []);
     assert.deepEqual([...result.coverage], [["1", [1]], ["1a", [1]], ["2", [2]], ["3", [3]]]);
+  });
+
+  it("accepts a Scenario under every story and several Scenarios under one story", () => {
+    const multiple = spec.replace(
+      "   Scenario: given an admin requests an export when export is available then the members are included",
+      "   Scenario: given an admin requests an export when export is available then the members are included\n" +
+        "   Scenario: GIVEN an admin requests an export WHEN no members exist THEN an empty export is returned",
+    );
+    const result = checkFeature({ spec: multiple, tickets: passingFor(multiple) });
+    assert.deepEqual(result.errors, []);
+    assert.deepEqual(result.warnings, []);
+  });
+
+  it("warns once for an older spec with no Scenario lines and ignores mentions outside the line pattern", () => {
+    const noScenarios = withoutScenarios(spec).replace(
+      "## Implementation Decisions",
+      "A note mentions Scenario: inline, but is not a Scenario line.\n\n## Implementation Decisions",
+    );
+    const outsideSection = noScenarios.replace(
+      "## Testing Decisions",
+      "## Testing Decisions\n\nScenario: given a check runs when the file is read then it is outside User Stories",
+    );
+    const result = checkFeature({ spec: outsideSection, tickets: passingFor(outsideSection) });
+    assert.deepEqual(result.errors, []);
+    assert.deepEqual(result.warnings, ["spec.md carries no scenarios"]);
+  });
+
+  it("names the first story without a Scenario when a spec has partial scenario coverage", () => {
+    const partial = spec
+      .replace("   Scenario: given an export includes members when roles are enabled then each role is included\n", "")
+      .replace("   Scenario: given an admin requests a CSV when records exist then the CSV can be opened\n", "");
+    const errors = checkFeature({ spec: partial, tickets: passingFor(partial) }).errors;
+    assert.deepEqual(
+      errors.filter((error) => /^story .+ has no Scenario line$/.test(error)),
+      ["story 1a has no Scenario line", "story 2 has no Scenario line"],
+    );
+  });
+
+  it("reports the first missing whole keyword, once per malformed Scenario line", () => {
+    for (const [line, missing] of [
+      ["Scenario: actor opens when a record exists then the record appears", "given"],
+      ["Scenario: given an actor opens then the record appears", "when"],
+      ["Scenario: given an actor opens when a record exists", "then"],
+      ["Scenario: givenly when a record exists then the record appears", "given"],
+    ]) {
+      const malformed = spec.replace(
+        "   Scenario: given an admin requests an export when export is available then the members are included",
+        `   ${line}`,
+      );
+      const result = checkFeature({ spec: malformed, tickets: passingFor(malformed) });
+      const scenarioErrors = result.errors.filter((error) => /Scenario line/.test(error));
+      const lineNumber = malformed.split("\n").indexOf(`   ${line}`) + 1;
+      assert.deepEqual(scenarioErrors, [`line ${lineNumber}: Scenario line is missing "${missing}"`]);
+    }
+  });
+
+  it("rejects Scenario keywords that are all present but out of order", () => {
+    const outOfOrder = spec.replace(
+      "   Scenario: given an admin requests an export when export is available then the members are included",
+      "   Scenario: when an action happens given a starting state then output",
+    );
+    const result = checkFeature({ spec: outOfOrder, tickets: passingFor(outOfOrder) });
+    const line = outOfOrder.split("\n").indexOf("   Scenario: when an action happens given a starting state then output") + 1;
+    assert.deepEqual(
+      result.errors.filter((error) => /^line \d+: Scenario line/.test(error)),
+      [`line ${line}: Scenario line is missing "when"`],
+    );
+  });
+
+  it("reports outside-a-story before indentation and keyword faults, and an unindented line covers no story", () => {
+    const inserted = spec.replace(
+      "## User Stories\n\n",
+      "## User Stories\n\nScenario: before a story\n\n",
+    );
+    const malformedPlacement = inserted.replace(
+      "   Scenario: given an admin requests an export when export is available then the members are included",
+      "Scenario: story one without indentation",
+    );
+    const result = checkFeature({ spec: malformedPlacement, tickets: passingFor(malformedPlacement) });
+    const scenarioErrors = result.errors.filter((error) => /^line \d+: Scenario line/.test(error));
+    const outsideLine = malformedPlacement.split("\n").indexOf("Scenario: before a story") + 1;
+    const unindentedLine = malformedPlacement.split("\n").indexOf("Scenario: story one without indentation") + 1;
+    assert.deepEqual(scenarioErrors, [
+      `line ${outsideLine}: Scenario line sits outside a story`,
+      `line ${unindentedLine}: Scenario line must be indented under its story`,
+    ]);
+    assert.ok(result.errors.includes("story 1 has no Scenario line"), result.errors.join("\n"));
   });
 
   it("ignores a leftover Reuse line without an error or a warning", () => {

@@ -5,6 +5,12 @@
 //   node <skill-dir>/scripts/check-tickets.mjs .scratch/<feature-slug>/ [--write-budget]
 //
 // - every numbered story under spec.md's "## User Stories" has a ticket;
+// - new specs carry one or more Scenario lines under every story; a spec with
+//   no Scenario line warns, so older specs remain valid;
+// - Scenario lines are recognized only in User Stories, are indented under a
+//   story, and contain the whole words given, when, then in that order;
+// - each Scenario line yields at most one error in order: outside a story,
+//   indentation, then keyword; multiple Scenario lines under one story pass;
 // - every ticket's **Stories:** names only stories the spec defines;
 // - every **Blocked by:** entry names an existing, lower-numbered ticket;
 // - every ticket has **Seam:** directly after **Stories:**;
@@ -55,6 +61,54 @@ export function parseStories(spec) {
     if (story) stories.push(story[1]);
   }
   return stories;
+}
+
+function checkScenarios(spec) {
+  const lines = spec.split("\n");
+  const start = lines.findIndex((line) => /^## User Stories\s*$/.test(line));
+  if (start === -1) return { usesScenarios: false, coveredStories: new Set(), errors: [] };
+
+  let story = null;
+  let usesScenarios = false;
+  const coveredStories = new Set();
+  const errors = [];
+
+  for (let i = start + 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^## /.test(line)) break;
+
+    const storyMatch = line.match(/^(\d+[a-z]?)\.\s+\S/);
+    if (storyMatch) story = storyMatch[1];
+
+    if (!/^\s*Scenario:/.test(line)) continue;
+    usesScenarios = true;
+    const lineNumber = i + 1;
+
+    if (story === null) {
+      errors.push(`line ${lineNumber}: Scenario line sits outside a story`);
+      continue;
+    }
+    if (!/^\s+Scenario:/.test(line)) {
+      errors.push(`line ${lineNumber}: Scenario line must be indented under its story`);
+      continue;
+    }
+
+    coveredStories.add(story);
+    const content = line.replace(/^\s+Scenario:\s*/, "");
+    let offset = 0;
+    let missing = null;
+    for (const keyword of ["given", "when", "then"]) {
+      const match = new RegExp(`\\b${keyword}\\b`, "i").exec(content.slice(offset));
+      if (!match) {
+        missing = keyword;
+        break;
+      }
+      offset += match.index + match[0].length;
+    }
+    if (missing) errors.push(`line ${lineNumber}: Scenario line is missing "${missing}"`);
+  }
+
+  return { usesScenarios, coveredStories, errors };
 }
 
 export function sectionOf(spec, ref) {
@@ -364,8 +418,16 @@ export function checkFeature({ spec, tickets: ticketFiles, files }) {
   const errors = [];
   const notes = [];
   const stories = parseStories(spec ?? "");
+  const scenarioCheck = checkScenarios(spec ?? "");
   if (spec === null) errors.push("spec.md is missing");
   else if (stories.length === 0) errors.push('spec.md has no numbered stories under "## User Stories"');
+
+  errors.push(...scenarioCheck.errors);
+  if (scenarioCheck.usesScenarios) {
+    for (const story of stories) {
+      if (!scenarioCheck.coveredStories.has(story)) errors.push(`story ${story} has no Scenario line`);
+    }
+  }
 
   const tickets = [];
   const seen = new Map();
@@ -523,6 +585,7 @@ export function checkFeature({ spec, tickets: ticketFiles, files }) {
   // result. Two tickets that change one path may land in the same wave unless
   // an edge orders them.
   const warnings = [];
+  if (spec != null && !scenarioCheck.usesScenarios) warnings.push("spec.md carries no scenarios");
   const touchesByPath = new Map();
   for (const ticket of tickets) {
     for (const item of contextItemsOf(ticket)) {
