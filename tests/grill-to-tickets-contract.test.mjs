@@ -9,6 +9,15 @@ async function fileExists(filePath) {
   await access(filePath, constants.R_OK);
 }
 
+async function filesUnder(directory) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const nested = await Promise.all(entries.map(async (entry) => {
+    const filePath = path.join(directory, entry.name);
+    return entry.isDirectory() ? filesUnder(filePath) : [filePath];
+  }));
+  return nested.flat();
+}
+
 function parseFrontmatter(markdown) {
   const match = markdown.match(/^---\n([\s\S]*?)\n---\n/);
   assert.ok(match, "SKILL.md must start with YAML frontmatter");
@@ -63,6 +72,16 @@ describe("grill-to-tickets composite skill contract", () => {
         /hands? off|handoff/i,
         "must frame the stop as a handoff rather than implementation",
       );
+    }
+  });
+
+  it("keeps the manifest out of the three implementer skills and their references", async () => {
+    for (const implementer of ["subagent-implement", "agy-implement", "opencode-implement"]) {
+      const directory = path.resolve("skills/agents", implementer);
+      const files = [path.join(directory, "SKILL.md"), ...(await filesUnder(path.join(directory, "references")))];
+      for (const file of files) {
+        assert.doesNotMatch(await readFile(file, "utf8"), /\bmanifest\b/i, `${file} must not depend on the manifest`);
+      }
     }
   });
 

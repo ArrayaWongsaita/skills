@@ -38,9 +38,15 @@
 // - warnings never change the result;
 // - the DAG summary lists each wave's tickets, the maximum wave width, the
 //   critical-path length, and the implementer those recommend.
+// - each result keeps its ticket-number list and planning-only per-ticket facts
+//   separately; only a PASS with --write-budget rewrites manifest.json atomically
+//   beside issues/ from those facts and the raw spec sha256. It has no Status,
+//   timestamp, verify commands, or passes field; a failing check leaves an earlier
+//   manifest untouched, and a write failure follows the report and exits 2.
 //
 // Exit codes: 0 clean, 1 errors found, 2 unusable input.
 
+import { createHash } from "node:crypto";
 import { chmod, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -741,7 +747,31 @@ export function checkFeature({ spec, tickets: ticketFiles, files }) {
     if (covering.length === 0) errors.push(`story ${id} has no ticket`);
   }
 
-  return { errors, warnings, notes, coverage, tickets: tickets.map((t) => t.number), budgets, dag: computeDag(tickets) };
+  const storyOrder = new Map(stories.map((id, index) => [id, index]));
+  const ticketFacts = tickets.map((ticket) => {
+    const storyRefs = parseStoryRefs(ticket.field("Stories") || "none", stories).refs;
+    const storyIds = [...new Set(storyRefs)].sort((a, b) => storyOrder.get(a) - storyOrder.get(b));
+    return {
+      number: ticket.number,
+      file: path.posix.join("issues", ticket.file),
+      title: ticket.title,
+      stories: storyIds,
+      blockedBy: [...(ticket.blockers ?? [])].sort((a, b) => a - b),
+      seam: ticket.field("Seam") ?? "",
+      budget: ticket.field("Budget") ?? "",
+    };
+  });
+
+  return {
+    errors,
+    warnings,
+    notes,
+    coverage,
+    tickets: tickets.map((t) => t.number),
+    ticketFacts,
+    budgets,
+    dag: computeDag(tickets),
+  };
 }
 
 export function findProjectRoot(dir) {
@@ -768,6 +798,20 @@ async function replaceFile(target, contents) {
     const { mode } = await stat(target);
     await writeFile(temporary, contents);
     await chmod(temporary, mode & 0o7777);
+    await rename(temporary, target);
+  } catch (error) {
+    await rm(temporary, { force: true }).catch(() => {});
+    throw error;
+  }
+}
+
+// A manifest may not exist on the first passing run, so use the temporary-file
+// and rename sequence without reading a target mode. It is derived output and
+// always takes the default mode for a newly written file.
+async function writeManifest(target, contents) {
+  const temporary = path.join(path.dirname(target), `.${path.basename(target)}.tmp-${process.pid}`);
+  try {
+    await writeFile(temporary, contents);
     await rename(temporary, target);
   } catch (error) {
     await rm(temporary, { force: true }).catch(() => {});
@@ -827,7 +871,25 @@ export async function checkFeatureDir(dir, { writeBudget = false } = {}) {
     tickets = await readTickets();
   }
 
-  return checkFeature({ spec, tickets, files });
+  const result = checkFeature({ spec, tickets, files });
+  if (writeBudget && result.errors.length === 0) {
+    try {
+      const specBytes = await readFile(path.join(dir, "spec.md"));
+      const manifest = {
+        version: 1,
+        specSha256: createHash("sha256").update(specBytes).digest("hex"),
+        waves: result.dag.waves,
+        maxWaveWidth: result.dag.width,
+        criticalPathLength: result.dag.criticalPath,
+        recommendedImplementers: result.dag.recommendation,
+        tickets: result.ticketFacts,
+      };
+      await writeManifest(path.join(dir, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
+    } catch (error) {
+      result.manifestError = error.message;
+    }
+  }
+  return result;
 }
 
 export function formatReport(dir, { errors, warnings = [], notes, coverage, budgets = [], dag }) {
@@ -883,6 +945,10 @@ async function main(argv) {
     return 2;
   }
   console.log(formatReport(dir, result));
+  if (result.manifestError) {
+    console.error(`manifest could not be written: ${result.manifestError}`);
+    return 2;
+  }
   return result.errors.length === 0 ? 0 : 1;
 }
 

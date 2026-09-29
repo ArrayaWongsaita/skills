@@ -1,5 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile, readdir, stat, chmod, mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -180,6 +181,27 @@ describe("check-tickets", () => {
     assert.deepEqual(result.errors, []);
     assert.deepEqual(result.warnings, []);
     assert.deepEqual([...result.coverage], [["1", [1]], ["1a", [1]], ["2", [2]], ["3", [3]]]);
+  });
+
+  it("returns ticket numbers separately from ordered, deduplicated planning facts", () => {
+    const tickets = passing();
+    tickets[0] = ticket("01", "Export members", { stories: "1a, 1, 1a" });
+    tickets[2] = ticket("03", "Hide emails", { blockedBy: "02, 01", stories: "3, 1a, 1" });
+    tickets.push(ticket("04", "Planning note", { stories: "none" }));
+
+    const result = checkFeature({ spec, tickets });
+
+    assert.deepEqual(result.errors, []);
+    assert.deepEqual(result.tickets, [1, 2, 3, 4]);
+    assert.deepEqual(result.ticketFacts, tickets.map((item, index) => ({
+      number: index + 1,
+      file: `issues/${item.file}`,
+      title: ["Export members", "CSV download", "Hide emails", "Planning note"][index],
+      stories: [["1", "1a"], ["2"], ["1", "1a", "3"], []][index],
+      blockedBy: [[], [1], [1, 2], []][index],
+      seam: "test boundary",
+      budget: item.text.match(/^\*\*Budget:\*\* (.+)$/m)?.[1],
+    })));
   });
 
   it("accepts a Scenario under every story and several Scenarios under one story", () => {
@@ -1189,6 +1211,170 @@ describe("check-tickets", () => {
     }
   });
 
+  it("writes a deterministic version 1 manifest from a passing --write-budget run", async () => {
+    await withBudgetProject(async ({ dir, issuesDir, tickets }) => {
+      const { stdout } = await run("node", [script, dir, "--write-budget"]);
+      assert.match(stdout, /result: PASS/);
+
+      const manifestPath = path.join(dir, "manifest.json");
+      const firstBytes = await readFile(manifestPath);
+      const firstText = firstBytes.toString("utf8");
+      const manifest = JSON.parse(firstText);
+      assert.equal(firstText, `${JSON.stringify(manifest, null, 2)}\n`);
+      assert.deepEqual(Object.keys(manifest), [
+        "version",
+        "specSha256",
+        "waves",
+        "maxWaveWidth",
+        "criticalPathLength",
+        "recommendedImplementers",
+        "tickets",
+      ]);
+      assert.equal(manifest.version, 1);
+      assert.equal(
+        manifest.specSha256,
+        createHash("sha256").update(await readFile(path.join(dir, "spec.md"))).digest("hex"),
+      );
+      assert.deepEqual(manifest.waves, [[1], [2, 3]]);
+      assert.equal(manifest.maxWaveWidth, 2);
+      assert.equal(manifest.criticalPathLength, 2);
+      assert.deepEqual(manifest.recommendedImplementers, [
+        "subagent-implement",
+        "agy-implement",
+        "opencode-implement",
+      ]);
+      assert.deepEqual(
+        manifest.tickets.map(({ number, title, file, stories, blockedBy, seam, budget }) => ({
+          number,
+          title,
+          file,
+          stories,
+          blockedBy,
+          seam,
+          budget,
+        })),
+        [
+          {
+            number: 1,
+            title: "Export members",
+            file: "issues/01-export-members.md",
+            stories: ["1", "1a"],
+            blockedBy: [],
+            seam: "test boundary",
+            budget: (await readFile(path.join(issuesDir, tickets[0].file), "utf8"))
+              .match(/^\*\*Budget:\*\* (.+)$/m)[1],
+          },
+          {
+            number: 2,
+            title: "CSV download",
+            file: "issues/02-csv-download.md",
+            stories: ["2"],
+            blockedBy: [1],
+            seam: "test boundary",
+            budget: (await readFile(path.join(issuesDir, tickets[1].file), "utf8"))
+              .match(/^\*\*Budget:\*\* (.+)$/m)[1],
+          },
+          {
+            number: 3,
+            title: "Hide emails",
+            file: "issues/03-hide-emails.md",
+            stories: ["3"],
+            blockedBy: [1],
+            seam: "test boundary",
+            budget: (await readFile(path.join(issuesDir, tickets[2].file), "utf8"))
+              .match(/^\*\*Budget:\*\* (.+)$/m)[1],
+          },
+        ],
+      );
+      assert.doesNotMatch(firstText, /\bStatus\b|timestamp|verify|passes/i);
+
+      const { stdout: secondStdout } = await run("node", [script, "--write-budget", dir]);
+      assert.match(secondStdout, /result: PASS/);
+      assert.deepEqual(await readFile(manifestPath), firstBytes);
+    });
+  });
+
+  it("rewrites the manifest after a Status-only edit without recording Status", async () => {
+    await withBudgetProject(async ({ dir, issuesDir, tickets }) => {
+      await checkFeatureDir(dir, { writeBudget: true });
+      const manifestPath = path.join(dir, "manifest.json");
+      const beforeText = await readFile(manifestPath, "utf8");
+      const before = JSON.parse(beforeText);
+
+      const firstTicketPath = path.join(issuesDir, tickets[0].file);
+      const firstTicket = await readFile(firstTicketPath, "utf8");
+      await writeFile(firstTicketPath, firstTicket.replace("**Status:** ready-for-agent", "**Status:** implemented"));
+      await checkFeatureDir(dir, { writeBudget: true });
+
+      const afterText = await readFile(manifestPath, "utf8");
+      const after = JSON.parse(afterText);
+      const expected = structuredClone(after);
+      for (let i = 0; i < expected.tickets.length; i++) {
+        expected.tickets[i].budget = before.tickets[i].budget;
+      }
+      assert.deepEqual(before, expected, "only a ticket budget may differ after changing Status");
+      assert.doesNotMatch(afterText, /\bStatus\b|ready-for-agent|implemented/);
+    });
+  });
+
+  it("does not create a manifest for older directories or runs without --write-budget", async () => {
+    await withBudgetProject(async ({ dir }) => {
+      await checkFeatureDir(dir, { writeBudget: true });
+      await rm(path.join(dir, "manifest.json"), { force: true });
+      const { stdout } = await run("node", [script, dir]);
+      assert.match(stdout, /result: PASS/);
+      await assert.rejects(readFile(path.join(dir, "manifest.json")), { code: "ENOENT" });
+    });
+  });
+
+  it("leaves a failing run's manifest absent or byte-identical to its earlier contents", async () => {
+    await withBudgetProject(async ({ dir, issuesDir, tickets }) => {
+      const absentResult = await checkFeatureDir(dir, { writeBudget: true });
+      assert.deepEqual(absentResult.errors, []);
+      const manifestPath = path.join(dir, "manifest.json");
+      const earlierBytes = await readFile(manifestPath);
+
+      const thirdTicketPath = path.join(issuesDir, tickets[2].file);
+      const thirdTicket = await readFile(thirdTicketPath, "utf8");
+      await writeFile(thirdTicketPath, thirdTicket.replace("**Stories:** 3", "**Stories:** 9"));
+      await assert.rejects(run("node", [script, dir, "--write-budget"]), (error) => {
+        assert.equal(error.code, 1);
+        assert.match(error.stdout, /result: FAIL/);
+        return true;
+      });
+      assert.deepEqual(await readFile(manifestPath), earlierBytes);
+    });
+
+    const root = await mkdtemp(path.join(os.tmpdir(), "check-tickets-manifest-fail-"));
+    const dir = path.join(root, ".scratch", "export-feature");
+    try {
+      await mkdir(path.join(dir, "issues"), { recursive: true });
+      await writeFile(path.join(dir, "spec.md"), spec);
+      const tickets = passing();
+      tickets[0] = ticket("01", "Export members", { stories: "9" });
+      for (const item of tickets) await writeFile(path.join(dir, "issues", item.file), item.text);
+
+      const result = await checkFeatureDir(dir, { writeBudget: true });
+      assert.ok(result.errors.length > 0);
+      await assert.rejects(readFile(path.join(dir, "manifest.json")), { code: "ENOENT" });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports manifest write failure after the normal report and exits 2", async () => {
+    await withBudgetProject(async ({ dir }) => {
+      await mkdir(path.join(dir, "manifest.json"));
+
+      await assert.rejects(run("node", [script, dir, "--write-budget"]), (error) => {
+        assert.equal(error.code, 2);
+        assert.match(error.stdout, /result: PASS/);
+        assert.match(error.stderr, /^manifest could not be written:/);
+        return true;
+      });
+    });
+  });
+
   it("--write-budget leaves a ticket with Context errors unchanged", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "check-tickets-ctx-budget-"));
     const dir = path.join(root, ".scratch", "export-feature");
@@ -1566,7 +1752,7 @@ describe("check-tickets", () => {
     assert.match(template, /\*\*Context:\*\*[\s\S]*?\*\*Budget:\*\*[\s\S]*?\*\*Status:\*\*/);
   });
 
-  it("the checker header lists the Budget checks, the measurement, and --write-budget", async () => {
+  it("the checker header lists Budget checks, manifest data, and manifest write rules", async () => {
     const content = await readFile(script, "utf8");
     const header = content.slice(0, content.indexOf("\nimport "));
     assert.match(header, /\*\*Budget:\*\*/);
@@ -1574,5 +1760,8 @@ describe("check-tickets", () => {
     assert.match(header, /--write-budget/);
     assert.match(header, /warning/i);
     assert.match(header, /wave/i);
+    assert.match(header, /manifest\.json/);
+    assert.match(header, /manifest/i);
+    assert.match(header, /only.*PASS|PASS.*only/i);
   });
 });
