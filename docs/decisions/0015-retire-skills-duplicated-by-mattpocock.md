@@ -1,6 +1,6 @@
 # ADR 0015: Retire the skills duplicated by mattpocock/skills
 
-- Status / สถานะ: Accepted / ยอมรับแล้ว
+- Status / สถานะ: Superseded by ADR 0016 / ถูกแทนที่โดย ADR 0016 (was: Accepted / ยอมรับแล้ว)
 - Date / วันที่: 2026-09-28
 - Supersedes / แทนที่: ADR 0002, 0003, 0004, 0005, 0006, 0007, 0008, 0010, 0012, 0013, 0014
 
@@ -55,6 +55,14 @@ ADR ที่ถูกแทนที่ยังเก็บไว้เป็�
   measurement; `to-tickets` owns the ticket format.
 - The repository's tests cover only the remaining skills and the repository
   contract.
+
+**Reverted by ADR 0016**: after trying upstream's `implement-spec` in
+practice, the owned multi-ticket implementers were preferred over it. See
+[ADR 0016](0016-restore-skills-retired-by-adr-0015.md).
+
+**ถูก revert โดย ADR 0016**: หลังจากลองใช้ `implement-spec` ของ upstream จริง
+พบว่า implementer แบบหลาย ticket ของ repo เองยังดีกว่า ดู
+[ADR 0016](0016-restore-skills-retired-by-adr-0015.md)
 
 ## Rejected alternatives / ทางเลือกที่ไม่เลือก
 

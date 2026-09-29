@@ -1,0 +1,562 @@
+{
+  "skill_name": "retro-to-remedies",
+  "evals": [
+    {
+      "id": 1,
+      "name": "explicit invocation only does not start itself",
+      "prompt": "Run /retro-to-remedies to inspect the completed feature run",
+      "expected_output": "The skill starts only upon explicit human invocation and never starts itself implicitly.",
+      "expectations": [
+        "The skill requires an explicit invocation via /retro-to-remedies or $retro-to-remedies",
+        "It does not start itself or trigger automatically from background events"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/review-status.md"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "target slug from argument",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model",
+      "expected_output": "Resolves the target feature slug directly from the command argument opencode-implement-hosted-model.",
+      "expectations": [
+        "Uses the explicit argument opencode-implement-hosted-model as the feature slug",
+        "Locates primary sources in .scratch/opencode-implement-hosted-model"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/review-status.md"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "target slug from integration branch stem",
+      "prompt": "/retro-to-remedies",
+      "expected_output": "Resolves the target feature slug from the current integration branch stem when no argument is given.",
+      "expectations": [
+        "Inspects current git branch subagent-implement/opencode-implement-hosted-model",
+        "Extracts feature slug opencode-implement-hosted-model from the branch stem"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/review-status.md"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "target slug from most recently modified scratch directory confirmed",
+      "prompt": "/retro-to-remedies",
+      "expected_output": "Finds the most recently modified .scratch/ directory and names it back to the human for confirmation.",
+      "expectations": [
+        "Identifies the latest modified directory under .scratch/",
+        "Names the candidate slug back to the user for explicit confirmation before reading sources"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/review-status.md"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "refusal on protected branch main master or dev",
+      "prompt": "/retro-to-remedies",
+      "expected_output": "Refuses on protected branch main, master, or dev before any read and names a branch to create.",
+      "expectations": [
+        "Detects protected branch main, master, or dev",
+        "Halts immediately before reading any primary source or log",
+        "Names a new working branch for the user to create"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/review-status.md"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "fixture run yields eight misses of Further Notes with locations and quotes",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model",
+      "expected_output": "The fixture Run yields the eight Misses of the spec's Further Notes table with their locations and verbatim quotes:\n1. worktree cut from a fixed base (status.md:12, harness note)\n2. worker branch ref collides with integration branch (status.md:14, gotcha)\n3. ticket 02 dispatched without isolation (status.md:16, incident)\n4. std-1: commit edited another skill's files against ADR 0007 §3 (review-status.md:42-46, blocker)\n5. std-2: one rule restated four times (review-status.md:47-49, carried)\n6. std-3: reference cites feature's own ticket numbers (review-status.md:50-52, carried)\n7. std-4: one command shown twice (review-status.md:53-55, carried)\n8. std-5: flag named by alias only (review-status.md:56-57, carried)",
+      "expectations": [
+        "Reads all primary sources from evals/fixtures/opencode-implement-hosted-model/",
+        "Extracts exactly the eight Misses defined in Further Notes with source locations and verbatim quotes",
+        "Edits none of the primary source files"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/review-status.md",
+        "evals/fixtures/opencode-implement-hosted-model/status.md",
+        "evals/fixtures/opencode-implement-hosted-model/reports/03.md",
+        "evals/fixtures/opencode-implement-hosted-model/design-review.md"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "run with no status.md proceeds and names it missing",
+      "prompt": "/retro-to-remedies upstream-feature",
+      "expected_output": "Proceeds with the available primary sources when status.md is missing, and names status.md as missing in the opening section of the Retro report.",
+      "expectations": [
+        "Identifies that status.md does not exist under .scratch/upstream-feature/",
+        "Records status.md as a missing expected source in the report's opening section",
+        "Continues reading remaining primary sources (such as review-status.md and git history) without failing"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/review-status.md"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "no .scratch asks before reading session transcript",
+      "prompt": "/retro-to-remedies adhoc-feature",
+      "expected_output": "Detects that no .scratch/adhoc-feature/ directory exists, and asks the user for explicit confirmation before reading the current session's transcript.",
+      "expectations": [
+        "Discovers that .scratch/adhoc-feature/ does not exist",
+        "Pauses and asks the user whether to read the current session's transcript before attempting any transcript read",
+        "Avoids silent multi-megabyte transcript reading without user consent"
+      ],
+      "files": []
+    },
+    {
+      "id": 9,
+      "name": "fixture classification instructions wrong yields Skill fix",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model",
+      "expected_output": "Following subagent-implement instructions as written caused worktree cut from a fixed base (harness note) and worker branch ref collision (gotcha) because the skill's instructions were wrong or outdated, classifying both as Skill fixes for subagent-implement.",
+      "expectations": [
+        "Applies the first classification rule: following a skill's instructions as written produced the Miss because instructions were wrong or outdated -> Skill fix",
+        "Proposes Skill fix for subagent-implement with ready-to-run prompt for this repository",
+        "Cites unmerged fix/subagent-implement-worktree-base-assumption"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/status.md"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "fixture classification ticket 02 departure yields Check",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model",
+      "expected_output": "Ticket 02 dispatched without isolation although the skill requires it represents ticket 02's departure from correct instructions, falling through rule 1 to rule 2 (Mechanical miss) and yielding a Check.",
+      "expectations": [
+        "Identifies ticket 02 dispatched without isolation as an agent departure from correct instructions",
+        "Applies rule 2 to classify it as a Check that the worker's first step fails unless running in its own worktree on its own branch",
+        "Hands off Check as a Code remedy"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/status.md"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "fixture classification std-3 carried mechanical pattern yields Check",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model",
+      "expected_output": "std-3 where a reference cites the feature's own ticket numbers is a mechanical syntactic pattern, classifying std-3 as a Check to fail when a skill reference names the tickets that built it.",
+      "expectations": [
+        "Treats carried finding std-3 as a Miss",
+        "Applies rule 2 to classify mechanical pattern into a Check",
+        "Hands off Check to fail fixed pattern such as Tickets 03-04"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/review-status.md"
+      ]
+    },
+    {
+      "id": 12,
+      "name": "fixture classification std-2 carried judgement miss yields Standard",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model",
+      "expected_output": "std-2 where one rule is restated four times requires human judgement of intent across files, classifying std-2 as a Standard in CODING_STANDARDS.md.",
+      "expectations": [
+        "Treats carried finding std-2 as a Miss",
+        "Applies rule 3 to classify judgement miss into a Standard",
+        "Targets CODING_STANDARDS.md with rule to state each rule once per skill and point to it elsewhere"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/review-status.md"
+      ]
+    },
+    {
+      "id": 13,
+      "name": "fixture classification std-4 carried intentional style yields proposed decline",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model",
+      "expected_output": "std-4 where one command is shown twice was intentional duplication for reader convenience, mapping std-4 to a proposed decline with rationale.",
+      "expectations": [
+        "Treats carried finding std-4 as a Miss",
+        "Maps finding to a proposed decline rather than carrying it open again",
+        "Provides clear decline rationale in the Carried findings section"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/review-status.md"
+      ]
+    },
+    {
+      "id": 14,
+      "name": "classification reuse convention yields Reuse Catalog Rule",
+      "prompt": "/retro-to-remedies shared-components-feature",
+      "expected_output": "A Miss concerning an architectural component reuse convention is classified under rule 3 as a judgement miss but routes specifically to a Reuse Catalog Rule.",
+      "expectations": [
+        "Identifies reuse convention in review findings",
+        "Applies rule 3 to route reuse convention to the Reuse Catalog's Rules rather than general coding standards",
+        "Specifies docs/reuse-catalog.md as target destination"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/review-status.md"
+      ]
+    },
+    {
+      "id": 15,
+      "name": "evidence bar ensures an evidence-free Remedy is dropped",
+      "prompt": "/retro-to-remedies speculative-run",
+      "expected_output": "Enforces the evidence bar so an evidence-free Remedy without located quote is dropped from the report.",
+      "expectations": [
+        "Enforces the evidence bar requiring at least one located verbatim quote from primary sources",
+        "Confirms that an evidence-free Remedy is dropped completely",
+        "Leaves no ungrounded suggestions in the Retro report"
+      ],
+      "files": []
+    },
+    {
+      "id": 16,
+      "name": "feature defect reported as Open bug kept out of Remedies",
+      "prompt": "/retro-to-remedies faulty-feature",
+      "expected_output": "A defect discovered in the feature's own source code is reported for /diagnosing-bugs in the Open bugs section, and is kept out of Remedies.",
+      "expectations": [
+        "Distinguishes environment misses from feature code defects",
+        "Reports feature code defect under the Open bugs section pointing to /diagnosing-bugs",
+        "Ensures an Open bug is never proposed as a Remedy or modified by the Retro"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/review-status.md"
+      ]
+    },
+    {
+      "id": 17,
+      "name": "choice validation refuses apply on a Code remedy",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model",
+      "expected_output": "Refuses apply choice on a Code remedy such as a Check or Skill fix, enforcing that apply is valid only for Text remedies and hand off only for Code remedies.",
+      "expectations": [
+        "Validates user answer against remedy type",
+        "Rejects apply on Code remedies (Check, Skill fix, Access)",
+        "Instructs that hand off is required for Code remedies"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/review-status.md"
+      ]
+    },
+    {
+      "id": 18,
+      "name": "applied Standard in a project without CODING_STANDARDS.md creates it",
+      "prompt": "/retro-to-remedies missing-standards-project",
+      "expected_output": "An applied Standard in a project without CODING_STANDARDS.md creates it with a short header and appends the standard rule.",
+      "expectations": [
+        "Detects absence of CODING_STANDARDS.md",
+        "Creates CODING_STANDARDS.md with a short header",
+        "Applies the Standard remedy into the new file"
+      ],
+      "files": []
+    },
+    {
+      "id": 19,
+      "name": "a Pointer in a project with neither instruction file creates AGENTS.md",
+      "prompt": "/retro-to-remedies no-instructions-project",
+      "expected_output": "A Pointer in a project with neither AGENTS.md nor CLAUDE.md creates AGENTS.md with the navigation pointer.",
+      "expectations": [
+        "Checks for existing AGENTS.md, else CLAUDE.md",
+        "Creates a new AGENTS.md when neither file exists",
+        "Inserts the Pointer navigation line into the created file"
+      ],
+      "files": []
+    },
+    {
+      "id": 20,
+      "name": "three applied Remedies make three commits",
+      "prompt": "/retro-to-remedies multi-remedy-run",
+      "expected_output": "Three applied Remedies make three commits as chore(retro): <remedy> on the working branch with their SHAs recorded in the report.",
+      "expectations": [
+        "Applies each chosen Text remedy in sequence",
+        "Creates one chore(retro): <remedy> commit per applied remedy",
+        "Writes each resulting commit SHA into the Retro report"
+      ],
+      "files": []
+    },
+    {
+      "id": 21,
+      "name": "a red test stops the handoff",
+      "prompt": "/retro-to-remedies failing-tests-run",
+      "expected_output": "A red test stops the handoff and names the failing command and the Retro commit it follows.",
+      "expectations": [
+        "Runs existing check scripts (validate, check, lint, test) once after commits",
+        "Detects failing test command",
+        "Halts execution before printing the handoff, naming the failing test command and preceding Retro commit"
+      ],
+      "files": []
+    },
+    {
+      "id": 22,
+      "name": "a Code remedy answered hand off appears only as a prompt",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model",
+      "expected_output": "A Code remedy answered hand off appears only as a prompt in the handoff and is not committed or applied.",
+      "expectations": [
+        "Recognizes Code remedy with user choice hand off",
+        "Applies no file changes or commits for the Code remedy",
+        "Prints the /grill-to-tickets prompt in the handoff before /pr-to-dev"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/review-status.md"
+      ]
+    },
+    {
+      "id": 23,
+      "name": "a first Retro creates the file with its header",
+      "prompt": "/retro-to-remedies initial-run",
+      "expected_output": "A first Retro creates docs/retro-log.md with its self-describing header comment defining entry format, Outcome states, and id rule.",
+      "expectations": [
+        "Detects that docs/retro-log.md does not yet exist",
+        "Creates docs/retro-log.md starting with the self-describing header comment",
+        "Appends the initial Remedy entries below the header"
+      ],
+      "files": []
+    },
+    {
+      "id": 24,
+      "name": "an applied Remedy's entry lands in its own commit",
+      "prompt": "/retro-to-remedies feature-with-applied",
+      "expected_output": "An applied Remedy's entry lands in its own commit together with the remedy change on the working branch as chore(retro): <remedy>.",
+      "expectations": [
+        "Applies the text remedy at its destination",
+        "Updates docs/retro-log.md with the applied Outcome in the same commit",
+        "Creates chore(retro): <remedy> containing both the change and its log entry"
+      ],
+      "files": []
+    },
+    {
+      "id": 25,
+      "name": "a Run with only declined and deferred Remedies still produces the log commit",
+      "prompt": "/retro-to-remedies no-apply-run",
+      "expected_output": "A Run with only declined and deferred Remedies still produces the final log commit chore(retro): log <feature-slug>.",
+      "expectations": [
+        "Applies no text remedies to environment files",
+        "Updates docs/retro-log.md with declined and deferred Outcomes",
+        "Creates one final chore(retro): log <feature-slug> commit so the log remains complete"
+      ],
+      "files": []
+    },
+    {
+      "id": 26,
+      "name": "two Runs on different slugs produce distinct ids",
+      "prompt": "/retro-to-remedies feature-beta",
+      "expected_output": "Two Runs on different slugs produce distinct ids formatted as R-<feature-slug>-<NN> scoped by the proposing Run.",
+      "expectations": [
+        "Assigns IDs formatted as R-<feature-slug>-<NN>",
+        "Numbers IDs sequentially within the proposing Run",
+        "Ensures two Runs on different feature slugs never collide on the same Remedy id"
+      ],
+      "files": []
+    },
+    {
+      "id": 27,
+      "name": "re-running on the fixture Run after its Retro counts nothing as recurrence",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model",
+      "expected_output": "Re-running on the fixture Run after its Retro counts nothing as recurrence because Misses already listed by slug and location in docs/retro-log.md are treated as the same occurrence.",
+      "expectations": [
+        "Reads existing entries in docs/retro-log.md for opencode-implement-hosted-model",
+        "Matches the fixture Misses by slug and location to the existing entries",
+        "Recognises each Miss as the same occurrence and counts nothing as recurrence"
+      ],
+      "files": []
+    },
+    {
+      "id": 28,
+      "name": "a Standard applied in one Run whose Miss appears in another becomes a Failed Remedy proposed as a Check",
+      "prompt": "/retro-to-remedies feature-zeta",
+      "expected_output": "A Standard applied in one Run whose Miss appears in another becomes a Failed Remedy proposed as a Check, escalating to a deterministic check.",
+      "expectations": [
+        "Matches a Miss in feature-zeta to an applied Standard from an earlier Run in docs/retro-log.md",
+        "Identifies the recurrence of an applied Remedy as a Failed Remedy",
+        "Escalates the Remedy from Standard to Check where the rule is mechanical"
+      ],
+      "files": []
+    },
+    {
+      "id": 29,
+      "name": "a declined Remedy whose Miss recurs is proposed with both occurrences",
+      "prompt": "/retro-to-remedies feature-theta",
+      "expected_output": "A declined Remedy whose Miss recurs is proposed with both occurrences, showing the original occurrence and the new recurrence after the decline.",
+      "expectations": [
+        "Matches the Miss to a previously declined Remedy in docs/retro-log.md",
+        "Verifies that the Miss recurred after the Remedy was declined",
+        "Proposes the Remedy again in the Retro report displaying both occurrences as evidence"
+      ],
+      "files": []
+    },
+    {
+      "id": 30,
+      "name": "a declined Remedy without a new occurrence is not proposed",
+      "prompt": "/retro-to-remedies feature-iota",
+      "expected_output": "A declined Remedy without a new occurrence is not proposed again in the Retro report.",
+      "expectations": [
+        "Reads previously declined Remedies from docs/retro-log.md",
+        "Confirms no new recurrence of the declined Miss exists in the Run",
+        "Excludes the declined Remedy from the proposed Remedies in the Retro report"
+      ],
+      "files": []
+    },
+    {
+      "id": 31,
+      "name": "a handed-off Remedy answered \"done\" becomes applied",
+      "prompt": "/retro-to-remedies feature-kappa",
+      "expected_output": "A handed-off Remedy answered \"done\" becomes applied, updating the Retro Log Outcome from handed-off to applied.",
+      "expectations": [
+        "Reads docs/retro-log.md and finds a Remedy still in handed-off state",
+        "Asks the user once whether the Remedy is done, still pending, or drop before reading sources",
+        "Updates the Outcome to applied upon the user answering done"
+      ],
+      "files": []
+    },
+    {
+      "id": 32,
+      "name": "the fixture Run's subagent-implement fixes routed as own-library prompts for this repository",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model",
+      "expected_output": "The fixture Run's subagent-implement fixes routed as own-library prompts for this repository carrying a /grill-to-tickets prompt targeting this repository.",
+      "expectations": [
+        "Identifies subagent-implement as belonging to the user's own library because its SKILL.md lives under skills/",
+        "Routes subagent-implement fixes as own-library prompts for this repository in the Retro report",
+        "Provides ready-to-run /grill-to-tickets prompt targeting this repository"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/status.md"
+      ]
+    },
+    {
+      "id": 33,
+      "name": "a Miss caused by a mattpocock/skills skill becomes Upstream feedback",
+      "prompt": "/retro-to-remedies mattpocock-skill-miss",
+      "expected_output": "A Miss caused by a mattpocock/skills skill becomes Upstream feedback recorded for that source and never modifies the installed copy.",
+      "expectations": [
+        "Inspects skills-lock.json and resolves skill source to mattpocock/skills",
+        "Routes the Skill fix as Upstream feedback targeting mattpocock/skills",
+        "Leaves the local installed skill copy untouched"
+      ],
+      "files": []
+    },
+    {
+      "id": 34,
+      "name": "a globally installed own skill is found through the global lock",
+      "prompt": "/retro-to-remedies global-skill-run",
+      "expected_output": "A globally installed own skill is found through the global lock ~/.agents/.skill-lock.json when absent from project skills-lock.json.",
+      "expectations": [
+        "Falls back from project skills-lock.json to ~/.agents/.skill-lock.json",
+        "Matches skill lock source to retro-to-remedies's own source ArrayaWongsaita/skills",
+        "Routes the Skill fix as an own-library prompt for the target repository"
+      ],
+      "files": []
+    },
+    {
+      "id": 35,
+      "name": "a skill with no lock entry is project-local",
+      "prompt": "/retro-to-remedies local-skill-run",
+      "expected_output": "A skill with no lock entry in project or global lock and no source under skills/ is project-local.",
+      "expectations": [
+        "Finds no lock entry in skills-lock.json or ~/.agents/.skill-lock.json",
+        "Finds no source under this repository's skills/ directory",
+        "Treats the skill as project-local in the Retro report"
+      ],
+      "files": []
+    },
+    {
+      "id": 36,
+      "name": "an issue request opens one issue and nothing more",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model --open-issue",
+      "expected_output": "An explicit issue request opens one issue and nothing more, leaving all other copies untouched and making no git push or pull request.",
+      "expectations": [
+        "Requires an explicit human request before opening any GitHub issue",
+        "Opens exactly one issue for the requested Skill fix and nothing more",
+        "Pushes no code and creates no pull request"
+      ],
+      "files": []
+    },
+    {
+      "id": 37,
+      "name": "--transcript lists matching sessions and waits for a pick",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model --transcript",
+      "expected_output": "Scans ~/.claude/projects/<project>/ for sessions mentioning opencode-implement-hosted-model, lists matching sessions with date and size, and pauses for the user's pick.",
+      "expectations": [
+        "Lists matching sessions found in the harness transcript directory with date and size",
+        "Waits for the user to pick which sessions to read before proceeding",
+        "Reads no unselected transcripts"
+      ],
+      "files": []
+    },
+    {
+      "id": 38,
+      "name": "without the flag no transcript is read",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model",
+      "expected_output": "Without the --transcript flag and with existing .scratch/ directory, no transcript is read.",
+      "expectations": [
+        "Observes that --transcript was not passed",
+        "Reads run-state primary sources from .scratch/opencode-implement-hosted-model",
+        "Avoids reading any session transcripts"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/review-status.md"
+      ]
+    },
+    {
+      "id": 39,
+      "name": "outside Claude Code the path is asked for",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model --transcript",
+      "expected_output": "Outside Claude Code where the harness transcript directory is not known, the Retro asks for the transcript path.",
+      "expectations": [
+        "Identifies that the harness is not Claude Code or the transcript directory is not standard",
+        "Asks the user for the transcript path directly",
+        "Proceeds with the user-supplied transcript path"
+      ],
+      "files": []
+    },
+    {
+      "id": 40,
+      "name": "subagent's return holds Misses only",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model --transcript",
+      "expected_output": "The single read-only subagent reads the picked sessions and its return holds Misses only, each with session id and verbatim quote.",
+      "expectations": [
+        "Delegates transcript reading to a single read-only subagent",
+        "Ensures the subagent's return holds Misses only with no full transcript content in primary context",
+        "Includes session id and verbatim quote for every transcript Miss covering slow searches, repeated failures, missing info, or expensive tool use"
+      ],
+      "files": []
+    },
+    {
+      "id": 41,
+      "name": "report with no answers resumes at the pause without re-reading sources",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model",
+      "expected_output": "An existing report with unanswered Choice: lines resumes at the pause without re-reading primary sources.",
+      "expectations": [
+        "Finds existing report at .scratch/opencode-implement-hosted-model/retro.md with unanswered Choice: lines",
+        "Resumes execution directly at the Stage 1 decision pause using the existing report",
+        "Avoids re-reading primary sources or re-running classification"
+      ],
+      "files": []
+    },
+    {
+      "id": 42,
+      "name": "report with two of three applied Remedies committed resumes at Stage 2 and commits only the third",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model",
+      "expected_output": "A report with two of three applied Remedies committed resumes at Stage 2 and commits only the third, skipping already committed Remedies.",
+      "expectations": [
+        "Finds answered Choice: lines where two applied Remedies already carry commit SHAs and a third does not",
+        "Resumes directly at Stage 2",
+        "Skips the two Remedies with recorded commit SHAs and commits only the third uncommitted Remedy"
+      ],
+      "files": []
+    },
+    {
+      "id": 43,
+      "name": "--fresh rebuilds the report from the sources",
+      "prompt": "/retro-to-remedies opencode-implement-hosted-model --fresh",
+      "expected_output": "Passing --fresh discards the unfinished report and rebuilds the report from the sources.",
+      "expectations": [
+        "Discards the existing report at .scratch/opencode-implement-hosted-model/retro.md",
+        "Re-reads primary sources from .scratch/opencode-implement-hosted-model and the branch git history",
+        "Re-runs Stage 0 collection and Stage 1 classification to replace the report"
+      ],
+      "files": [
+        "evals/fixtures/opencode-implement-hosted-model/review-status.md"
+      ]
+    }
+  ]
+}
+
+
+
+

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Engineering Workflow"
+  short_description: "Run resumable gated engineering workflows"
+  default_prompt: "Use $engineering-workflow to orchestrate this engineering request from classification through verified completion: [request]."
+policy:
+  allow_implicit_invocation: false

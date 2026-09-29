@@ -1,0 +1,120 @@
+# The native subagent worker contract
+
+The orchestrator dispatches one harness subagent per ticket as a **worker** and
+reads its final report. A second subagent per ticket, the **verifier**, is
+covered in
+[verification-and-integration.md](verification-and-integration.md). Both are
+dispatched through the harness's Agent / Task tool, run in the background, and
+notify the orchestrator on completion — the orchestrator is re-invoked as each
+finishes rather than blocking a single turn.
+
+## Dispatching a worker
+
+```
+Agent(
+  subagent_type: <resolved agent, see below>,
+  description:   "implement ticket <NN> <slug>",
+  prompt:        <contents of .scratch/<slug>/prompts/<NN>.md>,
+  isolation:     "worktree",
+  model:         <the run's --model value, only when set>,
+)
+```
+
+| field | why |
+|---|---|
+| `subagent_type` | the resolved worker agent (never `fork` — a fork inherits the orchestrator's context and model, which is the cost this skill exists to avoid) |
+| `description` | short label for the run log |
+| `prompt` | the self-contained worker prompt; written to `.scratch/<slug>/prompts/<NN>.md` first for the audit trail, then passed by value |
+| `isolation: "worktree"` | the worker gets its own git worktree so its edits and commits never touch the orchestrator's checkout; a worktree with commits on it persists for the orchestrator to merge |
+| `model` | passed only when the run set `--model`; otherwise omitted so the worker inherits the orchestrator's model and the skill stays portable across harnesses |
+
+The worker's working directory is its worktree, already on the worker branch
+`subagent-implement/<feature-slug>/<NN>` — see the confirmed-behavior note
+below on what commit it's actually cut from. Paths in the prompt follow the
+path rule: a path inside that working directory is written relative to it; a
+path outside it — the parent `spec.md`, an ADR, an untracked read-only Context
+file — is absolute. A read-only path that `git ls-files --error-unmatch` does
+not match is untracked, so it resolves by absolute path in the project root's
+main checkout.
+
+**Confirmed (not "cut from integration HEAD" as originally assumed):** the
+worktree's git base is a **fixed commit for the whole environment**, not the
+orchestrator's current HEAD at dispatch time — observed identically across
+two separate dispatches, hours apart, with the orchestrator's own checkout on
+a different branch/commit each time. A later ticket's worktree does **not**
+by default contain an earlier ticket's tracked-file changes. Every worker
+prompt after the first ticket must therefore open with an explicit sync
+step — merge (or cherry-pick) the current integration branch's tip into the
+worktree before doing anything else — rather than assuming the checkout
+already reflects prior tickets' work. Untracked `.scratch/<feature-slug>/`
+content is unaffected by this: spec/CONTEXT/ADR/ticket files are passed by
+absolute path in the main checkout, not read from the worktree.
+
+## Resolving the worker agent
+
+Decided once at planning, applied to every ticket:
+
+1. **`--agent <name>` wins.** A run-level pin names the subagent type for every
+   worker; use it and skip the rest.
+2. **Otherwise, match by wording.** Read the subagent types available in the
+   orchestrator's environment. Pick one whose name or description clearly covers
+   building software — words like `implement`, `feature`, `build`, `code`, `tdd`,
+   `engineer`, `developer`. The first clear match wins.
+3. **Fall back to `general-purpose`** when no available agent is
+   implementation-shaped.
+4. **Fall back to `claude`** when `general-purpose` is not among the available
+   types.
+
+There is no reasoning about which ticket suits which agent beyond the wording
+match — that selection is the part that goes wrong. The verifier is always
+`Explore`.
+
+## Worker final report
+
+The worker ends its final message with the structured return the prompt asks for:
+
+- **Red output** — the failing test run from the red step, verbatim.
+- **Green output** — the passing test run and the typecheck, verbatim.
+- **Files changed** — every file the worker created or modified, as a list,
+  split into test files and implementation files.
+- **Test → criterion table** — each new test mapped to the acceptance criterion
+  it covers.
+
+The orchestrator writes this to `.scratch/<slug>/reports/<NN>.md` and reads it
+there. The harness also exposes the worker's subagent id / name — retained in
+`status.md` and used to resume the same worker for a retry.
+
+A missing return section, a truncated message, or a non-completion status is a
+worker failure — handled the same as a verification failure.
+
+## Retry and budget
+
+One budget: **`MAX_TICKET_ATTEMPTS = 3`**.
+
+- A **verification failure** (tests missing, not actually red first, still red,
+  vacuous, or not covering the criteria) resumes the *same* worker:
+  `SendMessage({ to: <worker id/name>, message: "<the specific failure detail>" })`.
+  The worker keeps its worktree and its context; the follow-up is targeted and
+  cheap.
+- A **worker crash, timeout, or lost subagent** re-dispatches a *fresh* worker
+  against the same worker branch. There is no separate failover budget — with no
+  external provider in the loop, an infrastructure failure and a bad result draw
+  from the same three attempts.
+- The **third failure** yields `BLOCKED (TICKET_VERIFICATION_FAILED)`, records
+  the failure output in `status.md`, and keeps the worktree for inspection.
+
+## Points to confirm on first real use
+
+The Agent / Task tool's exact behaviour varies by harness. Confirm on the first
+run, the way `agy-implement` confirms its `agy` envelope, and adjust these
+references rather than the workflow:
+
+| assumption | how to confirm |
+|---|---|
+| a non-fork subagent dispatched in the background re-invokes the orchestrator on completion | dispatch one trivial worker, observe the re-invocation |
+| `isolation: "worktree"` keeps a worktree that has commits, and its path + branch are recoverable by the orchestrator | dispatch a worker that commits, then locate the worktree and branch from the orchestrator |
+| ~~the worktree is cut from the orchestrator's current HEAD at dispatch~~ | **CONFIRMED FALSE.** Two dispatches, different orchestrator checkouts, both landed on the same fixed base commit. See the confirmed-behavior note above — every prompt past ticket 1 needs its own sync-onto-integration-tip step. |
+| `SendMessage` resumes a backgrounded worker with its context intact | resume one worker with a follow-up, confirm it still has the ticket context |
+| the final report carries token usage | **CONFIRMED.** The completion notification's usage block carries the subagent's tokens; sum it per invocation into `status.md`'s `usage_total` |
+| a resumed worker's usage report is cumulative | resume one worker and compare the follow-up's usage block with the first; `usage_total` sums each invocation, so a cumulative figure would double-count |
+| `Explore` reads deeply enough to summarise a test diff | run one verifier; if its reading is too shallow, switch the verifier to `general-purpose` instructed to write nothing |

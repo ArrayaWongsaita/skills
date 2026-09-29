@@ -1,0 +1,263 @@
+{
+  "version": 1,
+  "providerPolicy": {
+    "canonicalEngineeringProvider": {
+      "owner": "Matt Pocock",
+      "repository": "mattpocock/skills"
+    },
+    "intentionalExceptions": [
+      {
+        "skill": "scrutinize",
+        "owner": "thananon",
+        "repository": "thananon/9arm-skills"
+      },
+      {
+        "skill": "post-mortem",
+        "owner": "thananon",
+        "repository": "thananon/9arm-skills"
+      }
+    ]
+  },
+  "coreFeatureFlow": [
+    "grill-with-docs",
+    "to-spec",
+    "scrutinize",
+    "to-tickets",
+    "implement",
+    "code-review"
+  ],
+  "dependencies": [
+    {
+      "skill": "grill-with-docs",
+      "owner": "Matt Pocock",
+      "repository": "mattpocock/skills",
+      "provider": "mattpocock-skills",
+      "role": "requirement discovery, domain clarification, and decision capture",
+      "category": "core",
+      "requiredFor": [
+        {"workflowType": "FEATURE", "stage": "DISCOVERY", "route": "normal"}
+      ],
+      "expectedInvocationMode": "user-invoked",
+      "transitiveDependencies": ["grilling", "domain-modeling"],
+      "installSource": "https://github.com/mattpocock/skills",
+      "sideEffects": ["write-docs"],
+      "upstreamSkillPath": "skills/engineering/grill-with-docs/SKILL.md"
+    },
+    {
+      "skill": "grilling",
+      "owner": "Matt Pocock",
+      "repository": "mattpocock/skills",
+      "provider": "mattpocock-skills",
+      "role": "requirement and design interview support",
+      "category": "transitive",
+      "requiredFor": [],
+      "expectedInvocationMode": "model-invoked",
+      "transitiveDependencies": [],
+      "installSource": "https://github.com/mattpocock/skills"
+    },
+    {
+      "skill": "domain-modeling",
+      "owner": "Matt Pocock",
+      "repository": "mattpocock/skills",
+      "provider": "mattpocock-skills",
+      "role": "domain terminology, glossary, and ADR support",
+      "category": "transitive",
+      "requiredFor": [],
+      "expectedInvocationMode": "model-invoked",
+      "transitiveDependencies": [],
+      "installSource": "https://github.com/mattpocock/skills",
+      "sideEffects": ["write-docs"]
+    },
+    {
+      "skill": "to-spec",
+      "owner": "Matt Pocock",
+      "repository": "mattpocock/skills",
+      "provider": "mattpocock-skills",
+      "role": "specification synthesis",
+      "category": "core",
+      "requiredFor": [
+        {"workflowType": "FEATURE", "stage": "SPECIFICATION"}
+      ],
+      "expectedInvocationMode": "user-invoked",
+      "transitiveDependencies": [],
+      "installSource": "https://github.com/mattpocock/skills",
+      "sideEffects": ["publish-spec"]
+    },
+    {
+      "skill": "scrutinize",
+      "owner": "thananon",
+      "repository": "thananon/9arm-skills",
+      "provider": "9arm-skills",
+      "role": "blocking design and system quality gate",
+      "category": "core",
+      "requiredFor": [
+        {"workflowType": "FEATURE", "stage": "DESIGN_REVIEW"},
+        {"workflowType": "FEATURE", "stage": "SYSTEM_REVIEW"},
+        {"workflowType": "BUG", "stage": "SYSTEM_REVIEW"}
+      ],
+      "expectedInvocationMode": "model-invoked",
+      "transitiveDependencies": [],
+      "installSource": "https://github.com/thananon/9arm-skills"
+    },
+    {
+      "skill": "to-tickets",
+      "owner": "Matt Pocock",
+      "repository": "mattpocock/skills",
+      "provider": "mattpocock-skills",
+      "role": "vertical ticket planning",
+      "category": "core",
+      "requiredFor": [
+        {"workflowType": "FEATURE", "stage": "PLANNING"},
+        {"workflowType": "LARGE_PROJECT", "stage": "PLANNING"}
+      ],
+      "expectedInvocationMode": "user-invoked",
+      "transitiveDependencies": [],
+      "installSource": "https://github.com/mattpocock/skills",
+      "sideEffects": ["publish-tickets"]
+    },
+    {
+      "skill": "implement",
+      "owner": "Matt Pocock",
+      "repository": "mattpocock/skills",
+      "provider": "mattpocock-skills",
+      "role": "implementation execution",
+      "category": "core",
+      "requiredFor": [
+        {"workflowType": "FEATURE", "stage": "IMPLEMENTATION"},
+        {"workflowType": "BUG", "stage": "IMPLEMENTATION"}
+      ],
+      "expectedInvocationMode": "user-invoked",
+      "transitiveDependencies": [],
+      "installSource": "https://github.com/mattpocock/skills",
+      "sideEffects": ["commit"]
+    },
+    {
+      "skill": "code-review",
+      "owner": "Matt Pocock",
+      "repository": "mattpocock/skills",
+      "provider": "mattpocock-skills",
+      "role": "two-axis standards and specification review",
+      "category": "core",
+      "requiredFor": [
+        {"workflowType": "FEATURE", "stage": "CODE_REVIEW"},
+        {"workflowType": "BUG", "stage": "CODE_REVIEW"}
+      ],
+      "expectedInvocationMode": "model-invoked",
+      "transitiveDependencies": [],
+      "installSource": "https://github.com/mattpocock/skills",
+      "requiresSubagents": true
+    },
+    {
+      "skill": "setup-matt-pocock-skills",
+      "owner": "Matt Pocock",
+      "repository": "mattpocock/skills",
+      "provider": "mattpocock-skills",
+      "role": "one-time repository workflow configuration",
+      "category": "repository-setup",
+      "requiredFor": [],
+      "expectedInvocationMode": "user-invoked",
+      "transitiveDependencies": [],
+      "installSource": "https://github.com/mattpocock/skills",
+      "sideEffects": ["write-repository-config"]
+    },
+    {
+      "skill": "tdd",
+      "owner": "Matt Pocock",
+      "repository": "mattpocock/skills",
+      "provider": "mattpocock-skills",
+      "role": "test-first implementation support",
+      "category": "transitive",
+      "requiredFor": [],
+      "expectedInvocationMode": "model-invoked",
+      "transitiveDependencies": [],
+      "installSource": "https://github.com/mattpocock/skills"
+    },
+    {
+      "skill": "codebase-design",
+      "owner": "Matt Pocock",
+      "repository": "mattpocock/skills",
+      "provider": "mattpocock-skills",
+      "role": "deep-module and seam vocabulary support",
+      "category": "conditional",
+      "requiredFor": [],
+      "expectedInvocationMode": "model-invoked",
+      "transitiveDependencies": [],
+      "installSource": "https://github.com/mattpocock/skills"
+    },
+    {
+      "skill": "prototype",
+      "owner": "Matt Pocock",
+      "repository": "mattpocock/skills",
+      "provider": "mattpocock-skills",
+      "role": "disposable empirical UI or state experiment",
+      "category": "conditional",
+      "requiredFor": [
+        {"workflowType": "FEATURE", "stage": "EXPLORATION", "stageMode": "PROTOTYPE"},
+        {"workflowType": "LARGE_PROJECT", "stage": "EXPLORATION", "stageMode": "PROTOTYPE"}
+      ],
+      "expectedInvocationMode": "model-invoked",
+      "transitiveDependencies": [],
+      "installSource": "https://github.com/mattpocock/skills"
+    },
+    {
+      "skill": "research",
+      "owner": "Matt Pocock",
+      "repository": "mattpocock/skills",
+      "provider": "mattpocock-skills",
+      "role": "authoritative external-fact investigation",
+      "category": "conditional",
+      "requiredFor": [
+        {"workflowType": "FEATURE", "stage": "EXPLORATION", "stageMode": "RESEARCH"},
+        {"workflowType": "LARGE_PROJECT", "stage": "EXPLORATION", "stageMode": "RESEARCH"}
+      ],
+      "expectedInvocationMode": "model-invoked",
+      "transitiveDependencies": [],
+      "installSource": "https://github.com/mattpocock/skills",
+      "requiresSubagents": true
+    },
+    {
+      "skill": "diagnosing-bugs",
+      "owner": "Matt Pocock",
+      "repository": "mattpocock/skills",
+      "provider": "mattpocock-skills",
+      "role": "reproduction and root-cause diagnosis",
+      "category": "conditional",
+      "requiredFor": [
+        {"workflowType": "BUG", "stage": "DIAGNOSIS"}
+      ],
+      "expectedInvocationMode": "model-invoked",
+      "transitiveDependencies": [],
+      "installSource": "https://github.com/mattpocock/skills"
+    },
+    {
+      "skill": "wayfinder",
+      "owner": "Matt Pocock",
+      "repository": "mattpocock/skills",
+      "provider": "mattpocock-skills",
+      "role": "large-project decision map and frontier",
+      "category": "conditional",
+      "requiredFor": [
+        {"workflowType": "LARGE_PROJECT", "stage": "WAYFINDING"}
+      ],
+      "expectedInvocationMode": "user-invoked",
+      "transitiveDependencies": ["grilling", "domain-modeling"],
+      "installSource": "https://github.com/mattpocock/skills",
+      "sideEffects": ["publish-wayfinding"],
+      "upstreamSkillPath": "skills/engineering/wayfinder/SKILL.md"
+    },
+    {
+      "skill": "post-mortem",
+      "owner": "thananon",
+      "repository": "thananon/9arm-skills",
+      "provider": "9arm-skills",
+      "role": "validated bug-fix engineering record",
+      "category": "conditional",
+      "requiredFor": [
+        {"workflowType": "BUG", "stage": "POST_MORTEM", "incidentOnly": true}
+      ],
+      "expectedInvocationMode": "model-invoked",
+      "transitiveDependencies": [],
+      "installSource": "https://github.com/thananon/9arm-skills"
+    }
+  ]
+}
