@@ -113,7 +113,8 @@ idea (lowercase alphanumeric with hyphens).
 ├── adr/                # architectural decision records (NNNN-<slug>.md)
 ├── spec.md             # feature specification
 ├── design-review.md    # one stable design-review report, updated per cycle
-└── issues/             # tracer-bullet vertical tickets (NN-<slug>.md)
+├── issues/             # tracer-bullet vertical tickets (NN-<slug>.md)
+└── manifest.json       # derived by the ticket checker
 ```
 
 `.scratch/` is local working state and stays out of git, so the tickets need no
@@ -292,11 +293,15 @@ no leading slash:
   maximum wave width: 2
   critical-path length: 2
   recommended implementer: subagent-implement, agy-implement, opencode-implement
+Manifest: .scratch/<feature-slug>/manifest.json
 
 Then implement the whole ticket directory in a fresh session:
 /subagent-implement .scratch/<feature-slug>/
 (or /agy-implement or /opencode-implement with the same argument)
 ```
+
+The manifest line appears only when the last checker run exited 0. Omit it when
+the checker could not run or could not write the manifest.
 
 The later implementer run owns implementation; this skill's job ends at the
 handoff.

@@ -392,6 +392,38 @@ describe("grill-to-tickets composite skill contract", () => {
     }
   });
 
+  it("lists the checker-derived manifest and conditionally places its path after the DAG summary", async () => {
+    for (const file of skillFiles) {
+      const content = await readFile(file, "utf8");
+      const storage = content.slice(content.indexOf("## Feature-Scoped Storage"), content.indexOf("## Stage 0"));
+      const handoff = content.slice(content.indexOf("## Stop — Handoff"));
+
+      assert.match(storage, /├── issues\/[^\n]*\n└── manifest\.json\s+# derived by the ticket checker/i,
+        "the storage tree lists the manifest beside issues and marks it as checker-derived");
+
+      const manifestLines = handoff.split("\n").filter((line) =>
+        /Manifest: \.scratch\/<feature-slug>\/manifest\.json/.test(line));
+      assert.equal(manifestLines.length, 1, "the handoff names the manifest path on one line");
+      const [manifestLine] = manifestLines;
+      assert.doesNotMatch(manifestLine, /recommended implementer/i,
+        "the manifest line does not match the recommended-implementer phrase");
+
+      const dagEnd = handoff.indexOf("recommended implementer:");
+      const manifestIndex = handoff.indexOf(manifestLine);
+      const implementerIntro = handoff.indexOf("Then implement the whole ticket directory");
+      const implementerCommand = handoff.indexOf("/subagent-implement");
+      assert.ok(
+        dagEnd !== -1 && dagEnd < manifestIndex && manifestIndex < implementerIntro && implementerIntro < implementerCommand,
+        "the manifest line follows the DAG summary and precedes the implementer command",
+      );
+
+      assert.match(handoff, /line appears only when the last checker run exited 0/i,
+        "the manifest line requires a successful final checker run");
+      assert.match(handoff, /omit it when\s+the checker could not run or could not write the manifest/i,
+        "the line is omitted when the checker could not run or write the manifest");
+    }
+  });
+
   it("preflights the three stage skills across install locations and keeps the tracker local", async () => {
     for (const file of skillFiles) {
       const content = await readFile(file, "utf8");
