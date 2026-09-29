@@ -39,8 +39,8 @@ npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 
 1. **Stage 0 — Grill**: สัมภาษณ์แบบ design tree พร้อมทำ domain modeling เขียน `CONTEXT.md` / `adr/` ทันทีที่ term นิ่ง บันทึกทุกคำถามและคำตอบลง **Decision Log** (`decisions.md`) ก่อนถามรอบถัดไป เมื่อ frontier ว่างจะทำ **Blind-spot pass** ไล่ 9 หมวด (scope, data, flow, quality attributes, integrations, edge cases, constraints, terminology, completion signals) ช่องว่างที่เปลี่ยน spec ได้จะถูกถามเป็นรอบสุดท้ายไม่เกิน 5 ข้อ ที่เหลือเขียนเป็นสมมติฐานให้เห็น แล้วหยุดขอ confirmation
 2. **Stage 1 — Spec**: เขียน `spec.md` ตาม `spec-format.md` โดยสังเคราะห์ `decisions.md`, glossary และ ADR โดยไม่สัมภาษณ์ซ้ำ ทุกการตัดสินใจใน log ต้องอยู่ใน spec
-3. **Stage 2 — Design Review Gate**: แต่ละรอบส่ง `scrutinize` ไปรันใน subagent ตัวใหม่ที่เห็นแค่ไฟล์และไม่แก้ไฟล์ใด ๆ (อ่าน spec แบบเดียวกับ implementer) แล้ว context หลัก normalize verdict เป็น `SHIP` / `FIX_THEN_SHIP` / `REWORK` / `REJECT` (`FIX_THEN_SHIP` แก้แล้วต้องไล่แก้ทุกประโยคใน spec ที่พูดเรื่องเดียวกันให้ตรงกัน) เก็บรายงานไว้ไฟล์เดียว `design-review.md` อัปเดตทุกรอบ
-4. **Stage 3 — Tickets**: เมื่อได้ `SHIP` เขียน ticket ตาม `ticket-format.md` ลง `.scratch/<feature-slug>/issues/` ทุก ticket มีบรรทัด `**Stories:**` บอกเลข user story ที่ ticket นั้นส่งมอบ, `**Seam:**` (ขอบเขตทดสอบเดียวจาก Testing Decisions ของ spec), `**Context:**` (Read set ของ worker: `spec §` refs และไฟล์ พร้อม marker อ่านอย่างเดียว / `(edit)` / `(new)` / `(from NN)` / `(edit from NN)`) และ `**Budget:**` (ผลวัดของ checker: read tokens, จำนวน criteria, จำนวน modules) ก่อน quiz ต้องรัน `scripts/check-tickets.mjs` พร้อม `--write-budget` ให้ผ่าน (ทุก story มี ticket, Blocked by ชี้ ticket ที่มีจริงและเลขต่ำกว่า, Seam/Context/Budget ครบ เป็นบรรทัดเดียว เรียงถูก) checker ออก warning 3 แบบ (ไม่เปลี่ยนผลลัพธ์): acceptance criterion ที่พูดถึงการรัน suite หรือ tool (`npm test`, `tests pass`, `typecheck passes`, `lint passes`, `suite passes`); ticket สองใบที่แก้ path เดียวกัน (`(edit)`, `(new)` หรือ `(edit from NN)`) โดยไม่มีใบไหน block อีกใบทางอ้อม; และ feature ที่มีเกิน 15 ticket warning ทุกตัวต้องถูกบันทึกใต้ `## Ticket warnings` ใน `decisions.md` เป็น `<warning> — acknowledged` หรือ `<warning> — fixed: <change>` แล้วแสดงตาราง story coverage, ตาราง budget และ DAG summary ใน quiz
+3. **Stage 2 — Design Review Gate**: ผู้ใช้กำหนดขอบเขตการรีวิวเอง (เสนอ 3 รอบ, `0` คือข้าม, หรือใช้ `--review N`); ดู routing, resume และทางออกเมื่อหมดรอบหรือติด stall ได้ที่ [สัญญา Design Review Gate](../../../skills/agents/grill-to-tickets/references/design-review-gate.md)
+4. **Stage 3 — Tickets**: หลัง `SHIP`, การข้ามด้วย `0`, หรือผู้ใช้เลือกไปต่อหลังหมดรอบ/ติด stall ให้เขียน ticket ตาม `ticket-format.md` ลง `.scratch/<feature-slug>/issues/` ทุก ticket มีบรรทัด `**Stories:**` บอกเลข user story ที่ ticket นั้นส่งมอบ, `**Seam:**` (ขอบเขตทดสอบเดียวจาก Testing Decisions ของ spec), `**Context:**` (Read set ของ worker: `spec §` refs และไฟล์ พร้อม marker อ่านอย่างเดียว / `(edit)` / `(new)` / `(from NN)` / `(edit from NN)`) และ `**Budget:**` (ผลวัดของ checker: read tokens, จำนวน criteria, จำนวน modules) ก่อน quiz ต้องรัน `scripts/check-tickets.mjs` พร้อม `--write-budget` ให้ผ่าน (ทุก story มี ticket, Blocked by ชี้ ticket ที่มีจริงและเลขต่ำกว่า, Seam/Context/Budget ครบ เป็นบรรทัดเดียว เรียงถูก) checker ออก warning 3 แบบ (ไม่เปลี่ยนผลลัพธ์): acceptance criterion ที่พูดถึงการรัน suite หรือ tool (`npm test`, `tests pass`, `typecheck passes`, `lint passes`, `suite passes`); ticket สองใบที่แก้ path เดียวกัน (`(edit)`, `(new)` หรือ `(edit from NN)`) โดยไม่มีใบไหน block อีกใบทางอ้อม; และ feature ที่มีเกิน 15 ticket warning ทุกตัวต้องถูกบันทึกใต้ `## Ticket warnings` ใน `decisions.md` เป็น `<warning> — acknowledged` หรือ `<warning> — fixed: <change>` แล้วแสดงตาราง story coverage, ตาราง budget และ DAG summary ใน quiz
 5. **Stop**: บอกว่า `.scratch/` อยู่ในเครื่องและถูก git ignore (ก่อนเขียนไฟล์แรก skill จะเช็ก `git check-ignore` และเพิ่ม `.scratch/` ลง `.git/info/exclude` ให้ถ้ายังไม่ถูก ignore) จึงไม่ต้อง commit แล้วพิมพ์ `/clear` ตามด้วย `/subagent-implement .scratch/<feature-slug>/` (หรือ `/agy-implement` / `/opencode-implement`) โดยเลือกตัวที่แนะนำจากบรรทัด `recommended implementer` ใน DAG summary ของ checker (เลือกจาก maximum wave width: 1 → `subagent-implement`, 2 → ทั้งสามตัว, 3 ขึ้นไป → `agy-implement` หรือ `opencode-implement` เป็นคำแนะนำเท่านั้น) ไม่เรียก implementer เอง
 
 `REWORK` แบบ spec-level รัน Stage 1 ใหม่และอยู่ใน Stage 2 ส่วน decision-level กลับไป Stage 0 เพื่อ grill
@@ -123,15 +123,13 @@ shown in the pause summary.
 Stage 1 writes the spec from that log following its owned
 `references/spec-format.md`. Each Design Review Gate cycle dispatches
 `scrutinize` to a fresh, read-only reviewer subagent that sees the files and not
-the interview, so it reads the spec the way the implementer will (ADR 0010); the
-main thread normalizes each verdict into `SHIP`, `FIX_THEN_SHIP`, `REWORK`, or
-`REJECT`, keeps one stable `design-review.md` report, and bounds itself to the rounds the user chose
-(asked once on entering Stage 2, or `--review N`), and on exhaustion or a stall asks
-whether to add rounds or go on to Stage 3, going on by default with the open findings recorded. A
-`FIX_THEN_SHIP` fix is followed by a sweep that aligns every other passage of the
-spec restating the same fact. A spec-level `REWORK` re-runs Stage 1 without leaving the gate; a decision-level
-`REWORK` returns to Stage 0 to re-grill, and the cycle counter carries over. On
-`SHIP`, tickets are published from the owned `references/ticket-format.md` — every ticket with a
+the interview, so it reads the spec the way the implementer will (ADR 0010). The
+user sets the review budget; the proposed default is three rounds, zero skips
+review, and `--review N` answers up front. See the [canonical Design Review
+Gate contract](../../../skills/agents/grill-to-tickets/references/design-review-gate.md)
+for verdict routing, resume, and the exhaustion or stall path. After `SHIP`, a
+recorded `0` skip, or the user's choice to go on after exhaustion or stall,
+tickets are published from the owned `references/ticket-format.md` — every ticket with a
 `**Stories:**` line naming the spec stories it delivers, a `**Seam:**` line
 naming one test boundary from the spec, a `**Context:**` line listing the Read
 set (spec sections and files, marked read-only, `(edit)`, `(new)`, `(from NN)`,

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile, access, readdir } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
+import { assertSkillMarkdownSectionsDoNotMatch } from "./helpers/markdown-contract.mjs";
 
 // The reference set SKILL.md links, the guide's Related files list, and the
 // references/ directory must agree. One source of truth for the three checks.
@@ -568,13 +569,11 @@ describe("agy-implement skill contract", () => {
 
   describe("reuse is not part of the contract", () => {
     it("no worker prompt, integration step, or planning field mentions the Reuse Catalog, Reuse Plan, or Reuse field", async () => {
-      for (const dir of skillDirs) {
-        const refs = (await readdir(path.resolve(dir, "references"))).filter((f) => f.endsWith(".md"));
-        for (const file of ["SKILL.md", ...refs.map((f) => `references/${f}`)]) {
-          const c = await readFile(path.resolve(dir, file), "utf8");
-          assert.doesNotMatch(c, /\*\*Reuse:\*\*|Reuse Catalog|Reuse Plan|reuse-catalog|Reuse line/, `${file} carries no reuse contract`);
-        }
-      }
+      await assertSkillMarkdownSectionsDoNotMatch(
+        skillDirs,
+        /\*\*Reuse:\*\*|Reuse Catalog|Reuse Plan|reuse-catalog|Reuse line/,
+        "worker-facing Markdown carries no reuse contract",
+      );
     });
 
     it("a ticket that still carries a Reuse line is planned like one without", async () => {

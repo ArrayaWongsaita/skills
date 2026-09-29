@@ -84,4 +84,3 @@ A wide-refactor expand–contract sequence is just an ordinary serial chain here
 `grill-to-tickets` stratifies it into waves (expand | migrate batches |
 contract), and this gate runs the full suite at every wave boundary — so it stays
 green step to step, with no wide-refactor-specific handling.
-

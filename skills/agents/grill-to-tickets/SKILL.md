@@ -24,7 +24,7 @@ Stage 0: Grill        grilling + domain-modeling
 Stage 1: Spec         spec-format.md              → spec.md
    ▼
 Stage 2: Design Review Gate   scrutinize (fresh reviewer) → design-review.md   (user-bounded loop)
-   │ (SHIP)
+   │ (SHIP / 0 skip / user goes on after exhaustion or stall)
    ▼
 Stage 3: Tickets      ticket-format.md            → issues/NN-<slug>.md
    ▼
@@ -207,8 +207,9 @@ Further Notes. `REJECT` still stops the run. Full routing table, stall detection
 
 ## Stage 3 — Tickets
 
-Once the gate returns `SHIP`, write tickets following
-[ticket-format.md](references/ticket-format.md) against the shipped `spec.md`.
+After `SHIP`, a recorded `0` skip, or the user's choice to go on after
+exhaustion or stall, write tickets following
+[ticket-format.md](references/ticket-format.md) against the `spec.md`.
 Break it into tracer-bullet vertical slices, each declaring its blocking edges,
 and write one file per ticket under `.scratch/<feature-slug>/issues/<NN>-<slug>.md`,
 numbered from `01` in dependency order. Every ticket carries a `**Stories:**` line after `**Blocked by:**`: the spec's

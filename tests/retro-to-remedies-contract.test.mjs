@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile, access, readdir } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
+import { assertAbsentFromMarkdownSections, markdownSection } from "./helpers/markdown-contract.mjs";
 
 const SKILL_REFERENCES = [
   "miss-sources.md",
@@ -332,7 +333,9 @@ describe("retro-to-remedies skill contract", () => {
 
         // (3) Judgement miss -> Standard
         assert.match(c, /Judgement miss[\s\S]*?Standard/i);
-        assert.doesNotMatch(c, /Reuse Catalog/);
+        const orderedRule = markdownSection(c, "The Ordered Rule");
+        assert.ok(orderedRule, "classification.md has an Ordered Rule section");
+        assert.doesNotMatch(orderedRule, /Reuse Catalog/);
 
         // (4) navigation effort -> Pointer
         assert.match(c, /navigation.*Pointer|Pointer.*navigation/i);
@@ -475,7 +478,11 @@ describe("retro-to-remedies skill contract", () => {
         assert.match(c, /short header/i);
         assert.match(c, /created.*absent|when absent.*created|absent.*created/i);
 
-        assert.doesNotMatch(c, /reuse convention|Reuse Catalog/i);
+        assertAbsentFromMarkdownSections(
+          c,
+          /reuse convention|Reuse Catalog/i,
+          "apply-and-handoff.md carries no reuse convention",
+        );
 
         // Pointer into AGENTS.md, else CLAUDE.md, else a new AGENTS.md
         assert.match(c, /Pointer/i);

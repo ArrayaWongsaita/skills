@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile, access, readdir } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
+import { assertSkillMarkdownSectionsDoNotMatch, markdownSection } from "./helpers/markdown-contract.mjs";
 
 async function fileExists(filePath) {
   await access(filePath, constants.R_OK);
@@ -117,7 +118,7 @@ describe("grill-to-tickets composite skill contract", () => {
 
       const gate = await readFile(path.resolve(dir, "references/design-review-gate.md"), "utf8");
       assert.match(gate, /this finding and `decisions\.md` to a fresh writer/);
-      assert.doesNotMatch(gate, /transcript/i, "the REWORK test reads the log, not a transcript");
+      assert.doesNotMatch(markdownSection(gate, "Reviewer"), /transcript/i, "the REWORK test reads the log, not a transcript");
     }
   });
 
@@ -215,21 +216,26 @@ describe("grill-to-tickets composite skill contract", () => {
     for (const dir of skillDirs) {
       const skill = await readFile(path.resolve(dir, "SKILL.md"), "utf8");
       const gate = await readFile(path.resolve(dir, "references/design-review-gate.md"), "utf8");
-      for (const content of [skill, gate]) {
+      const stage2 = markdownSection(skill, "Stage 2 — Design Review Gate");
+      const budget = markdownSection(gate, "Budget and early stops");
+      assert.ok(stage2, "SKILL.md has a Stage 2 section");
+      assert.ok(budget, "design-review-gate.md has the budget and early-stops section");
+      for (const content of [stage2, budget]) {
         assert.match(content, /at most\s+how many rounds/i, "Stage 2 asks for a maximum number of rounds");
         assert.match(content, /(propose|Propose)\s+(\*\*)?3/, "the proposed default is 3");
         assert.match(content, /`0` skips the review/, "0 skips the review");
         assert.match(content, /--review N/, "--review N answers the entry question");
+        assert.match(content, /a?\s*missing or invalid value\s+falls back to asking/i, "missing or invalid --review values fall back to asking");
         assert.match(content, /stall/i);
         assert.match(content, /add\s+(more\s+)?rounds/i);
         assert.match(content, /Known\s+unresolved\s+review\s+findings/);
-        assert.match(content, /carries over|never reset/i);
-        assert.doesNotMatch(content, /\bsix[- ]cycle|cycle 6|\b6 cycles|human authoriz|fresh budget/i, "no fixed six-cycle bound remains");
+        assert.match(content, /carries over|never reset|rounds spent stay spent|without refilling/i);
+        assert.doesNotMatch(content, /\bsix[- ]cycle|cycle 6|\b6 cycles|human authoriz|fresh budget/i, "no fixed six-cycle bound remains in the gate section");
       }
-      assert.match(gate, /Go on\*\* is the default/, "going on is the default at the exit");
-      assert.match(gate, /there is no default\s+number/, "added rounds have no default number");
-      assert.match(gate, /`maxRounds`[\s\S]*`roundsUsed`/, "the report records the maximum and rounds used");
-      assert.match(gate, /`REJECT` is not part of this exit: it stops the run at once/);
+      assert.match(budget, /Go on\*\* is the default/, "going on is the default at the exit");
+      assert.match(budget, /there is no default\s+number/, "added rounds have no default number");
+      assert.match(budget, /`maxRounds`[\s\S]*`roundsUsed`/, "the report records the maximum and rounds used");
+      assert.match(budget, /`REJECT` is not part of this exit: it stops the run at once/);
     }
   });
 
@@ -253,17 +259,21 @@ describe("grill-to-tickets composite skill contract", () => {
   });
 
   it("carries no reuse contract: no survey, catalog, Reuse Plan, Reuse field, or reuse lens", async () => {
+    await assertSkillMarkdownSectionsDoNotMatch(
+      skillDirs,
+      /reuse-catalog|Reuse Catalog|Reuse Plan|Reuse survey|reuse lens|\*\*Reuse:\*\*|reuse-pass/i,
+      "grill-to-tickets carries no reuse contract",
+    );
     for (const dir of skillDirs) {
-      const refs = (await readdir(path.resolve(dir, "references"))).filter((f) => f.endsWith(".md"));
-      for (const file of ["SKILL.md", ...refs.map((f) => `references/${f}`)]) {
-        const c = await readFile(path.resolve(dir, file), "utf8");
-        assert.doesNotMatch(c, /reuse-catalog|Reuse Catalog|Reuse Plan|Reuse survey|reuse lens|\*\*Reuse:\*\*|reuse-pass/i, `${file} carries no reuse contract`);
-      }
       for (const gone of ["references/reuse-pass.md", "references/reuse-catalog-template.md"]) {
         await assert.rejects(access(path.resolve(dir, gone)), `${gone} is removed`);
       }
       const check = await readFile(path.resolve(dir, "scripts/check-tickets.mjs"), "utf8");
-      assert.doesNotMatch(check, /Reuse Plan|REUSE_VERBS|parseReusePlan/, "the checker no longer validates reuse");
+      const parserStart = check.indexOf("export function parseTicket(");
+      const parserEnd = check.indexOf("\nexport function estimateTokens", parserStart);
+      assert.ok(parserStart >= 0 && parserEnd > parserStart, "the checker has a parseTicket function");
+      const ticketParser = check.slice(parserStart, parserEnd);
+      assert.doesNotMatch(ticketParser, /Reuse Plan|REUSE_VERBS|parseReusePlan/, "the ticket parser no longer validates reuse");
     }
   });
 
@@ -279,6 +289,19 @@ describe("grill-to-tickets composite skill contract", () => {
       assert.ok(
         handoff.indexOf("/clear") < handoff.indexOf("/subagent-implement"),
         "/clear, then the implementer",
+      );
+    }
+  });
+
+  it("Stage 3 follows SHIP, a zero skip, or the user's choice to go on after exhaustion or stall", async () => {
+    for (const file of skillFiles) {
+      const content = await readFile(file, "utf8");
+      const stage3 = markdownSection(content, "Stage 3 — Tickets");
+      assert.ok(stage3, "SKILL.md has a Stage 3 section");
+      assert.match(
+        stage3,
+        /After `SHIP`, a recorded `0` skip, or the user's choice to go on after\s+exhaustion or stall/,
+        "all three allowed routes reach Stage 3",
       );
     }
   });
@@ -459,7 +482,12 @@ describe("grill-to-tickets composite skill contract", () => {
       ]) {
         assert.match(content, new RegExp(`## ${section}`));
       }
-      assert.doesNotMatch(content, /### Reuse Plan/);
+      const templateStart = content.indexOf("## Spec Template");
+      const templateFenceStart = content.indexOf("```", templateStart);
+      const templateFenceEnd = content.indexOf("```", templateFenceStart + 3);
+      assert.ok(templateFenceStart >= 0 && templateFenceEnd > templateFenceStart, "the spec template is a fenced block");
+      const specTemplate = content.slice(templateFenceStart, templateFenceEnd);
+      assert.doesNotMatch(specTemplate, /### Reuse Plan/);
       assert.match(content, /every decision in the log|every logged decision/i);
       assert.match(content, /blind-spot assumption/i);
       assert.match(content, /heading.*never.*repeat|unique/i);

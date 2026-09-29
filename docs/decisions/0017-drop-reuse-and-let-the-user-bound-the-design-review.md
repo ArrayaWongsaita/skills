@@ -87,9 +87,6 @@ lens และ `docs/reuse-catalog.md`) ต้องมี drift test คอย�
   implementer's own judgement and `scrutinize` remain.
 - Going on to Stage 3 with open findings is now a one-keypress default; the
   findings are recorded, not fixed.
-- `tests/implementer-shared-prose-drift.test.mjs` (renamed from
-  `implementer-reuse-drift.test.mjs`) stays, because the three implementers
-  still share the ticket-format, Seam, Context, and Budget blocks word for word.
 
 ## Rejected alternatives / ทางเลือกที่ไม่เลือก
 

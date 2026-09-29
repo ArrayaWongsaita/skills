@@ -402,8 +402,20 @@
       "expectations": [
         "Does not ask the review entry question",
         "Records a maximum of 2 rounds in State",
-        "Treats --review 0 as skipping Stage 2 and records that it was skipped",
-        "Falls back to asking when the value is missing or not a non-negative integer"
+        "Treats --review 0 as skipping Stage 2 and records that it was skipped"
+      ],
+      "files": []
+    },
+    {
+      "id": 42,
+      "name": "missing and invalid --review values ask for the budget",
+      "prompt": "Run /grill-to-tickets Add CSV export to the members table with --review but no value. In a separate run, use --review many.",
+      "expected_output": "For each invocation, treat the missing or invalid --review value as unset. At Stage 2, ask once whether to review and at most how many rounds, propose 3, and wait for the user's answer before dispatching a reviewer.",
+      "expectations": [
+        "Falls back to asking when --review has no value",
+        "Falls back to asking when --review is not a non-negative integer",
+        "Asks the Stage 2 question once before dispatching a reviewer",
+        "Proposes 3 rounds"
       ],
       "files": []
     },

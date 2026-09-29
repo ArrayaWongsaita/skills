@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile, access, readdir } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
+import { markdownSection } from "./helpers/markdown-contract.mjs";
 
 // The reference set SKILL.md links, the guide's Related files list, and the
 // references/ directory must agree. One source of truth for the three checks.
@@ -653,10 +654,12 @@ describe("review-to-pr skill contract", () => {
   describe("no reuse catalog", () => {
     it("the Standards axis names no reuse catalog among its sources", async () => {
       for (const dir of skillDirs) {
-        for (const file of ["SKILL.md", "references/review-loop.md"]) {
-          const c = await readFile(path.resolve(dir, file), "utf8");
-          assert.doesNotMatch(c, /reuse-catalog|Reuse Catalog/, `${file} carries no Reuse Catalog`);
-        }
+        const loop = await readFile(path.resolve(dir, "references/review-loop.md"), "utf8");
+        const call = markdownSection(loop, "The inline `code-review` call");
+        assert.ok(call, "review-loop.md has the inline call section");
+        const standardsAxis = call.match(/^- \*\*Standards axis\*\*[\s\S]*?(?=^- \*\*Spec axis\*\*)/m);
+        assert.ok(standardsAxis, "the inline call has a Standards axis bullet");
+        assert.doesNotMatch(standardsAxis[0], /reuse-catalog|Reuse Catalog/, "the Standards axis sources do not include a reuse catalog");
       }
     });
   });

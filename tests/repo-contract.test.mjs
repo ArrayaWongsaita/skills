@@ -4,6 +4,7 @@ import { access, readFile, readdir } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
 import { discoverSkills, renderIndex } from "../scripts/generate-skill-index.mjs";
+import { markdownHeaderBlock, markdownHeadings } from "./helpers/markdown-contract.mjs";
 
 async function fileExists(path) {
   await access(path, constants.R_OK);
@@ -211,17 +212,21 @@ describe("grill-to-tickets production records and guides", () => {
   it("records ADR 0017: reuse is removed and the user bounds the design review", async () => {
     const doc = await readTextOrNull("docs/decisions/0017-drop-reuse-and-let-the-user-bound-the-design-review.md");
     assert.ok(doc, "ADR 0017 exists under docs/decisions/");
-    assert.match(doc, /^# ADR 0017: Drop reuse, and let the user bound the design review$/m);
-    assert.match(doc, /- Status \/ สถานะ: Accepted/);
-    assert.match(doc, /- Supersedes \/ แทนที่: ADR 0008/);
+    const headings = markdownHeadings(doc).map(({ title }) => title);
+    assert.equal(headings[0], "ADR 0017: Drop reuse, and let the user bound the design review");
+    const header = markdownHeaderBlock(doc);
+    assert.match(header, /^- Status \/ สถานะ: Accepted/m);
+    assert.match(header, /^- Supersedes \/ แทนที่: ADR 0008/m);
     for (const heading of ["Context / บริบท", "Decision / การตัดสินใจ", "Consequences / ผลที่ตามมา", "Rejected alternatives / ทางเลือกที่ไม่เลือก"]) {
-      assert.match(doc, new RegExp(`^## ${heading}$`, "m"), `ADR 0017 has ## ${heading}`);
+      assert.ok(headings.includes(heading), `ADR 0017 has ## ${heading}`);
     }
 
     const adr8 = await readTextOrNull("docs/decisions/0008-reuse-catalog-cross-skill-contract.md");
-    assert.match(adr8, /Superseded by ADR 0017/, "ADR 0008 is marked Superseded by ADR 0017");
+    assert.ok(adr8, "ADR 0008 exists");
+    assert.match(markdownHeaderBlock(adr8), /^- Status \/ สถานะ: Superseded by ADR 0017/m, "ADR 0008 is marked Superseded by ADR 0017");
     const adr10 = await readTextOrNull("docs/decisions/0010-grill-to-tickets-fresh-context-design-review.md");
-    assert.match(adr10, /ADR 0017 replaces only the fixed six-cycle bound/, "ADR 0010 notes that only its bound is replaced");
+    assert.ok(adr10, "ADR 0010 exists");
+    assert.match(markdownHeaderBlock(adr10), /ADR 0017 replaces only the fixed six-cycle bound/, "ADR 0010 notes that only its bound is replaced");
   });
 
   it("no longer holds a reuse catalog", async () => {

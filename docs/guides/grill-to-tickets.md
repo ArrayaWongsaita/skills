@@ -13,7 +13,7 @@
 ### จุดประสงค์หลักและคุณสมบัติเด่น
 1. **จบกระบวนการวางแผนในคำสั่งเดียว:** ครอบคลุมตั้งแต่วิเคราะห์ความต้องการจนได้ Tickets ที่สมบูรณ์
 2. **รักษา Context Window:** กระบวนการสัมภาษณ์, จัดทำ Spec และแตก Ticket จะรันอยู่บน reasoning thread เดียวกันแบบต่อเนื่อง ยกเว้นการรีวิว spec ที่แยกไปรันใน subagent ตัวใหม่เพื่อให้มองแบบคนนอก จากนั้นจะ **หยุดส่งมอบงาน (Handoff)** ทันทีที่ออก Tickets เสร็จ โดยไม่ลงมือเขียนโค้ด (Implement) เอง เพื่อให้เซสชันถัดไปที่ต้องเขียนโค้ดเริ่มต้นด้วย Context ที่สดใหม่และสะอาด
-3. **มี Design Review Gate ในตัว:** มีระบบตรวจคัดกรอง Spec ด้วย `scrutinize` ที่ผู้ใช้เลือกเองว่าจะรีวิวไหมและสูงสุดกี่รอบ (default 3, ตอบ 0 คือข้าม, หรือใช้ `--review N`), เมื่อรอบหมดหรือติดขัด (Stall detection) จะถามว่าจะเพิ่มรอบหรือไป Stage 3 ต่อ และแยกทางแก้แบบ Spec-level ออกจาก Decision-level อย่างชัดเจน
+3. **มี Design Review Gate ในตัว:** ผู้ใช้กำหนดขอบเขตการรีวิวเอง (เสนอ 3 รอบ, 0 คือข้าม, หรือใช้ `--review N`); ดูกติกาเรื่องทางออกเมื่อหมดรอบหรือติดขัดได้ที่ [สัญญา Design Review Gate](../../skills/agents/grill-to-tickets/references/design-review-gate.md)
 4. **Standalone โดยสมบูรณ์:** มีกติกาและกลไกของตัวเอง ไม่แตะต้องหรือแก้ไข skill ต้นทางภายนอก
 
 ---
@@ -106,7 +106,7 @@ Stop: Handoff message (/clear, DAG summary + recommended implementer แล้�
      - `REWORK`: ร่าง spec ไม่ชัดเจน (Spec-level) ให้แก้ spec หรือมีประเด็นที่ยังไม่ได้ตัดสินใจ (Decision-level) ให้กลับไปสัมภาษณ์ใหม่ใน Stage 0
      - `REJECT`: สถาปัตยกรรมหรือทิศทางไม่ผ่าน ➔ หยุดทำงานเพื่อให้มนุษย์ตัดสินใจ
 4. **Stage 3 — Tickets (แตกชิ้นงานย่อย):**
-   - เมื่อผ่านเกณฑ์ `SHIP` จะนำ `spec.md` มาแตกเป็น Tracer-bullet vertical slices เก็บไว้ใน `issues/<NN>-<slug>.md` เรียงตามลำดับ Dependency
+   - หลัง `SHIP`, การข้ามด้วย `0`, หรือผู้ใช้เลือกไปต่อหลังหมดรอบ/ติด stall ให้นำ `spec.md` มาแตกเป็น Tracer-bullet vertical slices เก็บไว้ใน `issues/<NN>-<slug>.md` เรียงตามลำดับ Dependency
    - ทุก ticket มีบรรทัด `**Stories:**` ต่อจาก `**Blocked by:**` บอกเลข user story ใน spec ที่ ticket นั้นส่งมอบ เช่น `2, 5` หรือช่วง `3-6` (ticket prefactor ใช้ `none`)
    - ทุก ticket มีบรรทัด `**Seam:**` (ขอบเขตทดสอบเดียวจาก Testing Decisions ของ spec), `**Context:**` (Read set ของ worker: `spec §` refs และไฟล์ พร้อม marker อ่านอย่างเดียว / `(edit)` / `(new)` / `(from NN)` / `(edit from NN)`) และ `**Budget:**` (ผลวัดของ checker: read tokens, จำนวน criteria, จำนวน modules) เรียงต่อจาก `**Stories:**` ตามลำดับ Seam → Context → Budget
    - ก่อน quiz ให้รันสคริปต์ตรวจ ticket ที่มากับ skill พร้อม `--write-budget` เพื่อให้มันเขียน Budget line จากผลวัด:
