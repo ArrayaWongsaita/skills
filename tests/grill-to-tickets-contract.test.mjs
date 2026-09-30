@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile, access, readdir } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
-import { assertAbsentFromMarkdownSections, assertSkillMarkdownSectionsDoNotMatch, markdownHeaderBlock, markdownSection } from "./helpers/markdown-contract.mjs";
+import { assertAbsentFromMarkdownSections, assertSkillMarkdownSectionsDoNotMatch, markdownHeaderBlock, markdownHeadings, markdownSection } from "./helpers/markdown-contract.mjs";
 
 async function fileExists(filePath) {
   await access(filePath, constants.R_OK);
@@ -564,13 +564,16 @@ describe("grill-to-tickets composite skill contract", () => {
   it("requires a one-line Scenario under every story in new specs", async () => {
     for (const dir of skillDirs) {
       const format = await readFile(path.resolve(dir, "references/spec-format.md"), "utf8");
-      assert.match(format, /Every new spec carries at least one `Scenario:` line under every story\./i);
-      assert.match(format, /A\s+Scenario is one line\./i);
       const templateStart = format.indexOf("## Spec Template");
       const templateFenceStart = format.indexOf("```", templateStart);
       const templateFenceEnd = format.indexOf("```", templateFenceStart + 3);
       const template = format.slice(templateFenceStart, templateFenceEnd);
       assert.match(template, /^\s+Scenario: given <precondition> when <action> then <outcome>$/m);
+      const userStoriesStart = template.indexOf("## User Stories");
+      const implementationDecisionsStart = template.indexOf("## Implementation Decisions", userStoriesStart);
+      const userStories = template.slice(userStoriesStart, implementationDecisionsStart);
+      assert.match(userStories, /Every new spec carries at least one `Scenario:` line under every story\./i);
+      assert.match(userStories, /A\s+Scenario is one line\./i);
 
       const skill = await readFile(path.resolve(dir, "SKILL.md"), "utf8");
       const stage1 = skill.slice(skill.indexOf("## Stage 1"), skill.indexOf("## Stage 2"));
@@ -763,7 +766,11 @@ describe("grill-to-tickets composite skill contract", () => {
     assertPattern(stage35, /Stage 3\.5\s+[—–-] Ticket review/i, "Stage 3 labels the step Stage 3.5 — Ticket review");
     assert.ok(stage3.indexOf("Stage 3.5") > stage3.indexOf("Fix every error"), "review follows error fixes");
     assertPattern(stage35, /run one review before the quiz/i, "Stage 3.5 precedes the quiz");
-    assert.doesNotMatch(skill, /^## Stage 3\.5\b/m, "Stage 3.5 stays within Stage 3");
+    assert.equal(
+      markdownHeadings(skill).some(({ level, title }) => level === 2 && /^Stage 3\.5\b/.test(title)),
+      false,
+      "Stage 3.5 stays within Stage 3",
+    );
     assertPattern(stage35, /after the checker prints `result: PASS`[\s\S]*run one review before the quiz/i, "Stage 3.5 runs once after a passing check and before the quiz");
     assertPattern(stage35, /one fresh reviewer/, "Stage 3.5 dispatches one fresh reviewer");
     assertPattern(invocation, /`--ticket-review 0`[\s\S]*whole token[\s\S]*other value[^\n]*absent/i, "the invocation paragraph documents exact skip-flag matching");
@@ -779,11 +786,12 @@ describe("grill-to-tickets composite skill contract", () => {
     const stage0 = markdownSection(skill, "Stage 0 — Grill");
     const stage0Step1 = stage0.slice(stage0.indexOf("1. **Ground"), stage0.indexOf("2. **Relentless"));
     const log = await readFile(path.resolve(canonicalDir, "references/decision-log.md"), "utf8");
+    const format = markdownSection(log, "Format");
     const resume = markdownSection(log, "Resume — `continue <feature-slug>`");
 
     assertPattern(stage0Step1, /creates `decisions\.md`[\s\S]*`ticket review: skipped`[\s\S]*`ticket review: pending`/,
       "Stage 0 initializes the review State from the skip flag");
-    assertPattern(log, /State[\s\S]*`ticket review: pending`, `done`, or\s+`skipped`[\s\S]*key becomes `done` after the review/i,
+    assertPattern(format, /State[\s\S]*`ticket review: pending`, `done`, or\s+`skipped`[\s\S]*key becomes `done` after the review/i,
       "the log defines the review State values and completion transition");
     assertPattern(resume, /State key wins over (?:any|all) invocation flags?/i,
       "a saved review State takes precedence over invocation flags");
@@ -823,18 +831,18 @@ describe("grill-to-tickets composite skill contract", () => {
   it("requires settled ticket-review state and a successful final checker before Stage 3 is done", async () => {
     const skill = await readFile(path.resolve(canonicalDir, "SKILL.md"), "utf8");
     const stage3 = markdownSection(skill, "Stage 3 — Tickets");
-    const body = skill.replace(/^---\n[\s\S]*?\n---\n/, "");
 
     assertPattern(stage3, /Stage 3 is done when[\s\S]*`ticket review`\s+State[\s\S]*`done` or\s+`skipped`[\s\S]*every `ASK` line[\s\S]*— resolved:[\s\S]*— acknowledged[\s\S]*either the last checker run exits 0 or, where Node is unavailable,\s+the by-hand checks listed in the script's header pass/i,
       "Stage 3 completion requires the review and ASK resolutions plus a successful checker or passing manual checks");
     assertPattern(stage3, /After a manifest write\s+failure,[\s\S]*report the failure[\s\S]*re-run the checker before finishing Stage 3/i,
       "Stage 3 reports a manifest failure and checks again before completion");
-    assert.doesNotMatch(body, /\bNever\b/i, "the skill states completion rules positively");
-    assert.doesNotMatch(body, /\bDo not\b/i, "the skill states completion rules positively");
+    assert.doesNotMatch(stage3, /\bNever\b/i, "the skill states completion rules positively");
+    assert.doesNotMatch(stage3, /\bDo not\b/i, "the skill states completion rules positively");
   });
 
   it("briefs a read-only ambiguity review with READY or ASK and a missing-verdict fallback", async () => {
     const review = await readFile(path.resolve(canonicalDir, "references/ticket-review.md"), "utf8");
+    const reviewer = markdownSection(review, "Reviewer");
 
     for (const pathText of [
       "issues/",
@@ -847,7 +855,7 @@ describe("grill-to-tickets composite skill contract", () => {
     ]) {
       assert.ok(review.includes(pathText), `review brief names ${pathText}`);
     }
-    assert.doesNotMatch(review, /tracker/i);
+    assert.doesNotMatch(reviewer, /tracker/i);
     assertPattern(review, /one fresh reviewer/, "the brief assigns one fresh reviewer");
     assertPattern(review, /edits nothing/, "the reviewer edits nothing");
     assertPattern(review, /every file named in the tickets' `\*\*Context:\*\*`\s+lines/i, "the reviewer reads every Context-named file");

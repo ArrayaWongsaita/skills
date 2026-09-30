@@ -53,4 +53,59 @@ describe("Markdown contract assertion scope", () => {
       assert.match(source, new RegExp(`assert\\.match\\(${scope}\\s*,`), `guide assertions use ${scope}`);
     }
   });
+
+  it("scopes Scenario-format requirements to the User Stories template section", async () => {
+    const source = await testCase(
+      "tests/grill-to-tickets-contract.test.mjs",
+      "requires a one-line Scenario under every story in new specs",
+    );
+    assert.doesNotMatch(source, /assert\.match\(format\s*,/,
+      "tests/grill-to-tickets-contract.test.mjs:567-568 must not assert against the entire spec format");
+    assert.match(source, /assert\.match\(userStories\s*,/,
+      "Scenario-format assertions use the User Stories template section");
+  });
+
+  it("checks Stage 3.5 placement against parsed top-level headings", async () => {
+    const source = await testCase(
+      "tests/grill-to-tickets-contract.test.mjs",
+      "runs Stage 3.5 once after a passing check and before the quiz, with the whole-token skip flag",
+    );
+    assert.doesNotMatch(source, /assert\.doesNotMatch\(skill\s*,/,
+      "tests/grill-to-tickets-contract.test.mjs:766 must not assert against the entire skill file");
+    assert.match(source, /markdownHeadings\(skill\)\.some\(/,
+      "Stage 3.5 placement is checked from parsed Markdown headings");
+  });
+
+  it("scopes ticket-review State transitions to the decision-log Format section", async () => {
+    const source = await testCase(
+      "tests/grill-to-tickets-contract.test.mjs",
+      "initializes and resumes the ticket-review State from the log",
+    );
+    assert.doesNotMatch(source, /assertPattern\(log\s*,\s*\/State/,
+      "tests/grill-to-tickets-contract.test.mjs:786 must not assert against the entire decision log");
+    assert.match(source, /assertPattern\(format\s*,/,
+      "ticket-review State assertions use the decision-log Format section");
+  });
+
+  it("scopes positive completion-language checks to the Stage 3 section", async () => {
+    const source = await testCase(
+      "tests/grill-to-tickets-contract.test.mjs",
+      "requires settled ticket-review state and a successful final checker before Stage 3 is done",
+    );
+    assert.doesNotMatch(source, /assert\.doesNotMatch\(body\s*,/,
+      "tests/grill-to-tickets-contract.test.mjs:832-833 must not assert against the whole skill body");
+    assert.match(source, /assert\.doesNotMatch\(stage3\s*,/,
+      "positive completion-language assertions use the Stage 3 section");
+  });
+
+  it("scopes the tracker exclusion to the ticket-review brief section", async () => {
+    const source = await testCase(
+      "tests/grill-to-tickets-contract.test.mjs",
+      "briefs a read-only ambiguity review with READY or ASK and a missing-verdict fallback",
+    );
+    assert.doesNotMatch(source, /assert\.doesNotMatch\(review\s*,/,
+      "tests/grill-to-tickets-contract.test.mjs:850 must not assert against the entire brief file");
+    assert.match(source, /assert\.doesNotMatch\(reviewer\s*,/,
+      "the tracker exclusion uses the ticket-review brief section");
+  });
 });
