@@ -920,6 +920,80 @@ describe("grill-to-tickets production records and guides", () => {
     assertHandoffSummary("the skill page's English handoff", handoffSummary);
   });
 
+  it("records ADR 0020 as the implement-family core and supersedes the standalone statuses", async () => {
+    const doc = await readTextOrNull("docs/decisions/0020-implement-tickets-core.md");
+    assert.ok(doc, "ADR 0020 exists under docs/decisions/");
+    assert.ok(/^# ADR 0020: Implement Tickets is the one core for the implement family$/m.test(doc), "ADR 0020 has its expected header");
+    for (const heading of ["Context / บริบท", "Decision / การตัดสินใจ", "Consequences / ผลที่ตามมา", "Rejected alternatives / ทางเลือกที่ไม่เลือก"]) {
+      const section = markdownSection(doc, heading);
+      assert.ok(section && /[\u0e00-\u0e7f]/.test(section), `ADR 0020 has bilingual ${heading}`);
+    }
+
+    const decision = markdownSection(doc, "Decision / การตัดสินใจ");
+    assert.ok(decision, "ADR 0020 has a bilingual Decision section");
+    assert.ok(/defaults\s+to native subagents[\s\S]*parallel waves/i.test(decision), "the core defaults to native workers and parallel waves");
+    assert.ok(/`implement-tickets-<backend>`[\s\S]*`--with <backend>`/.test(decision), "separate adapters are selected with --with");
+    assert.ok(/delet(?:e|ed)\s+`subagent-implement`[\s\S]*no alias/i.test(decision), "subagent-implement is deleted without an alias");
+    assert.ok(/`agy-implement`[\s\S]*`opencode-implement`[\s\S]*until their adapters ship/i.test(decision), "agy and opencode remain until adapters ship");
+    assert.ok(/parallel readiness[\s\S]*recorded human validation/i.test(decision), "parallel readiness depends on a recorded human run");
+    assert.ok(/status: not validated/i.test(doc), "the current parallel-validation state is explicit");
+    assert.doesNotMatch(doc, /26\.8%/, "the unverified conflict figure is not cited");
+
+    const expectedStatusLine = "- Status / สถานะ: Superseded by ADR 0020 / ถูกแทนที่โดย ADR 0020, for the implement family (was: Accepted / ยอมรับแล้ว)";
+    for (const file of [
+      "docs/decisions/0004-agy-implement-standalone.md",
+      "docs/decisions/0005-subagent-implement-standalone.md",
+      "docs/decisions/0007-opencode-implement-standalone.md",
+    ]) {
+      const previous = await readTextOrNull(file);
+      assert.ok(previous, `${file} exists`);
+      if (file.includes("0007-")) {
+        const status = markdownSection(previous, "Status / สถานะ");
+        assert.ok(
+          status?.split("\n").some((line) => line.trim() === expectedStatusLine),
+          `${file} has the labeled bilingual superseded status line`,
+        );
+      } else {
+        const status = previous.split("\n").find((line) => line.startsWith("- Status / สถานะ:"));
+        assert.equal(status, expectedStatusLine, `${file} has the exact bilingual superseded status`);
+      }
+    }
+  });
+
+  it("defines implement-tickets vocabulary and both Worker senses in bilingual glossary rows", async () => {
+    const glossary = await readTextOrNull("docs/glossary.md");
+    assert.ok(glossary, "the glossary exists");
+
+    const terms = ["Wave", "Touch set", "Adapter", "Backend", "Envelope", "Integration gate"];
+    const rows = Object.fromEntries(terms.map((term) => [term, tableRow(glossary, term)]));
+    const meanings = {
+      Wave: /group of tickets[\s\S]*parallel waves?|run together/i,
+      "Touch set": /paths?[\s\S]*\(edit from NN\)[\s\S]*wave planning/i,
+      Adapter: /`implement-tickets-<backend>`[\s\S]*`--with/,
+      Backend: /native subagents[\s\S]*adapter/i,
+      Envelope: /`outcome`[\s\S]*`session_id`[\s\S]*`report`[\s\S]*`usage`/,
+      "Integration gate": /typecheck[\s\S]*full test suite[\s\S]*integrated/i,
+    };
+    for (const [term, row] of Object.entries(rows)) {
+      assert.ok(row, `the glossary has a row for ${term}`);
+      assert.equal(row.split("|").length, 5, `the ${term} row has the Term, ภาษาไทย, and Definition cells`);
+      assert.ok(row.split("|")[2].trim(), `the ${term} row has a Thai term`);
+      assert.match(row.split("|")[3], / \/ .+/, `the ${term} definition is bilingual`);
+      assert.match(row.split("|")[3], meanings[term], `the ${term} definition describes its implement-tickets meaning`);
+    }
+
+    const worker = tableRow(glossary, "Worker");
+    assert.ok(worker, "the glossary keeps a Worker row");
+    assert.match(worker, /engineering-workflow[\s\S]*external specialist/i, "Worker retains its engineering-workflow meaning");
+    assert.match(worker, /`implement-tickets`[\s\S]*subagent[\s\S]*one ticket/i, "Worker adds the implement-tickets subagent meaning");
+    assert.match(worker, /ใน `engineering-workflow`[\s\S]*external specialist[\s\S]*ใน `implement-tickets`[\s\S]*ticket/, "Worker distinguishes both senses in Thai too");
+
+    const usage = tableRow(glossary, "usage_total");
+    assert.ok(usage, "the usage_total row exists");
+    assert.match(usage, /`implement-tickets`/, "usage_total names implement-tickets");
+    assert.doesNotMatch(usage, /`subagent-implement`/, "usage_total no longer names subagent-implement");
+  });
+
   it("defines the planning and implementation terms in bilingual glossary rows", async () => {
     const glossary = await readTextOrNull("docs/glossary.md");
     assert.ok(glossary, "the glossary exists");
@@ -981,11 +1055,11 @@ describe("grill-to-tickets production records and guides", () => {
     assert.match(usage.english, /dispatch[\s\S]*resume/, "usage_total sums every dispatch and every resume");
     assert.match(
       usage.english,
-      /agy-implement[\s\S]*opencode-implement[\s\S]*cache reads excluded[\s\S]*subagent-implement[\s\S]*cache-inclusive/,
-      "usage_total excludes cache reads only for agy and opencode, and is possibly cache-inclusive for subagent-implement",
+      /agy-implement[\s\S]*opencode-implement[\s\S]*cache reads excluded[\s\S]*implement-tickets[\s\S]*cache-inclusive/,
+      "usage_total excludes cache reads only for agy and opencode, and is possibly cache-inclusive for implement-tickets",
     );
     assert.match(usage.thai, /dispatch[\s\S]*resume/, "the Thai usage_total definition sums every dispatch and every resume");
-    assert.match(usage.thai, /subagent-implement[\s\S]*cache-inclusive/, "the Thai usage_total definition says subagent-implement is possibly cache-inclusive");
+    assert.match(usage.thai, /implement-tickets[\s\S]*cache-inclusive/, "the Thai usage_total definition says implement-tickets is possibly cache-inclusive");
 
     // opencode-implement is in both groups: its main path excludes cache reads, its native-subagent fallback path
     // records the subagent's reported tokens as given. Each half is cut where the cache-excluding clause ends.
@@ -1003,7 +1077,7 @@ describe("grill-to-tickets production records and guides", () => {
       /`opencode-implement`(?!'s main path)/,
       "usage_total does not list opencode-implement unqualified among the cache-excluding implementers",
     );
-    assert.match(english.reported, /`subagent-implement`/, "usage_total records subagent-implement's reported tokens");
+    assert.match(english.reported, /`implement-tickets`/, "usage_total records implement-tickets' reported tokens");
     assert.match(
       english.reported,
       /`opencode-implement`'s native-subagent fallback path[\s\S]*cache-inclusive/,
@@ -1018,7 +1092,7 @@ describe("grill-to-tickets production records and guides", () => {
       /(?<!main path ของ )`opencode-implement`/,
       "the Thai usage_total definition does not list opencode-implement unqualified among the cache-excluding implementers",
     );
-    assert.match(thai.reported, /`subagent-implement`/, "the Thai usage_total definition records subagent-implement's reported tokens");
+    assert.match(thai.reported, /`implement-tickets`/, "the Thai usage_total definition records implement-tickets' reported tokens");
     assert.match(
       thai.reported,
       /fallback path[^`]*ของ `opencode-implement`[\s\S]*cache-inclusive/,
