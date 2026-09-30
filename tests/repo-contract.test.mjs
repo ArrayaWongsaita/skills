@@ -974,3 +974,26 @@ describe("grill-to-tickets production records and guides", () => {
     assert.deepEqual(found, []);
   });
 });
+
+describe("Phase 2 decision amendments", () => {
+  it("records bilingual ADR 0019 and both decision amendments", async () => {
+    const doc = await readTextOrNull("docs/decisions/0019-grill-to-tickets-tiers-parked-questions-and-one-pause.md");
+    assert.ok(doc, "ADR 0019 exists before reading its contract");
+    const header = markdownHeaderBlock(doc);
+    assert.match(header, /^# ADR 0019:/m);
+    assert.match(header, /^- Status \/ สถานะ: Accepted \/ ยอมรับแล้ว/m);
+    assert.match(header, /^- Date \/ วันที่: \d{4}-\d{2}-\d{2}/m);
+    assert.match(header, /^- Amends \/ แก้ไข: ADR 0013 decision 3 and ADR 0017 decision 3/m);
+    for (const title of ["Context / บริบท", "Decision / การตัดสินใจ", "Consequences / ผลที่ตามมา", "Rejected alternatives / ทางเลือกที่ไม่เลือก"]) {
+      assert.ok(markdownHeadings(doc).some(h => h.title === title), `ADR 0019 has ${title}`);
+      assert.match(markdownSection(doc, title), /[ก-๙]/, `${title} includes Thai text`);
+    }
+    const decision = markdownSection(doc, "Decision / การตัดสินใจ");
+    assert.match(decision, /ADR 0013 decision 3[\s\S]*path[\s\S]*ADR 0017 decision 3[\s\S]*Stage 0 pause/);
+  });
+  for (const file of ["0013-grill-to-tickets-owns-spec-and-ticket-formats", "0017-drop-reuse-and-let-the-user-bound-the-design-review"]) {
+    it(`marks ${file.slice(0, 4)} amended in its header`, async () => {
+      assert.match(markdownHeaderBlock(await readText(`docs/decisions/${file}.md`)), /^- Amended by ADR 0019/m);
+    });
+  }
+});

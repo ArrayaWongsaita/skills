@@ -1008,7 +1008,8 @@ describe("question tiers", () => {
   const section = async (file, heading) => markdownSection(await readFile(`${root}/${file}`, "utf8"), heading);
   it("stores parked state beside the log without separating issues and manifest", async () => {
     const storage = await section("SKILL.md", "Feature-Scoped Storage");
-    assert.match(storage, /decisions\.md[^\n]*\n[^\n]*parked\.md/);
+    assert.ok(storage, "guide has a storage section");
+      assert.match(storage, /decisions\.md[^\n]*\n[^\n]*parked\.md/);
     assert.match(storage, /issues\/[^\n]*\n[^\n]*manifest\.json/);
   });
   it("ships a six-field parked questionnaire and its status vocabulary", async () => {
@@ -1098,4 +1099,39 @@ describe("rationalization table contract", () => {
       assert.ok(!/rationalizations?|excuse\s*\|\s*reality|shortcut table/i.test(reviewer), `${file} reviewer receives no rationalization table`);
     }
   });
+});
+
+describe("Phase 2 human documentation", () => {
+  for (const [file, workflow, preflight, handoff] of [
+    ["docs/skills/agents/grill-to-tickets.md", "Main workflow", "Purpose", "Main workflow"],
+    ["docs/guides/grill-to-tickets.md", "ขั้นตอนการทำงาน 4 ลำดับขั้น", "2. การพึ่งพา Skill อื่น (Dependencies) และการติดตั้ง", "ขั้นตอนการทำงาน 4 ลำดับขั้น"],
+  ]) {
+    const section = async title => markdownSection(await readFile(file, "utf8"), title);
+    it(`${file} explains tiers, parked lifecycle, and the single pause`, async () => {
+      const flow = await section(workflow);
+      for (const term of ["`hard`", "`easy`", "decided: default", "resolved: assumed", "blocking", "non-blocking", "Further Notes"]) assert.ok(flow.includes(term), `workflow names ${term}`);
+      assert.match(flow, /Stage 0 pause[^\n]*--review N[^\n]*3[^\n]*0/);
+      assert.match(flow, /Stage 2[^\n]*State/);
+      const stage2 = flow.slice(flow.indexOf("Stage 2: Design Review Gate"), flow.indexOf("Stage 3: Tickets"));
+      assert.doesNotMatch(stage2, /choose|ผู้ใช้กำหนด|--review/);
+      assert.match(flow, /rationalizations\.md/);
+    });
+    it(`${file} records paths only and removes the old lock explanation`, async () => {
+      const intro = await section(preflight);
+      assert.match(intro, /path/);
+      assert.match(intro, /npx skills check/);
+      assertAbsentFromMarkdownSections(await readFile(file, "utf8"), /\block\b|\bhash\b|skills-lock\.json/i, "guides remove lock explanations");
+    });
+    it(`${file} shows parked storage, review at pause, and assumed handoff entries`, async () => {
+      const flow = await section(workflow);
+      const storage = await section(file.includes("/guides/") ? "โครงสร้างไฟล์ที่สร้างขึ้น (Feature-scoped Storage)" : "Feature-scoped Storage");
+      assert.ok(storage, "guide has a storage section");
+      assert.match(storage, /decisions\.md[^\n]*\n[^\n]*parked\.md/);
+      assert.match(storage, /issues\/[^\n]*\n[^\n]*manifest\.json/);
+      const diagram = flow.match(/```text\n([\s\S]*?)```/)?.[1] ?? "";
+      assert.match(diagram, /Stage 0[\s\S]*pause[^\n]*review[^\n]*\n[\s\S]*Stage 1/);
+      assert.doesNotMatch(diagram, /Stage 2[^\n]*(?:choose|ผู้ใช้กำหนด)/);
+      assert.match(await section(handoff), /handoff[^\n]*resolved: assumed[^\n]*assumed/i);
+    });
+  }
 });

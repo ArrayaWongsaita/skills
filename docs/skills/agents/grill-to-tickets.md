@@ -20,7 +20,7 @@
 npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 ```
 
-ต้องมี stage skill อีก 3 ตัว (`grilling`, `domain-modeling`, `scrutinize`) ตอนเริ่ม **Preflight** จะหาใน `.agents/skills/`, `.claude/skills/`, `~/.agents/skills/` และ `~/.claude/skills/` ตามลำดับ ถ้าขาดตัวไหนจะหยุดและพิมพ์คำสั่ง `npx skills add ...` ของตัวที่ขาด พร้อมบันทึก path และค่า hash ที่ lock ของแต่ละตัวถืออยู่ตามที่ lock เขียนไว้ (ไม่คำนวณหรือเทียบใหม่; ใช้ `npx skills check` เช็ก update) ไม่ต้องตั้งค่า issue tracker เพราะไฟล์ใน `.scratch/` คือ tracker
+ต้องมี stage skill อีก 3 ตัว (`grilling`, `domain-modeling`, `scrutinize`) ตอนเริ่ม **Preflight** จะหาใน `.agents/skills/`, `.claude/skills/`, `~/.agents/skills/` และ `~/.claude/skills/` ตามลำดับ ถ้าขาดตัวไหนจะหยุดและพิมพ์คำสั่ง `npx skills add ...` ของตัวที่ขาด พร้อมบันทึกเฉพาะชื่อ skill และ path ที่พบ ใช้ `npx skills check` เช็ก update ไม่ต้องตั้งค่า issue tracker เพราะไฟล์ใน `.scratch/` คือ tracker
 
 ### ควรใช้เมื่อไร
 
@@ -37,9 +37,9 @@ npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 
 เรียก `/grill-to-tickets <idea>` หรือ `$grill-to-tickets <idea>` (ถ้า run ค้างกลางทาง เช่นหลัง `/clear` ให้เรียก `/grill-to-tickets continue <feature-slug>` เพื่อทำต่อจาก State ใน `decisions.md`) จากนั้น:
 
-1. **Stage 0 — Grill**: สัมภาษณ์แบบ design tree พร้อมทำ domain modeling เขียน `CONTEXT.md` / `adr/` ทันทีที่ term นิ่ง บันทึกทุกคำถามและคำตอบลง **Decision Log** (`decisions.md`) ก่อนถามรอบถัดไป เมื่อ frontier ว่างจะทำ **Blind-spot pass** ไล่ 9 หมวด (scope, data, flow, quality attributes, integrations, edge cases, constraints, terminology, completion signals) ช่องว่างที่เปลี่ยน spec ได้จะถูกถามเป็นรอบสุดท้ายไม่เกิน 5 ข้อ ที่เหลือเขียนเป็นสมมติฐานให้เห็น แล้วหยุดขอ confirmation
+1. **Stage 0 — Grill**: สัมภาษณ์แบบ design tree พร้อมทำ domain modeling เขียน `CONTEXT.md` / `adr/` ทันทีที่ term นิ่ง บันทึกทุกคำถามและคำตอบลง **Decision Log** (`decisions.md`) ก่อนถามรอบถัดไป เมื่อ frontier ว่างจะทำ **Blind-spot pass** ไล่ 9 หมวด (scope, data, flow, quality attributes, integrations, edge cases, constraints, terminology, completion signals) ช่องว่างที่เปลี่ยน spec ได้จะถูกถามเป็นรอบสุดท้ายไม่เกิน 5 ข้อ ที่เหลือเขียนเป็นสมมติฐานให้เห็น แล้วหยุดขอ confirmation และจำนวนรอบ review ใน Stage 0 pause (เสนอ 3, `0` ข้าม, `--review N` ตอบล่วงหน้า)
 2. **Stage 1 — Spec**: เขียน `spec.md` ตาม `spec-format.md` โดยสังเคราะห์ `decisions.md`, glossary และ ADR โดยไม่สัมภาษณ์ซ้ำ ทุก user story ใหม่มี Scenario แบบบรรทัดเดียว `Scenario: given … when … then …` ใต้ story อย่างน้อยหนึ่งบรรทัดเพื่อให้มีตัวอย่างที่ทดสอบได้; spec เก่าที่ไม่มี Scenario ยังผ่านพร้อม warning ทุกการตัดสินใจใน log ต้องอยู่ใน spec
-3. **Stage 2 — Design Review Gate**: ผู้ใช้กำหนดขอบเขตการรีวิวเอง (เสนอ 3 รอบ, `0` คือข้าม, หรือใช้ `--review N`); ดู routing, resume และทางออกเมื่อหมดรอบหรือติด stall ได้ที่ [สัญญา Design Review Gate](../../../skills/agents/grill-to-tickets/references/design-review-gate.md)
+3. **Stage 2 — Design Review Gate**: ใช้จำนวนรอบจาก State ที่ตอบไว้ใน Stage 0 pause; ดู routing, resume และทางออกเมื่อหมดรอบหรือติด stall ได้ที่ [สัญญา Design Review Gate](../../../skills/agents/grill-to-tickets/references/design-review-gate.md)
 4. **Stage 3 — Tickets** (Ticket review / Stage 3.5): หลัง `SHIP`, การข้ามด้วย `0`, หรือผู้ใช้เลือกไปต่อหลังหมดรอบ/ติด stall ให้แตก spec เป็น vertical tickets ใน `.scratch/<feature-slug>/issues/`; ทุก user story ใหม่มี Scenario แบบ `given`, `when`, `then` เพื่อบอกพฤติกรรมที่ทดสอบได้
    - ทุก ticket ระบุ `**Stories:**`, `**Seam:**`, `**Context:**` และ `**Budget:**` ตาม `ticket-format.md`; checker ตรวจ Scenario, coverage, dependencies และ fields แล้วแสดงตาราง coverage, budget, DAG และ warnings ดู [สัญญา grill-to-tickets หลัก](../../../skills/agents/grill-to-tickets/SKILL.md) สำหรับกฎ checker และ manifest; ไฟล์ manifest ที่ได้อยู่ใน `.scratch/<feature-slug>/manifest.json`
    - **Ticket review (Stage 3.5):** หลัง checker PASS และก่อน quiz ให้ทำ ticket review ดู [สัญญา grill-to-tickets หลัก](../../../skills/agents/grill-to-tickets/SKILL.md) และ [brief สำหรับผู้รีวิว ticket](../../../skills/agents/grill-to-tickets/references/ticket-review.md) สำหรับรายละเอียด
@@ -50,6 +50,14 @@ npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 
 `REWORK` แบบ spec-level รัน Stage 1 ใหม่และอยู่ใน Stage 2 ส่วน decision-level กลับไป Stage 0 เพื่อ grill
 การตัดสินใจนั้นใหม่ โดย cycle counter ไม่ถูก reset
+
+ทุกคำถามรวม blind-spot pass ใช้ tier `hard` / `easy`; easy มี default บรรทัดเดียว
+และบันทึก `decided: default` เมื่อไม่คัดค้าน ส่วนคำถามที่ยังตอบไม่ได้พักใน `parked.md`
+blocking ขวาง pause จนตอบหรือรับ default; non-blocking เปลี่ยนเป็น `resolved: assumed`
+เมื่อยืนยัน และ Stage 1 ใส่สมมติฐานใน Further Notes โดย handoff แสดงรายการ assumed
+ดู [สัญญาคำถามที่พักไว้](../../../skills/agents/grill-to-tickets/references/parked-questions.md)
+และ [ตาราง rationalization](../../../skills/agents/grill-to-tickets/references/rationalizations.md)
+สำหรับรายละเอียดและวิธีตอบทางลัด
 
 ### ตัวอย่าง prompt
 
@@ -95,9 +103,8 @@ The three stage skills — `grilling`, `domain-modeling`, `scrutinize` — must 
 installed too. A **Preflight** looks for each in `.agents/skills/`,
 `.claude/skills/`, `~/.agents/skills/`, then `~/.claude/skills/`, and stops
 before Stage 0 with the `npx skills add` line of any that is missing. For each
-one it finds, it records the path and the hash the lock holds, exactly as the
-lock holds it (no recomputation or comparison; `npx skills check` is the update
-tool). No issue tracker is needed: the files under `.scratch/` are the tracker.
+one it finds, it records only the skill name and path found; `npx skills check`
+is the update tool. No issue tracker is needed: the files under `.scratch/` are the tracker.
 
 ### Use it when
 
@@ -128,14 +135,45 @@ data, flow, quality attributes, integrations, edge cases, constraints,
 terminology, completion signals); gaps that would change the spec become one
 final round of at most five questions, and the rest become stated assumptions
 shown in the pause summary.
+
+Every interview question, including the blind-spot round, is tagged `hard` or
+`easy`. Hard means a story, interface, test seam, or hard-to-reverse decision
+changes: it gets full text and a recommendation. Easy has a safe default and
+uses one line; an unobjected answer is logged `decided: default`. Unsure means
+hard, and the person can raise easy to hard.
+Questions the person cannot answer move to `parked.md`; see the
+[parked-question contract](../../../skills/agents/grill-to-tickets/references/parked-questions.md). An open blocking
+question holds the pause until answered or its default is accepted. A
+non-blocking question becomes `resolved: assumed` on confirmation, as does a
+downgraded blocker; Stage 1 carries those defaults into Further Notes.
+The Stage 0 pause asks for confirmation and the review maximum together: `--review N` answers up front, 3 is proposed, and 0 skips.
+The answer stays in State; Stage 2 reads State and asks only for an older resumed
+run with no recorded answer. A decision re-grill keeps the answer and spent rounds.
+The [rationalization table](../../../skills/agents/grill-to-tickets/references/rationalizations.md)
+lists excuse, reality, and action for shortcuts; follow the linked canonical
+contracts for the full parked and resume rules.
+
+```text
+Stage 0: Grill
+   │ pause: confirmation + review maximum
+   ▼
+Stage 1: Spec
+   ▼
+Stage 2: Design Review Gate (reads State)
+   ▼
+Stage 3: Tickets → Stage 3.5: Ticket review
+   ▼
+Stop: handoff
+```
+The handoff lists every parked question marked `resolved: assumed`, labelled assumed.
+
 Stage 1 writes the spec from that log following its owned
 `references/spec-format.md`; every new user story has at least one indented,
 one-line `Scenario: given … when … then …` example so its behavior can be
 tested. Each Design Review Gate cycle dispatches
 `scrutinize` to a fresh, read-only reviewer subagent that sees the files and not
 the interview, so it reads the spec the way the implementer will (ADR 0010). The
-user sets the review budget; the proposed default is three rounds, zero skips
-review, and `--review N` answers up front. See the [canonical Design Review
+user sets the review budget at the Stage 0 pause; Stage 2 reads the saved State. See the [canonical Design Review
 Gate contract](../../../skills/agents/grill-to-tickets/references/design-review-gate.md)
 for verdict routing, resume, and the exhaustion or stall path. After `SHIP`, a recorded `0` skip, or the user's choice to proceed after gate exhaustion or stall, tickets are published from the owned `references/ticket-format.md`. Every ticket names its Stories, Seam, Context, and measured Budget; each new story has a one-line `Scenario: given … when … then …`.
 Before the quiz, the bundled checker validates scenarios and ticket structure, then reports coverage, budget, DAG, and warnings. The derived planning manifest is stored at `.scratch/<feature-slug>/manifest.json`; see the [canonical grill-to-tickets contract](../../../skills/agents/grill-to-tickets/SKILL.md) for checker and manifest rules.
@@ -179,3 +217,17 @@ Then the skill prints a handoff in this order: `/clear`, the DAG summary carryin
   `skill-creator`'s `old_skill` baseline
 - `evals/trigger-evals.json` — guards that the skill's description does not read
   as model-invocable (the skill is `disable-model-invocation`)
+
+### Feature-scoped Storage
+
+```text
+.scratch/<feature-slug>/
+├── decisions.md
+├── parked.md
+├── CONTEXT.md
+├── adr/
+├── spec.md
+├── design-review.md
+├── issues/
+└── manifest.json
+```

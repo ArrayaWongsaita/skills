@@ -5,6 +5,8 @@
 - Supersedes / แทนที่: ADR 0008
 - Amends / แก้ไข: ADR 0010 (replaces only its fixed six-cycle bound)
 
+- Amended by ADR 0019 / แก้ไขโดย: [ADR 0019](0019-grill-to-tickets-tiers-parked-questions-and-one-pause.md) (decision 3)
+
 ## Context / บริบท
 
 [ADR 0008](0008-reuse-catalog-cross-skill-contract.md) made the Reuse Catalog a

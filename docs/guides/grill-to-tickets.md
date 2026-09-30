@@ -49,7 +49,7 @@ npx skills add mattpocock/skills --skill domain-modeling
 npx skills add thananon/9arm-skills --skill scrutinize
 ```
 
-ตอนเริ่ม (และตอน `continue`) skill จะทำ **Preflight** หา `SKILL.md` ของ stage skill ทั้ง 3 ตัวตามลำดับ `.agents/skills/` → `.claude/skills/` → `~/.agents/skills/` → `~/.claude/skills/` จึงใช้ได้ทั้งแบบติดตั้งใน project และแบบ global (`-g`) ถ้าขาดตัวไหนจะหยุดก่อน Stage 0 และพิมพ์คำสั่งติดตั้งเฉพาะตัวที่ขาด สำหรับแต่ละตัวที่เจอ Preflight จะบันทึก path ที่เจอและค่า hash ที่ lock ของมันถืออยู่ (`skills-lock.json` ของ project หรือ `~/.agents/.skill-lock.json`) ตามที่ lock เขียนไว้ โดยไม่คำนวณหรือเทียบใหม่ ถ้าต้องเช็ก update ของ stage skill ใช้ `npx skills check`
+ตอนเริ่ม (และตอน `continue`) skill จะทำ **Preflight** หา `SKILL.md` ของ stage skill ทั้ง 3 ตัวตามลำดับ `.agents/skills/` → `.claude/skills/` → `~/.agents/skills/` → `~/.claude/skills/` จึงใช้ได้ทั้งแบบติดตั้งใน project และแบบ global (`-g`) ถ้าขาดตัวไหนจะหยุดก่อน Stage 0 และพิมพ์คำสั่งติดตั้งเฉพาะตัวที่ขาด สำหรับแต่ละตัวที่เจอ Preflight จะบันทึกเฉพาะชื่อ skill และ path ที่พบ ถ้าต้องเช็ก update ใช้ `npx skills check`
 
 ---
 
@@ -66,23 +66,39 @@ Skill นี้ถูกตั้งค่าแบบ Explicit Invocation (ต�
 ```text
 .scratch/<feature-slug>/
 ├── decisions.md        # Decision Log: ทุกคำถาม คำตอบแนะนำ คำตอบจริง และ State ของ run
+├── parked.md           # คำถามที่พักไว้ พร้อมสมมติฐานและสถานะ
 ├── CONTEXT.md          # พจนานุกรมคำศัพท์เชิงโดเมน (Ubiquitous Language)
 ├── adr/                # บันทึกการตัดสินใจทางสถาปัตยกรรม (NNNN-<slug>.md)
 ├── spec.md             # เอกสารข้อกำหนดของฟีเจอร์ (Specification)
 ├── design-review.md    # รายงานผลการตรวจสอบ Design Review Gate
-├── manifest.json       # derived planning snapshot สำหรับ handoff
-└── issues/             # รายการ tickets ที่พร้อมพัฒนา (NN-<slug>.md)
+├── issues/             # รายการ tickets ที่พร้อมพัฒนา (NN-<slug>.md)
+└── manifest.json       # derived planning snapshot สำหรับ handoff
 ```
 
 ### ขั้นตอนการทำงาน 4 ลำดับขั้น
 
+ทุกคำถามรวม blind-spot round มี tier `hard` หรือ `easy`: hard เปลี่ยน story,
+interface, test seam หรือย้อนกลับยาก จึงมีคำถามเต็มและคำตอบแนะนำ ส่วน easy มี
+safe default บรรทัดเดียวและบันทึก `decided: default` เมื่อไม่คัดค้าน ถ้าไม่แน่ใจ
+ให้เป็น hard และผู้ใช้ยก easy เป็น hard ได้
+คำถามที่ยังตอบไม่ได้พักใน `parked.md` ตาม
+[สัญญาคำถามที่พักไว้](../../skills/agents/grill-to-tickets/references/parked-questions.md): open blocking ขวาง pause จนตอบหรือรับ
+ค่าเริ่มต้น ส่วน non-blocking และ blocker ที่ยอมรับ default เป็น `resolved: assumed`
+เมื่อยืนยัน แล้ว Stage 1 ใส่ค่าเริ่มต้นใน Further Notes
+Stage 0 pause ถาม confirmation และจำนวนรอบพร้อมกัน: `--review N` ตอบล่วงหน้า เสนอ 3 และ 0 คือข้าม
+Stage 2 อ่าน State; ถามเฉพาะ run เก่าที่ resume โดยไม่มีคำตอบ และ re-grill เก็บคำตอบกับรอบที่ใช้แล้ว
+[ตาราง rationalization](../../skills/agents/grill-to-tickets/references/rationalizations.md)
+อธิบาย excuse, reality, action ของทางลัด ดูสัญญาหลักและ reference สำหรับรายละเอียด
+ข้อความ handoff แสดงทุกคำถาม `resolved: assumed` โดยติดป้าย assumed
+
+
 ```text
 Stage 0: Grill        grilling + domain-modeling  → CONTEXT.md, adr/
-   │ (หยุดรอการยืนยันจากผู้ใช้เมื่อคำถามหมด)
+   │ pause: confirmation + review maximum
    ▼
 Stage 1: Spec         spec-format.md               → spec.md (Scenario ใต้ทุก user story)
    ▼
-Stage 2: Design Review Gate   scrutinize (subagent ใหม่) → design-review.md   (ผู้ใช้กำหนดจำนวนรอบ)
+Stage 2: Design Review Gate   scrutinize (subagent ใหม่) → design-review.md   (อ่าน State จาก pause)
    │ (เมื่อผลเป็น SHIP)
    ▼
 Stage 3: Tickets      ticket-format.md + checker   → issues/NN-<slug>.md + manifest.json + Ticket review
