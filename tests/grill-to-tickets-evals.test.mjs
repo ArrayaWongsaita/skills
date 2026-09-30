@@ -99,6 +99,7 @@ describe("grill-to-tickets eval suite contract", () => {
       assert.match(ticketReview.prompt, /result: PASS[\s\S]*no --ticket-review flag[\s\S]*Run Stage 3\.5/i);
       assert.match(ticketReview.expected_output, /one fresh, read-only ticket reviewer[\s\S]*READY or ASK[\s\S]*Seam, Context, and Budget/i);
       const safeguards = [
+        { label: "question tiers", match: /question tiers/i },
         { label: "decision log", match: /decision log records/i },
         { label: "resume", match: /^continue .*decision log/i },
         { label: "blind-spot pass", match: /blind-spot pass/i },

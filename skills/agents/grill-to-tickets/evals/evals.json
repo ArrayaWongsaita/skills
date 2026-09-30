@@ -445,6 +445,21 @@
         "Re-runs the checker with --write-budget after a fix and leaves another review to the person's request"
       ],
       "files": []
+    },
+    {
+      "id": 44,
+      "name": "question tiers: partial reply and blind-spot round",
+      "prompt": "$grill-to-tickets Add team exports. Post round 1 with export permissions (changes a story), default filename (safe default), and an unsure choice. I answer only the permissions question and ask you to raise filename to hard. In the next round I answer only one hard question and do not object to its easy default. Later post the blind-spot final round.",
+      "expected_output": "Tag every question hard or easy. Permissions and the unsure choice are hard, with numbered titles, full bodies, and recommended answers. Filename starts easy, one line stating its default unless the person objects, and is raised to hard with full text and a recommendation on request. Record tiers in decisions.md. When the partial reply to the next round is recorded, log every unobjected easy question as decided: default; unanswered hard questions remain open. The blind-spot final round uses the same tiers.",
+      "expectations": [
+        "Classifies story, interface, test-seam, and hard-to-reverse choices as hard; unsure means hard",
+        "Shows hard questions with numbered titles, full bodies, and recommended answers",
+        "Shows easy questions as one line with a default unless the person objects",
+        "Raises filename to hard and re-posts its full text and recommendation",
+        "Logs tiers and decided: default for unobjected easy questions on the partial reply, retaining unanswered hard questions as open",
+        "Tags each blind-spot question hard or easy using the same rules"
+      ],
+      "files": []
     }
   ]
 }

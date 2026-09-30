@@ -933,3 +933,33 @@ describe("grill-to-tickets composite skill contract", () => {
     ]) assertPattern(done, pattern, `the completion list names ${label}`);
   });
 });
+
+
+describe("question tiers", () => {
+  const root = "skills/agents/grill-to-tickets";
+  it("defines classification and presentation in the interview step", async () => {
+    const stage = markdownSection(await readFile(`${root}/SKILL.md`, "utf8"), "Stage 0 — Grill");
+    const interview = stage.split("2. **Relentless interview")[1].split("3. **Active domain modeling")[0];
+    assert.match(interview, /each question[^.]*tagged `hard` or `easy`/i);
+    assert.match(interview, /hard question changes a (?:user )?story, an interface, or a test seam, or is hard to reverse/i);
+    assert.match(interview, /hard question carries a numbered title, a full body, and a recommended answer/i);
+    assert.match(interview, /easy question is a single line stating the default that applies unless the person objects/i);
+    assert.match(interview, /raise an easy question to hard[^.]*full text and a recommendation/i);
+    assert.match(interview, /unsure classification is hard/i);
+  });
+  it("applies the interview tiers to the blind-spot final round", async () => {
+    const procedure = markdownSection(await readFile(`${root}/references/blind-spot-pass.md`, "utf8"), "Procedure");
+    assert.match(procedure, /final round[\s\S]*each[^.]*tagged `hard` or `easy`/i);
+    assert.match(procedure, /same[^.]*tier[^.]*Stage 0[^.]*interview/i);
+  });
+  it("logs tiers and settles unobjected easy defaults on partial replies", async () => {
+    const log = await readFile(`${root}/references/decision-log.md`, "utf8");
+    const format = markdownSection(log, "Format");
+    assert.match(format, /\*\*Q1[^\n]*tier: hard/);
+    assert.match(format, /\*\*Q2[^\n]*tier: easy[^\n]*decided: default/);
+    const timing = markdownSection(log, "When to write");
+    assert.match(timing, /When the person's reply to a round is recorded[\s\S]*every easy question[^.]*did not object to[^.]*`decided: default`/i);
+    assert.match(timing, /including when they answered only some hard questions/i);
+    assert.match(timing, /unanswered hard questions[^.]*`decided: open`/i);
+  });
+});

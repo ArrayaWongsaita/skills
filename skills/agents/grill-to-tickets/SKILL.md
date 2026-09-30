@@ -138,7 +138,12 @@ Run `grilling` and `domain-modeling` together as one discovery pass.
    entry under `## Preflight` recording the stage skills' paths and lock hashes.
 2. **Relentless interview (inline `grilling`).** Map decisions as a design tree.
    Work the tree in rounds across the frontier — every decision whose
-   prerequisites are settled. Number each question and give a recommended answer.
+   prerequisites are settled. Each question is tagged `hard` or `easy`.
+   A hard question changes a user story, an interface, or a test seam, or is hard to reverse.
+   A hard question carries a numbered title, a full body, and a recommended answer.
+   An easy question is a single line stating the default that applies unless the person objects.
+   The person can raise an easy question to hard at any time; re-post it with full text and a recommendation.
+   An unsure classification is hard.
    Find facts yourself through repository inspection and tool lookups; reserve
    questions for human decisions. Log every round in
    `.scratch/<feature-slug>/decisions.md` as you post it, and record each answer

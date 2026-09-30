@@ -29,12 +29,12 @@ decision, including the small ones neither of them takes.
 
 ## Round 1
 
-- **Q1 — <question title>** — recommended: <answer> — decided: <answer> — why: <the user's reason, when given>
-- **Q2 — <question title>** — recommended: <answer> — decided: <answer>
+- **Q1 — <question title>** — tier: hard — recommended: <answer> — decided: <answer> — why: <the user's reason, when given>
+- **Q2 — <question title>** — tier: easy — recommended: <default> — decided: default
 
 ## Round 2
 
-- **Q1 — <question title>** — recommended: <answer> — decided: open
+- **Q1 — <question title>** — tier: hard — recommended: <answer> — decided: open
 
 ## Ticket review
 
@@ -94,10 +94,16 @@ For a run that skips the review, the State key is `ticket review: skipped` and
 
 ## When to write
 
-1. When you post a round, append it with each question's recommended answer and
+1. When you post a round, append it with each question's tier, recommended answer and
    `decided: open`, and set `waiting on` to that round.
-2. When the answers arrive, fill in every `decided:` before you post the next
-   round.
+2. When the person's reply to a round is recorded, log every easy question they
+   did not object to as `decided: default`, including when they answered only some hard questions.
+   `decided: default` means the stated default was accepted by exception; keep
+   that default in the question's recommended answer so the decision is durable.
+   Record explicit answers and objections; unanswered hard questions stay
+   `decided: open` until answered. A request to raise an easy question to hard
+   changes its tier to hard, keeps it open, and re-posts its full text and recommendation.
+   Fill in the remaining answers before you post the next round.
 3. At every stage transition, and before every pause that waits on the user,
    update State.
 
