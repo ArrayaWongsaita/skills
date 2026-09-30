@@ -52,17 +52,35 @@ until approval. Do not dispatch workers or write run state before approval.
 
 ## Stage 1 — Execute approved waves
 
-After approval, run waves in order. Tickets in one wave have satisfied
-blockers and non-overlapping known touch sets. A ticket with an unknown touch
-set runs alone. `--serial` is the one-ticket-per-wave mode; `--concurrency N`
-sets the in-flight cap but does not change computed waves. Verifiers share that
-cap and take priority over new workers.
+After approval, follow [references/dispatch-contract.md](references/dispatch-contract.md),
+[references/prompt-scaffold.md](references/prompt-scaffold.md), and
+[references/verification.md](references/verification.md). Run waves in order.
+Tickets in one wave have satisfied blockers and non-overlapping known touch
+sets. A ticket with an unknown touch set runs alone. `--serial` is the
+one-ticket-per-wave mode; `--concurrency N` sets the in-flight cap but does not
+change computed waves.
 
-Workers use the ticket's test seam and declared Context paths, build test-first,
-and report evidence. A fresh verifier reproduces the red state and runs the
-ticket tests, typecheck, and suite. The orchestrator judges the reports and
-integrates verified work in ticket order. Stop before review, push, or a pull
-request; hand off the integration branch and review commands for a later pass.
+Every worker prompt starts with a sync command that checks out its worker
+branch at the wave's integration SHA and asserts that `HEAD` equals that SHA.
+A mismatch returns `failed_infra` without spending a ticket attempt. Workers
+and verifiers run in the background. The default cap is four active workers
+and verifiers combined; pending verifiers start before new workers. As soon as
+a worker returns, start its fresh native `Explore` verifier without waiting
+for the rest of the wave. If the report is too shallow to judge, dispatch a
+fresh read-only `general-purpose` verifier. Verifiers return raw evidence and
+no verdict; the orchestrator judges the reports and integrates verified work
+in ticket order.
+
+Arm one background wait per dispatch: 2700 seconds for a worker and 900 seconds
+for a verifier. If a wait ends first, stop that subagent with `TaskStop` and
+record `failed_infra`, without counting an attempt. A crash or lost subagent is
+also `failed_infra`. Allow two infrastructure retries per ticket; after two
+infra retries, mark it `BLOCKED (TICKET_PROVIDER_FAILED)`. A harness rejection
+with `Concurrent subagent limit reached` waits for a free slot and retries the
+spawn without using an infra retry.
+
+Stop before review, push, or a pull request; hand off the integration branch
+and review commands for a later pass.
 
 ## Constraints
 

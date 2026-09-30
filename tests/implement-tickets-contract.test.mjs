@@ -217,3 +217,91 @@ describe("implement-tickets skill and documentation contract", () => {
     assert.match(marker, /^status: not validated$/m);
   });
 });
+
+describe("implement-tickets worker dispatch and verification contract", () => {
+  const dispatchPath = path.join(skillRoot, "references/dispatch-contract.md");
+  const promptPath = path.join(skillRoot, "references/prompt-scaffold.md");
+  const verificationPath = path.join(skillRoot, "references/verification.md");
+
+  function requireText(text, expression, behavior) {
+    assert.ok(expression.test(text), behavior);
+  }
+
+  it("starts every worker prompt with a checkout and integration SHA assertion", async () => {
+    const prompt = await readTextOrNull(promptPath);
+    assert.ok(prompt, "the worker prompt scaffold exists");
+    const firstShellBlock = prompt.match(/```bash\s*([\s\S]*?)```/i);
+    assert.ok(firstShellBlock, "the prompt includes its sync command block");
+    const firstCommand = firstShellBlock[1].trimStart().split(/\r?\n/, 1)[0];
+    assert.match(firstCommand, /^git checkout -B /, "checkout is the worker's first shell command");
+    const checkout = prompt.match(/git checkout -B\s+"?<worker-branch>"?\s+"?<integration-sha>"?/);
+    const checkoutIndex = checkout?.index ?? -1;
+    assert.notEqual(checkoutIndex, -1, "the first worker command checks out the worker branch at the integration SHA");
+    requireText(prompt, /test\s+"\$\(git rev-parse HEAD\)"\s*=\s*"<integration-sha>"/, "the sync command asserts the integration SHA");
+    requireText(prompt, /mismatch[\s\S]*return `failed_infra`/i, "a sync mismatch is returned as failed_infra");
+    const taskBodyIndex = prompt.indexOf("<the ticket's \"What to build\" paragraph");
+    assert.ok(taskBodyIndex > checkoutIndex, "the sync step precedes ticket instructions");
+    requireText(prompt, /every worker prompt[\s\S]*including ticket 1/i, "the first ticket also receives the sync step");
+  });
+
+  it("caps workers and verifiers together and gives pending verifiers priority", async () => {
+    const dispatch = await readTextOrNull(dispatchPath);
+    assert.ok(dispatch, "the dispatch contract exists");
+    requireText(dispatch, /default(?:s)? (?:in-flight )?cap (?:is|of) 4/i, "the shared cap defaults to four");
+    requireText(dispatch, /--concurrency N/, "the cap has a concurrency override");
+    requireText(dispatch, /workers and verifiers together|workers plus verifiers/i, "workers and verifiers use the same cap");
+    requireText(dispatch, /verifiers?\s+(?:are\s+)?(?:started|dispatched|take)\s+before\s+(?:starting\s+|dispatching\s+)?new workers/i, "verifiers have priority over new workers");
+  });
+
+  it("pipelines a fresh native verifier and keeps its report to raw evidence", async () => {
+    const verification = await readTextOrNull(verificationPath);
+    assert.ok(verification, "the verification contract exists");
+    requireText(verification, /as soon as (?:a )?worker\s+returns[\s\S]*?without waiting for the rest of the wave/i, "verification starts as each worker returns");
+    requireText(verification, /fresh (?:native )?subagent[\s\S]*never\s+the orchestrator/i, "the verifier is a separate native subagent");
+    requireText(verification, /subagent_type:\s*Explore/, "the first verifier is Explore");
+    requireText(verification, /too shallow to judge[\s\S]*general-purpose/i, "shallow evidence triggers a general-purpose verifier");
+    requireText(verification, /read-only/, "the fallback verifier is read-only");
+    requireText(verification, /raw evidence[\s\S]*no verdict/i, "the verifier returns evidence without a verdict");
+  });
+
+  it("runs each worker and verifier in the background with its own soft-timeout wait", async () => {
+    const dispatch = await readTextOrNull(dispatchPath);
+    const verification = await readTextOrNull(verificationPath);
+    assert.ok(dispatch, "the dispatch contract exists");
+    assert.ok(verification, "the verification contract exists");
+    const combined = `${dispatch}\n${verification}`;
+    requireText(combined, /workers and verifiers[\s\S]*?background/i, "workers and verifiers run in the background");
+    requireText(combined, /one background wait per dispatch/i, "each child dispatch arms one background wait");
+    requireText(combined, /worker[^\n]*2700 seconds/i, "workers have a 2700-second timeout");
+    requireText(combined, /verifier[^\n]*900 seconds/i, "verifiers have a 900-second timeout");
+    requireText(combined, /wait (?:ends|completes) first[\s\S]*TaskStop/i, "an early wait stops its subagent");
+    requireText(combined, /timeout[\s\S]*failed_infra[\s\S]*does not count (?:as|against) (?:a\s+ticket\s+)?attempt/i, "timeouts are infra failures outside the attempt count");
+  });
+
+  it("routes crashes, lost subagents, and harness-cap rejections through infra retries", async () => {
+    const dispatch = await readTextOrNull(dispatchPath);
+    assert.ok(dispatch, "the dispatch contract exists");
+    requireText(dispatch, /crash(?:es|ed)? or lost subagents?[\s\S]*failed_infra/i, "crashed or lost subagents are infra failures");
+    requireText(dispatch, /Concurrent subagent limit reached/, "harness capacity rejections are recognized");
+    requireText(dispatch, /wait for a free slot[\s\S]*retry/i, "capacity rejections wait and retry");
+    requireText(dispatch, /do(?:es)? not count against (?:the )?two infra retries/i, "capacity waits do not use an infra retry");
+    requireText(dispatch, /after two infra retries[\s\S]*BLOCKED \(TICKET_PROVIDER_FAILED\)/i, "two infra retries end in the provider-failed status");
+  });
+
+  it("describes dispatch, sync, the shared cap, verification, and timeouts on both user-facing pages", async () => {
+    for (const file of ["docs/guides/implement-tickets.md", "docs/skills/agents/implement-tickets.md"]) {
+      const doc = await readTextOrNull(path.join(repoRoot, file));
+      assert.ok(doc, `${file} exists`);
+      const requirements = [
+        ["worker dispatch", /dispatch(?:es|ing)? (?:one )?(?:background )?worker/i],
+        ["worker sync step", /sync step|integration sha/i],
+        ["shared worker and verifier cap", /concurrency cap[\s\S]*workers and verifiers/i],
+        ["fresh verifier", /fresh (?:native )?verifier/i],
+        ["worker and verifier timeouts", /2700 seconds[\s\S]*900 seconds|45 minutes[\s\S]*15 minutes/i],
+      ];
+      for (const [name, expression] of requirements) {
+        assert.ok(expression.test(doc), `${file} describes ${name}`);
+      }
+    }
+  });
+});

@@ -52,6 +52,28 @@ npx skills add ArrayaWongsaita/skills --skill implement-tickets
    integrate งานที่ผ่าน verification
 4. **Handoff:** หยุดก่อน review, push หรือเปิด PR และส่งชื่อ integration branch ให้ผู้ใช้
 
+### Dispatch, verifier และ timeout
+
+หลัง approval orchestrator dispatch worker หนึ่งตัวต่อ ticket ใน wave และทุก
+worker prompt เริ่มด้วย sync step: checkout worker branch ที่ integration SHA
+แล้ว assert ว่า `HEAD` เท่ากับ SHA นั้น ถ้าไม่ตรงให้รายงาน `failed_infra`
+โดยไม่ใช้ ticket attempt
+
+ค่าเริ่มต้น concurrency cap คือ 4 และ `--concurrency N` ใช้แทนได้ cap นับ worker
+และ verifier ที่ทำงานอยู่รวมกัน Verifier มี priority ก่อน worker ใหม่ และเมื่อ
+worker ตัวใดคืนผลให้ dispatch fresh native verifier ทันทีโดยไม่รอ worker ตัวอื่น
+ใน wave verifier เริ่มด้วย `Explore`; ถ้ารายงานตื้นเกินตัดสิน orchestrator ใช้
+verifier ใหม่แบบ `general-purpose` ที่อ่านอย่างเดียว Verifier ส่ง raw evidence
+โดยไม่ให้ verdict แล้ว orchestrator เป็นผู้ตัดสิน
+
+Worker และ verifier ทำงาน background โดย orchestrator ตั้ง background wait
+แยกต่อ dispatch: worker 2700 วินาที (45 นาที) และ verifier 900 วินาที (15 นาที)
+ถ้า wait จบก่อน ให้ `TaskStop` subagent และบันทึก `failed_infra` โดยไม่คิดเป็น
+attempt การ crash หรือ subagent หายก็เป็น infrastructure failure เช่นกัน
+อนุญาต infra retries สองครั้ง แล้ว ticket จะเป็น
+`BLOCKED (TICKET_PROVIDER_FAILED)` หาก spawn แจ้ง `Concurrent subagent limit reached`
+ให้รอ slot ว่างแล้ว retry โดยไม่หัก infra retry
+
 ถ้า marker ระบุ `status: not validated` แผนจะแสดงบรรทัด
 `parallel not yet validated` เพื่อให้เห็นสถานะการตรวจสอบ parallel execution
 
@@ -104,6 +126,24 @@ When the marker says `status: not validated`, the Plan prints the line
 gets an exclusive wave and a warning. `--concurrency N` does not change wave
 placement; the orchestrator enforces the in-flight cap across workers and
 verifiers.
+
+The orchestrator dispatches one background worker per ticket. Every worker
+prompt begins with a sync step that checks out the worker branch at the
+integration SHA and asserts that `HEAD` equals it; a mismatch is `failed_infra`
+and does not count as a ticket attempt. The concurrency cap covers workers and
+verifiers together, and verifiers are started before new workers. As soon as a
+worker returns, dispatch a fresh native verifier without waiting for the rest
+of its wave. Start with `Explore`; if that report is too shallow to judge, use
+a fresh read-only `general-purpose` verifier. The verifier returns raw evidence
+and no verdict for the orchestrator to judge.
+
+Workers and verifiers run in the background, with one background wait per
+dispatch: 2700 seconds for a worker and 900 seconds for a verifier. If its wait
+ends first, stop the subagent with `TaskStop` and record `failed_infra` without
+counting an attempt. A crash or lost subagent is also an infrastructure failure.
+After two infra retries, the ticket is `BLOCKED (TICKET_PROVIDER_FAILED)`. When
+spawn reports `Concurrent subagent limit reached`, wait for a free slot and
+retry without using an infra retry.
 
 ### Seam and Context
 
