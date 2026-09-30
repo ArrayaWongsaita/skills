@@ -940,7 +940,7 @@ describe("grill-to-tickets composite skill contract", () => {
       "resume preserves completed and skipped reviews");
   });
 
-  it("retires ticket-review verdicts when a late answer changes an already-reviewed set", async () => {
+  it("reconciles and requizzes reviewed tickets after a late answer", async () => {
     const skill = await readFile(path.resolve(canonicalDir, "SKILL.md"), "utf8");
     const stage3 = markdownSection(skill, "Stage 3 — Tickets");
     const stage35Start = stage3.indexOf("**Stage 3.5");
@@ -950,31 +950,31 @@ describe("grill-to-tickets composite skill contract", () => {
     const format = markdownSection(log, "Format");
     const resume = markdownSection(log, "Resume — `continue <feature-slug>`");
 
-    assertPattern(stage35, /late answer[\s\S]*already been reviewed[\s\S]*historical for the affected ticket numbers/i,
-      "a late answer identifies which ticket verdicts in the numbered review are historical");
-    assertPattern(stage35, /unchanged tickets?[\s\S]*verdicts?\s+remain current[\s\S]*open `ASK` questions? remain open[\s\S]*continue into\s+the revised quiz/i,
-      "unchanged-ticket verdicts and open ASK questions remain current in the revised quiz");
-    assertPattern(stage35, /changed tickets? have no current verdict from earlier reviews/i,
-      "prior verdicts do not carry over for changed ticket content");
-    assertPattern(stage35, /open `ASK`[\s\S]*changed ticket[\s\S]*`— superseded: <late decision>`[\s\S]*not carried[\s\S]*revised quiz/i,
-      "changed-ticket ASK lines are superseded and omitted as open questions from the revised quiz");
-    assertPattern(stage35, /reconcile[\s\S]*checker[\s\S]*repeat the user quiz/i,
+    assertPattern(stage35, /late answer[\s\S]*tickets? have already been reviewed[\s\S]*changes ticket content/i,
+      "a late answer that changes reviewed ticket content triggers reconciliation");
+    assertPattern(stage35, /\[decision-log\.md\]\(references\/decision-log\.md\)[\s\S]{0,100}Format[\s\S]{0,40}Resume/i,
+      "Stage 3.5 points to the canonical Format and Resume rules for review history");
+    assertPattern(stage35, /reconcile[\s\S]*checker[\s\S]*repeat\s+the user quiz/i,
       "the revised ticket set is reconciled, checked, and quizzed again");
-    assertPattern(stage35, /second (?:fresh )?review[\s\S]*only when the person asks[\s\S]*numbered review entry/i,
-      "a second fresh review remains opt-in and appends a numbered entry");
-    assertPattern(stage35, /changed tickets? have no current verdict from earlier reviews[\s\S]*quiz\s+remains the approval gate/i,
-      "changed-ticket history leaves the quiz as approval gate for the revised set");
+    assertPattern(stage35, /second fresh review remains opt-in[\s\S]*only when the person asks/i,
+      "a second fresh review remains opt-in");
+    assertPattern(stage35, /quiz remains the approval gate for the revised\s+tickets/i,
+      "the revised ticket quiz remains the approval gate");
 
     assertPattern(format, /numbered review entries[\s\S]*`### Review 1`[\s\S]*historical[\s\S]*changed ticket numbers[\s\S]*`— superseded: <late decision>`/i,
       "the decision-log format scopes numbered review history to affected tickets");
     assertPattern(format, /unchanged\s+tickets?[\s\S]*verdicts?\s+remain current[\s\S]*open `ASK` questions? remain open/i,
       "the decision-log format carries forward unchanged verdicts and open questions");
+    assertPattern(format, /changed tickets? have no current[\s\S]*verdict from earlier reviews[\s\S]*`— superseded: <late decision>`[\s\S]*still-open `ASK` line/i,
+      "the decision-log format retires changed-ticket verdicts and supersedes open ASK lines");
     assertPattern(format, /existing unnumbered\s+review output is treated as Review 1[\s\S]*preserve it under that heading/i,
       "existing unnumbered review logs can be preserved as the first numbered history entry");
     assertPattern(resume, /selects? current verdicts per ticket[\s\S]*whether that ticket's content changed/i,
       "resume selects current verdicts per ticket based on content changes");
     assertPattern(resume, /partially historical review[\s\S]*heading alone[\s\S]*does not (?:exclude|disqualify)[\s\S]*unchanged-ticket verdicts/i,
       "resume retains unchanged-ticket verdicts from a partially historical review");
+    assertPattern(resume, /revised set still goes through its checker and user quiz[\s\S]*fresh review[\s\S]*only when the person asks[\s\S]*appended as the next\s+numbered entry/i,
+      "resume checks and quizzes revised tickets, and numbers a fresh review only on request");
   });
 
   it("requires settled ticket-review state and a successful final checker before Stage 3 is done", async () => {
