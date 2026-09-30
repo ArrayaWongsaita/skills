@@ -780,7 +780,8 @@ describe("grill-to-tickets composite skill contract", () => {
     assertPattern(stage35, /absent flag[^\n]*runs the review\s+once/i, "an absent flag runs the review once");
     assertPattern(stage35, /no subagent[\s\S]*main context[\s\S]*`reviewer: inline`/i, "no-subagent harnesses run inline and record the reviewer");
     assert.doesNotMatch(stage2, /--ticket-review/);
-    assert.doesNotMatch(gate, /--ticket-review/);
+    const budget = markdownSection(gate, "Budget and early stops");
+    assert.doesNotMatch(budget, /--ticket-review/);
   });
 
   it("initializes and resumes the ticket-review State from the log", async () => {

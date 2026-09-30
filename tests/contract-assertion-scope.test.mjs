@@ -76,6 +76,19 @@ describe("Markdown contract assertion scope", () => {
       "Stage 3.5 placement is checked from parsed Markdown headings");
   });
 
+  it("scopes the Design Review Gate flag exclusion to its Budget and early stops section", async () => {
+    const source = await testCase(
+      "tests/grill-to-tickets-contract.test.mjs",
+      "runs Stage 3.5 once after a passing check and before the quiz, with the whole-token skip flag",
+    );
+    assert.doesNotMatch(source, /assert\.doesNotMatch\(gate\s*,\s*\/--ticket-review\//,
+      "the Design Review Gate exclusion must not search the entire file");
+    assert.match(source, /const budget = markdownSection\(gate, [\"']Budget and early stops[\"']\)/,
+      "the Design Review Gate exclusion uses its Budget and early stops section");
+    assert.match(source, /assert\.doesNotMatch\(budget\s*,\s*\/--ticket-review\//,
+      "the Design Review Gate flag exclusion is asserted within that section");
+  });
+
   it("scopes ticket-review State transitions to the decision-log Format section", async () => {
     const source = await testCase(
       "tests/grill-to-tickets-contract.test.mjs",
