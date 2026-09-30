@@ -54,6 +54,141 @@ describe("Markdown contract assertion scope", () => {
     }
   });
 
+  it("scopes owned-format guide orientation claims to their workflow summaries", async () => {
+    const source = await testCase(
+      "tests/repo-contract.test.mjs",
+      "orients readers to owned formats, Preflight, ticket fields, the checker, and handoff",
+    );
+    assert.doesNotMatch(source, /assert\.(?:match|doesNotMatch)\(\s*(?:doc|guide|page)\s*,/,
+      "guide orientation assertions must not scan a whole document alias");
+    assert.doesNotMatch(source, /\b(?:doc|guide|page)\.match\(/,
+      "guide orientation counts must not call match on a whole document alias");
+    assert.match(source, /sectionOf\(guide,\s*["']### คำสั่งติดตั้งทั้งหมด["']\)/,
+      "install command counts use the installation section");
+    assert.match(source, /assert\.ok\(installSection,/,
+      "the installation section exists before its commands are counted");
+    assert.match(source, /numberedMarkdownItem\(guideWorkflow, 4\)/,
+      "the Thai guide Stage 3 claims use item 4");
+    assert.match(source, /numberedMarkdownItem\(guideWorkflow, 5\)/,
+      "the Thai guide handoff claims use item 5");
+    assert.match(source, /numberedMarkdownItem\(thaiWorkflow, 4\)/,
+      "the skill page Thai Stage 3 claims use item 4");
+    assert.match(source, /numberedMarkdownItem\(thaiWorkflow, 5\)/,
+      "the skill page Thai handoff claims use item 5");
+    assert.match(source, /paragraphOf\(englishWorkflow, ["']Stage 3 writes vertical tickets/,
+      "English Stage 3 claims use their workflow summary paragraph");
+    assert.match(source, /paragraphOf\(englishWorkflow, ["']Then the skill prints a handoff/,
+      "English handoff claims use their handoff summary paragraph");
+  });
+
+  it("scopes handoff ordering to the guide and skill-page workflow summaries", async () => {
+    const source = await testCase(
+      "tests/repo-contract.test.mjs",
+      "describes the grill-to-tickets handoff in the skill's order: /clear, then the DAG summary, then the implementer command",
+    );
+    assert.doesNotMatch(source, /assert\.(?:match|doesNotMatch)\(\s*(?:guide|page)\s*,/,
+      "handoff assertions must not scan a whole guide or skill page");
+    assert.doesNotMatch(source, /\b(?:guide|page)\.(?:replace|match)\(/,
+      "handoff extraction must not normalize or match an entire guide or skill page");
+    assert.match(source, /sectionOf\(guide,\s*["']### ขั้นตอนการทำงาน 4 ลำดับขั้น["']\)/,
+      "the Thai guide diagram and handoff use its workflow section");
+    assert.match(source, /numberedMarkdownItem\(guideWorkflow,\s*5\)/,
+      "the Thai guide handoff order uses workflow item 5");
+    assert.match(source, /sectionOf\(page,\s*["']### วิธีทำงานหลัก["']\)/,
+      "the Thai skill-page stop uses its workflow section");
+    assert.match(source, /numberedMarkdownItem\(thaiWorkflow,\s*5\)/,
+      "the Thai skill-page stop assertion uses workflow item 5");
+    assert.match(source, /sectionOf\(page,\s*["']### Main workflow["']\)/,
+      "the English handoff uses its workflow section");
+    assert.match(source, /paragraphOf\(englishWorkflow,\s*["']Then the skill prints a handoff/,
+      "the English handoff order uses its summary paragraph");
+  });
+
+  it("scopes guide storage-tree checks to the feature-storage section", async () => {
+    const source = await testCase(
+      "tests/repo-contract.test.mjs",
+      "updates the Thai guide with scenarios, the manifest, the ticket review, and two subagent dispatches",
+    );
+    assert.doesNotMatch(source, /\bguide\.match\(/,
+      "the feature storage tree must not be extracted from the whole guide");
+    assert.doesNotMatch(source, /assert\.(?:match|doesNotMatch)\(\s*guide\s*,/,
+      "storage-tree contract assertions must not target the whole guide");
+    assert.match(source, /sectionOf\(guide,\s*["']### โครงสร้างไฟล์ที่สร้างขึ้น \(Feature-scoped Storage\)["']\)/,
+      "the tree fence is read from the guide's Feature-scoped Storage section");
+    assert.match(source, /storageSection\.match\(/,
+      "storage-tree extraction runs on that section");
+  });
+
+  it("scopes guide handoff order checks to workflow item 5", async () => {
+    const source = await testCase(
+      "tests/repo-contract.test.mjs",
+      "orders the guide handoff to match SKILL.md: recommended implementer, then Manifest",
+    );
+    assert.doesNotMatch(source, /\bguide\.match\(/,
+      "the guide handoff must not be extracted from the whole guide");
+    assert.doesNotMatch(source, /assert\.(?:match|doesNotMatch)\(\s*guide\s*,/,
+      "guide handoff assertions must not target the whole guide");
+    assert.match(source, /sectionOf\(guide,\s*["']### ขั้นตอนการทำงาน 4 ลำดับขั้น["']\)/,
+      "the handoff is read from the guide workflow section");
+    assert.match(source, /numberedMarkdownItem\(guideWorkflow,\s*5\)/,
+      "the handoff-order checks use workflow item 5");
+  });
+
+  it("scopes concise guide storage-tree checks to Feature-scoped Storage", async () => {
+    const source = await testCase(
+      "tests/repo-contract.test.mjs",
+      "links concise ticket-review and manifest summaries to the canonical contracts",
+    );
+    assert.doesNotMatch(source, /\bguide\.match\(/,
+      "the storage tree must not be extracted from the whole guide");
+    assert.doesNotMatch(source, /assert\.(?:match|doesNotMatch)\(\s*(?:guide|page)\s*,/,
+      "summary contract assertions must not target a whole guide or skill page");
+    assert.match(source, /sectionOf\(guide,\s*["']### โครงสร้างไฟล์ที่สร้างขึ้น \(Feature-scoped Storage\)["']\)/,
+      "the storage tree is read from the guide's Feature-scoped Storage section");
+    assert.match(source, /guideStorageSection\.match\(/,
+      "storage-tree extraction runs on that section");
+  });
+
+  it("scopes skill-page manifest handoff checks to workflow summaries", async () => {
+    const source = await testCase(
+      "tests/repo-contract.test.mjs",
+      "keeps the manifest line in the skill page Stop item and English handoff",
+    );
+    assert.doesNotMatch(source, /\bpage\.(?:indexOf|slice|match)\(/,
+      "manifest handoff checks must not search or slice the whole skill page");
+    assert.doesNotMatch(source, /assert\.(?:match|doesNotMatch)\(\s*page\s*,/,
+      "manifest handoff assertions must not target the whole skill page");
+    assert.match(source, /sectionOf\(page,\s*["']### วิธีทำงานหลัก["']\)/,
+      "the Thai Stop item is read from its workflow section");
+    assert.match(source, /numberedMarkdownItem\(thaiWorkflow,\s*5\)/,
+      "the Thai Stop assertion uses workflow item 5");
+    assert.match(source, /const thaiStopHeader = thaiStop\.split\(["']\\n["'],\s*1\)\[0\]/,
+      "the Thai Manifest claims are scoped to the Stop item header line");
+    assert.match(source, /assert\.match\(thaiStopHeader,\s*\/Manifest:/,
+      "the Thai header line names the Manifest path");
+    assert.match(source, /assert\.match\(thaiStopHeader,\s*\/เมื่อมี\//,
+      "the Thai header line indicates when the Manifest path appears");
+    assert.match(source, /sectionOf\(page,\s*["']### Main workflow["']\)/,
+      "the English handoff is read from its workflow section");
+    assert.match(source, /paragraphOf\(englishWorkflow,\s*["']Then the skill prints a handoff/,
+      "the English handoff checks use the summary paragraph");
+  });
+
+  it("scopes the ADR 0018 cost rationale to decision 5", async () => {
+    const source = await testCase(
+      "tests/repo-contract.test.mjs",
+      "ADR 0018 names ADR 0014's rejection of dry-runs as a cost calibrated against nothing",
+    );
+    assert.doesNotMatch(source, /\badr18\.match\(/,
+      "the cost rationale must not be extracted from the whole ADR");
+    assert.doesNotMatch(source, /assert\.(?:match|doesNotMatch)\(\s*adr18\s*,/,
+      "cost-rationale assertions must not target the whole ADR");
+    assert.match(source, /markdownSection\(adr18,\s*["']Decision \/[^"']+["']\)/,
+      "the cost rationale is read from the ADR Decision section");
+    assert.match(source, /numberedMarkdownItem\(decision,\s*5\)/,
+      "the cost rationale checks numbered decision 5");
+  });
+
   it("scopes Scenario-format requirements to the User Stories template section", async () => {
     const source = await testCase(
       "tests/grill-to-tickets-contract.test.mjs",
@@ -63,6 +198,93 @@ describe("Markdown contract assertion scope", () => {
       "tests/grill-to-tickets-contract.test.mjs:567-568 must not assert against the entire spec format");
     assert.match(source, /assert\.match\(userStories\s*,/,
       "Scenario-format assertions use the User Stories template section");
+    assert.match(source, /markdownSection\(format,\s*["']Spec Template["']\)/,
+      "Scenario-format checks first locate the Spec Template heading");
+    assert.match(source, /assert\.ok\(templateSection,/,
+      "Scenario-format checks require the Spec Template section before slicing its fence");
+  });
+
+  it("scopes the spec-format contract to its process, template, and individual sections", async () => {
+    const source = await testCase(
+      "tests/grill-to-tickets-contract.test.mjs",
+      "owns spec-format.md adapted from to-spec with upstream source line and license",
+    );
+    assert.doesNotMatch(source, /assert\.(?:match|doesNotMatch)\(content\s*,/,
+      "spec-format content assertions must not search the entire Markdown file");
+    for (const scope of ["process", "testingDecisions"]) {
+      assert.match(source, new RegExp(`assert\\.(?:match|doesNotMatch)\\(${scope}\\s*,`),
+        `spec-format assertions use ${scope}`);
+    }
+    assert.match(source, /markdownSection\(specTemplate,\s*["']User Stories["']\)/,
+      "template story checks use the parsed User Stories section");
+    assert.match(source, /assert\.ok\(userStories,/,
+      "the User Stories section is present in the specific template");
+    assert.match(source, /markdownSection\(content,\s*["']Spec Template["']\)/,
+      "spec-format fence extraction starts from the parsed Spec Template section");
+    assert.match(source, /assert\.ok\(templateSection,/,
+      "spec-format checks require the Spec Template heading before slicing its fence");
+    assert.match(source, /assertAbsentFromMarkdownSections\(content,/,
+      "spec-wide exclusions check each Markdown section");
+  });
+
+  it("scopes the ticket-format contract to its owning sections and template", async () => {
+    const source = await testCase(
+      "tests/grill-to-tickets-contract.test.mjs",
+      "owns ticket-format.md adapted from to-tickets with upstream source line and license",
+    );
+    assert.doesNotMatch(source, /assert\.(?:match|doesNotMatch)\(content\s*,/,
+      "ticket-format content assertions must not search the entire Markdown file");
+    for (const scope of ["process", "prefactoring", "verticalSlices", "quizBody", "ticketTemplate", "criteriaRules"]) {
+      assert.match(source, new RegExp(`assert\\.(?:match|doesNotMatch)\\(${scope}\\s*,`),
+        `ticket-format assertions use ${scope}`);
+    }
+    assert.match(source, /assert\.match\(expandContractBody,/,
+      "the expand-contract term is checked in its section body");
+    assert.match(source, /markdownSection\(content,\s*["']Local Ticket Template["']\)/,
+      "ticket-format fence extraction starts from the parsed template section");
+    assert.match(source, /assert\.ok\(ticketTemplateSection,/,
+      "ticket-format checks require the template heading before slicing its fence");
+    assert.match(source, /assertAbsentFromMarkdownSections\(content,/,
+      "ticket-wide exclusions check each Markdown section");
+  });
+
+  it("scopes the overview and Design Review Gate assertions to their Markdown sections", async () => {
+    const source = await testCase(
+      "tests/grill-to-tickets-contract.test.mjs",
+      "points SKILL.md and design-review-gate at owned formats",
+    );
+    assert.doesNotMatch(source, /assert\.(?:match|doesNotMatch)\(content\s*,/,
+      "overview assertions must not search the entire skill file");
+    assert.match(source, /const overview = markdownHeaderBlock\(content\)/,
+      "overview claims use the Markdown header block");
+    assert.doesNotMatch(source, /assert\.(?:match|doesNotMatch)\(gate\s*,/,
+      "Design Review Gate assertions must not search the entire reference");
+    for (const scope of ["ship", "specLevel", "decisionLevel"]) {
+      assert.match(source, new RegExp(`assert\\.(?:match|doesNotMatch)\\(${scope}\\s*,`),
+        `gate assertions use ${scope}`);
+    }
+    assert.match(source, /assertAbsentFromMarkdownSections\(gate,/,
+      "gate-wide exclusions check each Markdown section");
+  });
+
+  it("enforces the positive-instruction prohibition independently in each skill section", async () => {
+    const positive = await testCase(
+      "tests/grill-to-tickets-contract.test.mjs",
+      "steers positively — no 'Never' or 'Do not' in the instruction body",
+    );
+    assert.doesNotMatch(positive, /assert\.doesNotMatch\(body\s*,/,
+      "the positive-instruction prohibition must not scan the whole body at once");
+    assert.match(positive, /assertAbsentFromMarkdownSections\(body,/,
+      "the positive-instruction prohibition checks every body section");
+
+    const rationalizations = await testCase(
+      "tests/grill-to-tickets-contract.test.mjs",
+      "links the reference once in the section immediately after Invocation and resolves it",
+    );
+    assert.doesNotMatch(rationalizations, /assert\.ok\(!\/.*\.test\(skill\)/,
+      "the rationalizations contract must not scan the whole skill file at once");
+    assert.match(rationalizations, /assertAbsentFromMarkdownSections\(body,/,
+      "the rationalizations contract checks the prohibition in every skill section");
   });
 
   it("checks Stage 3.5 placement against parsed top-level headings", async () => {
