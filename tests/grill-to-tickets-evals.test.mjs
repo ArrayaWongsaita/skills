@@ -188,10 +188,10 @@ describe("grill-to-tickets eval suite contract", () => {
   });
 });
 
-it("covers parked-flow with a dedicated coverage label", async () => {
+it("covers parked-flow and retires stale ticket-review verdicts", async () => {
   const entry = (await evalsJson()).evals.find((e) => /parked-flow/.test(e.name));
   assert.ok(entry, "no eval case covers parked-flow");
-  const text = entry.expected_output + entry.expectations.join(" ");
+  const text = `${entry.prompt} ${entry.expected_output} ${entry.expectations.join(" ")}`;
   for (const requirement of [
     /six fields/,
     /decided: parked/,
@@ -205,6 +205,14 @@ it("covers parked-flow with a dedicated coverage label", async () => {
     /Stage 1[\s\S]*Further Notes/,
     /State review budget unchanged/,
     /existing tickets[\s\S]*checker and quiz/,
+    /Review 1[\s\S]*01 READY[\s\S]*02 ASK/,
+    /Later the compliance lead answers 90 days, changing ticket 02/i,
+    /Review 1[\s\S]*historical[\s\S]*superseded ticket set/,
+    /02 ASK line[\s\S]*— superseded: <late decision>/,
+    /historical READY\/ASK lines are not current verdicts/,
+    /without automatically starting Review 2/,
+    /Only after the person asks[\s\S]*append Review 2/,
+    /user quiz remains the approval gate/,
     /Further Notes/,
     /resume/,
     /handoff/,

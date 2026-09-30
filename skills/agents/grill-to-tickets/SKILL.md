@@ -319,22 +319,32 @@ quiz. The person decides whether to fix or acknowledge each question. The main
 thread waits until the person has seen and decided on the question before
 applying a fix, and fixes a ticket only when
 the person chooses fix. After each fix, re-run the checker with `--write-budget`;
-a second review starts only when the person asks. `ASK` lines name tickets as
-numbered at review time; when the quiz removes a ticket, give its line the
-`— acknowledged` suffix. The review set closes at review time. Tickets the quiz
-creates join a review only after the person asks for another review.
+a second review starts only when the person asks. Record each review under
+`## Ticket review` in the next numbered entry (`### Review 1`, `### Review 2`,
+and so on). `ASK` lines name tickets as numbered at review time; when the quiz removes a
+ticket, give its line the `— acknowledged` suffix. The review set closes at review time.
+Tickets the quiz creates join a review only after the person asks for another review.
 
-When a changed late answer arrives after tickets exist, reconcile the tickets
-against the revised spec, re-run the checker with `--write-budget`, and repeat
-the ticket quiz before handoff.
+When a changed late answer arrives after tickets have already been reviewed
+and changes that reviewed set, preserve the prior reviewer output and mark its
+numbered entry historical for the superseded ticket set. Keep the old `READY`
+and `ASK` text as history. For each still-open `ASK` line from that set whose
+ticket content was affected by the late decision, add
+`— superseded: <late decision>`. That line is closed history and is not carried
+into the revised quiz as an open question. A historical `READY` or `ASK` is not a verdict on the revised set.
+Reconcile the tickets against the revised spec, re-run the
+checker with `--write-budget`, and repeat the user quiz before handoff. This
+does not start a fresh ticket review: a second fresh review remains opt-in and
+starts only when the person asks, as the next numbered review entry. The quiz
+remains the approval gate for the revised tickets.
 
 Stage 3 is done when all of these hold:
 
 - every warning is logged under `## Ticket warnings` in `decisions.md`, one line
   per warning: `<warning> — acknowledged` or `<warning> — fixed: <change>`;
 - the `ticket review` State is `done` or `skipped`;
-- every `ASK` line under `## Ticket review` carries `— resolved: <change>` or
-  `— acknowledged`;
+- every `ASK` line under `## Ticket review` carries `— resolved: <change>`,
+  `— acknowledged`, or `— superseded: <late decision>`;
 - the user approves the breakdown;
 - either the last checker run exits 0 or, where Node is unavailable,
   the by-hand checks listed in the script's header pass.

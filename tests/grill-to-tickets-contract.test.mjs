@@ -940,11 +940,40 @@ describe("grill-to-tickets composite skill contract", () => {
       "resume preserves completed and skipped reviews");
   });
 
+  it("retires ticket-review verdicts when a late answer changes an already-reviewed set", async () => {
+    const skill = await readFile(path.resolve(canonicalDir, "SKILL.md"), "utf8");
+    const stage3 = markdownSection(skill, "Stage 3 — Tickets");
+    const stage35Start = stage3.indexOf("**Stage 3.5");
+    const stage35End = stage3.indexOf("Stage 3 is done when");
+    const stage35 = stage3.slice(stage35Start, stage35End);
+    const log = await readFile(path.resolve(canonicalDir, "references/decision-log.md"), "utf8");
+    const format = markdownSection(log, "Format");
+    const resume = markdownSection(log, "Resume — `continue <feature-slug>`");
+
+    assertPattern(stage35, /late answer[\s\S]*already been reviewed[\s\S]*historical[\s\S]*superseded ticket set/i,
+      "a late answer marks the prior review as history for the superseded ticket set");
+    assertPattern(stage35, /open `ASK`[\s\S]*affected[\s\S]*`— superseded: <late decision>`[\s\S]*not carried[\s\S]*revised quiz/i,
+      "affected old ASK lines are superseded and omitted as open questions from the revised quiz");
+    assertPattern(stage35, /reconcile[\s\S]*checker[\s\S]*repeat the user quiz/i,
+      "the revised ticket set is reconciled, checked, and quizzed again");
+    assertPattern(stage35, /second (?:fresh )?review[\s\S]*only when the person asks[\s\S]*numbered review entry/i,
+      "a second fresh review remains opt-in and appends a numbered entry");
+    assertPattern(stage35, /historical `READY` or `ASK`[\s\S]*not a verdict on the\s+revised set[\s\S]*quiz\s+remains the approval gate/i,
+      "historical verdicts do not decide the revised set and the quiz remains its approval gate");
+
+    assertPattern(format, /numbered review entries[\s\S]*`### Review 1`[\s\S]*historical[\s\S]*`— superseded: <late decision>`/i,
+      "the decision-log format keeps numbered review history and the superseded ASK suffix");
+    assertPattern(format, /existing unnumbered\s+review output is treated as Review 1[\s\S]*preserve it under that heading/i,
+      "existing unnumbered review logs can be preserved as the first numbered history entry");
+    assertPattern(resume, /historical review\s+entries[\s\S]*not current[\s\S]*superseded ASK lines[\s\S]*open questions/i,
+      "resume excludes historical verdicts and superseded ASK lines from current open questions");
+  });
+
   it("requires settled ticket-review state and a successful final checker before Stage 3 is done", async () => {
     const skill = await readFile(path.resolve(canonicalDir, "SKILL.md"), "utf8");
     const stage3 = markdownSection(skill, "Stage 3 — Tickets");
 
-    assertPattern(stage3, /Stage 3 is done when[\s\S]*`ticket review`\s+State[\s\S]*`done` or\s+`skipped`[\s\S]*every `ASK` line[\s\S]*— resolved:[\s\S]*— acknowledged[\s\S]*either the last checker run exits 0 or, where Node is unavailable,\s+the by-hand checks listed in the script's header pass/i,
+    assertPattern(stage3, /Stage 3 is done when[\s\S]*`ticket review`\s+State[\s\S]*`done` or\s+`skipped`[\s\S]*every `ASK` line[\s\S]*— resolved:[\s\S]*— acknowledged[\s\S]*— superseded: <late decision>[\s\S]*either the last checker run exits 0 or, where Node is unavailable,\s+the by-hand checks listed in the script's header pass/i,
       "Stage 3 completion requires the review and ASK resolutions plus a successful checker or passing manual checks");
     assertPattern(stage3, /After a manifest write\s+failure,[\s\S]*report the failure[\s\S]*re-run the checker before finishing Stage 3/i,
       "Stage 3 reports a manifest failure and checks again before completion");
@@ -1036,7 +1065,7 @@ describe("grill-to-tickets composite skill contract", () => {
     for (const [pattern, label] of [
       [/every warning[\s\S]*`## Ticket warnings`[\s\S]*— acknowledged[\s\S]*— fixed: <change>/, "warnings logged"],
       [/`ticket review` State is `done` or\s+`skipped`/, "review State settled"],
-      [/every `ASK` line[\s\S]*— resolved: <change>[\s\S]*— acknowledged/, "ASK lines settled"],
+      [/every `ASK` line[\s\S]*— resolved: <change>[\s\S]*— acknowledged[\s\S]*— superseded: <late decision>/, "ASK lines settled"],
       [/the user approves the breakdown/, "user approval"],
       [/the last checker run exits 0/, "checker exit 0"],
     ]) assertPattern(done, pattern, `the completion list names ${label}`);

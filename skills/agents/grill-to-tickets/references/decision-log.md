@@ -38,6 +38,8 @@ decision, including the small ones neither of them takes.
 
 ## Ticket review
 
+### Review 1 — current ticket set
+
 - reviewer: subagent
 - 01 READY
 - 02 ASK: <question> — resolved: <change>
@@ -62,6 +64,13 @@ For a run that skips the review, the State key is `ticket review: skipped` and
 - review skipped
 ```
 
+When a changed late answer changes a reviewed ticket set, preserve the reviewer
+output and mark its entry with a heading like
+`### Review N — historical: superseded by <late decision>`. Keep its `READY`
+and `ASK` text. Add `— superseded: <late decision>` to each still-open `ASK`
+line for the superseded set; those lines are closed history and are excluded
+from current open questions.
+
 - **State** is rewritten in place. `stage` is one of `0 — Grill`, `1 — Spec`,
   `2 — Design Review Gate`, `3 — Tickets`, or `done`. `waiting on` names the one
   thing the run needs from the user next — a round's answers, Stage 0
@@ -72,12 +81,21 @@ For a run that skips the review, the State key is `ticket review: skipped` and
   the entry question. It also carries `ticket review: pending`, `done`, or
   `skipped`; Stage 0 step 1 writes `skipped` when `--ticket-review 0` is present
   and `pending` otherwise, and the key becomes `done` after the review.
-- **Ticket review** records one reviewer line, either `- reviewer: subagent` or
-  `- reviewer: inline`, followed by one line per ticket: `- NN READY` or
-  `- NN ASK: <question>`. An open ASK line has no suffix; when settled, that
-  same line carries `— resolved: <change>` or `— acknowledged`. A skipped
-  review records `- review skipped` as its only Ticket review entry, alongside
-  the State key.
+- **Ticket review** records chronological, numbered review entries under
+  `## Ticket review` (`### Review 1`, `### Review 2`, and so on). Each entry has
+  one reviewer line, either `- reviewer: subagent` or `- reviewer: inline`,
+  followed by one line per ticket: `- NN READY` or `- NN ASK: <question>`. An
+  open ASK line has no suffix; when settled, that same line carries
+  `— resolved: <change>` or `— acknowledged`. If a late answer supersedes the
+  ticket set, retain the output under its numbered heading and mark it
+  `historical: superseded by <late decision>`; add
+  `— superseded: <late decision>` to each still-open ASK line from that set.
+  Historical READY/ASK lines are not current verdicts, and superseded ASK lines
+  are not current open questions. A second fresh review runs only when the
+  person asks, and is appended under the next review number. Existing unnumbered
+  review output is treated as Review 1; preserve it under that heading when
+  numbering or marking it historical. A skipped review records `- review
+  skipped` as its only Ticket review entry, alongside the State key.
 - **Preflight** records the skill and the path found for each stage skill. Stage 0
   step 1 writes the first `### Preflight <date>` entry under `## Preflight` when
   it creates the log, and each `continue` appends another, keeping earlier entries.
@@ -122,7 +140,8 @@ A round is closed when every question in it carries a `decided:` other than
 ## Resume — `continue <feature-slug>`
 
 1. Read `decisions.md`, State first, and its `## Ticket review` section to
-   recover verdicts and ASK questions that are still open; then read
+   recover verdicts and ASK questions that are still open for the current
+   ticket set; then read
    `parked.md` when present to recover each parked question's current state,
    `CONTEXT.md`, `adr/`, and whichever of `spec.md`, `design-review.md`, and
    `issues/` exist.
@@ -144,8 +163,14 @@ A round is closed when every question in it carries a `decided:` other than
    `done` with every flag, and a `skipped` review stays `skipped`. A State with
    no `ticket review` key takes the invocation's flag and otherwise runs the
    review once. Keep the review State and `## Ticket review` entries together:
-   a `done` State keeps its verdicts, each open ASK stays open until resolved or
-   acknowledged, and a `skipped` State keeps the review skipped.
+   a `done` State keeps its numbered entries, and a `skipped` State keeps the
+   review skipped. On resume, only the latest nonhistorical entry for the
+   current ticket set supplies verdicts and open questions. Historical review
+   entries are preserved but are not current; superseded ASK lines are
+   excluded from open questions. If a late answer leaves only historical
+   entries, the revised set still goes through its checker and user quiz. A
+   fresh review of that set starts only when the person asks and is appended as
+   the next numbered entry.
 6. If a late answer changes an assumed parked value already present in
    `spec.md`, log the superseding decision, update `parked.md`, set State to
    Stage 1, and synchronize the spec before handoff. Resume through the affected
