@@ -305,3 +305,97 @@ describe("implement-tickets worker dispatch and verification contract", () => {
     }
   });
 });
+
+describe("implement-tickets integration gate and run-state contract", () => {
+  const gatePath = path.join(skillRoot, "references/integration-gate.md");
+  const statePath = path.join(skillRoot, "references/status-and-resume.md");
+
+  function requireText(text, expression, behavior) {
+    assert.ok(expression.test(text), behavior);
+  }
+
+  it("squash-merges a fully verified wave in ticket order and gates the combined result", async () => {
+    const gate = await readTextOrNull(gatePath);
+    assert.ok(gate, "the integration gate procedure exists");
+    requireText(
+      gate,
+      /after every ticket in (?:the )?wave is verified[\s\S]*?squash-merge[\s\S]*?ticket(?:-number)?\s+order[\s\S]*?one commit per ticket[\s\S]*?full typecheck[\s\S]*?(?:full )?(?:test )?suite/i,
+      "a verified wave is merged in order and checked as one result",
+    );
+  });
+
+  it("locates a gate culprit, restores the last good commit, preserves later verified tickets, and retries alone", async () => {
+    const gate = await readTextOrNull(gatePath);
+    assert.ok(gate, "the integration gate procedure exists");
+    requireText(gate, /gate fails[\s\S]*?re-merge[\s\S]*?ticket(?:-number)? order/i, "a failed gate is replayed in order");
+    requireText(gate, /after each merge[\s\S]*?typecheck[\s\S]*?suite/i, "each replayed merge runs both checks");
+    requireText(gate, /git checkout -B <integration-branch> <sha>/, "recovery checks out the last good commit onto the integration branch");
+    requireText(gate, /hard reset/i, "the recovery rule excludes hard reset");
+    requireText(gate, /already-verified later tickets[\s\S]*?without re-verifying/i, "later verified tickets are retained without another verifier run");
+    requireText(gate, /gate once more/i, "the rebuilt wave is gated once more");
+    requireText(gate, /re-dispatch(?:es)? the culprit alone as a serial attempt[\s\S]*?count(?:ing|s) one attempt/i, "only the culprit is retried and that retry counts once");
+  });
+
+  it("blocks a ticket after three verification failures and reports held and independent paths", async () => {
+    const state = await readTextOrNull(statePath);
+    assert.ok(state, "the run-state and resume procedure exists");
+    requireText(state, /three failed verification attempts[\s\S]*?BLOCKED \(TICKET_VERIFICATION_FAILED\)/i, "three verification failures block the ticket");
+    requireText(state, /dependants?[\s\S]*?(?:held|not started)[\s\S]*?next frontier/i, "only dependants are held at the next frontier");
+    requireText(state, /independent tickets[\s\S]*?available partial path/i, "independent tickets are reported as an available partial path");
+    requireText(state, /halt report[\s\S]*?blocked tickets[\s\S]*?held tickets[\s\S]*?resume command/i, "the halt report names blocked tickets, held tickets, and the resume command");
+    requireText(state, /\/implement-tickets continue <feature-slug>/, "the halt report gives the implement-tickets continue command");
+  });
+
+  it("defines the status header and per-ticket table, including reported usage totals", async () => {
+    const state = await readTextOrNull(statePath);
+    assert.ok(state, "the run-state and resume procedure exists");
+    requireText(state, /^skill: implement-tickets/m, "status.md starts with the skill identity");
+    const template = state.match(/```markdown\s*([\s\S]*?)```/)?.[1];
+    assert.ok(template, "the run-state reference includes a status.md template");
+    assert.equal(template.split(/\r?\n/, 1)[0], "skill: implement-tickets", "the template's first line is the skill identity");
+    requireText(
+      state,
+      /\| Ticket \| Wave \| Backend \| Touch set \| Status \| Session ID \| Attempts \| Branch \| Commit \| Budget estimate \| Usage total \| Verifier usage total \|/i,
+      "the ticket table contains all required state and usage columns",
+    );
+    requireText(state, /usage_total[\s\S]*every dispatch and resume[\s\S]*delivering path/i, "worker usage is summed across dispatches and resumes on the delivering path");
+    requireText(state, /possibly cache-inclusive/i, "reported usage is marked as possibly cache-inclusive");
+    requireText(state, /`?unknown`? when none (?:is|was) reported/i, "missing usage is recorded as unknown");
+    requireText(state, /verifier_usage_total[\s\S]*verifier\s+dispatch/i, "verifier usage is tracked separately");
+  });
+
+  it("refuses legacy state and reconciles, rewinds, replans, and resumes valid state", async () => {
+    const state = await readTextOrNull(statePath);
+    assert.ok(state, "the run-state and resume procedure exists");
+    requireText(state, /continue[\s\S]*status\.md\s+without the first line[\s\S]*refus/i, "continue refuses a status file without the identity line");
+    requireText(state, /recover the old skill from git history or start over/i, "legacy-state refusal gives the recovery choices");
+    requireText(state, /continue[\s\S]*reconcile[\s\S]*git/i, "continue reconciles recorded state against git");
+    requireText(state, /drift[\s\S]*git checkout -B <integration-branch> <sha>/, "continue rewinds drift through a branch checkout");
+    requireText(state, /re-present the Plan[\s\S]*resume from (?:the )?(?:earliest eligible )?frontier/i, "continue presents the reconciled Plan and resumes at the frontier");
+  });
+
+  it("keeps status and list read-only", async () => {
+    const state = await readTextOrNull(statePath);
+    assert.ok(state, "the run-state and resume procedure exists");
+    requireText(state, /status \[slug\][\s\S]*list[\s\S]*read-only[\s\S]*change nothing/i, "status and list only report saved state");
+  });
+
+  it("hands off a green integrated run without starting review or publication", async () => {
+    const gate = await readTextOrNull(gatePath);
+    assert.ok(gate, "the integration gate procedure exists");
+    requireText(gate, /every ticket is integrated[\s\S]*last suite is green[\s\S]*handoff/i, "a successful run prints a handoff after its final gate");
+    requireText(gate, /implement-tickets\/<(?:feature-)?slug>/, "the handoff names the integration branch");
+    requireText(gate, /review commands/i, "the handoff names review commands");
+    requireText(gate, /do not run review, push, or (?:open|create) a pull\s+request/i, "the run stops before review and publication");
+  });
+
+  it("documents the gate, status file, and resume command on both user-facing pages", async () => {
+    for (const file of ["docs/guides/implement-tickets.md", "docs/skills/agents/implement-tickets.md"]) {
+      const doc = await readTextOrNull(path.join(repoRoot, file));
+      assert.ok(doc, `${file} exists`);
+      requireText(doc, /integration gate[\s\S]*typecheck[\s\S]*suite/i, `${file} describes the integration gate`);
+      requireText(doc, /status\.md[\s\S]*skill: implement-tickets/i, `${file} describes the status file identity`);
+      requireText(doc, /\/implement-tickets continue \[slug\]/, `${file} documents the resume command`);
+    }
+  });
+});

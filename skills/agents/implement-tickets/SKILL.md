@@ -34,6 +34,17 @@ Options are set once for the run:
 - `--concurrency N` sets the shared worker and verifier cap; default `4`.
 - `--serial` puts one ticket in each wave.
 
+Existing runs can be inspected or resumed with:
+
+- `/implement-tickets status [slug]` to read one run's `status.md`;
+- `/implement-tickets list` to list saved runs; or
+- `/implement-tickets continue [slug]` to reconcile a run with Git, re-present
+  its Plan, and resume from the frontier.
+
+`status` and `list` are read-only. A valid run record starts with
+`skill: implement-tickets`; see
+[references/status-and-resume.md](references/status-and-resume.md).
+
 ## Stage 0 — Plan, then pause
 
 Follow [references/planning.md](references/planning.md). Resolve and read the
@@ -53,8 +64,9 @@ until approval. Do not dispatch workers or write run state before approval.
 ## Stage 1 — Execute approved waves
 
 After approval, follow [references/dispatch-contract.md](references/dispatch-contract.md),
-[references/prompt-scaffold.md](references/prompt-scaffold.md), and
-[references/verification.md](references/verification.md). Run waves in order.
+[references/prompt-scaffold.md](references/prompt-scaffold.md),
+[references/verification.md](references/verification.md), and
+[references/integration-gate.md](references/integration-gate.md). Run waves in order.
 Tickets in one wave have satisfied blockers and non-overlapping known touch
 sets. A ticket with an unknown touch set runs alone. `--serial` is the
 one-ticket-per-wave mode; `--concurrency N` sets the in-flight cap but does not
@@ -70,6 +82,18 @@ for the rest of the wave. If the report is too shallow to judge, dispatch a
 fresh read-only `general-purpose` verifier. Verifiers return raw evidence and
 no verdict; the orchestrator judges the reports and integrates verified work
 in ticket order.
+
+After all tickets in a wave are verified, squash-merge them one commit per
+ticket in ticket order and run the full typecheck and suite on the integration
+branch. If the gate fails, trace the first failing merge and preserve
+already-verified later tickets as described in the gate procedure. Record the
+run in `.scratch/<feature-slug>/status.md`.
+
+After three failed verification attempts, mark the ticket
+`BLOCKED (TICKET_VERIFICATION_FAILED)`, hold its dependants, and report the
+independent partial path with the resume command. When every ticket is
+integrated and the final suite is green, print the integration branch and
+review commands as a handoff, then stop before review, push, or a pull request.
 
 Arm one background wait per dispatch: 2700 seconds for a worker and 900 seconds
 for a verifier. If a wait ends first, stop that subagent with `TaskStop` and

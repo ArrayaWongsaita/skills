@@ -58,6 +58,28 @@ worker 2700 วินาที และ verifier 900 วินาที ถ้�
 `Concurrent subagent limit reached` ให้รอ slot ว่างแล้วลอง spawn ใหม่โดยไม่คิด
 infra retry
 
+### Integration gate, status, and resume
+
+หลัง ticket ทุกใบใน wave verified แล้ว ให้ squash-merge ตาม ticket order เป็น
+หนึ่ง commit ต่อ ticket และรัน full typecheck กับ suite บน integration branch
+เมื่อ gate fail ให้ตรวจหลังแต่ละ merge หา culprit ย้าย integration branch ไปยัง
+last good commit ด้วย branch checkout แล้วคง ticket ที่ verified ภายหลังไว้
+โดยไม่ verify ซ้ำ ก่อน dispatch culprit เดี่ยวแบบ serial
+
+บันทึก run ที่ `.scratch/<feature-slug>/status.md` โดยบรรทัดแรกเป็น
+`skill: implement-tickets` และมี ticket table สำหรับ wave, backend, touch set,
+status, session ID, attempts, branch, commit, budget estimate, `usage_total`
+และ `verifier_usage_total`. ค่า usage รวมรายงานทุก dispatch และ resume บน
+delivering path ซึ่งอาจรวม cache หรือเป็น `unknown` หากไม่มีรายงาน
+`status [slug]` และ `list` อ่านอย่างเดียว ส่วน `continue [slug]` reconcile กับ
+Git, rewind เมื่อพบ drift, แสดง Plan อีกครั้ง แล้วทำต่อจาก frontier
+
+ถ้า verification ล้มเหลวสามครั้งให้ตั้ง
+`BLOCKED (TICKET_VERIFICATION_FAILED)`, hold dependants และรายงาน partial path
+จาก ticket อิสระพร้อม resume command เมื่อทุก ticket integrated และ suite สุดท้าย
+ผ่าน ให้แจ้ง integration branch และ review commands จากนั้นหยุดก่อน review,
+push หรือเปิด PR
+
 ### Seam และ Context
 
 **Seam:** worker ใช้ `**Seam:**` ของ ticket แบบ verbatim เป็นขอบเขตที่ใช้ทดสอบ
@@ -111,6 +133,27 @@ counting an attempt. A crash or lost subagent is also an infrastructure failure.
 After two infra retries, mark the ticket `BLOCKED (TICKET_PROVIDER_FAILED)`. If
 spawn reports `Concurrent subagent limit reached`, wait for a free slot and
 retry without using an infra retry.
+
+After every ticket in a wave is verified, squash-merge its branches in ticket
+order as one commit per ticket and run the full typecheck and suite on the
+integration branch. If the gate fails, test each replayed merge to locate the
+first failing ticket, rewind with `git checkout -B`, retain later verified
+tickets without re-verifying them, run the gate again, and re-dispatch the
+culprit alone as one serial attempt.
+
+Save run state in `.scratch/<feature-slug>/status.md`, starting with
+`skill: implement-tickets`. Its ticket table records wave, backend, touch set,
+status, session ID, attempts, branch, commit, budget estimate, `usage_total`,
+and `verifier_usage_total`. Usage sums reports across every dispatch and resume
+on the path that delivered the ticket, may be cache-inclusive, and is
+`unknown` when none was reported. `/implement-tickets status [slug]` and
+`/implement-tickets list` only read state. `/implement-tickets continue [slug]`
+refuses a missing identity line, reconciles against Git, rewinds on drift,
+re-presents the Plan, and resumes from the frontier. Three verification
+failures block that ticket and hold its dependants while independent tickets
+remain an available partial path. Once all tickets are integrated and the
+final suite is green, hand off the integration branch and review commands;
+stop before review, push, or a pull request.
 
 ### Seam and Context
 

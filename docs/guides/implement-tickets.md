@@ -52,6 +52,21 @@ npx skills add ArrayaWongsaita/skills --skill implement-tickets
    integrate งานที่ผ่าน verification
 4. **Handoff:** หยุดก่อน review, push หรือเปิด PR และส่งชื่อ integration branch ให้ผู้ใช้
 
+### Integration gate, status, and resume
+
+หลัง ticket ทุกใบใน wave ผ่าน verifier แล้ว จะ squash-merge ตามลำดับ ticket
+เป็นหนึ่ง commit ต่อ ticket จากนั้นรัน full typecheck และ suite บน integration
+branch หาก gate ไม่ผ่าน ระบบตรวจแต่ละ merge เพื่อหาต้นเหตุ ย้อน branch ไปยัง
+commit ล่าสุดที่ยังผ่านด้วย branch checkout แล้วเก็บ ticket ที่ verify แล้ว
+หลังต้นเหตุไว้ก่อนส่งต้นเหตุให้ลองใหม่แบบ serial
+
+หนึ่ง run บันทึกใน `.scratch/<feature-slug>/status.md` โดยบรรทัดแรกต้องเป็น
+`skill: implement-tickets` พร้อมตารางสถานะของทุก ticket และ usage ที่รายงาน
+โดย `usage_total` อาจรวม cache และจะเป็น `unknown` เมื่อไม่มีรายงาน
+`/implement-tickets status [slug]` และ `/implement-tickets list` อ่านอย่างเดียว
+ส่วน `/implement-tickets continue [slug]` ตรวจสถานะกับ Git แสดง Plan อีกครั้ง
+และทำต่อจาก frontier
+
 ### Dispatch, verifier และ timeout
 
 หลัง approval orchestrator dispatch worker หนึ่งตัวต่อ ticket ใน wave และทุก
@@ -144,6 +159,32 @@ counting an attempt. A crash or lost subagent is also an infrastructure failure.
 After two infra retries, the ticket is `BLOCKED (TICKET_PROVIDER_FAILED)`. When
 spawn reports `Concurrent subagent limit reached`, wait for a free slot and
 retry without using an infra retry.
+
+### Integration gate, status, and resume
+
+After every ticket in a wave passes verification, squash-merge the verified
+branches in ticket order as one commit per ticket, then run the full project
+typecheck and suite on the integration branch. If the gate fails, test each
+replayed merge to find the first failing ticket, rewind with a branch checkout,
+keep later verified tickets without re-verifying them, and retry the culprit
+alone as one serial attempt.
+
+Store each run in `.scratch/<feature-slug>/status.md`; its first line is
+`skill: implement-tickets`. The per-ticket table includes wave, backend, touch
+set, status, session ID, attempts, branch, commit, budget estimate,
+`usage_total`, and `verifier_usage_total`. Sum reported worker usage across
+each dispatch and resume on the delivering path; it may be cache-inclusive, or
+is `unknown` when none was reported. `/implement-tickets status [slug]` and
+`/implement-tickets list` only read state and change nothing.
+
+`/implement-tickets continue [slug]` refuses old status files without the
+identity line, reconciles valid state against Git, rewinds on drift, presents
+the Plan again, and resumes from the frontier. After three failed
+verifications, mark the ticket `BLOCKED (TICKET_VERIFICATION_FAILED)`, hold its
+dependants, and report independent tickets as an available partial path with
+the resume command. When every ticket is integrated and the final suite is
+green, print the integration branch and review commands as a handoff; do not
+run review, push, or open a pull request.
 
 ### Seam and Context
 
