@@ -11,7 +11,7 @@
         "Runs scrutinize exactly once and records cycle 1 with verdict SHIP in a single .scratch/<feature-slug>/design-review.md file",
         "Normalizes the scrutinize verdict to the token SHIP with no paraphrasing",
         "Does not enter FIX_THEN_SHIP, REWORK, or a backward transition to Stage 0",
-        "Prints the handoff — .scratch/ needs no commit, /clear, then /subagent-implement .scratch/<feature-slug>/ — never invokes an implementer, and dispatches a subagent only for the Stage 2 review"
+        "Prints the handoff — .scratch/ needs no commit, /clear, then /subagent-implement .scratch/<feature-slug>/ — never invokes an implementer, and dispatches a subagent only twice: the Stage 2 design reviewer and the Stage 3.5 ticket reviewer"
       ],
       "files": []
     },
@@ -428,6 +428,21 @@
         "Reads the maximum and rounds used from State and design-review.md",
         "Does not ask the review entry question again",
         "Runs at most one more round before the add-rounds-or-continue question"
+      ],
+      "files": []
+    },
+    {
+      "id": 43,
+      "name": "ticket review shows each ASK before the user decides",
+      "prompt": "$grill-to-tickets continue member-export. Stage 3 has drafted tickets 01 and 02 and the checker has just printed result: PASS. The invocation has no --ticket-review flag and the harness offers a subagent. Run Stage 3.5 for both tickets.",
+      "expected_output": "Run one fresh, read-only ticket reviewer after the passing check and before the quiz. Read the whole ticket set, the spec, every file named in the Context lines, the feature glossary and ADRs, and the repository glossary and ADRs. For each ticket decide whether a fresh worker holding only that ticket and its Context paths could start without asking anyone. Return one numbered line per ticket as READY or ASK with a question. Show each ASK question next to that ticket's Seam, Context, and Budget; the person chooses whether to fix or acknowledge before the main thread acts. Re-run the checker with --write-budget after a fix and start a second review only if the person asks.",
+      "expectations": [
+        "Runs Stage 3.5 once after result: PASS and before the quiz",
+        "Uses one fresh reviewer that reads the ticket set, the spec, and the Context-named files",
+        "Reads the feature and repository glossaries and ADRs to understand terms",
+        "Returns READY or ASK with the question a fresh worker would ask",
+        "Shows each ASK beside Seam, Context, and Budget before the person chooses fix or acknowledge",
+        "Re-runs the checker with --write-budget after a fix and leaves another review to the person's request"
       ],
       "files": []
     }

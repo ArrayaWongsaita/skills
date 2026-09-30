@@ -12,7 +12,7 @@
 โดยรัน `grilling` และ `domain-modeling` แบบ inline ต่อเนื่องใน context เดียว
 เขียน spec ตาม `references/spec-format.md` และ ticket ตาม `references/ticket-format.md`
 ซึ่งเป็นรูปแบบที่ skill เป็นเจ้าของเอง (ดัดแปลงจาก upstream พร้อมแนบ `UPSTREAM-LICENSE.md`)
-ส่วน `scrutinize` รีวิว spec ใน subagent ตัวใหม่ ไม่ลงมือ implement และไม่แตะ `grill-with-docs` หรือ skill ของ Matt Pocock
+มี 2 ขั้นตอนที่ dispatch subagent: Stage 2 ส่ง `scrutinize` รีวิว spec ใน context ใหม่ และ Stage 3 ส่ง fresh reviewer ทำ Ticket review เพื่อหา ambiguity ในชุด ticket; skill ไม่ลงมือ implement และไม่แตะ `grill-with-docs` หรือ skill ของ Matt Pocock
 
 ติดตั้ง:
 
@@ -38,10 +38,15 @@ npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 เรียก `/grill-to-tickets <idea>` หรือ `$grill-to-tickets <idea>` (ถ้า run ค้างกลางทาง เช่นหลัง `/clear` ให้เรียก `/grill-to-tickets continue <feature-slug>` เพื่อทำต่อจาก State ใน `decisions.md`) จากนั้น:
 
 1. **Stage 0 — Grill**: สัมภาษณ์แบบ design tree พร้อมทำ domain modeling เขียน `CONTEXT.md` / `adr/` ทันทีที่ term นิ่ง บันทึกทุกคำถามและคำตอบลง **Decision Log** (`decisions.md`) ก่อนถามรอบถัดไป เมื่อ frontier ว่างจะทำ **Blind-spot pass** ไล่ 9 หมวด (scope, data, flow, quality attributes, integrations, edge cases, constraints, terminology, completion signals) ช่องว่างที่เปลี่ยน spec ได้จะถูกถามเป็นรอบสุดท้ายไม่เกิน 5 ข้อ ที่เหลือเขียนเป็นสมมติฐานให้เห็น แล้วหยุดขอ confirmation
-2. **Stage 1 — Spec**: เขียน `spec.md` ตาม `spec-format.md` โดยสังเคราะห์ `decisions.md`, glossary และ ADR โดยไม่สัมภาษณ์ซ้ำ ทุกการตัดสินใจใน log ต้องอยู่ใน spec
+2. **Stage 1 — Spec**: เขียน `spec.md` ตาม `spec-format.md` โดยสังเคราะห์ `decisions.md`, glossary และ ADR โดยไม่สัมภาษณ์ซ้ำ ทุก user story ใหม่มี Scenario แบบบรรทัดเดียว `Scenario: given … when … then …` ใต้ story อย่างน้อยหนึ่งบรรทัดเพื่อให้มีตัวอย่างที่ทดสอบได้; spec เก่าที่ไม่มี Scenario ยังผ่านพร้อม warning ทุกการตัดสินใจใน log ต้องอยู่ใน spec
 3. **Stage 2 — Design Review Gate**: ผู้ใช้กำหนดขอบเขตการรีวิวเอง (เสนอ 3 รอบ, `0` คือข้าม, หรือใช้ `--review N`); ดู routing, resume และทางออกเมื่อหมดรอบหรือติด stall ได้ที่ [สัญญา Design Review Gate](../../../skills/agents/grill-to-tickets/references/design-review-gate.md)
-4. **Stage 3 — Tickets**: หลัง `SHIP`, การข้ามด้วย `0`, หรือผู้ใช้เลือกไปต่อหลังหมดรอบ/ติด stall ให้เขียน ticket ตาม `ticket-format.md` ลง `.scratch/<feature-slug>/issues/` ทุก ticket มีบรรทัด `**Stories:**` บอกเลข user story ที่ ticket นั้นส่งมอบ, `**Seam:**` (ขอบเขตทดสอบเดียวจาก Testing Decisions ของ spec), `**Context:**` (Read set ของ worker: `spec §` refs และไฟล์ พร้อม marker อ่านอย่างเดียว / `(edit)` / `(new)` / `(from NN)` / `(edit from NN)`) และ `**Budget:**` (ผลวัดของ checker: read tokens, จำนวน criteria, จำนวน modules) ก่อน quiz ต้องรัน `scripts/check-tickets.mjs` พร้อม `--write-budget` ให้ผ่าน (ทุก story มี ticket, Blocked by ชี้ ticket ที่มีจริงและเลขต่ำกว่า, Seam/Context/Budget ครบ เป็นบรรทัดเดียว เรียงถูก) checker ออก warning 3 แบบ (ไม่เปลี่ยนผลลัพธ์): acceptance criterion ที่พูดถึงการรัน suite หรือ tool (`npm test`, `tests pass`, `typecheck passes`, `lint passes`, `suite passes`); ticket สองใบที่แก้ path เดียวกัน (`(edit)`, `(new)` หรือ `(edit from NN)`) โดยไม่มีใบไหน block อีกใบทางอ้อม; และ feature ที่มีเกิน 15 ticket warning ทุกตัวต้องถูกบันทึกใต้ `## Ticket warnings` ใน `decisions.md` เป็น `<warning> — acknowledged` หรือ `<warning> — fixed: <change>` แล้วแสดงตาราง story coverage, ตาราง budget และ DAG summary ใน quiz
-5. **Stop**: บอกว่า `.scratch/` อยู่ในเครื่องและถูก git ignore (ก่อนเขียนไฟล์แรก skill จะเช็ก `git check-ignore` และเพิ่ม `.scratch/` ลง `.git/info/exclude` ให้ถ้ายังไม่ถูก ignore) จึงไม่ต้อง commit แล้วพิมพ์ `/clear` ตามด้วย `/subagent-implement .scratch/<feature-slug>/` (หรือ `/agy-implement` / `/opencode-implement`) โดยเลือกตัวที่แนะนำจากบรรทัด `recommended implementer` ใน DAG summary ของ checker (เลือกจาก maximum wave width: 1 → `subagent-implement`, 2 → ทั้งสามตัว, 3 ขึ้นไป → `agy-implement` หรือ `opencode-implement` เป็นคำแนะนำเท่านั้น) ไม่เรียก implementer เอง
+4. **Stage 3 — Tickets** (Ticket review / Stage 3.5): หลัง `SHIP`, การข้ามด้วย `0`, หรือผู้ใช้เลือกไปต่อหลังหมดรอบ/ติด stall ให้แตก spec เป็น vertical tickets ใน `.scratch/<feature-slug>/issues/`; ทุก user story ใหม่มี Scenario แบบ `given`, `when`, `then` เพื่อบอกพฤติกรรมที่ทดสอบได้
+   - ทุก ticket ระบุ `**Stories:**`, `**Seam:**`, `**Context:**` และ `**Budget:**` ตาม `ticket-format.md`; checker ตรวจ Scenario, coverage, dependencies และ fields แล้วแสดงตาราง coverage, budget, DAG และ warnings ดู [สัญญา grill-to-tickets หลัก](../../../skills/agents/grill-to-tickets/SKILL.md) สำหรับกฎ checker และ manifest; ไฟล์ manifest ที่ได้อยู่ใน `.scratch/<feature-slug>/manifest.json`
+   - **Ticket review (Stage 3.5):** หลัง checker PASS และก่อน quiz ให้ทำ ticket review ดู [สัญญา grill-to-tickets หลัก](../../../skills/agents/grill-to-tickets/SKILL.md) และ [brief สำหรับผู้รีวิว ticket](../../../skills/agents/grill-to-tickets/references/ticket-review.md) สำหรับรายละเอียด
+   - checker เตือนเมื่อ acceptance criterion พูดถึงการรัน suite หรือ tool (`npm test`, `tests pass`, `typecheck passes`, `lint passes`, `suite passes`), เมื่อ ticket สองใบแก้ path เดียวกัน (`(edit)`, `(new)` หรือ `(edit from NN)`) โดยไม่มีใบไหน block อีกใบทางอ้อม (transitively), และเมื่อมีเกิน 15 ticket; warnings ไม่เปลี่ยนผล PASS/FAIL
+   - บันทึก warning ทุกตัวใต้ `## Ticket warnings` ใน `decisions.md` เป็น `<warning> — acknowledged` หรือ `<warning> — fixed: <change>`; รัน checker ซ้ำเมื่อ quiz ทำให้ ticket เปลี่ยน
+
+5. **Stop**: บอกว่า `.scratch/` อยู่ในเครื่องและถูก git ignore (ก่อนเขียนไฟล์แรก skill จะเช็ก `git check-ignore` และเพิ่ม `.scratch/` ลง `.git/info/exclude` ให้ถ้ายังไม่ถูก ignore) จึงไม่ต้อง commit แล้วพิมพ์ `/clear` ตามด้วย `/subagent-implement .scratch/<feature-slug>/` (หรือ `/agy-implement` / `/opencode-implement`) โดยเลือกตัวที่แนะนำจากบรรทัด `recommended implementer` ใน DAG summary ของ checker (เลือกจาก maximum wave width: 1 → `subagent-implement`, 2 → ทั้งสามตัว, 3 ขึ้นไป → `agy-implement` หรือ `opencode-implement` เป็นคำแนะนำเท่านั้น) และพิมพ์บรรทัด `Manifest: .scratch/<feature-slug>/manifest.json` ต่อจาก DAG block ก่อนคำสั่ง implementer เฉพาะเมื่อ checker run สุดท้ายออกด้วย exit 0 ไม่เรียก implementer เอง
 
 `REWORK` แบบ spec-level รัน Stage 1 ใหม่และอยู่ใน Stage 2 ส่วน decision-level กลับไป Stage 0 เพื่อ grill
 การตัดสินใจนั้นใหม่ โดย cycle counter ไม่ถูก reset
@@ -56,11 +61,13 @@ npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 
 - `references/spec-format.md` — รูปแบบ spec ที่ skill เป็นเจ้าของ ดัดแปลงจาก upstream พร้อมบรรทัดแหล่งที่มาและ MIT notice
 - `references/ticket-format.md` — รูปแบบ ticket ที่ skill เป็นเจ้าของ พร้อมฟิลด์ Seam, Context และ Budget ดัดแปลงจาก upstream พร้อมบรรทัดแหล่งที่มาและ MIT notice
+- `references/ticket-review.md` — brief และ return format `READY` / `ASK` ของ Ticket review ใน Stage 3.5
+- `.scratch/<feature-slug>/manifest.json` — derived planning snapshot สำหรับ handoff; สัญญา grill-to-tickets หลักอธิบายเนื้อหาและกฎที่เกี่ยวข้อง
 - `references/UPSTREAM-LICENSE.md` — MIT notice ของ upstream ที่รูปแบบทั้งสองแนบไว้
 - `references/decision-log.md` — รูปแบบของ Decision Log (`decisions.md`) เวลาที่ต้องเขียน และขั้นตอน `continue <feature-slug>`
 - `references/blind-spot-pass.md` — 9 หมวดที่ต้องไล่ก่อนหยุดพักท้าย Stage 0 (ดัดแปลงจาก `/clarify` ของ Spec Kit) วิธีให้คะแนน และเพดาน 5 คำถาม
 - `references/design-review-gate.md` — source เดียวของ routing table เต็ม, cycle accounting, stall detection, gate report format (SKILL.md Stage 2 เก็บแค่สรุปสั้น ๆ ต่อ verdict แล้วชี้มาที่นี่)
-- `scripts/check-tickets.mjs` — สคริปต์ Node (ไม่มี dependency) ตรวจ ticket ก่อน quiz: story coverage, Blocked by พร้อมตรวจ Seam, Context และ Budget (บรรทัดเดียว เรียงถูก อ้างถึง path และ spec section จริง) เมื่อใช้ `--write-budget` จะวัดแต่ละ ticket แล้วเขียน Budget line ให้ ออก warning ที่ไม่เปลี่ยนผลลัพธ์ และพิมพ์ตาราง story coverage, ตาราง budget และ DAG summary พร้อม recommended implementer (exit 0 ผ่าน, 1 มี error, 2 อินพุตใช้ไม่ได้)
+- `scripts/check-tickets.mjs` — สคริปต์ Node ตรวจ Scenario, story coverage, Blocked by, Seam, Context และ Budget; `--write-budget` วัดและเขียน Budget line พร้อมรายงาน warnings, ตาราง coverage/budget, DAG และ recommended implementer; กฎของ manifest.json ดูใน [สัญญา grill-to-tickets หลัก](../../../skills/agents/grill-to-tickets/SKILL.md) (exit 0 ผ่าน, 1 มี error, 2 อินพุตใช้ไม่ได้)
 - `evals/evals.json` — เคสพฤติกรรมในรูปแบบ benchmark ของ `skill-creator`: อย่างน้อยหนึ่งเคสต่อ routing branch ของ Design Review Gate, หนึ่งเคสต่อกลไกป้องกัน (decision log, `continue`, blind-spot pass, reviewer ใน context ใหม่, การไล่แก้หลัง `FIX_THEN_SHIP`, สคริปต์ตรวจ ticket) และเคส `quality:` ที่วัดคุณภาพของคำถาม spec และ ticket รันแบบ on-demand ไม่ได้อยู่ใน CI เวลา benchmark ให้ใช้ snapshot ของ skill เวอร์ชันก่อนหน้าเป็น baseline แบบ `old_skill` ของ `skill-creator`
 - `evals/trigger-evals.json` — กันไม่ให้ description ของ skill อ่านเหมือนเป็น model-invocable (skill นี้เป็น `disable-model-invocation`)
 
@@ -73,9 +80,10 @@ ticket-ready work, then stop. It inline-executes `grilling` and `domain-modeling
 in a single continuous context window, writes `spec.md` from its owned
 `references/spec-format.md` and tickets from its owned
 `references/ticket-format.md` (adapted upstream, notice carried in
-`UPSTREAM-LICENSE.md`), and runs `scrutinize` in a fresh reviewer subagent.
-It never implements, and it never touches `grill-with-docs` or any Matt
-Pocock-sourced skill.
+`UPSTREAM-LICENSE.md`). Two steps dispatch a subagent: Stage 2 sends
+`scrutinize` for the spec review, and Stage 3 sends a fresh reviewer for the
+ticket review. It never implements, and it never touches `grill-with-docs` or
+any Matt Pocock-sourced skill.
 
 Install with:
 
@@ -121,37 +129,20 @@ terminology, completion signals); gaps that would change the spec become one
 final round of at most five questions, and the rest become stated assumptions
 shown in the pause summary.
 Stage 1 writes the spec from that log following its owned
-`references/spec-format.md`. Each Design Review Gate cycle dispatches
+`references/spec-format.md`; every new user story has at least one indented,
+one-line `Scenario: given … when … then …` example so its behavior can be
+tested. Each Design Review Gate cycle dispatches
 `scrutinize` to a fresh, read-only reviewer subagent that sees the files and not
 the interview, so it reads the spec the way the implementer will (ADR 0010). The
 user sets the review budget; the proposed default is three rounds, zero skips
 review, and `--review N` answers up front. See the [canonical Design Review
 Gate contract](../../../skills/agents/grill-to-tickets/references/design-review-gate.md)
-for verdict routing, resume, and the exhaustion or stall path. After `SHIP`, a
-recorded `0` skip, or the user's choice to go on after exhaustion or stall,
-tickets are published from the owned `references/ticket-format.md` — every ticket with a
-`**Stories:**` line naming the spec stories it delivers, a `**Seam:**` line
-naming one test boundary from the spec, a `**Context:**` line listing the Read
-set (spec sections and files, marked read-only, `(edit)`, `(new)`, `(from NN)`,
-or `(edit from NN)`), and a `**Budget:**` line recording the checker's
-measurement (read tokens, criteria, modules). Before the quiz, the
-bundled `scripts/check-tickets.mjs` runs with `--write-budget`, which writes
-each Budget line from the measurement and must pass: every story has a ticket,
-every blocker exists with a lower number, and Seam / Context / Budget are
-present, single-line, ordered, and real; the quiz shows the story-coverage table, the budget table, the
-DAG summary, and every warning. The checker warns on an acceptance criterion
-that mentions a suite or tool run (`npm test`, `tests pass`, `typecheck passes`,
-`lint passes`, `suite passes`), on two tickets that change the same path —
-`(edit)`, `(new)`, or `(edit from NN)` — when neither transitively blocks the
-other, and on more than 15 tickets; a warning never changes the result. Each
-warning is logged under `## Ticket warnings` in `decisions.md` as
-`<warning> — acknowledged` or `<warning> — fixed: <change>`. Then the skill
-prints a handoff in this order: `/clear`, the DAG summary
-carrying the `recommended implementer` (chosen by maximum wave width:
-1 → `subagent-implement`, 2 → all three, 3 or more → `agy-implement` or
-`opencode-implement`; advice only, you choose), and the implementer command (`.scratch/` is local and git-ignored, so nothing needs a commit; the command is
-`/subagent-implement .scratch/<feature-slug>/` or its `agy` / `opencode`
-siblings) and stops.
+for verdict routing, resume, and the exhaustion or stall path. After `SHIP`, a recorded `0` skip, or the user's choice to proceed after gate exhaustion or stall, tickets are published from the owned `references/ticket-format.md`. Every ticket names its Stories, Seam, Context, and measured Budget; each new story has a one-line `Scenario: given … when … then …`.
+Before the quiz, the bundled checker validates scenarios and ticket structure, then reports coverage, budget, DAG, and warnings. The derived planning manifest is stored at `.scratch/<feature-slug>/manifest.json`; see the [canonical grill-to-tickets contract](../../../skills/agents/grill-to-tickets/SKILL.md) for checker and manifest rules.
+Stage 3.5 Ticket review runs after checker PASS and before the quiz. See the [canonical contract](../../../skills/agents/grill-to-tickets/SKILL.md) and [ticket-review brief](../../../skills/agents/grill-to-tickets/references/ticket-review.md) for the review process.
+The checker warns on acceptance criteria that mention a suite or tool run (`npm test`, `tests pass`, `typecheck passes`, `lint passes`, `suite passes`), two tickets that change the same path — `(edit)`, `(new)`, or `(edit from NN)` — when neither transitively blocks the other, and more than 15 tickets. Warnings do not change the result; each is logged under `## Ticket warnings` as `<warning> — acknowledged` or `<warning> — fixed: <change>`.
+
+Then the skill prints a handoff in this order: `/clear`, the DAG summary carrying the `recommended implementer` (chosen by maximum wave width: 1 → `subagent-implement`, 2 → all three, 3 or more → `agy-implement` or `opencode-implement`; advice only, you choose), a `Manifest: .scratch/<feature-slug>/manifest.json` line after the DAG block (only when the last checker run exited 0), and the implementer command (`.scratch/` is local and git-ignored, so nothing needs a commit; the command is `/subagent-implement .scratch/<feature-slug>/` or its `agy` / `opencode` siblings) and stops.
 
 ### Example prompt
 
@@ -166,6 +157,9 @@ siblings) and stops.
 - `references/ticket-format.md` — the owned ticket format with the Seam,
   Context, and Budget fields, adapted upstream with its source line and the MIT
   notice
+- `references/ticket-review.md` — the fresh reviewer's brief and `READY` / `ASK`
+  return format for the Stage 3.5 ambiguity review
+- `.scratch/<feature-slug>/manifest.json` — the derived planning snapshot used by the handoff; the canonical grill-to-tickets contract documents its contents and rules
 - `references/UPSTREAM-LICENSE.md` — the upstream MIT notice both formats carry
 - `references/blind-spot-pass.md` — the nine categories checked before the
   Stage 0 pause (adapted from Spec Kit's `/clarify`), the marks, and the
@@ -175,12 +169,7 @@ siblings) and stops.
 - `references/design-review-gate.md` — the single source for the full routing
   table, cycle accounting, stall detection, and the per-cycle gate report format;
   SKILL.md Stage 2 keeps only a brief per-verdict summary and points here
-- `scripts/check-tickets.mjs` — a dependency-free Node checker run before the
-  Stage 3 quiz: story coverage and blockers, plus Seam, Context, and Budget (single line, ordered, real
-  paths and spec sections). With `--write-budget` it measures each ticket and
-  writes its Budget line; it warns without ever failing the result, and prints
-  the story-coverage table, the budget table, and the DAG summary with a
-  recommended implementer (exit 0 clean, 1 errors, 2 unusable input)
+- `scripts/check-tickets.mjs` — the dependency-free Node checker for Scenario, story coverage, blockers, Seam, Context, and Budget; `--write-budget` measures and writes Budget lines, then reports warnings, coverage, budget, DAG, and recommended implementer; see the [canonical grill-to-tickets contract](../../../skills/agents/grill-to-tickets/SKILL.md) for manifest.json rules (exit 0 clean, 1 errors, 2 unusable input)
 - `evals/evals.json` — behavioral cases in `skill-creator`'s benchmark format:
   at least one per Design Review Gate routing branch, one
   per planning safeguard (decision log, `continue`, blind-spot pass, fresh

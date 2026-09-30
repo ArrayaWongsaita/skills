@@ -27,6 +27,7 @@ Stage 2: Design Review Gate   scrutinize (fresh reviewer) → design-review.md  
    │ (SHIP / 0 skip / user goes on after exhaustion or stall)
    ▼
 Stage 3: Tickets      ticket-format.md            → issues/NN-<slug>.md
+Stage 3.5: Ticket review      fresh reviewer subagent (skippable) → ## Ticket review
    ▼
 Stop: handoff message (/clear, /subagent-implement <dir>)
 ```
@@ -45,6 +46,9 @@ Add `--review N` to the idea to answer the Stage 2 review question up front — 
 is the most rounds of design review to run, and `--review 0` skips the review.
 Without the flag, Stage 2 asks.
 
+Match `--ticket-review 0` as whole tokens to skip Stage 3.5. Only
+that exact value skips; any other value is treated as absent.
+
 Codex policy is declared in `agents/openai.yaml` (`allow_implicit_invocation: false`).
 Claude Code installations rely on `disable-model-invocation: true`. Require explicit
 human invocation before starting.
@@ -53,16 +57,21 @@ human invocation before starting.
 
 Stages 0, 1, and 3 run **inline**: read each stage skill's `SKILL.md` at the
 path Preflight found and follow its workflow steps directly, in this one
-continuous context window. This skill follows three stage skills (`grilling`,
+continuous context window. The ticket review is the one dispatched step inside
+Stage 3, because the interview, the spec, and the ticket writing remain inline.
+This skill follows three stage skills (`grilling`,
 `domain-modeling`, `scrutinize`) and two owned formats
 ([spec-format.md](references/spec-format.md) and
 [ticket-format.md](references/ticket-format.md)). `grilling` and
 `domain-modeling` run inline, keeping the interview, the spec, and the tickets
 on one reasoning thread, where the user is.
 
-One step dispatches a subagent, and it makes no decision: the Stage 2 reviewer. The
-reviewer runs `scrutinize` in a fresh context so it reads the spec the way the implementer will — from files
-alone, without the interview's answers to fill its gaps.
+Two steps dispatch a subagent, and neither decides: the Stage 2 design reviewer
+and the Stage 3.5 ticket reviewer. The Stage 2 reviewer runs `scrutinize` in a
+fresh context so it reads the spec the way the implementer will, from files
+alone. The Stage 3.5 reviewer follows the read-only brief in
+[ticket-review.md](references/ticket-review.md) and reports a verdict for each
+ticket; the main thread keeps the decisions for both reviews.
 
 This skill owns its own copy of the Design Review Gate rules and runs fully
 standalone.
@@ -107,7 +116,8 @@ idea (lowercase alphanumeric with hyphens).
 ├── adr/                # architectural decision records (NNNN-<slug>.md)
 ├── spec.md             # feature specification
 ├── design-review.md    # one stable design-review report, updated per cycle
-└── issues/             # tracer-bullet vertical tickets (NN-<slug>.md)
+├── issues/             # tracer-bullet vertical tickets (NN-<slug>.md)
+└── manifest.json       # derived by the ticket checker
 ```
 
 `.scratch/` is local working state and stays out of git, so the tickets need no
@@ -122,9 +132,10 @@ Run `grilling` and `domain-modeling` together as one discovery pass.
 
 1. **Ground in existing context.** Read the repository's root `CONTEXT.md` and
    `docs/adr/` if they exist, plus any relevant existing directory under
-   `.scratch/`. Initialize `.scratch/<feature-slug>/` with its
-   `decisions.md` State and write the first `### Preflight <date>` entry under
-   `## Preflight` recording the stage skills' paths and lock hashes.
+   `.scratch/`. When Stage 0 step 1 creates `decisions.md`, initialize its State
+   with `ticket review: skipped` for `--ticket-review 0` or
+   `ticket review: pending` otherwise. Write the first `### Preflight <date>`
+   entry under `## Preflight` recording the stage skills' paths and lock hashes.
 2. **Relentless interview (inline `grilling`).** Map decisions as a design tree.
    Work the tree in rounds across the frontier — every decision whose
    prerequisites are settled. Number each question and give a recommended answer.
@@ -156,7 +167,8 @@ glossary, and the ADRs directly into `.scratch/<feature-slug>/spec.md` using the
 standard sections (Problem Statement, Solution, User Stories, Implementation
 Decisions, Testing Decisions, Out of Scope, Further Notes). Sketch the test
 seams and confirm them with the user. Stage 0 already settled the decisions —
-synthesize them and keep the interview closed. The spec is done when
+synthesize them and keep the interview closed. For every new spec, write at
+least one `Scenario:` line under every story. The spec is done when
 every decision in the log appears in it — as a story, an implementation or
 testing decision, an out-of-scope line, or a further note — and
 every blind-spot assumption appears in Further Notes.
@@ -216,6 +228,12 @@ numbered from `01` in dependency order. Every ticket carries a `**Stories:**` li
 user-story numbers it delivers (`2, 5`, or a range `3-6`), or `none` for a
 prefactor.
 
+Draw each ticket's acceptance criteria from the Scenario lines of the stories
+it delivers. The checker enforces Scenario form: `given`, `when`, `then` in
+order, and a Scenario under every story; an older spec without Scenarios
+passes with a warning
+([ticket-format.md](references/ticket-format.md)).
+
 **Draft, measure, fix, then quiz.** Write the draft tickets first, then run the
 ticket checker that ships with this skill with `--write-budget`, so it writes
 every ticket's Budget line from its measurement:
@@ -231,11 +249,45 @@ granularity and blocking edges, showing each ticket's Seam, Context, and
 Budget, and showing the checker's story-coverage table, budget table, DAG
 summary, and every warning. Re-run the checker after every change with `--write-budget`.
 
-Stage 3 is done when the checker prints `result: PASS`, every warning is logged
-under `## Ticket warnings` in `decisions.md` — one line per warning,
-`<warning> — acknowledged` or `<warning> — fixed: <change>` — and the user
-approves the breakdown. Where Node is unavailable, apply the checks listed in the
-script's header by hand.
+**Stage 3.5 — Ticket review.** After the checker prints `result: PASS` and
+ticket errors are fixed, run one review before the quiz. Match
+`--ticket-review 0` as whole tokens; that exact value skips the
+review, and any other value is treated as absent. An absent flag runs the review
+once. Dispatch one fresh reviewer subagent and follow the brief in
+[ticket-review.md](references/ticket-review.md); the reviewer is read-only. When
+the harness offers no subagent, run the review in the main context and record
+`reviewer: inline`. A skipped review records the single line `- review skipped`
+under `## Ticket review` in `decisions.md`, alongside the State key
+`ticket review: skipped`. Once the review has run, set State
+`ticket review: done`; while the `ASK` questions are shown at the quiz, State
+reads `waiting on: ticket-quiz approval`
+([decision-log.md](references/decision-log.md) — Format).
+
+The review returns `NN READY` or `NN ASK: <question>` for each ticket. Treat
+each ticket with no return line as `ASK: the reviewer returned no verdict`.
+Show each `ASK` question beside its ticket's Seam, Context, and Budget in the
+quiz. The person decides whether to fix or acknowledge each question. The main
+thread waits until the person has seen and decided on the question before
+applying a fix, and fixes a ticket only when
+the person chooses fix. After each fix, re-run the checker with `--write-budget`;
+a second review starts only when the person asks. `ASK` lines name tickets as
+numbered at review time; when the quiz removes a ticket, give its line the
+`— acknowledged` suffix. The review set closes at review time. Tickets the quiz
+creates join a review only after the person asks for another review.
+
+Stage 3 is done when all of these hold:
+
+- every warning is logged under `## Ticket warnings` in `decisions.md`, one line
+  per warning: `<warning> — acknowledged` or `<warning> — fixed: <change>`;
+- the `ticket review` State is `done` or `skipped`;
+- every `ASK` line under `## Ticket review` carries `— resolved: <change>` or
+  `— acknowledged`;
+- the user approves the breakdown;
+- either the last checker run exits 0 or, where Node is unavailable,
+  the by-hand checks listed in the script's header pass.
+
+After a manifest write
+failure, report the failure and re-run the checker before finishing Stage 3.
 
 ## Stop — Handoff
 
@@ -260,11 +312,15 @@ no leading slash:
   maximum wave width: 2
   critical-path length: 2
   recommended implementer: subagent-implement, agy-implement, opencode-implement
+Manifest: .scratch/<feature-slug>/manifest.json
 
 Then implement the whole ticket directory in a fresh session:
 /subagent-implement .scratch/<feature-slug>/
 (or /agy-implement or /opencode-implement with the same argument)
 ```
+
+The manifest line appears only when the last checker run exited 0. Omit it when
+the checker could not run or could not write the manifest.
 
 The later implementer run owns implementation; this skill's job ends at the
 handoff.

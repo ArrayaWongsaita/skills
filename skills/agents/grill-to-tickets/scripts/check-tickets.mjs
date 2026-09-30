@@ -5,6 +5,12 @@
 //   node <skill-dir>/scripts/check-tickets.mjs .scratch/<feature-slug>/ [--write-budget]
 //
 // - every numbered story under spec.md's "## User Stories" has a ticket;
+// - new specs carry one or more Scenario lines under every story; a spec with
+//   no Scenario line warns, so older specs remain valid;
+// - Scenario lines are recognized only in User Stories, are indented under a
+//   story, and contain the whole words given, when, then in that order;
+// - each Scenario line yields at most one error in order: outside a story,
+//   indentation, then keyword; multiple Scenario lines under one story pass;
 // - every ticket's **Stories:** names only stories the spec defines;
 // - every **Blocked by:** entry names an existing, lower-numbered ticket;
 // - every ticket has **Seam:** directly after **Stories:**;
@@ -32,10 +38,16 @@
 // - warnings never change the result;
 // - the DAG summary lists each wave's tickets, the maximum wave width, the
 //   critical-path length, and the implementer those recommend.
+// - each result keeps its ticket-number list and planning-only per-ticket facts
+//   separately; only a PASS with --write-budget rewrites manifest.json atomically
+//   beside issues/ from those facts and the raw spec sha256. It has no Status,
+//   timestamp, verify commands, or passes field; a failing check leaves an earlier
+//   manifest untouched, and a write failure follows the report and exits 2.
 //
 // Exit codes: 0 clean, 1 errors found, 2 unusable input.
 
-import { chmod, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { chmod, lstat, readFile, readlink, readdir, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -55,6 +67,54 @@ export function parseStories(spec) {
     if (story) stories.push(story[1]);
   }
   return stories;
+}
+
+function checkScenarios(spec) {
+  const lines = spec.split("\n");
+  const start = lines.findIndex((line) => /^## User Stories\s*$/.test(line));
+  if (start === -1) return { usesScenarios: false, coveredStories: new Set(), errors: [] };
+
+  let story = null;
+  let usesScenarios = false;
+  const coveredStories = new Set();
+  const errors = [];
+
+  for (let i = start + 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^## /.test(line)) break;
+
+    const storyMatch = line.match(/^(\d+[a-z]?)\.\s+\S/);
+    if (storyMatch) story = storyMatch[1];
+
+    if (!/^\s*Scenario:/.test(line)) continue;
+    usesScenarios = true;
+    const lineNumber = i + 1;
+
+    if (story === null) {
+      errors.push(`line ${lineNumber}: Scenario line sits outside a story`);
+      continue;
+    }
+    if (!/^\s+Scenario:/.test(line)) {
+      errors.push(`line ${lineNumber}: Scenario line must be indented under its story`);
+      continue;
+    }
+
+    coveredStories.add(story);
+    const content = line.replace(/^\s+Scenario:\s*/, "");
+    let offset = 0;
+    let missing = null;
+    for (const keyword of ["given", "when", "then"]) {
+      const match = new RegExp(`\\b${keyword}\\b`, "i").exec(content.slice(offset));
+      if (!match) {
+        missing = keyword;
+        break;
+      }
+      offset += match.index + match[0].length;
+    }
+    if (missing) errors.push(`line ${lineNumber}: Scenario line is missing "${missing}"`);
+  }
+
+  return { usesScenarios, coveredStories, errors };
 }
 
 export function sectionOf(spec, ref) {
@@ -211,6 +271,48 @@ function contextItemsOf(ticket) {
   return value.split("·").map((s) => s.trim()).filter(Boolean).map(parseContextItem);
 }
 
+function contextPathProblem(rawPath) {
+  const win32Root = path.win32.parse(rawPath).root;
+  if (path.isAbsolute(rawPath) || path.posix.isAbsolute(rawPath) || path.win32.isAbsolute(rawPath) || win32Root) {
+    return "absolute";
+  }
+
+  const escapesRoot = (normalized) => normalized === ".." || normalized.startsWith("../");
+  const posixPath = path.posix.normalize(rawPath);
+  const windowsPath = path.posix.normalize(rawPath.replaceAll("\\", "/"));
+  return escapesRoot(posixPath) || escapesRoot(windowsPath) ? "escapes" : null;
+}
+
+function isWithinDirectory(root, candidate) {
+  const relative = path.relative(root, candidate);
+  return relative === "" || (relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
+}
+
+async function canonicalExistingPrefix(candidate) {
+  let current = candidate;
+  while (true) {
+    try {
+      return await realpath(current);
+    } catch (error) {
+      if (error.code !== "ENOENT" && error.code !== "ENOTDIR") throw error;
+
+      try {
+        const entry = await lstat(current);
+        if (entry.isSymbolicLink()) {
+          const target = await readlink(current);
+          return await canonicalExistingPrefix(path.resolve(path.dirname(current), target));
+        }
+      } catch (entryError) {
+        if (entryError.code !== "ENOENT" && entryError.code !== "ENOTDIR") throw entryError;
+      }
+
+      const parent = path.dirname(current);
+      if (parent === current) throw error;
+      current = parent;
+    }
+  }
+}
+
 // The read tokens, criteria, and modules a ticket's Budget line records.
 function measureBudget(ticket, { spec, files }) {
   const budgetLines = new Set(ticket.fields.filter((f) => f.name === "Budget").map((f) => f.lineIndex));
@@ -364,8 +466,16 @@ export function checkFeature({ spec, tickets: ticketFiles, files }) {
   const errors = [];
   const notes = [];
   const stories = parseStories(spec ?? "");
+  const scenarioCheck = checkScenarios(spec ?? "");
   if (spec === null) errors.push("spec.md is missing");
   else if (stories.length === 0) errors.push('spec.md has no numbered stories under "## User Stories"');
+
+  errors.push(...scenarioCheck.errors);
+  if (scenarioCheck.usesScenarios) {
+    for (const story of stories) {
+      if (!scenarioCheck.coveredStories.has(story)) errors.push(`story ${story} has no Scenario line`);
+    }
+  }
 
   const tickets = [];
   const seen = new Map();
@@ -523,6 +633,7 @@ export function checkFeature({ spec, tickets: ticketFiles, files }) {
   // result. Two tickets that change one path may land in the same wave unless
   // an edge orders them.
   const warnings = [];
+  if (spec != null && !scenarioCheck.usesScenarios) warnings.push("spec.md carries no scenarios");
   const touchesByPath = new Map();
   for (const ticket of tickets) {
     for (const item of contextItemsOf(ticket)) {
@@ -582,18 +693,22 @@ export function checkFeature({ spec, tickets: ticketFiles, files }) {
       }
 
       const { marker, rawPath } = item;
-      if (path.posix.isAbsolute(rawPath)) {
+      const pathProblem = contextPathProblem(rawPath);
+      if (pathProblem === "absolute") {
         contextError(`${where}: Context path "${rawPath}" is absolute`);
         continue;
       }
-
       const norm = path.posix.normalize(rawPath);
-      if (norm.startsWith("../") || norm === ".." || norm.startsWith("/..")) {
+      if (pathProblem === "escapes") {
         contextError(`${where}: Context path "${rawPath}" escapes the project root`);
         continue;
       }
 
       const fileEntry = getFile(files, norm);
+      if (fileEntry && typeof fileEntry === "object" && fileEntry.escaped) {
+        contextError(`${where}: Context path "${rawPath}" escapes the project root`);
+        continue;
+      }
       if (fileEntry && typeof fileEntry === "object" && fileEntry.directory) {
         contextError(`${where}: Context path "${norm}" is a directory`);
         continue;
@@ -678,7 +793,31 @@ export function checkFeature({ spec, tickets: ticketFiles, files }) {
     if (covering.length === 0) errors.push(`story ${id} has no ticket`);
   }
 
-  return { errors, warnings, notes, coverage, tickets: tickets.map((t) => t.number), budgets, dag: computeDag(tickets) };
+  const storyOrder = new Map(stories.map((id, index) => [id, index]));
+  const ticketFacts = tickets.map((ticket) => {
+    const storyRefs = parseStoryRefs(ticket.field("Stories") || "none", stories).refs;
+    const storyIds = [...new Set(storyRefs)].sort((a, b) => storyOrder.get(a) - storyOrder.get(b));
+    return {
+      number: ticket.number,
+      file: path.posix.join("issues", ticket.file),
+      title: ticket.title,
+      stories: storyIds,
+      blockedBy: [...(ticket.blockers ?? [])].sort((a, b) => a - b),
+      seam: ticket.field("Seam") ?? "",
+      budget: ticket.field("Budget") ?? "",
+    };
+  });
+
+  return {
+    errors,
+    warnings,
+    notes,
+    coverage,
+    tickets: tickets.map((t) => t.number),
+    ticketFacts,
+    budgets,
+    dag: computeDag(tickets),
+  };
 }
 
 export function findProjectRoot(dir) {
@@ -712,8 +851,30 @@ async function replaceFile(target, contents) {
   }
 }
 
+// A manifest may not exist on the first passing run. New manifests use the
+// default mode; rewrites preserve the existing file's permissions.
+async function writeManifest(target, contents) {
+  const temporary = path.join(path.dirname(target), `.${path.basename(target)}.tmp-${process.pid}`);
+  try {
+    let mode;
+    try {
+      mode = (await stat(target)).mode & 0o7777;
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+    }
+
+    await writeFile(temporary, contents);
+    if (mode !== undefined) await chmod(temporary, mode);
+    await rename(temporary, target);
+  } catch (error) {
+    await rm(temporary, { force: true }).catch(() => {});
+    throw error;
+  }
+}
+
 export async function checkFeatureDir(dir, { writeBudget = false } = {}) {
   const projectRoot = findProjectRoot(dir);
+  const canonicalRoot = await realpath(projectRoot);
   const spec = await readFile(path.join(dir, "spec.md"), "utf8").catch(() => null);
   const issuesDir = path.join(dir, "issues");
   const names = (await readdir(issuesDir)).filter((name) => name.endsWith(".md")).sort();
@@ -726,12 +887,21 @@ export async function checkFeatureDir(dir, { writeBudget = false } = {}) {
     for (const item of contextItemsOf(parseTicket(file, text))) {
       if (item.kind === "spec") continue;
       const norm = path.posix.normalize(item.rawPath);
-      if (path.posix.isAbsolute(norm) || norm.startsWith("../") || norm === "..") {
+      if (contextPathProblem(item.rawPath)) {
         continue;
       }
       if (!files.has(norm)) {
         const fullPath = path.resolve(projectRoot, norm);
+        if (!isWithinDirectory(projectRoot, fullPath)) {
+          files.set(norm, { escaped: true });
+          continue;
+        }
         try {
+          const canonicalPath = await canonicalExistingPrefix(fullPath);
+          if (!isWithinDirectory(canonicalRoot, canonicalPath)) {
+            files.set(norm, { escaped: true });
+            continue;
+          }
           const st = await stat(fullPath);
           if (st.isDirectory()) {
             files.set(norm, { directory: true });
@@ -764,7 +934,25 @@ export async function checkFeatureDir(dir, { writeBudget = false } = {}) {
     tickets = await readTickets();
   }
 
-  return checkFeature({ spec, tickets, files });
+  const result = checkFeature({ spec, tickets, files });
+  if (writeBudget && result.errors.length === 0) {
+    try {
+      const specBytes = await readFile(path.join(dir, "spec.md"));
+      const manifest = {
+        version: 1,
+        specSha256: createHash("sha256").update(specBytes).digest("hex"),
+        waves: result.dag.waves,
+        maxWaveWidth: result.dag.width,
+        criticalPathLength: result.dag.criticalPath,
+        recommendedImplementers: result.dag.recommendation,
+        tickets: result.ticketFacts,
+      };
+      await writeManifest(path.join(dir, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
+    } catch (error) {
+      result.manifestError = error.message;
+    }
+  }
+  return result;
 }
 
 export function formatReport(dir, { errors, warnings = [], notes, coverage, budgets = [], dag }) {
@@ -820,6 +1008,10 @@ async function main(argv) {
     return 2;
   }
   console.log(formatReport(dir, result));
+  if (result.manifestError) {
+    console.error(`manifest could not be written: ${result.manifestError}`);
+    return 2;
+  }
   return result.errors.length === 0 ? 0 : 1;
 }
 

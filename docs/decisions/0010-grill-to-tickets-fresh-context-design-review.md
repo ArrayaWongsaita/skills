@@ -5,8 +5,10 @@
 - Relates to / เกี่ยวข้องกับ: ADR 0003 (`grill-to-tickets` as a standalone
   composite); replaces that skill's "keep every stage on the main thread" rule
 - Amended by / แก้ไขโดย: ADR 0017 replaces only the fixed six-cycle bound of
-  the gate; the fresh-context reviewer decision below still stands /
-  ADR 0017 แทนที่เฉพาะเพดาน 6 รอบตายตัวของ gate ส่วนการรีวิวใน context ใหม่ยังใช้ต่อ
+  the gate; ADR 0018 amends decision 5 because Stage 3 now also dispatches the
+  ticket reviewer. The fresh-context reviewer decision below still stands /
+  ADR 0017 แทนที่เฉพาะเพดาน 6 รอบตายตัวของ gate; ADR 0018 แก้ไข decision 5 เพราะ
+  Stage 3 ส่ง ticket reviewer ผ่าน subagent ด้วย ส่วนการรีวิวใน context ใหม่ยังใช้ต่อ
 
 ## Context / บริบท
 

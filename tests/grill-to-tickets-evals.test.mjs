@@ -82,8 +82,22 @@ describe("grill-to-tickets eval suite contract", () => {
       );
     });
 
+    it("describes the handoff eval as two subagent dispatches, Stage 2 and Stage 3.5", async () => {
+      const { evals } = await evalsJson();
+      const lines = evals.flatMap((item) => item.expectations ?? []).filter((line) => /^Prints the handoff/.test(line));
+      assert.ok(lines.length > 0, "an eval expectation covers the handoff");
+      for (const line of lines) {
+        assert.match(line, /Stage 2[\s\S]*Stage 3\.5/, "the handoff expectation names both dispatches");
+        assert.doesNotMatch(line, /only for the Stage 2 review/, "the handoff expectation is not limited to Stage 2");
+      }
+    });
+
     it("covers every planning safeguard: decision log, resume, blind spots, fresh reviewer, sweep, ticket check", async () => {
       const { evals } = await evalsJson();
+      const ticketReview = evals.find((item) => item.name === "ticket review shows each ASK before the user decides");
+      assert.ok(ticketReview, "a ticket-review eval exercises Stage 3.5");
+      assert.match(ticketReview.prompt, /result: PASS[\s\S]*no --ticket-review flag[\s\S]*Run Stage 3\.5/i);
+      assert.match(ticketReview.expected_output, /one fresh, read-only ticket reviewer[\s\S]*READY or ASK[\s\S]*Seam, Context, and Budget/i);
       const safeguards = [
         { label: "decision log", match: /decision log records/i },
         { label: "resume", match: /^continue .*decision log/i },
@@ -103,6 +117,7 @@ describe("grill-to-tickets eval suite contract", () => {
         { label: "same-file warning adds an edge", match: /same-file warning adds an edge/i },
         { label: "above 15 tickets proposes a split", match: /above 15 tickets proposes a split/i },
         { label: "handoff recommends from the DAG", match: /handoff recommends an implementer from the DAG/i },
+        { label: "ticket review", match: /ticket review/i },
       ];
       for (const safeguard of safeguards) {
         assert.ok(
