@@ -267,14 +267,14 @@
     },
     {
       "id": 32,
-      "name": "Preflight records the lock by location",
-      "prompt": "/grill-to-tickets Add export feature. grilling is found under .agents/skills/grilling/, domain-modeling under .claude/skills/domain-modeling/, and scrutinize under ~/.agents/skills/scrutinize/. The project skills-lock.json holds computedHash values for grilling and domain-modeling. Global ~/.agents/.skill-lock.json has no entry for scrutinize.",
-      "expected_output": "Preflight resolves grilling (.agents/skills/) and domain-modeling (.claude/skills/) from the project and scrutinize (~/.agents/skills/) from home. It reads skills-lock.json computedHash for grilling and domain-modeling, and ~/.agents/.skill-lock.json for scrutinize. Because scrutinize has no entry in the global lock, Preflight records 'no lock entry'. It writes these into decisions.md under ## Preflight as ### Preflight <date> when initializing Stage 0.",
+      "name": "Preflight records paths only on resume",
+      "prompt": "/grill-to-tickets continue export-feature. grilling is found under .agents/skills/grilling/, domain-modeling under .claude/skills/domain-modeling/, and scrutinize under ~/.agents/skills/scrutinize/. decisions.md has older Preflight lines carrying lock hashes. Resume the run.",
+      "expected_output": "Keep the older Preflight lines with lock hashes as written. Append a new dated entry under ## Preflight in decisions.md: each line records the skill and the path found, with no hash. The new entries record paths only, without reading either lock file. Resume at the recorded State.",
       "expectations": [
-        "Resolves project skills against skills-lock.json computedHash",
-        "Resolves global skills against ~/.agents/.skill-lock.json skillFolderHash",
-        "Records 'no lock entry' when a lock file, entry, or value is missing",
-        "Writes the dated entry under ## Preflight in decisions.md without recomputation or warning"
+        "Records the skill and the path found for grilling, domain-modeling, and scrutinize in their resolved locations",
+        "Older Preflight lines carrying lock hashes are kept on resume",
+        "New dated entries record paths only under ## Preflight",
+        "Appends the entry without reading either lock file"
       ],
       "files": []
     },

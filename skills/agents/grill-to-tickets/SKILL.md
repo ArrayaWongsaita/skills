@@ -104,11 +104,9 @@ npx skills add thananon/9arm-skills --skill scrutinize
 
 Use `npx skills check` to check the stage skills for updates.
 
-For each skill found, record the path found and the hash its matching lock holds:
-- a skill found under `.agents/skills/` or `.claude/skills/` reads the project `skills-lock.json` → `skills.<name>.computedHash`;
-- a skill found under `~/.agents/skills/` or `~/.claude/skills/` reads `~/.agents/.skill-lock.json` → `skills.<name>.skillFolderHash`.
-
-Record the value as the lock holds it without recomputation, comparison, or warning. A missing lock file, a missing entry, or an empty value records `no lock entry`. Stage 0 step 1 writes the first dated entry under `## Preflight` in `decisions.md`; each `continue` appends another.
+For each skill found, each entry records the skill and the path found.
+Stage 0 step 1 writes the first dated entry under `## Preflight` in
+`decisions.md`; each `continue` appends another.
 
 ## Feature-Scoped Storage
 
@@ -142,7 +140,7 @@ Run `grilling` and `domain-modeling` together as one discovery pass.
    `.scratch/`. When Stage 0 step 1 creates `decisions.md`, initialize its State
    with `ticket review: skipped` for `--ticket-review 0` or
    `ticket review: pending` otherwise. Write the first `### Preflight <date>`
-   entry under `## Preflight` recording the stage skills' paths and lock hashes.
+   entry under `## Preflight`; each entry records the skill and the path found.
 2. **Relentless interview (inline `grilling`).** Map decisions as a design tree.
    Work the tree in rounds across the frontier — every decision whose
    prerequisites are settled. Each question is tagged `hard` or `easy`.

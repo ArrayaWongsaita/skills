@@ -23,9 +23,9 @@ decision, including the small ones neither of them takes.
 
 ### Preflight 2026-09-24
 
-- `grilling` — `.agents/skills/grilling/SKILL.md` — lock: `a1b2c3d4...`
-- `domain-modeling` — `.agents/skills/domain-modeling/SKILL.md` — lock: `e5f6a7b8...`
-- `scrutinize` — `~/.agents/skills/scrutinize/SKILL.md` — lock: `no lock entry`
+- `grilling` — `.agents/skills/grilling/SKILL.md`
+- `domain-modeling` — `.agents/skills/domain-modeling/SKILL.md`
+- `scrutinize` — `~/.agents/skills/scrutinize/SKILL.md`
 
 ## Round 1
 
@@ -78,7 +78,7 @@ For a run that skips the review, the State key is `ticket review: skipped` and
   same line carries `— resolved: <change>` or `— acknowledged`. A skipped
   review records `- review skipped` as its only Ticket review entry, alongside
   the State key.
-- **Preflight** records the stage skills found and their lock values. Stage 0
+- **Preflight** records the skill and the path found for each stage skill. Stage 0
   step 1 writes the first `### Preflight <date>` entry under `## Preflight` when
   it creates the log, and each `continue` appends another, keeping earlier entries.
 - **Ticket warnings** logs the checker's Stage 3 warnings, one line each with the
@@ -130,6 +130,8 @@ A round is closed when every question in it carries a `decided:` other than
    A recorded State answer wins over a `--review` flag on `continue`.
    The pause and Stage 2 each ask only when State holds no review answer;
    an older run resuming at Stage 2 with none gets the entry question there.
+   Older Preflight lines with lock hashes are kept as written on resume;
+   new entries record paths only. Append the dated entry without reading either lock file.
 3. Resume at the recorded `stage` and `waiting on`. When the run waits on a
    round, re-post that round's open questions. Every logged decision is settled:
    a question returns only when a gate finding reopens it.

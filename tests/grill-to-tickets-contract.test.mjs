@@ -467,14 +467,39 @@ describe("grill-to-tickets composite skill contract", () => {
       }
       assert.ok(!preflight.includes("to-spec"), "no install line for to-spec");
       assert.ok(!preflight.includes("to-tickets"), "no install line for to-tickets");
-      assert.match(preflight, /skills-lock\.json/);
-      assert.match(preflight, /computedHash/);
-      assert.match(preflight, /~\/\.agents\/\.skill-lock\.json/);
-      assert.match(preflight, /skillFolderHash/);
-      assert.match(preflight, /no lock entry/);
+      assert.match(preflight, /each entry records the skill and the path found/i);
+      assert.doesNotMatch(preflight, /lock|hash|computedHash|skillFolderHash/i);
+      const step1 = markdownSection(content, "Stage 0 — Grill").split("2. **Relentless interview")[0];
+      assert.match(step1, /entry[\s\S]*skill and the path found/i);
+      assert.doesNotMatch(step1, /lock|hash/i);
       assert.match(preflight, /npx skills check/);
       assert.match(content, /at the\s+path Preflight found/);
       assert.match(content, /local files are the tracker/);
+    }
+  });
+
+  it("keeps older Preflight entries on resume and writes path-only examples", async () => {
+    const log = await readFile(path.resolve(canonicalDir, "references/decision-log.md"), "utf8");
+    const format = markdownSection(log, "Format");
+    const example = format.slice(format.indexOf("## Preflight"), format.indexOf("## Round 1"));
+    assert.deepEqual(example.split("\n").filter((line) => line.startsWith("- ")), [
+      "- `grilling` — `.agents/skills/grilling/SKILL.md`",
+      "- `domain-modeling` — `.agents/skills/domain-modeling/SKILL.md`",
+      "- `scrutinize` — `~/.agents/skills/scrutinize/SKILL.md`",
+    ]);
+    assert.match(format, /Preflight[^\n]*skill and the path found/);
+    const resume = markdownSection(log, "Resume — `continue <feature-slug>`");
+    assert.match(resume, /older Preflight lines with lock hashes[\s\S]*kept/i);
+    assert.match(resume, /new entr(?:y|ies) record paths only/i);
+  });
+
+  it("preserves the owned formats' exact upstream source lines", async () => {
+    for (const [format, expectedSourceLine] of [
+      ["spec", "Adapted from mattpocock/skills:skills/engineering/to-spec/SKILL.md (sha256 folder hash 3fa1a0695d4ea242fae9e569e4d22aa1788623197abb33bfadafae7315789bbf). See [UPSTREAM-LICENSE.md](UPSTREAM-LICENSE.md)."],
+      ["ticket", "Adapted from mattpocock/skills:skills/engineering/to-tickets/SKILL.md (sha256 folder hash bf5e6ebcb4f1272de0c188d5b3901f265a03d1fa9935a21a7a56938e21e2e761). See [UPSTREAM-LICENSE.md](UPSTREAM-LICENSE.md)."],
+    ]) {
+      const text = await readFile(path.resolve(canonicalDir, `references/${format}-format.md`), "utf8");
+      assert.equal(text.split("\n")[0], expectedSourceLine);
     }
   });
 

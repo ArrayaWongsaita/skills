@@ -109,7 +109,7 @@ describe("grill-to-tickets eval suite contract", () => {
         { label: "ticket checker", match: /ticket checker/i },
         { label: "preflight: missing stage skill", match: /preflight stops/i },
         { label: "preflight: global install", match: /preflight uses a globally installed/i },
-        { label: "preflight: lock by location", match: /preflight records the lock by location/i },
+        { label: "preflight: paths only on resume", match: /preflight records paths only on resume/i },
         { label: "local tracker", match: /local files replace/i },
         { label: "git-ignored scratch", match: /local exclude/i },
         { label: "budget-line mismatch", match: /budget-line mismatch/i },
@@ -194,3 +194,10 @@ it("covers parked-flow with a dedicated coverage label", async () => {
   const text = entry.expected_output + entry.expectations.join(" ");
   for (const requirement of [/six fields/, /decided: parked/, /blocking/, /non-blocking/, /resolved: assumed/, /resolved: answered/, /Further Notes/, /resume/, /handoff/, /pause/]) assert.match(text, requirement);
 });
+
+ it("covers path-only Preflight resume while retaining older lock lines", async () => {
+  const entry = (await evalsJson()).evals.find((e) => /preflight records paths only on resume/i.test(e.name));
+  assert.ok(entry, "no eval case covers path-only Preflight resume");
+  const text = entry.expected_output + entry.expectations.join(" ");
+  for (const requirement of [/skill and the path found/i, /older.*lock.*kept/i, /new.*paths only/i, /without reading either lock file/i]) assert.match(text, requirement);
+ });
