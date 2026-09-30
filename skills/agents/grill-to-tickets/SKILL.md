@@ -27,6 +27,7 @@ Stage 2: Design Review Gate   scrutinize (fresh reviewer) → design-review.md  
    │ (SHIP / 0 skip / user goes on after exhaustion or stall)
    ▼
 Stage 3: Tickets      ticket-format.md            → issues/NN-<slug>.md
+Stage 3.5: Ticket review      fresh reviewer subagent (skippable) → ## Ticket review
    ▼
 Stop: handoff message (/clear, /subagent-implement <dir>)
 ```
@@ -56,7 +57,9 @@ human invocation before starting.
 
 Stages 0, 1, and 3 run **inline**: read each stage skill's `SKILL.md` at the
 path Preflight found and follow its workflow steps directly, in this one
-continuous context window. This skill follows three stage skills (`grilling`,
+continuous context window. The ticket review is the one dispatched step inside
+Stage 3, because the interview, the spec, and the ticket writing remain inline.
+This skill follows three stage skills (`grilling`,
 `domain-modeling`, `scrutinize`) and two owned formats
 ([spec-format.md](references/spec-format.md) and
 [ticket-format.md](references/ticket-format.md)). `grilling` and
@@ -247,7 +250,12 @@ review, and any other value is treated as absent. An absent flag runs the review
 once. Dispatch one fresh reviewer subagent and follow the brief in
 [ticket-review.md](references/ticket-review.md); the reviewer is read-only. When
 the harness offers no subagent, run the review in the main context and record
-`reviewer: inline`.
+`reviewer: inline`. A skipped review records the single line `- review skipped`
+under `## Ticket review` in `decisions.md`, alongside the State key
+`ticket review: skipped`. Once the review has run, set State
+`ticket review: done`; while the `ASK` questions are shown at the quiz, State
+reads `waiting on: ticket-quiz approval`
+([decision-log.md](references/decision-log.md) — Format).
 
 The review returns `NN READY` or `NN ASK: <question>` for each ticket. Treat
 each ticket with no return line as `ASK: the reviewer returned no verdict`.
@@ -261,13 +269,18 @@ numbered at review time; when the quiz removes a ticket, give its line the
 `— acknowledged` suffix. The review set closes at review time. Tickets the quiz
 creates join a review only after the person asks for another review.
 
-Stage 3 is done when every warning is logged under `## Ticket warnings` in
-`decisions.md` — one line per warning, `<warning> — acknowledged` or
-`<warning> — fixed: <change>` —, the `ticket review` State is `done` or
-`skipped`, every `ASK` line under `## Ticket review` carries
-`— resolved: <change>` or `— acknowledged`, and the user approves the
-breakdown, and either the last checker run exits 0 or, where Node is unavailable,
-the by-hand checks listed in the script's header pass. After a manifest write
+Stage 3 is done when all of these hold:
+
+- every warning is logged under `## Ticket warnings` in `decisions.md`, one line
+  per warning: `<warning> — acknowledged` or `<warning> — fixed: <change>`;
+- the `ticket review` State is `done` or `skipped`;
+- every `ASK` line under `## Ticket review` carries `— resolved: <change>` or
+  `— acknowledged`;
+- the user approves the breakdown;
+- either the last checker run exits 0 or, where Node is unavailable,
+  the by-hand checks listed in the script's header pass.
+
+After a manifest write
 failure, report the failure and re-run the checker before finishing Stage 3.
 
 ## Stop — Handoff

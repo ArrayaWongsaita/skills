@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile, access, readdir } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
-import { assertSkillMarkdownSectionsDoNotMatch, markdownSection } from "./helpers/markdown-contract.mjs";
+import { assertSkillMarkdownSectionsDoNotMatch, markdownHeaderBlock, markdownSection } from "./helpers/markdown-contract.mjs";
 
 async function fileExists(filePath) {
   await access(filePath, constants.R_OK);
@@ -866,5 +866,43 @@ describe("grill-to-tickets composite skill contract", () => {
       assertPattern(quiz, /ticket[\s\S]{0,80}quiz removes[\s\S]{0,80}`— acknowledged`/i, `${label} acknowledges a removed ticket`);
       assertPattern(quiz, /tickets? (?:the )?quiz\s+creates[\s\S]{0,100}join a review only after the person\s+asks/i, `${label} leaves new tickets outside this review`);
     }
+  });
+
+  it("draws Stage 3.5 in the stage diagram and states it is the one dispatched step inside Stage 3", async () => {
+    const skill = await readFile(path.resolve(canonicalDir, "SKILL.md"), "utf8");
+    const diagram = markdownHeaderBlock(skill).match(/```\n([\s\S]*?)```/)?.[1] ?? "";
+    const inline = markdownSection(skill, "Inline Execution");
+
+    assertPattern(diagram, /Stage 3: Tickets[\s\S]*Stage 3\.5: Ticket review[\s\S]*Stop: handoff/, "the diagram places the ticket review between Stage 3 and the handoff");
+    assertPattern(inline, /Stages 0, 1, and 3 run \*\*inline\*\*[\s\S]{0,400}ticket review is the one dispatched step inside\s+Stage 3[\s\S]{0,120}interview, the spec, and the ticket\s+writing remain inline/i,
+      "Inline Execution says the ticket review is the one dispatched step inside Stage 3");
+  });
+
+  it("records the skipped, waiting, and done ticket-review State in Stage 3.5", async () => {
+    const skill = await readFile(path.resolve(canonicalDir, "SKILL.md"), "utf8");
+    const stage3 = markdownSection(skill, "Stage 3 — Tickets");
+    const start = stage3.indexOf("**Stage 3.5");
+    const end = stage3.indexOf("Stage 3 is done when");
+    const stage35 = stage3.slice(start, end);
+
+    assertPattern(stage35, /`--ticket-review 0`[\s\S]*`- review skipped`[\s\S]*`## Ticket review`[\s\S]*`ticket review: skipped`/, "a skipped review records the single line and the State key");
+    assertPattern(stage35, /`waiting on: ticket-quiz approval`/, "the quiz sets waiting on ticket-quiz approval");
+    assertPattern(stage35, /`ticket review:`[^\n]*`done`|`ticket review: done`/, "State ticket review becomes done after the review");
+  });
+
+  it("lists the Stage 3 completion conditions as a clean sentence", async () => {
+    const skill = await readFile(path.resolve(canonicalDir, "SKILL.md"), "utf8");
+    const stage3 = markdownSection(skill, "Stage 3 — Tickets");
+    const done = stage3.slice(stage3.indexOf("Stage 3 is done when"), stage3.indexOf("After a manifest write"));
+
+    assert.doesNotMatch(done, /—,/, "no stray comma after an em dash");
+    assert.doesNotMatch(done, /\band\b[^.]*\band\b[^.]*\band\b/, "no doubled and-chain");
+    for (const [pattern, label] of [
+      [/every warning[\s\S]*`## Ticket warnings`[\s\S]*— acknowledged[\s\S]*— fixed: <change>/, "warnings logged"],
+      [/`ticket review` State is `done` or\s+`skipped`/, "review State settled"],
+      [/every `ASK` line[\s\S]*— resolved: <change>[\s\S]*— acknowledged/, "ASK lines settled"],
+      [/the user approves the breakdown/, "user approval"],
+      [/the last checker run exits 0/, "checker exit 0"],
+    ]) assertPattern(done, pattern, `the completion list names ${label}`);
   });
 });
