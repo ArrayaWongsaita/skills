@@ -963,3 +963,47 @@ describe("question tiers", () => {
     assert.match(timing, /unanswered hard questions[^.]*`decided: open`/i);
   });
 });
+
+ describe("parked questions contract", () => {
+  const root = "skills/agents/grill-to-tickets";
+  const section = async (file, heading) => markdownSection(await readFile(`${root}/${file}`, "utf8"), heading);
+  it("stores parked state beside the log without separating issues and manifest", async () => {
+    const storage = await section("SKILL.md", "Feature-Scoped Storage");
+    assert.match(storage, /decisions\.md[^\n]*\n[^\n]*parked\.md/);
+    assert.match(storage, /issues\/[^\n]*\n[^\n]*manifest\.json/);
+  });
+  it("ships a six-field parked questionnaire and its status vocabulary", async () => {
+    const file = `${root}/references/parked-questions.md`;
+    assert.ok(await access(file).then(() => true, () => false), "parked questionnaire reference must exist");
+    const template = markdownSection(await readFile(file, "utf8"), "Template");
+    for (const field of ["question", "why parked", "blocking", "default assumption", "owner", "status"]) assert.match(template, new RegExp(`^- ${field}:`, "m"));
+    for (const status of ["open", "resolved: answered", "resolved: assumed"]) assert.ok(template.includes(`\`${status}\``));
+    assert.match(template, /blocking.*non-blocking/);
+  });
+  it("closes parked round lines and logs late answers as new decisions", async () => {
+    const grill = await section("SKILL.md", "Stage 0 — Grill");
+    assert.match(grill, /leaves its round[\s\S]*decided: parked[\s\S]*counts as closed/);
+    assert.match(grill, /later answer[\s\S]*new decision entry[\s\S]*resolved: answered/);
+    assert.match(grill, /references\/parked-questions\.md/);
+    const writes = await section("references/decision-log.md", "When to write");
+    assert.match(writes, /decided: parked[\s\S]*closed/);
+    assert.match(writes, /later answer[\s\S]*new decision entry[\s\S]*resolved: answered/);
+  });
+  it("holds the pause for blockers and resolves accepted defaults explicitly", async () => {
+    const grill = await section("SKILL.md", "Stage 0 — Grill");
+    const pause = grill.slice(grill.indexOf("**Pause.**"));
+    assert.match(pause, /open blocking parked question[\s\S]*pause cannot complete/);
+    assert.match(pause, /downgrade[\s\S]*accepting its default[\s\S]*resolved: assumed[\s\S]*Further Notes/);
+    assert.match(pause, /non-blocking parked question[\s\S]*resolved: assumed[\s\S]*confirms the pause/);
+    assert.match(pause, /every[\s\S]*resolved: assumed[\s\S]*labelled assumed/);
+    const spec = await section("SKILL.md", "Stage 1 — Spec");
+    assert.match(spec, /parked[\s\S]*default[\s\S]*Further Notes/);
+  });
+  it("resumes parked state and names blockers in waiting on", async () => {
+    assert.match(await section("references/decision-log.md", "Format"), /waiting on[\s\S]*blocking parked question/);
+    assert.match(await section("references/decision-log.md", "Resume — `continue <feature-slug>`"), /read[\s\S]*parked\.md/);
+  });
+  it("lists every assumed parked entry in the handoff", async () => {
+    assert.match(await section("SKILL.md", "Stop — Handoff"), /every[\s\S]*resolved: assumed[\s\S]*labelled assumed/);
+  });
+});

@@ -18,7 +18,7 @@ ticket directory up afterward.
 Preflight             locate the three stage skills (stop if one is missing)
    ▼
 Stage 0: Grill        grilling + domain-modeling
-                      → decisions.md, CONTEXT.md, adr/
+                      → decisions.md, parked.md, CONTEXT.md, adr/
    │ (pause: explicit confirmation, empty frontier)
    ▼
 Stage 1: Spec         spec-format.md              → spec.md
@@ -112,6 +112,7 @@ idea (lowercase alphanumeric with hyphens).
 ```
 .scratch/<feature-slug>/
 ├── decisions.md        # Decision Log: every question and answer, plus run State
+├── parked.md           # parked questions, defaults, owners, and statuses
 ├── CONTEXT.md          # domain glossary and ubiquitous language
 ├── adr/                # architectural decision records (NNNN-<slug>.md)
 ├── spec.md             # feature specification
@@ -149,6 +150,14 @@ Run `grilling` and `domain-modeling` together as one discovery pass.
    `.scratch/<feature-slug>/decisions.md` as you post it, and record each answer
    there before the next round — the log, not the conversation, is what Stage 1
    and a resumed run read: [decision-log.md](references/decision-log.md).
+   When the person cannot answer now, a parked question leaves its round:
+   log its round line as `decided: parked`, which counts as closed. Write the
+   question, why parked, blocking or non-blocking, default assumption, owner,
+   and status `open` to `.scratch/<feature-slug>/parked.md` using
+   [parked-questions.md](references/parked-questions.md). The owner is the person
+   or the third party they name. Resume reads its state from `parked.md`.
+   A later answer is logged as a new decision entry, and its parked status
+   becomes `resolved: answered`.
 3. **Active domain modeling (inline `domain-modeling`).** Challenge overloaded
    terms, sharpen fuzzy language, and stress-test relationships with concrete
    scenarios. Write terms into `.scratch/<feature-slug>/CONTEXT.md` the moment
@@ -162,7 +171,14 @@ Run `grilling` and `domain-modeling` together as one discovery pass.
 5. **Pause.** When the frontier is empty and the blind-spot pass is done,
    summarize the agreed glossary, the decisions, the blind-spot table with its
    assumptions, then pause for explicit user
-   confirmation before Stage 1.
+   confirmation before Stage 1. An open blocking parked question holds the
+   pause: the pause cannot complete until it is answered or downgraded.
+   The person can downgrade it by accepting its default; set its status to
+   `resolved: assumed` and carry its default into Further Notes.
+   A non-blocking parked question becomes `resolved: assumed` when the person
+   confirms the pause, without a fresh question. Update the pause summary to
+   list every parked entry with status `resolved: assumed`, labelled assumed,
+   including the non-blocking entries resolved by that confirmation.
 
 ## Stage 1 — Spec
 
@@ -176,7 +192,10 @@ synthesize them and keep the interview closed. For every new spec, write at
 least one `Scenario:` line under every story. The spec is done when
 every decision in the log appears in it — as a story, an implementation or
 testing decision, an out-of-scope line, or a further note — and
-every blind-spot assumption appears in Further Notes.
+every blind-spot assumption appears in Further Notes. Read `parked.md` and
+write every `resolved: assumed` parked entry's default into Further Notes as
+an assumption, including non-blocking entries resolved at the confirmed pause
+and blocking entries the person downgraded.
 
 ## Stage 2 — Design Review Gate
 
@@ -296,7 +315,9 @@ failure, report the failure and re-run the checker before finishing Stage 3.
 
 ## Stop — Handoff
 
-Print a handoff message and stop:
+Print a handoff message and stop. Include every parked entry whose status is
+`resolved: assumed`, labelled assumed, with its question and default assumption:
+
 
 ```text
 Tickets published to .scratch/<feature-slug>/issues/. Planning is done; this skill

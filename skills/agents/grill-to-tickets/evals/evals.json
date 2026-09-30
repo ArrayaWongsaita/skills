@@ -460,6 +460,21 @@
         "Tags each blind-spot question hard or easy using the same rules"
       ],
       "files": []
+    },
+    {
+      "id": 45,
+      "name": "parked-flow: blocking downgrade, default confirmation, resume and late answer",
+      "prompt": "$grill-to-tickets Add exports. I cannot answer retention or filename now: park retention as blocking with default 30 days owned by the compliance lead, and filename as non-blocking with default export.csv owned by me. Resume before the pause. At the pause I accept retention’s default and confirm. Later the compliance lead answers 90 days. Finish the handoff.",
+      "expected_output": "Write both questions with six fields in parked.md, status open. Their round lines read decided: parked and count as closed. On resume read parked.md. The open blocking retention question holds the pause. Accepting its default makes it resolved: assumed; confirming the pause makes non-blocking filename resolved: assumed without a fresh ask. Stage 1 writes both defaults to Further Notes. Log the late retention answer as a new decision and change it to resolved: answered. The pause summary lists both entries labelled assumed after confirmation; the handoff lists every remaining resolved: assumed entry, filename only.",
+      "expectations": [
+        "Stores six fields: question, why parked, blocking or non-blocking, default assumption, owner, status",
+        "Resume restores parked state and waiting on names the blocking parked question",
+        "Pause cannot complete with an open blocker",
+        "Downgrade and non-blocking confirmation resolve defaults explicitly",
+        "Further Notes carries assumed defaults; a late answer creates a new decision",
+        "Pause summary and handoff list every resolved: assumed entry labelled assumed"
+      ],
+      "files": []
     }
   ]
 }

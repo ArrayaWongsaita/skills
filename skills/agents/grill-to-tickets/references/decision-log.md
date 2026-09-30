@@ -66,7 +66,8 @@ For a run that skips the review, the State key is `ticket review: skipped` and
   `2 — Design Review Gate`, `3 — Tickets`, or `done`. `waiting on` names the one
   thing the run needs from the user next — a round's answers, Stage 0
   confirmation, test-seam confirmation, ticket-quiz approval, the review entry
-  question, or the add-rounds choice — or `nothing` while the run works. In Stage 2, State also carries
+  question, a blocking parked question (name it when it alone holds the run),
+  or the add-rounds choice — or `nothing` while the run works. In Stage 2, State also carries
   `review: <used>/<max> rounds` (or `review: skipped`), the user's answer to
   the entry question. It also carries `ticket review: pending`, `done`, or
   `skipped`; Stage 0 step 1 writes `skipped` when `--ticket-review 0` is present
@@ -103,6 +104,10 @@ For a run that skips the review, the State key is `ticket review: skipped` and
    Record explicit answers and objections; unanswered hard questions stay
    `decided: open` until answered. A request to raise an easy question to hard
    changes its tier to hard, keeps it open, and re-posts its full text and recommendation.
+   A parked question leaves its round with `decided: parked`, which counts as
+   closed; write its state in `parked.md` using `parked-questions.md`.
+   A later answer is logged as a new decision entry naming the parked question;
+   update its status in `parked.md` to `resolved: answered`.
    Fill in the remaining answers before you post the next round.
 3. At every stage transition, and before every pause that waits on the user,
    update State.
@@ -114,6 +119,7 @@ A round is closed when every question in it carries a `decided:` other than
 
 1. Read `decisions.md`, State first, and its `## Ticket review` section to
    recover verdicts and ASK questions that are still open; then read
+   `parked.md` when present to recover each parked question's current state,
    `CONTEXT.md`, `adr/`, and whichever of `spec.md`, `design-review.md`, and
    `issues/` exist.
 2. Take the gate's maximum and rounds used from State and `design-review.md`;

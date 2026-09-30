@@ -183,3 +183,10 @@ describe("grill-to-tickets eval suite contract", () => {
     });
   });
 });
+
+it("covers parked-flow with a dedicated coverage label", async () => {
+  const entry = (await evalsJson()).evals.find((e) => /parked-flow/.test(e.name));
+  assert.ok(entry, "no eval case covers parked-flow");
+  const text = entry.expected_output + entry.expectations.join(" ");
+  for (const requirement of [/six fields/, /decided: parked/, /blocking/, /non-blocking/, /resolved: assumed/, /resolved: answered/, /Further Notes/, /resume/, /handoff/, /pause/]) assert.match(text, requirement);
+});
