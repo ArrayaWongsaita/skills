@@ -365,8 +365,10 @@ describe("grill-to-tickets production records and guides", () => {
     assert.match(stage1, /Scenario: given/i, "the guide describes the scenario line in Stage 1");
     assert.match(stage3, /manifest\.json/, "the guide describes the manifest in Stage 3");
     assert.match(stage3, /Ticket review/i, "the guide describes the ticket review in Stage 3");
-    assert.match(stage3, /^   - \*\*Ticket review[^\n]*READY[^\n]*ASK/m, "the guide makes ticket review and its verdicts a step 4 sub-bullet");
-    assert.match(stage3, /^     - [^\n]*ASK/m, "the guide nests quiz handling under the ticket-review sub-bullet");
+    assert.match(stage3, /Ticket review \(Stage 3\.5\)[^\n]*checker PASS[^\n]*(?:ก่อน|before) quiz/i, "the guide keeps the Stage 3.5 placement after checker PASS and before the quiz");
+    assert.doesNotMatch(stage3, /\b(?:READY|ASK)\b/, "the guide leaves ticket-review verdict details in the canonical contract");
+    assert.doesNotMatch(stage3, /แสดงคำถาม[^\n]*(?:fix|acknowledge)[^\n]*## Ticket review/i, "the guide does not duplicate quiz question resolution and recording steps");
+    assert.doesNotMatch(stage3, /`continue`[^\n]*(?:State|review รอบสอง)/i, "the guide does not duplicate ticket-review resume behavior");
   });
 
   it("orders the guide handoff to match SKILL.md: recommended implementer, then Manifest", async () => {
@@ -483,7 +485,11 @@ describe("grill-to-tickets production records and guides", () => {
     const thaiStage3 = numberedMarkdownItem(thaiWorkflow, 4);
     assert.ok(thaiStage3, "the skill page keeps the Thai Stage 3 summary");
     assert.match(thaiStage3, /Ticket review/i, "the Thai summary keeps Stage 3.5 ticket review");
+    assert.match(thaiStage3, /Ticket review \(Stage 3\.5\)[^\n]*checker PASS[^\n]*(?:ก่อน|before) quiz/i, "the Thai summary keeps the high-level review placement");
     assert.match(thaiStage3, /manifest\.json/, "the Thai summary keeps the derived manifest path");
+    assert.doesNotMatch(thaiStage3, /\b(?:READY|ASK)\b/, "the Thai summary delegates verdict details to its canonical links");
+    assert.doesNotMatch(thaiStage3, /quiz แสดงคำถาม[^\n]*(?:แก้|acknowledge)[^\n]*บันทึก verdict/i, "the Thai summary omits quiz resolution and recording mechanics");
+    assert.doesNotMatch(thaiStage3, /`continue`[^\n]*(?:State|เริ่มรีวิวซ้ำ)/i, "the Thai summary omits ticket-review resume mechanics");
     assert.doesNotMatch(thaiStage3, /--ticket-review 0/, "the Thai summary does not repeat the skip flag");
     assert.doesNotMatch(thaiStage3, /spec fingerprint|planning-time ticket facts|no Status or timestamp/i, "the Thai summary does not repeat manifest internals");
     await assertLinksToCanonicalContracts(pageFile, thaiStage3, "Thai skill-page Stage 3");
@@ -496,7 +502,13 @@ describe("grill-to-tickets production records and guides", () => {
     assert.match(englishTicketParagraph, /Ticket review/i, "the English summary keeps Stage 3.5 ticket review");
     assert.doesNotMatch(englishTicketParagraph, /--ticket-review 0/, "the English summary does not repeat the skip flag");
     assert.doesNotMatch(englishTicketParagraph, /spec fingerprint|planning-time ticket facts|no Status or timestamp/i, "the English summary does not repeat manifest internals");
-    await assertLinksToCanonicalContracts(pageFile, englishTicketParagraph, "English skill-page ticket workflow");
+    const englishReviewSummary = englishWorkflow.split("\n").find((line) => line.startsWith("Stage 3.5 Ticket review runs"));
+    assert.ok(englishReviewSummary, "the English workflow keeps its Stage 3.5 summary");
+    assert.match(englishReviewSummary, /Ticket review runs after checker PASS and before the quiz/i, "the English summary keeps the high-level review placement");
+    assert.doesNotMatch(englishReviewSummary, /\b(?:READY|ASK)\b/, "the English summary delegates verdict details to its canonical links");
+    assert.doesNotMatch(englishReviewSummary, /quiz shows questions[^\n]*(?:resolve and record|record under)/i, "the English summary omits quiz resolution and recording mechanics");
+    assert.doesNotMatch(englishReviewSummary, /\b(?:continue|State|resume)\b/i, "the English summary omits ticket-review resume mechanics");
+    await assertLinksToCanonicalContracts(pageFile, englishReviewSummary, "English skill-page Stage 3.5 summary");
 
     const relatedFiles = sectionOf(page, "### Related files");
     assert.ok(relatedFiles, "the skill page has a Related files section");

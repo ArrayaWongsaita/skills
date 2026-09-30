@@ -115,9 +115,7 @@ Stop: Handoff message (/clear, DAG summary + recommended implementer แล้�
      node <โฟลเดอร์ของ skill>/scripts/check-tickets.mjs .scratch/<feature-slug>/ --write-budget
      ```
      checker ตรวจรูปแบบ Scenario (`given`, `when`, `then` ตามลำดับ), story coverage และฟิลด์ของ ticket แล้วแสดงตาราง coverage, budget, DAG และ warnings; manifest ที่ได้อยู่ที่ `.scratch/<feature-slug>/manifest.json` สำหรับ handoff รายละเอียด checker และ manifest อยู่ใน [สัญญา grill-to-tickets หลัก](../../skills/agents/grill-to-tickets/SKILL.md)
-   - **Ticket review (Stage 3.5):** หลัง checker PASS และก่อน quiz ให้รีวิว ticket set และคืน `READY` หรือ `ASK` สำหรับแต่ละใบ ดู [สัญญา grill-to-tickets หลัก](../../skills/agents/grill-to-tickets/SKILL.md) และ [brief สำหรับผู้รีวิว ticket](../../skills/agents/grill-to-tickets/references/ticket-review.md) สำหรับพฤติกรรมและรูปแบบ verdict
-     - แสดงคำถาม `ASK` ข้าง `Seam`, `Context` และ `Budget` ใน quiz ให้คนตัดสินใจว่าจะ fix หรือ acknowledge แล้ว main thread รัน checker ด้วย `--write-budget` ซ้ำและบันทึกผลใน `## Ticket review` ของ `decisions.md`
-     - `continue` อ่าน State `ticket review: done` หรือ `skipped` เพื่อไม่เริ่มซ้ำ; review รอบสองเริ่มเมื่อผู้ใช้ขอเท่านั้น
+   - **Ticket review (Stage 3.5):** หลัง checker PASS และก่อน quiz ให้ทำ ticket review ดู [สัญญา grill-to-tickets หลัก](../../skills/agents/grill-to-tickets/SKILL.md) และ [brief สำหรับผู้รีวิว ticket](../../skills/agents/grill-to-tickets/references/ticket-review.md) สำหรับรายละเอียด
    - warning ที่ checker ออกให้มี 3 แบบ และไม่เปลี่ยนผล `PASS` / `FAIL`: acceptance criterion ที่พูดถึงการรัน suite หรือ tool (`npm test`, `tests pass`, `typecheck passes`, `lint passes`, `suite passes`); ticket สองใบที่แก้ path เดียวกัน (`(edit)`, `(new)` หรือ `(edit from NN)`) โดยไม่มีใบไหน block อีกใบทางอ้อม (transitively); และ feature ที่มีเกิน 15 ticket
    - warning ทุกตัวที่ checker รายงานต้องถูกบันทึกใต้ `## Ticket warnings` ใน `decisions.md` บรรทัดละหนึ่งตัว เป็น `<warning> — acknowledged` หรือ `<warning> — fixed: <change>` จึงจะถือว่า Stage 3 เสร็จ
    - รัน checker ซ้ำด้วย `--write-budget` ทุกครั้งที่ quiz ทำให้ ticket เปลี่ยน
