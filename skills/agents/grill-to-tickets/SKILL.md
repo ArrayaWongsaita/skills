@@ -326,12 +326,17 @@ ticket, give its line the `— acknowledged` suffix. The review set closes at re
 Tickets the quiz creates join a review only after the person asks for another review.
 
 When a changed late answer arrives after tickets have already been reviewed
-and changes that reviewed set, preserve the prior reviewer output and mark its
-numbered entry historical for the superseded ticket set. Keep the old `READY`
-and `ASK` text as history. For each still-open `ASK` line from that set whose
-ticket content was affected by the late decision, add
+and changes ticket content, preserve the prior reviewer output and mark its
+numbered entry historical for the affected ticket numbers, for example
+`### Review N — historical for ticket 02: superseded by <late decision>`. Keep
+the old `READY` and `ASK` text as history. For unchanged tickets, verdicts
+remain current, and their open `ASK` questions remain open and continue into
+the revised quiz. Changed tickets have no current verdict from earlier reviews.
+For each still-open `ASK` line on a changed ticket, add
 `— superseded: <late decision>`. That line is closed history and is not carried
-into the revised quiz as an open question. A historical `READY` or `ASK` is not a verdict on the revised set.
+into the revised quiz as an open question. A partially historical heading
+identifies the affected verdicts without invalidating verdicts for unchanged
+tickets.
 Reconcile the tickets against the revised spec, re-run the
 checker with `--write-budget`, and repeat the user quiz before handoff. This
 does not start a fresh ticket review: a second fresh review remains opt-in and

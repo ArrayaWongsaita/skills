@@ -64,12 +64,16 @@ For a run that skips the review, the State key is `ticket review: skipped` and
 - review skipped
 ```
 
-When a changed late answer changes a reviewed ticket set, preserve the reviewer
-output and mark its entry with a heading like
-`### Review N — historical: superseded by <late decision>`. Keep its `READY`
-and `ASK` text. Add `— superseded: <late decision>` to each still-open `ASK`
-line for the superseded set; those lines are closed history and are excluded
-from current open questions.
+When a changed late answer changes reviewed ticket content, preserve the
+reviewer output and mark its numbered entry historical for the affected ticket
+numbers, for example
+`### Review N — historical for ticket 02: superseded by <late decision>`. Keep
+its `READY` and `ASK` text. For unchanged tickets, verdicts remain current, and
+their open `ASK` questions remain open. Changed tickets have no current
+verdict from earlier reviews. Add
+`— superseded: <late decision>` to each still-open `ASK` line for a changed
+ticket; those lines are closed history and are excluded from current open
+questions.
 
 - **State** is rewritten in place. `stage` is one of `0 — Grill`, `1 — Spec`,
   `2 — Design Review Gate`, `3 — Tickets`, or `done`. `waiting on` names the one
@@ -86,12 +90,15 @@ from current open questions.
   one reviewer line, either `- reviewer: subagent` or `- reviewer: inline`,
   followed by one line per ticket: `- NN READY` or `- NN ASK: <question>`. An
   open ASK line has no suffix; when settled, that same line carries
-  `— resolved: <change>` or `— acknowledged`. If a late answer supersedes the
-  ticket set, retain the output under its numbered heading and mark it
-  `historical: superseded by <late decision>`; add
-  `— superseded: <late decision>` to each still-open ASK line from that set.
-  Historical READY/ASK lines are not current verdicts, and superseded ASK lines
-  are not current open questions. A second fresh review runs only when the
+  `— resolved: <change>` or `— acknowledged`. If a late answer changes ticket
+  content, retain the output under its numbered heading and mark it historical
+  for the changed ticket numbers, for example
+  `historical for ticket 02: superseded by <late decision>`. For unchanged
+  tickets, verdicts remain current, including their open ASK questions.
+  Changed tickets have no current verdict from earlier reviews. Add
+  `— superseded: <late decision>` to each still-open ASK line for a
+  changed ticket; those lines are closed history and are not current open
+  questions. A second fresh review runs only when the
   person asks, and is appended under the next review number. Existing unnumbered
   review output is treated as Review 1; preserve it under that heading when
   numbering or marking it historical. A skipped review records `- review
@@ -164,13 +171,15 @@ A round is closed when every question in it carries a `decided:` other than
    no `ticket review` key takes the invocation's flag and otherwise runs the
    review once. Keep the review State and `## Ticket review` entries together:
    a `done` State keeps its numbered entries, and a `skipped` State keeps the
-   review skipped. On resume, only the latest nonhistorical entry for the
-   current ticket set supplies verdicts and open questions. Historical review
-   entries are preserved but are not current; superseded ASK lines are
-   excluded from open questions. If a late answer leaves only historical
-   entries, the revised set still goes through its checker and user quiz. A
-   fresh review of that set starts only when the person asks and is appended as
-   the next numbered entry.
+   review skipped. On resume, select current verdicts per ticket based on
+   whether that ticket's content changed. In a partially historical review, the
+   heading alone does not disqualify unchanged-ticket verdicts or their open
+   ASK questions. Revised tickets have no current verdict from a review whose
+   ticket content changed; superseded ASK lines are closed history and excluded
+   from open questions.
+   The revised set still goes through its checker and user quiz. A fresh review
+   of that set starts only when the person asks and is appended as the next
+   numbered entry.
 6. If a late answer changes an assumed parked value already present in
    `spec.md`, log the superseding decision, update `parked.md`, set State to
    Stage 1, and synchronize the spec before handoff. Resume through the affected
