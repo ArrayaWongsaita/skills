@@ -583,11 +583,12 @@ describe("grill-to-tickets composite skill contract", () => {
         "Out of Scope",
         "Further Notes",
       ];
-      const templateHeading = content.indexOf("## Spec Template");
-      const templateFenceStart = content.indexOf("```", templateHeading);
-      const templateFenceEnd = content.indexOf("```", templateFenceStart + 3);
+      const templateSection = markdownSection(content, "Spec Template");
+      assert.ok(templateSection, "spec-format.md has its Spec Template section");
+      const templateFenceStart = templateSection.indexOf("```");
+      const templateFenceEnd = templateSection.indexOf("```", templateFenceStart + 3);
       assert.ok(templateFenceStart >= 0 && templateFenceEnd > templateFenceStart, "the spec template is a fenced block");
-      const specTemplate = content.slice(templateFenceStart + 3, templateFenceEnd);
+      const specTemplate = templateSection.slice(templateFenceStart + 3, templateFenceEnd);
       const templateHeadings = markdownHeadings(specTemplate).map(({ title }) => title);
       for (const section of expectedSections) {
         assert.ok(templateHeadings.includes(section), `spec template has a ${section} section`);
@@ -613,14 +614,15 @@ describe("grill-to-tickets composite skill contract", () => {
   it("requires a one-line Scenario under every story in new specs", async () => {
     for (const dir of skillDirs) {
       const format = await readFile(path.resolve(dir, "references/spec-format.md"), "utf8");
-      const templateStart = format.indexOf("## Spec Template");
-      const templateFenceStart = format.indexOf("```", templateStart);
-      const templateFenceEnd = format.indexOf("```", templateFenceStart + 3);
-      const template = format.slice(templateFenceStart, templateFenceEnd);
-      assert.match(template, /^\s+Scenario: given <precondition> when <action> then <outcome>$/m);
-      const userStoriesStart = template.indexOf("## User Stories");
-      const implementationDecisionsStart = template.indexOf("## Implementation Decisions", userStoriesStart);
-      const userStories = template.slice(userStoriesStart, implementationDecisionsStart);
+      const templateSection = markdownSection(format, "Spec Template");
+      assert.ok(templateSection, "spec-format.md has its Spec Template section");
+      const templateFenceStart = templateSection.indexOf("```");
+      const templateFenceEnd = templateSection.indexOf("```", templateFenceStart + 3);
+      assert.ok(templateFenceStart >= 0 && templateFenceEnd > templateFenceStart, "the spec template is a fenced block");
+      const template = templateSection.slice(templateFenceStart + 3, templateFenceEnd);
+      const userStories = markdownSection(template, "User Stories");
+      assert.ok(userStories, "the spec template has a User Stories section");
+      assert.match(userStories, /^\s+Scenario: given <precondition> when <action> then <outcome>$/m);
       assert.match(userStories, /Every new spec carries at least one `Scenario:` line under every story\./i);
       assert.match(userStories, /A\s+Scenario is one line\./i);
 
@@ -670,11 +672,12 @@ describe("grill-to-tickets composite skill contract", () => {
       assert.ok(quiz, "ticket-format.md has its quiz section");
       const quizBody = quiz.slice(quiz.indexOf("\n") + 1);
       assert.match(quizBody, /quiz/i);
-      const ticketTemplateHeading = content.indexOf("## Local Ticket Template");
-      const ticketFenceStart = content.indexOf("```", ticketTemplateHeading);
-      const ticketFenceEnd = content.indexOf("```", ticketFenceStart + 3);
+      const ticketTemplateSection = markdownSection(content, "Local Ticket Template");
+      assert.ok(ticketTemplateSection, "ticket-format.md has its Local Ticket Template section");
+      const ticketFenceStart = ticketTemplateSection.indexOf("```");
+      const ticketFenceEnd = ticketTemplateSection.indexOf("```", ticketFenceStart + 3);
       assert.ok(ticketFenceStart >= 0 && ticketFenceEnd > ticketFenceStart, "the local ticket template is fenced");
-      const ticketTemplate = content.slice(ticketFenceStart + 3, ticketFenceEnd);
+      const ticketTemplate = ticketTemplateSection.slice(ticketFenceStart + 3, ticketFenceEnd);
       assert.match(ticketTemplate, /# <NN>:/);
       assert.match(ticketTemplate, /\*\*What to build:\*\*/);
       assert.match(ticketTemplate, /\*\*Blocked by:\*\*/);
@@ -775,8 +778,11 @@ describe("grill-to-tickets composite skill contract", () => {
       assert.ok(decisionLevel, "design-review-gate.md has its decision-level rework route");
       assert.match(decisionLevel, /Stage 1 cannot/);
       assert.match(decisionLevel, /re-run Stage 1 and re-review/);
-      assertAbsentFromMarkdownSections(gate, /`to-spec`/, "the gate uses the owned spec format");
-      assertAbsentFromMarkdownSections(gate, /`to-tickets`/, "the gate uses the owned ticket format");
+      const priorSpecFormat = ["to", "spec"].join("-");
+      const priorTicketFormat = ["to", "tickets"].join("-");
+      const backtick = String.fromCharCode(96);
+      assertAbsentFromMarkdownSections(gate, new RegExp(`${backtick}${priorSpecFormat}${backtick}`), "the gate never uses the prior spec format");
+      assertAbsentFromMarkdownSections(gate, new RegExp(`${backtick}${priorTicketFormat}${backtick}`), "the gate never uses the prior ticket format");
     }
   });
 

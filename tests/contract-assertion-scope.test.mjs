@@ -54,6 +54,33 @@ describe("Markdown contract assertion scope", () => {
     }
   });
 
+  it("scopes owned-format guide orientation claims to their workflow summaries", async () => {
+    const source = await testCase(
+      "tests/repo-contract.test.mjs",
+      "orients readers to owned formats, Preflight, ticket fields, the checker, and handoff",
+    );
+    assert.doesNotMatch(source, /assert\.(?:match|doesNotMatch)\(\s*(?:doc|guide|page)\s*,/,
+      "guide orientation assertions must not scan a whole document alias");
+    assert.doesNotMatch(source, /\b(?:doc|guide|page)\.match\(/,
+      "guide orientation counts must not call match on a whole document alias");
+    assert.match(source, /sectionOf\(guide,\s*["']### คำสั่งติดตั้งทั้งหมด["']\)/,
+      "install command counts use the installation section");
+    assert.match(source, /assert\.ok\(installSection,/,
+      "the installation section exists before its commands are counted");
+    assert.match(source, /numberedMarkdownItem\(guideWorkflow, 4\)/,
+      "the Thai guide Stage 3 claims use item 4");
+    assert.match(source, /numberedMarkdownItem\(guideWorkflow, 5\)/,
+      "the Thai guide handoff claims use item 5");
+    assert.match(source, /numberedMarkdownItem\(thaiWorkflow, 4\)/,
+      "the skill page Thai Stage 3 claims use item 4");
+    assert.match(source, /numberedMarkdownItem\(thaiWorkflow, 5\)/,
+      "the skill page Thai handoff claims use item 5");
+    assert.match(source, /paragraphOf\(englishWorkflow, ["']Stage 3 writes vertical tickets/,
+      "English Stage 3 claims use their workflow summary paragraph");
+    assert.match(source, /paragraphOf\(englishWorkflow, ["']Then the skill prints a handoff/,
+      "English handoff claims use their handoff summary paragraph");
+  });
+
   it("scopes Scenario-format requirements to the User Stories template section", async () => {
     const source = await testCase(
       "tests/grill-to-tickets-contract.test.mjs",
@@ -63,6 +90,10 @@ describe("Markdown contract assertion scope", () => {
       "tests/grill-to-tickets-contract.test.mjs:567-568 must not assert against the entire spec format");
     assert.match(source, /assert\.match\(userStories\s*,/,
       "Scenario-format assertions use the User Stories template section");
+    assert.match(source, /markdownSection\(format,\s*["']Spec Template["']\)/,
+      "Scenario-format checks first locate the Spec Template heading");
+    assert.match(source, /assert\.ok\(templateSection,/,
+      "Scenario-format checks require the Spec Template section before slicing its fence");
   });
 
   it("scopes the spec-format contract to its process, template, and individual sections", async () => {
@@ -80,6 +111,10 @@ describe("Markdown contract assertion scope", () => {
       "template story checks use the parsed User Stories section");
     assert.match(source, /assert\.ok\(userStories,/,
       "the User Stories section is present in the specific template");
+    assert.match(source, /markdownSection\(content,\s*["']Spec Template["']\)/,
+      "spec-format fence extraction starts from the parsed Spec Template section");
+    assert.match(source, /assert\.ok\(templateSection,/,
+      "spec-format checks require the Spec Template heading before slicing its fence");
     assert.match(source, /assertAbsentFromMarkdownSections\(content,/,
       "spec-wide exclusions check each Markdown section");
   });
@@ -97,6 +132,10 @@ describe("Markdown contract assertion scope", () => {
     }
     assert.match(source, /assert\.match\(expandContractBody,/,
       "the expand-contract term is checked in its section body");
+    assert.match(source, /markdownSection\(content,\s*["']Local Ticket Template["']\)/,
+      "ticket-format fence extraction starts from the parsed template section");
+    assert.match(source, /assert\.ok\(ticketTemplateSection,/,
+      "ticket-format checks require the template heading before slicing its fence");
     assert.match(source, /assertAbsentFromMarkdownSections\(content,/,
       "ticket-wide exclusions check each Markdown section");
   });

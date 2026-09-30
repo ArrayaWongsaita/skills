@@ -90,6 +90,11 @@ function numberedMarkdownItem(section, number) {
   return [lines[start], ...(next === -1 ? rest : rest.slice(0, next))].join("\n");
 }
 
+function paragraphOf(section, start) {
+  if (!section) return null;
+  return section.split(/\n\s*\n/).find((paragraph) => paragraph.startsWith(start)) ?? null;
+}
+
 // One "- `label` ..." bullet of a file list with its wrapped lines, on one line.
 function listItem(list, label) {
   const lines = list.split("\n");
@@ -516,30 +521,85 @@ describe("grill-to-tickets production records and guides", () => {
   });
 
   it("orients readers to owned formats, Preflight, ticket fields, the checker, and handoff", async () => {
-    for (const file of ["docs/guides/grill-to-tickets.md", "docs/skills/agents/grill-to-tickets.md"]) {
-      const doc = await readTextOrNull(file);
-      assert.ok(doc, `${file} exists`);
+    const guideFile = "docs/guides/grill-to-tickets.md";
+    const guide = await readTextOrNull(guideFile);
+    assert.ok(guide, `${guideFile} exists`);
+    const dependencies = sectionOf(guide, "## 2. การพึ่งพา Skill อื่น (Dependencies) และการติดตั้ง");
+    assert.ok(dependencies, "the Thai guide has its Dependencies section");
+    for (const skill of ["grilling", "domain-modeling", "scrutinize"]) {
+      assert.match(dependencies, new RegExp(`\\b${skill}\\b`), `the Thai guide Dependencies section keeps ${skill}`);
+    }
+    assert.doesNotMatch(dependencies, /five stage skills|stage skills ทั้ง 5|ทั้งหมด 5 ตัว/i,
+      "the Thai guide Dependencies section does not claim five stage skills");
+    const guideWorkflow = sectionOf(guide, "### ขั้นตอนการทำงาน 4 ลำดับขั้น");
+    assert.ok(guideWorkflow, "the Thai guide has its four-step workflow");
+    const guideStage1 = numberedMarkdownItem(guideWorkflow, 2);
+    const guideStage3 = numberedMarkdownItem(guideWorkflow, 4);
+    const guideHandoff = numberedMarkdownItem(guideWorkflow, 5);
+    assert.ok(guideStage1, "the Thai guide workflow has Stage 1");
+    assert.ok(guideStage3, "the Thai guide workflow has Stage 3");
+    assert.ok(guideHandoff, "the Thai guide workflow has its handoff");
+    assert.match(guideStage1, /spec-format\.md/, "the Thai guide Stage 1 summary names the owned spec format");
+    assert.match(guideStage3, /ticket-format\.md/, "the Thai guide Stage 3 summary names the owned ticket format");
+    for (const field of ["Seam", "Context", "Budget"]) {
+      assert.match(guideStage3, new RegExp(`\\*\\*${field}\\*\\*`), `the Thai guide Stage 3 summary names ${field}`);
+    }
+    assert.match(guideStage3, /checker[^\n]*warnings/i, "the Thai guide Stage 3 summary covers checker warnings");
+    assert.match(guideStage3, /grill-to-tickets\/SKILL\.md/, "the Thai guide Stage 3 summary links the canonical contract");
+    assert.match(guideHandoff, /recommended implementer/i, "the Thai guide handoff names the recommended implementer");
 
-      assert.match(doc, /spec-format\.md/, `${file} names the owned spec format`);
-      assert.match(doc, /ticket-format\.md/, `${file} names the owned ticket format`);
+    const pageFile = "docs/skills/agents/grill-to-tickets.md";
+    const page = await readTextOrNull(pageFile);
+    assert.ok(page, `${pageFile} exists`);
+    const thaiPurpose = sectionOf(page, "### มีไว้ทำอะไร");
+    const englishPurpose = sectionOf(page, "### Purpose");
+    assert.ok(thaiPurpose, "the skill page has its Thai purpose section");
+    assert.ok(englishPurpose, "the skill page has its English purpose section");
+    for (const [section, language] of [[thaiPurpose, "Thai"], [englishPurpose, "English"]]) {
       for (const skill of ["grilling", "domain-modeling", "scrutinize"]) {
-        assert.match(doc, new RegExp(skill), `${file} keeps ${skill}`);
+        assert.match(section, new RegExp(`\\b${skill}\\b`), `${language} purpose keeps ${skill}`);
       }
-      assert.doesNotMatch(doc, /five stage skills|stage skills ทั้ง 5|ทั้งหมด 5 ตัว/, `${file} no longer claims five stage skills`);
-
-      assert.match(doc, /\bSeam\b/, `${file} names the Seam field`);
-      assert.match(doc, /\bContext\b/, `${file} names the Context field`);
-      assert.match(doc, /\bBudget\b/, `${file} names the Budget field`);
-
-      assert.match(doc, /checker/i, `${file} introduces the ticket checker`);
-      assert.match(doc, /warnings/i, `${file} summarizes checker warnings`);
-      assert.match(doc, /grill-to-tickets\/SKILL\.md/, `${file} links checker details to its canonical contract`);
-      assert.match(doc, /recommended implementer/i, `${file} documents the handoff recommendation`);
+      assert.doesNotMatch(section, /five stage skills|stage skills ทั้ง 5|ทั้งหมด 5 ตัว/i,
+        `${language} purpose does not claim five stage skills`);
     }
 
-    const guide = await readTextOrNull("docs/guides/grill-to-tickets.md");
-    assert.ok(guide, "the grill-to-tickets guide exists");
-    const installs = guide.match(/npx skills add [^\n`]+/g) || [];
+    const thaiWorkflow = sectionOf(page, "### วิธีทำงานหลัก");
+    assert.ok(thaiWorkflow, "the skill page has its Thai workflow");
+    const thaiStage1 = numberedMarkdownItem(thaiWorkflow, 2);
+    const thaiStage3 = numberedMarkdownItem(thaiWorkflow, 4);
+    const thaiHandoff = numberedMarkdownItem(thaiWorkflow, 5);
+    assert.ok(thaiStage1, "the Thai workflow has Stage 1");
+    assert.ok(thaiStage3, "the Thai workflow has Stage 3");
+    assert.ok(thaiHandoff, "the Thai workflow has its handoff");
+    assert.match(thaiStage1, /spec-format\.md/, "the Thai workflow Stage 1 summary names the owned spec format");
+    assert.match(thaiStage3, /ticket-format\.md/, "the Thai workflow Stage 3 summary names the owned ticket format");
+    for (const field of ["Seam", "Context", "Budget"]) {
+      assert.match(thaiStage3, new RegExp(`\\b${field}\\b`), `the Thai workflow Stage 3 summary names ${field}`);
+    }
+    assert.match(thaiStage3, /checker[^\n]*warnings/i, "the Thai workflow Stage 3 summary covers checker warnings");
+    assert.match(thaiStage3, /grill-to-tickets\/SKILL\.md/, "the Thai workflow Stage 3 summary links the canonical contract");
+    assert.match(thaiHandoff, /recommended implementer/i, "the Thai workflow handoff names the recommended implementer");
+
+    const englishWorkflow = sectionOf(page, "### Main workflow");
+    assert.ok(englishWorkflow, "the skill page has its English workflow");
+    const englishStage1 = paragraphOf(englishWorkflow, "Stage 1 writes a testable spec");
+    const englishStage3 = paragraphOf(englishWorkflow, "Stage 3 writes vertical tickets");
+    const englishHandoff = paragraphOf(englishWorkflow, "Then the skill prints a handoff");
+    assert.ok(englishStage1, "the English workflow has its Stage 1 summary paragraph");
+    assert.ok(englishStage3, "the English workflow has its Stage 3 summary paragraph");
+    assert.ok(englishHandoff, "the English workflow has its handoff summary paragraph");
+    assert.match(englishStage1, /spec-format\.md/, "the English Stage 1 summary names the owned spec format");
+    assert.match(englishStage3, /ticket-format\.md/, "the English Stage 3 summary names the owned ticket format");
+    for (const field of ["Stories", "Seam", "Context", "Budget"]) {
+      assert.match(englishStage3, new RegExp(`\\b${field}\\b`), `the English Stage 3 summary names ${field}`);
+    }
+    assert.match(englishStage3, /checker[^\n]*warnings/i, "the English Stage 3 summary covers checker warnings");
+    assert.match(englishStage3, /grill-to-tickets\/SKILL\.md/, "the English Stage 3 summary links the canonical contract");
+    assert.match(englishHandoff, /recommended implementer/i, "the English handoff names the recommended implementer");
+
+    const installSection = sectionOf(guide, "### คำสั่งติดตั้งทั้งหมด");
+    assert.ok(installSection, "the Thai guide has its installation commands section");
+    const installs = installSection.match(/npx skills add [^\n`]+/g) || [];
     const dependencyInstalls = installs.filter((line) => !line.includes("--skill grill-to-tickets"));
     assert.equal(dependencyInstalls.length, 3, "the guide installs exactly three stage skills");
     for (const skill of ["grilling", "domain-modeling", "scrutinize"]) {
