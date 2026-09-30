@@ -805,13 +805,20 @@ async function replaceFile(target, contents) {
   }
 }
 
-// A manifest may not exist on the first passing run, so use the temporary-file
-// and rename sequence without reading a target mode. It is derived output and
-// always takes the default mode for a newly written file.
+// A manifest may not exist on the first passing run. New manifests use the
+// default mode; rewrites preserve the existing file's permissions.
 async function writeManifest(target, contents) {
   const temporary = path.join(path.dirname(target), `.${path.basename(target)}.tmp-${process.pid}`);
   try {
+    let mode;
+    try {
+      mode = (await stat(target)).mode & 0o7777;
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+    }
+
     await writeFile(temporary, contents);
+    if (mode !== undefined) await chmod(temporary, mode);
     await rename(temporary, target);
   } catch (error) {
     await rm(temporary, { force: true }).catch(() => {});

@@ -1317,6 +1317,22 @@ describe("check-tickets", () => {
     });
   });
 
+  it("--write-budget preserves an existing manifest's custom file mode", async () => {
+    await withBudgetProject(async ({ dir }) => {
+      await checkFeatureDir(dir, { writeBudget: true });
+      const manifestPath = path.join(dir, "manifest.json");
+      const normalMode = 0o666 & ~process.umask();
+      const customMode = normalMode ^ 0o100;
+      assert.equal((await stat(manifestPath)).mode & 0o777, normalMode);
+      await chmod(manifestPath, customMode);
+      assert.equal((await stat(manifestPath)).mode & 0o777, customMode);
+
+      const { stdout } = await run("node", [script, dir, "--write-budget"]);
+      assert.match(stdout, /result: PASS/);
+      assert.equal((await stat(manifestPath)).mode & 0o777, customMode);
+    });
+  });
+
   it("does not create a manifest for older directories or runs without --write-budget", async () => {
     await withBudgetProject(async ({ dir }) => {
       await checkFeatureDir(dir, { writeBudget: true });
