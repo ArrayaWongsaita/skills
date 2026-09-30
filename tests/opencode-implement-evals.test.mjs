@@ -50,7 +50,7 @@ describe("opencode-implement eval suite contract", () => {
     it("has a negative case for a bare 'implement this', for a sibling skill, and for a bare mention of a hosted model — no Ollama-specific case remains", async () => {
       const negatives = (await triggerJson()).filter((t) => !t.should_trigger);
       assert.ok(negatives.some((t) => /implement this|implement the tickets/i.test(t.query)));
-      assert.ok(negatives.some((t) => /agy-implement|subagent-implement|\/implement\b/i.test(t.query)));
+      assert.ok(negatives.some((t) => /agy-implement|implement-tickets|\/implement\b/i.test(t.query)));
       assert.ok(
         negatives.some((t) => /hosted model/i.test(t.query)),
         "has a negative case mentioning a hosted model",

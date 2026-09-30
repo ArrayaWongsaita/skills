@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { access, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -239,6 +239,33 @@ describe("implement-tickets skill and documentation contract", () => {
       assert.match(doc, /\*\*Seam:\*\*[\s\S]*?verbatim[\s\S]*?\*\*Context:\*\*[\s\S]*?read list/i);
       assert.match(doc, /รายการอ่าน/);
       assert.match(doc, /`implement-tickets`/);
+    }
+  });
+
+  it("keeps explicit-invocation frontmatter and the reference list aligned across the skill, guide, page, and directory", async () => {
+    const skill = await readTextOrNull(path.join(skillRoot, "SKILL.md"));
+    const guide = await readTextOrNull(path.join(repoRoot, "docs/guides/implement-tickets.md"));
+    const page = await readTextOrNull(path.join(repoRoot, "docs/skills/agents/implement-tickets.md"));
+    assert.ok(skill && guide && page, "the skill and both user-facing pages exist");
+
+    const header = skill.match(/^---\n([\s\S]*?)\n---\n/);
+    assert.ok(header, "the skill begins with frontmatter");
+    assert.match(header[1], /^name: implement-tickets$/m);
+    assert.match(header[1], /^disable-model-invocation: true$/m);
+
+    const directoryReferences = (await readdir(path.join(skillRoot, "references")))
+      .filter((file) => file.endsWith(".md"))
+      .sort();
+    const linkedReferences = (content) => [...new Set(
+      [...content.matchAll(/references\/([^/\s)`]+\.md)/g)].map((match) => match[1]),
+    )].sort();
+
+    for (const [label, content] of [["SKILL.md", skill], ["guide", guide], ["skill page", page]]) {
+      assert.deepEqual(
+        linkedReferences(content),
+        directoryReferences,
+        `${label} lists exactly the reference Markdown files in the skill directory`,
+      );
     }
   });
 

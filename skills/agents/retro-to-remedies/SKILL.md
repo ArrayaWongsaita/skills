@@ -23,7 +23,7 @@ Codex shortcut: `$retro-to-remedies`
 Resolve the target feature slug using the following precedence:
 
 1. **Explicit argument**: Use `<feature-slug>` when supplied on the command line.
-2. **Integration branch stem**: Derive the slug from the checked-out branch name (for example, `subagent-implement/<slug>` yields `<slug>`).
+2. **Integration branch stem**: Derive the slug from the checked-out branch name (for example, `implement-tickets/<slug>` yields `<slug>`).
 3. **Most recently modified scratch directory**: Inspect `.scratch/*/` and select the most recently modified directory, naming it back to the user for explicit confirmation before proceeding.
 
 ### Branch Guardrail
@@ -86,4 +86,3 @@ Completion criterion: every applied Text remedy is committed in its own `chore(r
 Present the handoff following [references/apply-and-handoff.md](references/apply-and-handoff.md). Print each Code remedy's ready-to-run prompt (such as `/grill-to-tickets`), followed by `/pr-to-dev`. A Code remedy answered `hand off` appears only as a prompt. The run pushes nothing to any remote branch, opens no pull request, and opens a GitHub issue only on an explicit human request.
 
 Completion criterion: every Code remedy prompt is printed in order, followed by `/pr-to-dev`, with no git push or pull request created.
-

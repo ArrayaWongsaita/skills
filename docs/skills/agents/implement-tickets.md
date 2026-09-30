@@ -214,6 +214,10 @@ plain paths and `(from NN)` are read-only, while `(edit)`, `(new)`, and
   — the worker prompt and required integration sync step
 - [`verification.md`](../../../skills/agents/implement-tickets/references/verification.md)
   — verifier dispatch, evidence, and timeout contract
+- [`integration-gate.md`](../../../skills/agents/implement-tickets/references/integration-gate.md)
+  — ticket-order integration, full-suite gate, and culprit recovery
+- [`status-and-resume.md`](../../../skills/agents/implement-tickets/references/status-and-resume.md)
+  — read-only status, list, and resume behavior
 - [`waves.mjs`](../../../skills/agents/implement-tickets/scripts/waves.mjs) —
   deterministic ticket wave planner
 - [`adapter-contract.md`](../../../skills/agents/implement-tickets/references/adapter-contract.md)

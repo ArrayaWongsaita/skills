@@ -26,7 +26,7 @@ contracts.
 2. Install other backends as separate adapter skills named
    `implement-tickets-<backend>` and select one with `--with <backend>`. The core
    remains complete and usable without an adapter.
-3. Delete `subagent-implement` with no alias. Keep `agy-implement` and
+3. Retire the prior standalone core with no alias. Keep `agy-implement` and
    `opencode-implement` behaviorally unchanged until their adapters ship.
 4. Gate parallel readiness on a recorded human validation run. The parallel
    readiness decision stays pending until a human run is completed and its dated
@@ -39,7 +39,7 @@ contracts.
 ติดตั้ง backend อื่นเป็น adapter skill แยกชื่อ `implement-tickets-<backend>`
 และเลือกด้วย `--with <backend>` โดย core ยังคงใช้งานได้โดยไม่มี adapter
 
-ลบ `subagent-implement` โดยไม่สร้าง alias และคงพฤติกรรมของ `agy-implement`
+เลิกใช้ core standalone เดิมโดยไม่สร้าง alias และคงพฤติกรรมของ `agy-implement`
 กับ `opencode-implement` ไว้จนกว่า adapter ของแต่ละตัวจะส่งมอบ
 
 ความพร้อมของ parallel execution ต้องรอผล human validation ที่บันทึกไว้
@@ -68,7 +68,7 @@ core เดียวเป็นเจ้าของ Plan, wave, contract ข�
 - Keep three standalone implementations as equal core paths. Rejected because
   they duplicate the shared plan and execution contract and make the family
   harder to keep consistent.
-- Keep `subagent-implement` as an alias. Rejected because it would preserve two
+- Keep an alias for the prior standalone core. Rejected because it would preserve two
   names for the same core and make future adapter selection unclear.
 - Declare parallel readiness from automated checks alone. Rejected because the
   live human validation has not yet been recorded.
@@ -76,7 +76,7 @@ core เดียวเป็นเจ้าของ Plan, wave, contract ข�
 ไม่เลือกเก็บ implementation แยกสามชุดเป็น core เทียบเท่ากัน เพราะจะทำซ้ำ contract
 และทำให้รักษาความสอดคล้องของตระกูลได้ยาก
 
-ไม่เลือกเก็บ alias `subagent-implement` เพราะจะมีสองชื่อสำหรับ core เดียว
+ไม่เลือกเก็บ alias ของ core standalone เดิม เพราะจะมีสองชื่อสำหรับ core เดียว
 และทำให้การเลือก adapter ในอนาคตไม่ชัดเจน
 
 ไม่ประกาศความพร้อมของ parallel จาก automated check เพียงอย่างเดียว

@@ -82,8 +82,9 @@ until approval. Do not dispatch workers or write run state before approval.
 
 After approval, follow [references/dispatch-contract.md](references/dispatch-contract.md),
 [references/prompt-scaffold.md](references/prompt-scaffold.md),
-[references/verification.md](references/verification.md), and
-[references/integration-gate.md](references/integration-gate.md). Run waves in order.
+[references/verification.md](references/verification.md),
+[references/integration-gate.md](references/integration-gate.md), and
+[references/parallel-validation.md](references/parallel-validation.md). Run waves in order.
 Tickets in one wave have satisfied blockers and non-overlapping known touch
 sets. A ticket with an unknown touch set runs alone. `--serial` is the
 one-ticket-per-wave mode; `--concurrency N` sets the in-flight cap but does not

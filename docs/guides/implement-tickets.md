@@ -237,5 +237,10 @@ plain and `(from NN)` items are read-only, while `(edit)`, `(new)`, and
 - `skills/agents/implement-tickets/SKILL.md` — invocation and workflow contract
 - `references/planning.md` — ticket parsing, wave calculation, and Plan rules
 - `references/parallel-validation.md` — the validation marker
+- `references/dispatch-contract.md` — worker scheduling, shared cap, and infrastructure retries
+- `references/prompt-scaffold.md` — worker prompt and integration sync step
+- `references/verification.md` — verifier evidence, fallback, and timeout contract
+- `references/integration-gate.md` — ordered integration and recovery gate
+- `references/status-and-resume.md` — status, list, and resume behavior
 - `scripts/waves.mjs` — deterministic wave planner
 - `references/adapter-contract.md` — adapter input, outcomes, and worktree rules

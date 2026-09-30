@@ -25,7 +25,7 @@ before review**.
 
 This is the fallback-carrying, single-hosted-model sibling of `agy-implement`
 (which spreads spend and dispatch across several providers) and
-`subagent-implement` (which keeps the main agent's context lean). It carries
+`implement-tickets` (which keeps the main agent's context lean). It carries
 its own copy of the planning, worker-contract, fallback, verification, and
 state machinery so it can diverge from them freely (see
 `docs/decisions/0007-opencode-implement-standalone.md`).
@@ -317,7 +317,7 @@ request.
   cross-provider failover, no model list, and no per-ticket model reasoning —
   switching models is something the user does in `opencode`, not a flag this
   skill remembers on their behalf.
-- Keep `grill-to-tickets`, `agy-implement`, `subagent-implement`,
+- Keep `grill-to-tickets`, `agy-implement`, `implement-tickets`,
   `engineering-workflow`, every `mattpocock/skills`-sourced file, and
   `skills-lock.json` exactly as they are — this skill is standalone by design
   (see `docs/decisions/0007-opencode-implement-standalone.md`).

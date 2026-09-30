@@ -80,7 +80,7 @@ describe("grill-to-tickets composite skill contract", () => {
   });
 
   it("keeps the manifest out of the three implementer skills and their references", async () => {
-    for (const implementer of ["subagent-implement", "agy-implement", "opencode-implement"]) {
+    for (const implementer of ["implement-tickets", "agy-implement", "opencode-implement"]) {
       const directory = path.resolve("skills/agents", implementer);
       const files = [path.join(directory, "SKILL.md"), ...(await filesUnder(path.join(directory, "references")))];
       for (const file of files) {
@@ -354,7 +354,7 @@ describe("grill-to-tickets composite skill contract", () => {
       assert.match(handoff, /\/clear/);
       assert.match(handoff, /\/implement-tickets \.scratch\/<feature-slug>\//);
       assert.match(handoff, /--with <backend>/, "the handoff gives the adapter option in one line");
-      assert.doesNotMatch(handoff, /\/(?:subagent-implement|agy-implement|opencode-implement)\b/);
+      assert.doesNotMatch(handoff, /\/(?:agy-implement|opencode-implement)\b/);
       assert.ok(
         handoff.indexOf("/clear") < handoff.indexOf("/implement-tickets"),
         "/clear, then the implementer",
@@ -1281,7 +1281,7 @@ describe("Phase 2 human documentation", () => {
       /Stage 2.{0,100}(?:reads|read).{0,50}State|decision re-grill.{0,100}spent rounds/i,
       /checker warns.{0,200}(?:suite or tool run|same path|npm test)|15 tickets/i,
       /checker เตือน.{0,200}(?:suite หรือ tool|path เดียวกัน|npm test)|15 ticket/i,
-      /maximum wave width.{0,150}subagent-implement.{0,150}agy-implement/i,
+      /maximum wave width.{0,150}implement-tickets.{0,150}agy-implement/i,
     ];
 
     for (const [file, sections] of cases) {

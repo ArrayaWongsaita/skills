@@ -63,7 +63,7 @@ Pick the one view that shows the point with the least reading: pseudocode for lo
 
 Evidence is a before/after pair from runs that actually happened on this branch:
 
-- **Execution evidence:** name the test that failed before the change and passes after it, and quote its red and green lines. When the branch came through an implementer, that red and green output is already recorded per ticket under `.scratch/<feature-slug>/`: `reports/<NN>.md` (`subagent-implement`), `logs/<NN>.json` (`agy-implement`), or `logs/<NN>.jsonl` (`opencode-implement`). When it came through `review-to-pr`, its `review-status.md` holds the review verdicts and the `fix(review):` commits worth listing.
+- **Execution evidence:** name the test that failed before the change and passes after it, and quote its red and green lines. When the branch came through an implementer, that red and green output is already recorded per ticket under `.scratch/<feature-slug>/`: `reports/<NN>.md` (`implement-tickets`), `logs/<NN>.json` (`agy-implement`), or `logs/<NN>.jsonl` (`opencode-implement`). When it came through `review-to-pr`, its `review-status.md` holds the review verdicts and the `fix(review):` commits worth listing.
 - **Visual evidence:** for a visible UI change, a before/after screenshot is the strongest evidence whenever the environment can capture one.
 - **Checks list:** tick a check only when it ran and passed on the final tree.
 
