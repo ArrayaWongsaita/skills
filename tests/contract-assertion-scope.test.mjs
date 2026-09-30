@@ -98,6 +98,39 @@ describe("Markdown contract assertion scope", () => {
       "positive completion-language assertions use the Stage 3 section");
   });
 
+  it("scopes Inline Execution dispatch assertions to the Inline Execution section", async () => {
+    const source = await testCase(
+      "tests/grill-to-tickets-contract.test.mjs",
+      "dispatches each Stage 2 review to a fresh, read-only reviewer",
+    );
+    assert.doesNotMatch(
+      source,
+      /assertPattern\(content\s*,\s*\/(?:Two steps dispatch a subagent|Stage 2 design reviewer)/,
+      "dispatch assertions must not search the entire skill file",
+    );
+    assert.match(source, /assertPattern\(inlineSection\s*,\s*\/Two steps dispatch a subagent/,
+      "the two dispatches are asserted in Inline Execution");
+    assert.match(source, /assertPattern\(inlineSection\s*,\s*\/Stage 2 design reviewer/,
+      "the two reviewer roles are asserted in Inline Execution");
+  });
+
+  it("scopes Ticket Review Brief assertions to its Reviewer section", async () => {
+    const source = await testCase(
+      "tests/grill-to-tickets-contract.test.mjs",
+      "briefs a read-only ambiguity review with READY or ASK and a missing-verdict fallback",
+    );
+    assert.doesNotMatch(source, /assert\.ok\(review\.includes\(/,
+      "brief paths must not be asserted against the whole document");
+    assert.doesNotMatch(source, /assertPattern\(review\s*,/,
+      "brief behavior must not be asserted against the whole document");
+    assert.match(source, /assert\.ok\(reviewer\.includes\(/,
+      "brief paths are asserted in the Reviewer section");
+    assert.match(source, /assertPattern\(briefIntro\s*,\s*\/one fresh reviewer/,
+      "the brief's opening instruction is checked in the parsed heading block");
+    assert.match(source, /assertPattern\(reviewer\s*,/,
+      "brief behavior is asserted in the Reviewer section");
+  });
+
   it("scopes the tracker exclusion to the ticket-review brief section", async () => {
     const source = await testCase(
       "tests/grill-to-tickets-contract.test.mjs",

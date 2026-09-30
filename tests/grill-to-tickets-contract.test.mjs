@@ -188,12 +188,14 @@ describe("grill-to-tickets composite skill contract", () => {
       assert.match(stage2, /fresh reviewer subagent/);
       assert.match(stage2, /edits nothing/);
       assert.match(stage2, /\(references\/design-review-gate\.md\) — Reviewer/);
-      assert.match(content, /Stages 0, 1, and 3 run \*\*inline\*\*/);
-      assertPattern(content, /Two steps dispatch a subagent, and neither decides/, "both review steps dispatch and neither decides");
-      assertPattern(content, /Stage 2 design reviewer[\s\S]*Stage 3\.5 ticket reviewer/, "the sentences after the inline statement name both reviewers");
+      const inlineSection = markdownSection(content, "Inline Execution");
+      assertPattern(inlineSection, /Stages 0, 1, and 3 run \*\*inline\*\*/);
+      assertPattern(inlineSection, /Two steps dispatch a subagent, and neither decides/, "both review steps dispatch and neither decides");
+      assertPattern(inlineSection, /Stage 2 design reviewer[\s\S]*Stage 3\.5 ticket reviewer/, "the sentences after the inline statement name both reviewers");
     }
     for (const dir of skillDirs) {
       const gate = await readFile(path.resolve(dir, "references/design-review-gate.md"), "utf8");
+      const report = markdownSection(gate, "Stable report");
       const reviewer = gate.slice(gate.indexOf("## Reviewer"), gate.indexOf("## Verdict vocabulary"));
       assert.ok(reviewer.startsWith("## Reviewer"), "the gate reference has a Reviewer section");
       for (const brief of ["**Paths:**", "**Task:**", "**Prior findings,**", "**Return:**"]) {
@@ -201,7 +203,7 @@ describe("grill-to-tickets composite skill contract", () => {
       }
       assert.match(reviewer, /edits no file/);
       assert.match(reviewer, /`reviewer: inline`/, "the inline fallback is recorded");
-      assert.match(gate, /^- `reviewer` — /m, "each cycle records its reviewer");
+      assert.match(report, /^- `reviewer` — /m, "each cycle records its reviewer");
     }
     await fileExists(path.resolve("docs/decisions/0010-grill-to-tickets-fresh-context-design-review.md"));
   });
@@ -842,6 +844,7 @@ describe("grill-to-tickets composite skill contract", () => {
 
   it("briefs a read-only ambiguity review with READY or ASK and a missing-verdict fallback", async () => {
     const review = await readFile(path.resolve(canonicalDir, "references/ticket-review.md"), "utf8");
+    const briefIntro = markdownHeaderBlock(review);
     const reviewer = markdownSection(review, "Reviewer");
 
     for (const pathText of [
@@ -853,20 +856,20 @@ describe("grill-to-tickets composite skill contract", () => {
       "docs/glossary.md",
       "docs/decisions/",
     ]) {
-      assert.ok(review.includes(pathText), `review brief names ${pathText}`);
+      assert.ok(reviewer.includes(pathText), `review brief names ${pathText}`);
     }
     assert.doesNotMatch(reviewer, /tracker/i);
-    assertPattern(review, /one fresh reviewer/, "the brief assigns one fresh reviewer");
-    assertPattern(review, /edits nothing/, "the reviewer edits nothing");
-    assertPattern(review, /every file named in the tickets' `\*\*Context:\*\*`\s+lines/i, "the reviewer reads every Context-named file");
-    assertPattern(review, /fresh worker holding only that\s+ticket and what its\s+Context line lists[\s\S]*could start without asking anyone/i, "the brief asks whether a fresh worker can start");
-    assertPattern(review, /glossary, ADRs, and spec text outside the Context-named\s+sections[\s\S]{0,80}only to understand terms/i, "extra context explains terms without filling worker gaps");
-    assertPattern(review, /one line per ticket/i, "the reviewer returns one line per ticket");
-    assertPattern(review, /`NN READY` or `NN ASK: <question>`/, "the brief pins its one-line return format");
-    assertPattern(review, /ticket with no line in the\s+return is treated as `ASK` with the question `the\s+reviewer returned no verdict`/i, "a missing verdict becomes ASK with the stated question");
-    assertPattern(review, /exactly the verdicts `READY` or `ASK`/, "the verdicts are exactly READY and ASK");
-    assertPattern(review, /ambiguity only[\s\S]*sets no limit/i, "review reads for ambiguity and sets no limit");
-    assertPattern(review, /ambiguity-only form of the\s+readiness dry-run that ADR 0014 deferred/i, "the brief identifies its ADR 0014 relationship");
+    assertPattern(briefIntro, /one fresh reviewer/, "the brief assigns one fresh reviewer");
+    assertPattern(reviewer, /edits nothing/, "the reviewer edits nothing");
+    assertPattern(reviewer, /every file named in the tickets' `\*\*Context:\*\*`\s+lines/i, "the reviewer reads every Context-named file");
+    assertPattern(reviewer, /fresh worker holding only that\s+ticket and what its\s+Context line lists[\s\S]*could start without asking anyone/i, "the brief asks whether a fresh worker can start");
+    assertPattern(reviewer, /glossary, ADRs, and spec text outside the Context-named\s+sections[\s\S]{0,80}only to understand terms/i, "extra context explains terms without filling worker gaps");
+    assertPattern(reviewer, /one line per ticket/i, "the reviewer returns one line per ticket");
+    assertPattern(reviewer, /`NN READY` or `NN ASK: <question>`/, "the brief pins its one-line return format");
+    assertPattern(reviewer, /ticket with no line in the\s+return is treated as `ASK` with the question `the\s+reviewer returned no verdict`/i, "a missing verdict becomes ASK with the stated question");
+    assertPattern(reviewer, /exactly the verdicts `READY` or `ASK`/, "the verdicts are exactly READY and ASK");
+    assertPattern(reviewer, /ambiguity only[\s\S]*sets no limit/i, "review reads for ambiguity and sets no limit");
+    assertPattern(reviewer, /ambiguity-only form of the\s+readiness dry-run that ADR 0014 deferred/i, "the brief identifies its ADR 0014 relationship");
   });
 
   it("puts each ASK beside Seam, Context, and Budget and leaves its resolution to the person", async () => {
