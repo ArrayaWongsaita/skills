@@ -1102,18 +1102,110 @@ describe("rationalization table contract", () => {
 });
 
 describe("Phase 2 human documentation", () => {
+  it("places the review confirmation and maximum at the pause and names assumed parked handoff entries", async () => {
+    const diagrams = [
+      ["docs/guides/grill-to-tickets.md", "ขั้นตอนการทำงาน 4 ลำดับขั้น"],
+      ["docs/skills/agents/grill-to-tickets.md", "Main workflow"],
+    ];
+    for (const [file, heading] of diagrams) {
+      const workflow = markdownSection(await readFile(file, "utf8"), heading);
+      assert.ok(workflow, `${file} has its ${heading} workflow section`);
+      const diagram = workflow.match(/```text\n([\s\S]*?)```/)?.[1] ?? "";
+      assert.match(
+        diagram,
+        /Stage 0[^\n]*\n[^\n]*pause[^\n]*(?:confirm|confirmation)[^\n]*ask review maximum/i,
+        `${file} places confirmation and the review maximum at the Stage 0 pause`,
+      );
+    }
+
+    const handoffs = [
+      ["docs/guides/grill-to-tickets.md", "ขั้นตอนการทำงาน 4 ลำดับขั้น", false],
+      ["docs/skills/agents/grill-to-tickets.md", "วิธีทำงานหลัก", false],
+      ["docs/skills/agents/grill-to-tickets.md", "Main workflow", true],
+    ];
+    for (const [file, heading, english] of handoffs) {
+      const workflow = markdownSection(await readFile(file, "utf8"), heading);
+      assert.ok(workflow, `${file} has its ${heading} workflow section`);
+      let handoff;
+      if (english) {
+        handoff = workflow.split(/\n\s*\n/).find((paragraph) => /Then the skill prints a handoff/.test(paragraph));
+      } else {
+        const stop = workflow.indexOf("5. **Stop");
+        assert.notEqual(stop, -1, `${file} has its Stage 5 handoff`);
+        handoff = workflow.slice(stop);
+      }
+      assert.ok(handoff, `${file} has its handoff summary`);
+      assert.match(
+        handoff,
+        english
+          ? /lists?[^.\n]*parked questions?[^.\n]*(?:assumptions|assumed)/i
+          : /parked questions?[^\n]*(?:สมมติฐาน|assumption)/i,
+        `${file} says the handoff lists parked questions carried as assumptions`,
+      );
+      assert.match(handoff, /parked-questions\.md/i, `${file} links handoff details to the canonical parked-question contract`);
+    }
+  });
+
+  it("links workflow topics to canonical contracts and keeps operational rules there", async () => {
+    const targets = [
+      "docs/glossary.md",
+      "skills/agents/grill-to-tickets/SKILL.md",
+      "skills/agents/grill-to-tickets/references/decision-log.md",
+      "skills/agents/grill-to-tickets/references/parked-questions.md",
+      "skills/agents/grill-to-tickets/references/blind-spot-pass.md",
+      "skills/agents/grill-to-tickets/references/design-review-gate.md",
+      "skills/agents/grill-to-tickets/references/rationalizations.md",
+    ];
+    const cases = [
+      ["docs/guides/grill-to-tickets.md", ["ขั้นตอนการทำงาน 4 ลำดับขั้น"]],
+      ["docs/skills/agents/grill-to-tickets.md", ["วิธีทำงานหลัก", "Main workflow"]],
+    ];
+    const duplicatedRules = [
+      /hard changes a (?:user )?story, an interface, a test seam, or is hard to reverse/i,
+      /hard เปลี่ยน story,\s*interface, test seam หรือย้อนกลับยาก/i,
+      /easy (?:has|is) (?:a )?(?:safe )?default.{0,100}(?:one|single) line/i,
+      /safe default บรรทัดเดียว.{0,120}decided: default/i,
+      /(?:did not object|does not object|ไม่คัดค้าน).{0,60}decided: default/i,
+      /(?:--review N.{0,120}(?:three|3).{0,80}(?:zero|0).{0,40}(?:skip|ข้าม)|เสนอ 3.{0,60}0 คือข้าม)/i,
+      /open blocking parked question.{0,100}(?:holds|blocks).{0,60}pause|non-blocking.{0,100}resolved: assumed/i,
+      /Stage 2.{0,100}(?:reads|read).{0,50}State|decision re-grill.{0,100}spent rounds/i,
+      /checker warns.{0,200}(?:suite or tool run|same path|npm test)|15 tickets/i,
+      /checker เตือน.{0,200}(?:suite หรือ tool|path เดียวกัน|npm test)|15 ticket/i,
+      /maximum wave width.{0,150}subagent-implement.{0,150}agy-implement/i,
+    ];
+
+    for (const [file, sections] of cases) {
+      for (const heading of sections) {
+        const section = markdownSection(await readFile(file, "utf8"), heading);
+        assert.ok(section, `${file} has its ${heading} workflow section`);
+        const links = [...section.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)].map((match) => match[1]);
+        for (const target of targets) {
+          const expected = path.resolve(target);
+          assert.ok(
+            links.some((link) => path.resolve(path.dirname(file), link.split("#")[0]) === expected),
+            `${file} ${heading} links to ${target}`,
+          );
+          await fileExists(expected);
+        }
+        for (const pattern of duplicatedRules) {
+          assert.doesNotMatch(section, pattern, `${file} ${heading} leaves normative workflow detail in its contract`);
+        }
+      }
+    }
+  });
+
   for (const [file, workflow, preflight, handoff] of [
     ["docs/skills/agents/grill-to-tickets.md", "Main workflow", "Purpose", "Main workflow"],
     ["docs/guides/grill-to-tickets.md", "ขั้นตอนการทำงาน 4 ลำดับขั้น", "2. การพึ่งพา Skill อื่น (Dependencies) และการติดตั้ง", "ขั้นตอนการทำงาน 4 ลำดับขั้น"],
   ]) {
     const section = async title => markdownSection(await readFile(file, "utf8"), title);
-    it(`${file} explains tiers, parked lifecycle, and the single pause`, async () => {
+    it(`${file} gives the workflow vocabulary and links to its rules`, async () => {
       const flow = await section(workflow);
-      for (const term of ["`hard`", "`easy`", "decided: default", "resolved: assumed", "blocking", "non-blocking", "Further Notes"]) assert.ok(flow.includes(term), `workflow names ${term}`);
-      assert.match(flow, /Stage 0 pause[^\n]*--review N[^\n]*3[^\n]*0/);
-      assert.match(flow, /Stage 2[^\n]*State/);
+      for (const term of ["`hard`", "`easy`", "parked", "resolved: assumed", "Stage 0", "Stage 2"]) assert.ok(flow.includes(term), `workflow names ${term}`);
+      assert.match(flow, /Stage 0[^\n]*pause|pause[\s\S]*Stage 1/i);
       const stage2 = flow.slice(flow.indexOf("Stage 2: Design Review Gate"), flow.indexOf("Stage 3: Tickets"));
       assert.doesNotMatch(stage2, /choose|ผู้ใช้กำหนด|--review/);
+      assert.match(flow, /design-review-gate\.md/i);
       assert.match(flow, /rationalizations\.md/);
     });
     it(`${file} records paths only and removes the old lock explanation`, async () => {
@@ -1122,16 +1214,17 @@ describe("Phase 2 human documentation", () => {
       assert.match(intro, /npx skills check/);
       assertAbsentFromMarkdownSections(await readFile(file, "utf8"), /\block\b|\bhash\b|skills-lock\.json/i, "guides remove lock explanations");
     });
-    it(`${file} shows parked storage, review at pause, and assumed handoff entries`, async () => {
+    it(`${file} shows parked storage and the stage pause while linking status details`, async () => {
       const flow = await section(workflow);
       const storage = await section(file.includes("/guides/") ? "โครงสร้างไฟล์ที่สร้างขึ้น (Feature-scoped Storage)" : "Feature-scoped Storage");
       assert.ok(storage, "guide has a storage section");
       assert.match(storage, /decisions\.md[^\n]*\n[^\n]*parked\.md/);
       assert.match(storage, /issues\/[^\n]*\n[^\n]*manifest\.json/);
       const diagram = flow.match(/```text\n([\s\S]*?)```/)?.[1] ?? "";
-      assert.match(diagram, /Stage 0[\s\S]*pause[^\n]*review[^\n]*\n[\s\S]*Stage 1/);
+      assert.match(diagram, /Stage 0[\s\S]*pause[\s\S]*Stage 1/);
       assert.doesNotMatch(diagram, /Stage 2[^\n]*(?:choose|ผู้ใช้กำหนด)/);
-      assert.match(await section(handoff), /handoff[^\n]*resolved: assumed[^\n]*assumed/i);
+      assert.match(await section(handoff), /handoff/i);
+      assert.match(await section(handoff), /parked-questions\.md/i);
     });
   }
 });
