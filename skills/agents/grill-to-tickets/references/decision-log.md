@@ -17,6 +17,7 @@ decision, including the small ones neither of them takes.
 - stage: 0 — Grill
 - waiting on: answers to round 3
 - updated: 2026-09-24
+- ticket review: done
 
 ## Preflight
 
@@ -41,12 +42,24 @@ decision, including the small ones neither of them takes.
 - 01 READY
 - 02 ASK: <question> — resolved: <change>
 - 03 ASK: <question> — acknowledged
-- review skipped
 
 ## Ticket warnings
 
 - `issues/02-csv-download.md: acceptance criterion "npm test passes" mentions a suite or tool run` — fixed: rewrote the criterion as a behavioural statement
 - `the feature has 16 tickets; split it into separate feature slugs` — acknowledged
+```
+
+For a run that skips the review, the State key is `ticket review: skipped` and
+`- review skipped` is the only entry under `## Ticket review`:
+
+```markdown
+## State
+
+- ticket review: skipped
+
+## Ticket review
+
+- review skipped
 ```
 
 - **State** is rewritten in place. `stage` is one of `0 — Grill`, `1 — Spec`,
