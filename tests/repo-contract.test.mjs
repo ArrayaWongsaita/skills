@@ -352,7 +352,9 @@ describe("grill-to-tickets production records and guides", () => {
     assert.ok(purpose, "the guide has its purpose section");
     assert.match(purpose, /2 ขั้นตอน[^\n]*dispatch[^\n]*subagent/i, "the guide says two steps dispatch a subagent");
 
-    const tree = guide.match(/```text\n(\.scratch\/<feature-slug>\/[\s\S]*?)```/);
+    const storageSection = sectionOf(guide, "### โครงสร้างไฟล์ที่สร้างขึ้น (Feature-scoped Storage)");
+    assert.ok(storageSection, "the guide has its Feature-scoped Storage section");
+    const tree = storageSection.match(/```text\n(\.scratch\/<feature-slug>\/[\s\S]*?)```/);
     assert.ok(tree, "the guide has the feature storage tree");
     assert.match(tree[1], /manifest\.json/, "the feature storage tree lists manifest.json");
 
@@ -374,9 +376,11 @@ describe("grill-to-tickets production records and guides", () => {
 
   it("orders the guide handoff to match SKILL.md: recommended implementer, then Manifest", async () => {
     const guide = await readTextOrNull("docs/guides/grill-to-tickets.md");
-    const stop = guide.match(/^5\. \*\*Stop[^\n]*\n([\s\S]*?)(?=\n#{2,3} )/m);
+    const guideWorkflow = sectionOf(guide, "### ขั้นตอนการทำงาน 4 ลำดับขั้น");
+    assert.ok(guideWorkflow, "the guide has its workflow section");
+    const stop = numberedMarkdownItem(guideWorkflow, 5);
     assert.ok(stop, "the guide has the Stop step");
-    const order = stop[1].split("\n").find((line) => /^   - พิมพ์ข้อความ handoff/.test(line));
+    const order = stop.split("\n").find((line) => /^   - พิมพ์ข้อความ handoff/.test(line));
     assert.ok(order, "the Stop step has the handoff-order bullet");
     const at = (needle) => order.indexOf(needle);
     assert.ok(at("DAG summary") !== -1 && at("DAG summary") < at("Manifest:") && at("Manifest:") < at("`/subagent-implement`"),
@@ -384,22 +388,25 @@ describe("grill-to-tickets production records and guides", () => {
     assert.ok(at("recommended implementer") !== -1 && at("recommended implementer") < at("Manifest:"),
       "the Manifest line follows the recommended implementer line");
     assert.match(order, /Manifest: `?\.scratch\/<feature-slug>\/manifest\.json/, "the line is spelled Manifest:");
-    const example = stop[1].match(/recommended implementer: [^\n]*\n\s*(\S+):/);
+    const example = stop.match(/recommended implementer: [^\n]*\n\s*(\S+):/);
     assert.ok(example, "the example shows a line after recommended implementer");
     assert.equal(example[1], "Manifest", "the example prints Manifest: after recommended implementer");
-    assert.doesNotMatch(stop[1], /^\s*manifest: /m, "no lowercase manifest: example line");
+    assert.doesNotMatch(stop, /^\s*manifest: /m, "no lowercase manifest: example line");
   });
 
   it("keeps the manifest line in the skill page Stop item and English handoff", async () => {
     const page = await readTextOrNull("docs/skills/agents/grill-to-tickets.md");
-    const englishStart = page.indexOf("## English / ภาษาอังกฤษ");
-    const thaiStop = page.slice(0, englishStart).match(/^5\. \*\*Stop\*\*[^\n]*$/m);
+    const thaiWorkflow = sectionOf(page, "### วิธีทำงานหลัก");
+    assert.ok(thaiWorkflow, "the skill page has its Thai main workflow section");
+    const thaiStop = numberedMarkdownItem(thaiWorkflow, 5);
     assert.ok(thaiStop, "the Thai Stop item exists");
-    assert.match(thaiStop[0], /Manifest: \.scratch\/<feature-slug>\/manifest\.json/, "the Thai Stop item names the Manifest line");
-    assert.match(thaiStop[0], /เมื่อมี/, "the Thai Stop item indicates the line appears when available");
-    const english = page.slice(englishStart);
-    const para = english.slice(english.indexOf("prints a handoff in this order"));
-    const handoff = para.slice(0, para.indexOf("### Example prompt"));
+    const thaiStopHeader = thaiStop.split("\n", 1)[0];
+    assert.match(thaiStopHeader, /Manifest: \.scratch\/<feature-slug>\/manifest\.json/, "the Thai Stop item names the Manifest line");
+    assert.match(thaiStopHeader, /เมื่อมี/, "the Thai Stop item indicates the line appears when available");
+    const englishWorkflow = sectionOf(page, "### Main workflow");
+    assert.ok(englishWorkflow, "the skill page has its English main workflow section");
+    const handoff = paragraphOf(englishWorkflow, "Then the skill prints a handoff");
+    assert.ok(handoff, "the English workflow has its handoff paragraph");
     assert.match(handoff, /Manifest: \.scratch\/<feature-slug>\/manifest\.json/, "the English handoff names the Manifest line");
     assert.match(handoff, /when available/, "the English handoff indicates the line appears when available");
     assert.ok(handoff.indexOf("DAG summary") < handoff.indexOf("Manifest:"), "the Manifest line follows the DAG summary");
@@ -408,7 +415,10 @@ describe("grill-to-tickets production records and guides", () => {
 
   it("ADR 0018 names ADR 0014's rejection of dry-runs as a cost calibrated against nothing", async () => {
     const adr18 = await readTextOrNull("docs/decisions/0018-grill-to-tickets-scenarios-manifest-and-ticket-review.md");
-    const decision5 = adr18.match(/^5\. [\s\S]*?(?=^6\. )/m)[0];
+    const decision = markdownSection(adr18, "Decision / การตัดสินใจ");
+    assert.ok(decision, "ADR 0018 has its Decision section");
+    const decision5 = numberedMarkdownItem(decision, 5);
+    assert.ok(decision5, "ADR 0018 has decision 5");
     const thaiStart = decision5.search(/[\u0E00-\u0E7F]/);
     const english = decision5.slice(0, thaiStart);
     const thai = decision5.slice(thaiStart);
@@ -466,7 +476,9 @@ describe("grill-to-tickets production records and guides", () => {
     assert.doesNotMatch(guideStage3, /--ticket-review 0/, "the guide does not duplicate the ticket-review skip flag");
     assert.doesNotMatch(guideStage3, /spec fingerprint|planning-time ticket facts|no Status or timestamp/i, "the guide does not repeat manifest internals");
     await assertLinksToCanonicalContracts(guideFile, guideStage3, "Thai guide Stage 3");
-    const guideStorage = guide.match(/```text\n(\.scratch\/<feature-slug>\/[\s\S]*?)```/);
+    const guideStorageSection = sectionOf(guide, "### โครงสร้างไฟล์ที่สร้างขึ้น (Feature-scoped Storage)");
+    assert.ok(guideStorageSection, "the guide has its Feature-scoped Storage section");
+    const guideStorage = guideStorageSection.match(/```text\n(\.scratch\/<feature-slug>\/[\s\S]*?)```/);
     assert.ok(guideStorage, "the guide keeps the feature storage tree");
     assert.match(guideStorage[1], /manifest\.json/, "the storage tree keeps the manifest path");
     assert.doesNotMatch(guideStorage[1], /spec fingerprint|planning facts|timestamp/i, "the storage tree does not duplicate manifest internals");
