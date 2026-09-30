@@ -631,7 +631,9 @@ describe("grill-to-tickets production records and guides", () => {
     const guide = await readTextOrNull("docs/guides/grill-to-tickets.md");
     assert.ok(guide, "the grill-to-tickets guide exists");
 
-    const diagramLine = guide.match(/^Stop: Handoff message[^\n]*$/m);
+    const guideWorkflow = sectionOf(guide, "### ขั้นตอนการทำงาน 4 ลำดับขั้น");
+    assert.ok(guideWorkflow, "the guide has its four-step workflow section");
+    const diagramLine = guideWorkflow.match(/^Stop: Handoff message[^\n]*$/m);
     assert.ok(diagramLine, "the guide's diagram has a Stop: Handoff message line");
     assertFirstMentionOrder(
       diagramLine[0],
@@ -639,10 +641,10 @@ describe("grill-to-tickets production records and guides", () => {
       "guide diagram line",
     );
 
-    const step = guide.match(/^5\. \*\*Stop — Handoff[^\n]*\n([\s\S]*?)(?=\n---)/m);
-    assert.ok(step, "the guide has a Stage 5 Stop — Handoff step");
-    assertFirstMentionOrder(step[1], ["/clear", "DAG summary", "/subagent-implement"], "guide handoff step");
-    const message = step[1].match(/```text\n([\s\S]*?)```/);
+    const guideStop = numberedMarkdownItem(guideWorkflow, 5);
+    assert.ok(guideStop, "the guide workflow has a Stage 5 Stop — Handoff step");
+    assertFirstMentionOrder(guideStop, ["/clear", "DAG summary", "/subagent-implement"], "guide handoff step");
+    const message = guideStop.match(/```text\n([\s\S]*?)```/);
     assert.ok(message, "the guide's handoff step shows the message");
     assertFirstMentionOrder(
       message[1],
@@ -653,17 +655,21 @@ describe("grill-to-tickets production records and guides", () => {
     const page = await readTextOrNull("docs/skills/agents/grill-to-tickets.md");
     assert.ok(page, "the grill-to-tickets skill page exists");
 
-    const english = page.replace(/\s+/g, " ").match(/prints a handoff.*?the skill stops\./);
+    const englishWorkflow = sectionOf(page, "### Main workflow");
+    assert.ok(englishWorkflow, "the skill page has its English workflow section");
+    const english = paragraphOf(englishWorkflow, "Then the skill prints a handoff");
     assert.ok(english, "the skill page's English text describes the handoff");
     assertFirstMentionOrder(
-      english[0],
+      english,
       ["/clear", "DAG summary", "recommended implementer", "/subagent-implement"],
       "skill page English handoff",
     );
 
-    const stage5 = page.match(/^5\. \*\*Stop\*\*[^\n]*$/m);
+    const thaiWorkflow = sectionOf(page, "### วิธีทำงานหลัก");
+    assert.ok(thaiWorkflow, "the skill page has its Thai workflow section");
+    const stage5 = numberedMarkdownItem(thaiWorkflow, 5);
     assert.ok(stage5, "the skill page's Thai text has a Stage 5 Stop line");
-    assertFirstMentionOrder(stage5[0], ["/clear", "DAG summary"], "skill page Thai Stage 5 line");
+    assertFirstMentionOrder(stage5, ["/clear", "DAG summary"], "skill page Thai Stage 5 line");
   });
 
   it("says the orchestrator builds the worker's read list into the prompt, in the guides and the skill pages", async () => {

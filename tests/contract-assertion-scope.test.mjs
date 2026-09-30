@@ -81,6 +81,29 @@ describe("Markdown contract assertion scope", () => {
       "English handoff claims use their handoff summary paragraph");
   });
 
+  it("scopes handoff ordering to the guide and skill-page workflow summaries", async () => {
+    const source = await testCase(
+      "tests/repo-contract.test.mjs",
+      "describes the grill-to-tickets handoff in the skill's order: /clear, then the DAG summary, then the implementer command",
+    );
+    assert.doesNotMatch(source, /assert\.(?:match|doesNotMatch)\(\s*(?:guide|page)\s*,/,
+      "handoff assertions must not scan a whole guide or skill page");
+    assert.doesNotMatch(source, /\b(?:guide|page)\.(?:replace|match)\(/,
+      "handoff extraction must not normalize or match an entire guide or skill page");
+    assert.match(source, /sectionOf\(guide,\s*["']### ขั้นตอนการทำงาน 4 ลำดับขั้น["']\)/,
+      "the Thai guide diagram and handoff use its workflow section");
+    assert.match(source, /numberedMarkdownItem\(guideWorkflow,\s*5\)/,
+      "the Thai guide handoff order uses workflow item 5");
+    assert.match(source, /sectionOf\(page,\s*["']### วิธีทำงานหลัก["']\)/,
+      "the Thai skill-page stop uses its workflow section");
+    assert.match(source, /numberedMarkdownItem\(thaiWorkflow,\s*5\)/,
+      "the Thai skill-page stop assertion uses workflow item 5");
+    assert.match(source, /sectionOf\(page,\s*["']### Main workflow["']\)/,
+      "the English handoff uses its workflow section");
+    assert.match(source, /paragraphOf\(englishWorkflow,\s*["']Then the skill prints a handoff/,
+      "the English handoff order uses its summary paragraph");
+  });
+
   it("scopes Scenario-format requirements to the User Stories template section", async () => {
     const source = await testCase(
       "tests/grill-to-tickets-contract.test.mjs",
