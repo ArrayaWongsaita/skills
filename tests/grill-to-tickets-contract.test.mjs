@@ -149,6 +149,30 @@ describe("grill-to-tickets composite skill contract", () => {
     }
   });
 
+  it("reconciles a changed late answer to an assumed parked question before handoff", async () => {
+    const skill = await readFile(path.resolve(canonicalDir, "SKILL.md"), "utf8");
+    const stage1 = markdownSection(skill, "Stage 1 — Spec");
+    const stage2 = markdownSection(skill, "Stage 2 — Design Review Gate");
+    const stage3 = markdownSection(skill, "Stage 3 — Tickets");
+    const parked = await readFile(path.resolve(canonicalDir, "references/parked-questions.md"), "utf8");
+    const lifecycle = markdownSection(parked, "Lifecycle");
+    const log = await readFile(path.resolve(canonicalDir, "references/decision-log.md"), "utf8");
+    const resume = markdownSection(log, "Resume — `continue <feature-slug>`");
+
+    assertPattern(lifecycle, /later answer[\s\S]*new decision[\s\S]*supersedes[\s\S]*(?:assumed decision|assumption)[\s\S]*resolved: answered/i,
+      "a changed late answer supersedes the assumed decision and resolves the parked entry");
+    assertPattern(stage1, /late answer[\s\S]*spec[\s\S]*Stage 1[\s\S]*Further Notes/i,
+      "a changed answer returns to Stage 1 to synchronize the existing spec");
+    assertPattern(stage2, /late answer[\s\S]*maximum and rounds used from State[\s\S]*not\s+reset/i,
+      "the downstream design review keeps its recorded review budget");
+    assertPattern(stage3, /late answer[\s\S]*tickets[\s\S]*reconcil[\s\S]*checker[\s\S]*quiz/i,
+      "existing tickets are reconciled and checked and quizzed again");
+    assertPattern(resume, /late answer[\s\S]*Stage 1[\s\S]*Stage 2[\s\S]*maximum and rounds used from State/i,
+      "resume routes changed late answers through affected downstream stages with State intact");
+    assertPattern(lifecycle, /confirms? the assumption[\s\S]*(?:does not|doesn't) invalidate downstream/i,
+      "a late answer that confirms the assumption leaves downstream artifacts valid");
+  });
+
   it("runs a blind-spot pass over fixed categories before the Stage 0 pause", async () => {
     for (const file of skillFiles) {
       const content = await readFile(file, "utf8");

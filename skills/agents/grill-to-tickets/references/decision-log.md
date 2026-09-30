@@ -106,8 +106,9 @@ For a run that skips the review, the State key is `ticket review: skipped` and
    changes its tier to hard, keeps it open, and re-posts its full text and recommendation.
    A parked question leaves its round with `decided: parked`, which counts as
    closed; write its state in `parked.md` using `parked-questions.md`.
-   A later answer is logged as a new decision entry naming the parked question;
-   update its status in `parked.md` to `resolved: answered`.
+   A later answer is logged as a new decision entry naming the parked question
+   and superseding its assumed decision; update its status in `parked.md` to
+   `resolved: answered`.
    Fill in the remaining answers before you post the next round.
 3. At the Stage 0 pause, record the review answer in State when given, even
    while a blocking parked question holds the pause open. Use `review: 0/<max> rounds`
@@ -145,3 +146,11 @@ A round is closed when every question in it carries a `decided:` other than
    review once. Keep the review State and `## Ticket review` entries together:
    a `done` State keeps its verdicts, each open ASK stays open until resolved or
    acknowledged, and a `skipped` State keeps the review skipped.
+6. If a late answer changes an assumed parked value already present in
+   `spec.md`, log the superseding decision, update `parked.md`, set State to
+   Stage 1, and synchronize the spec before handoff. Resume through the affected
+   Stage 2 and ticket stages. Keep the review maximum and rounds used from State;
+   never reset or re-ask for the review budget. When tickets already exist,
+   reconcile them against the revised spec, rerun the checker, and repeat the
+   ticket quiz. If the answer confirms the assumption, downstream artifacts
+   remain valid.

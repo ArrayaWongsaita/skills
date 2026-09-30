@@ -160,8 +160,10 @@ Run `grilling` and `domain-modeling` together as one discovery pass.
    and status `open` to `.scratch/<feature-slug>/parked.md` using
    [parked-questions.md](references/parked-questions.md). The owner is the person
    or the third party they name. Resume reads its state from `parked.md`.
-   A later answer is logged as a new decision entry, and its parked status
-   becomes `resolved: answered`.
+   A later answer is logged as a new decision entry that supersedes the
+   assumption, and its parked status becomes `resolved: answered`. If it changes
+   a value already in `spec.md`, follow the late-answer rework path below before
+   handoff.
 3. **Active domain modeling (inline `domain-modeling`).** Challenge overloaded
    terms, sharpen fuzzy language, and stress-test relationships with concrete
    scenarios. Write terms into `.scratch/<feature-slug>/CONTEXT.md` the moment
@@ -207,6 +209,13 @@ write every `resolved: assumed` parked entry's default into Further Notes as
 an assumption, including non-blocking entries resolved at the confirmed pause
 and blocking entries the person downgraded.
 
+When a late answer changes an assumption already written into the spec,
+return to Stage 1 and replace the assumed value everywhere it appears, including
+Further Notes. Check that every decision in `decisions.md` is represented in the
+revised spec. Then rerun the affected downstream review and ticket stages before
+handoff. A late answer that confirms the assumption leaves the spec and
+downstream artifacts valid.
+
 ## Stage 2 — Design Review Gate
 
 Read the review answer from `decisions.md` State. Stage 2 asks only when State holds no review answer:
@@ -217,7 +226,10 @@ Stage 0. A decision-level rework keeps the answer and does not repeat the
 question. A recorded State answer wins over any `--review` flag on `continue`.
 When State says `review: skipped` (including `--review 0` at the pause), write
 `ended: skipped` in the gate report and advance to Stage 3. Otherwise keep the
-maximum and rounds used without refilling the budget. A round is one completed review.
+maximum and rounds used without refilling the budget. A changed late answer to
+an assumed parked question returns to Stage 1 first, then resumes this gate
+from the revised spec with the maximum and rounds used from State. This does not
+reset the budget or ask for it again. A round is one completed review.
 
 Each round, dispatch a fresh reviewer subagent that runs `scrutinize` against
 `spec.md` from files alone and edits nothing — its brief is in
@@ -311,6 +323,10 @@ a second review starts only when the person asks. `ASK` lines name tickets as
 numbered at review time; when the quiz removes a ticket, give its line the
 `— acknowledged` suffix. The review set closes at review time. Tickets the quiz
 creates join a review only after the person asks for another review.
+
+When a changed late answer arrives after tickets exist, reconcile the tickets
+against the revised spec, re-run the checker with `--write-budget`, and repeat
+the ticket quiz before handoff.
 
 Stage 3 is done when all of these hold:
 

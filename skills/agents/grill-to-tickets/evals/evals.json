@@ -465,13 +465,16 @@
       "id": 45,
       "name": "parked-flow: blocking downgrade, default confirmation, resume and late answer",
       "prompt": "$grill-to-tickets Add exports. I cannot answer retention or filename now: park retention as blocking with default 30 days owned by the compliance lead, and filename as non-blocking with default export.csv owned by me. Resume before the pause. At the pause I accept retention’s default and confirm. Later the compliance lead answers 90 days. Finish the handoff.",
-      "expected_output": "Write both questions with six fields in parked.md, status open. Their round lines read decided: parked and count as closed. On resume read parked.md. The open blocking retention question holds the pause. Accepting its default makes it resolved: assumed; confirming the pause makes non-blocking filename resolved: assumed without a fresh ask. Stage 1 writes both defaults to Further Notes. Log the late retention answer as a new decision and change it to resolved: answered. The pause summary lists both entries labelled assumed after confirmation; the handoff lists every remaining resolved: assumed entry, filename only.",
+      "expected_output": "Write both questions with six fields in parked.md, status open. Their round lines read decided: parked and count as closed. On resume read parked.md. The open blocking retention question holds the pause. Accepting its 30-day default makes it resolved: assumed; confirming the pause makes non-blocking filename resolved: assumed without a fresh ask. Stage 1 writes both defaults to Further Notes. When the compliance lead later answers 90 days, log a new decision superseding the 30-day assumption and change retention to resolved: answered. Because the spec already contains the 30-day assumption, return to Stage 1, replace it in Further Notes, and check the revised spec against every decision. Resume the affected Stage 2 review using the maximum and rounds already recorded in State; do not reset or re-ask for the budget. Reconcile existing tickets against the 90-day spec, rerun the checker and ticket quiz, and finish the handoff only after synchronization. The pause summary lists both entries labelled assumed after confirmation; the final handoff lists every remaining resolved: assumed entry, filename only.",
       "expectations": [
         "Stores six fields: question, why parked, blocking or non-blocking, default assumption, owner, status",
         "Resume restores parked state and waiting on names the blocking parked question",
         "Pause cannot complete with an open blocker",
         "Downgrade and non-blocking confirmation resolve defaults explicitly",
-        "Further Notes carries assumed defaults; a late answer creates a new decision",
+        "Stage 1 carries the 30-day default into Further Notes before the late answer",
+        "The 90-day answer supersedes the 30-day assumption and resolves retention as answered",
+        "Resynchronizes the spec in Stage 1 and reruns affected review stages with the State review budget unchanged",
+        "Reconciles existing tickets against the revised spec, then reruns the checker and quiz before handoff",
         "Pause summary and handoff list every resolved: assumed entry labelled assumed"
       ],
       "files": []
