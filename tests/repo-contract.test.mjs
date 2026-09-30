@@ -4,7 +4,7 @@ import { access, readFile, readdir } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
 import { discoverSkills, renderIndex } from "../scripts/generate-skill-index.mjs";
-import { markdownHeaderBlock, markdownHeadings } from "./helpers/markdown-contract.mjs";
+import { markdownHeaderBlock, markdownHeadings, markdownSection } from "./helpers/markdown-contract.mjs";
 
 async function fileExists(path) {
   await access(path, constants.R_OK);
@@ -77,6 +77,17 @@ function sectionOf(doc, heading) {
     body.push(line);
   }
   return body.join("\n");
+}
+
+function numberedMarkdownItem(section, number) {
+  if (!section) return null;
+  const lines = section.split("\n");
+  const start = lines.findIndex((line) => line.startsWith(`${number}. `));
+  if (start === -1) return null;
+
+  const rest = lines.slice(start + 1);
+  const next = rest.findIndex((line) => /^\d+\. /.test(line));
+  return [lines[start], ...(next === -1 ? rest : rest.slice(0, next))].join("\n");
 }
 
 function withoutCodeFences(text) {
@@ -277,16 +288,36 @@ describe("grill-to-tickets production records and guides", () => {
     const header = markdownHeaderBlock(adr18);
     assert.match(header, /^- Status \/ สถานะ: Accepted/m);
     assert.match(header, /Amends \/ แก้ไข: ADR 0014 and ADR 0010 decision 5/i);
-    for (const term of [/Scenario/i, /สถานการณ์/, /manifest\.json/, /manifest/, /ticket review/i, /รีวิว ticket/i]) {
-      assert.match(adr18, term, `ADR 0018 records ${term}`);
+    const context = markdownSection(adr18, "Context / บริบท");
+    const decision = markdownSection(adr18, "Decision / การตัดสินใจ");
+    assert.ok(context, "ADR 0018 has its Context section");
+    assert.ok(decision, "ADR 0018 has its Decision section");
+
+    assert.match(context, /Scenario/i, "ADR 0018 Context introduces the Scenario line");
+    const scenarioDecision = numberedMarkdownItem(decision, 1);
+    const manifestDecision = numberedMarkdownItem(decision, 2);
+    const ticketReviewDecision = numberedMarkdownItem(decision, 3);
+    const costDecision = numberedMarkdownItem(decision, 5);
+    const dispatchDecision = numberedMarkdownItem(decision, 6);
+    assert.ok(scenarioDecision, "ADR 0018 Decision has decision 1");
+    assert.ok(manifestDecision, "ADR 0018 Decision has decision 2");
+    assert.ok(ticketReviewDecision, "ADR 0018 Decision has decision 3");
+    assert.ok(costDecision, "ADR 0018 Decision has decision 5");
+    assert.ok(dispatchDecision, "ADR 0018 Decision has decision 6");
+    assert.match(scenarioDecision, /สถานการณ์/, "ADR 0018 decision 1 records the Thai scenario wording");
+    for (const term of [/manifest\.json/, /manifest/]) {
+      assert.match(manifestDecision, term, `ADR 0018 decision 2 records ${term}`);
     }
-    assert.match(adr18, /readiness dry-runs/i, "ADR 0018 identifies ADR 0014's readiness dry-run deferral");
-    assert.match(adr18, /ambiguity-only/i, "the ticket review is the ambiguity-only form of a readiness dry-run");
-    assert.match(adr18, /limits, profiles,[\s\S]*over-budget warnings, and Budget calibration stay deferred/i, "the other budget-calibration work stays deferred");
-    assert.match(adr18, /default-on/i, "ADR 0018 explains the default-on review cost");
-    assert.match(adr18, /no calibration data/i, "the review cost does not need calibration data");
-    assert.match(adr18, /--ticket-review 0/, "the review cost can be turned off");
-    assert.match(adr18, /Stage 3 now also dispatches the ticket reviewer/i, "ADR 0018 amends ADR 0010 decision 5");
+    for (const term of [/ticket review/i, /รีวิว ticket/i]) {
+      assert.match(ticketReviewDecision, term, `ADR 0018 decision 3 records ${term}`);
+    }
+    assert.match(costDecision, /readiness dry-runs/i, "ADR 0018 identifies ADR 0014's readiness dry-run deferral");
+    assert.match(costDecision, /ambiguity-only/i, "the ticket review is the ambiguity-only form of a readiness dry-run");
+    assert.match(costDecision, /limits, profiles,[\s\S]*over-budget warnings, and Budget calibration stay deferred/i, "the other budget-calibration work stays deferred");
+    assert.match(costDecision, /default-on/i, "ADR 0018 explains the default-on review cost");
+    assert.match(costDecision, /no calibration data/i, "the review cost does not need calibration data");
+    assert.match(costDecision, /--ticket-review 0/, "the review cost can be turned off");
+    assert.match(dispatchDecision, /Stage 3 now also dispatches the ticket reviewer/i, "ADR 0018 amends ADR 0010 decision 5");
 
     const adr14 = await readTextOrNull("docs/decisions/0014-measure-tickets-before-limiting-them.md");
     assert.match(markdownHeaderBlock(adr14), /^- Amended by \/ แก้ไขโดย: ADR 0018/m, "ADR 0014 names ADR 0018 in its header");
@@ -299,10 +330,9 @@ describe("grill-to-tickets production records and guides", () => {
   it("updates the Thai guide with scenarios, the manifest, the ticket review, and two subagent dispatches", async () => {
     const guide = await readTextOrNull("docs/guides/grill-to-tickets.md");
     assert.ok(guide, "the grill-to-tickets guide exists");
-    assert.match(guide, /2 ขั้นตอน[^\n]*dispatch[^\n]*subagent/i, "the guide says two steps dispatch a subagent");
-    assert.match(guide, /Scenario: given/i, "the guide describes the scenario line");
-    assert.match(guide, /manifest\.json/, "the guide describes the manifest");
-    assert.match(guide, /Ticket review/i, "the guide describes the ticket review");
+    const purpose = markdownSection(guide, "จุดประสงค์หลักและคุณสมบัติเด่น");
+    assert.ok(purpose, "the guide has its purpose section");
+    assert.match(purpose, /2 ขั้นตอน[^\n]*dispatch[^\n]*subagent/i, "the guide says two steps dispatch a subagent");
 
     const tree = guide.match(/```text\n(\.scratch\/<feature-slug>\/[\s\S]*?)```/);
     assert.ok(tree, "the guide has the feature storage tree");
@@ -311,10 +341,15 @@ describe("grill-to-tickets production records and guides", () => {
     const guideWorkflow = sectionOf(guide, "### ขั้นตอนการทำงาน 4 ลำดับขั้น");
     const steps = [...guideWorkflow.matchAll(/^(\d)\. \*\*/gm)].map((match) => match[1]);
     assert.deepEqual(steps, ["1", "2", "3", "4", "5"], "the guide keeps five top-level steps and Stop at step 5");
-    const stage3 = guideWorkflow.match(/^4\. \*\*Stage 3[^\n]*\n([\s\S]*?)(?=\n5\. \*\*Stop)/m);
-    assert.ok(stage3, "the guide keeps ticket review inside step 4");
-    assert.match(stage3[1], /^   - \*\*Ticket review[^\n]*READY[^\n]*ASK/m, "the guide makes ticket review and its verdicts a step 4 sub-bullet");
-    assert.match(stage3[1], /^     - [^\n]*ASK/m, "the guide nests quiz handling under the ticket-review sub-bullet");
+    const stage1 = numberedMarkdownItem(guideWorkflow, 2);
+    const stage3 = numberedMarkdownItem(guideWorkflow, 4);
+    assert.ok(stage1, "the guide keeps Stage 1 inside the workflow section");
+    assert.ok(stage3, "the guide keeps Stage 3 inside the workflow section");
+    assert.match(stage1, /Scenario: given/i, "the guide describes the scenario line in Stage 1");
+    assert.match(stage3, /manifest\.json/, "the guide describes the manifest in Stage 3");
+    assert.match(stage3, /Ticket review/i, "the guide describes the ticket review in Stage 3");
+    assert.match(stage3, /^   - \*\*Ticket review[^\n]*READY[^\n]*ASK/m, "the guide makes ticket review and its verdicts a step 4 sub-bullet");
+    assert.match(stage3, /^     - [^\n]*ASK/m, "the guide nests quiz handling under the ticket-review sub-bullet");
   });
 
   it("orders the guide handoff to match SKILL.md: recommended implementer, then Manifest", async () => {

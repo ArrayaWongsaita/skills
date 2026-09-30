@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile, access, readdir } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
-import { assertSkillMarkdownSectionsDoNotMatch, markdownHeaderBlock, markdownSection } from "./helpers/markdown-contract.mjs";
+import { assertAbsentFromMarkdownSections, assertSkillMarkdownSectionsDoNotMatch, markdownHeaderBlock, markdownSection } from "./helpers/markdown-contract.mjs";
 
 async function fileExists(filePath) {
   await access(filePath, constants.R_OK);
@@ -84,7 +84,11 @@ describe("grill-to-tickets composite skill contract", () => {
       const directory = path.resolve("skills/agents", implementer);
       const files = [path.join(directory, "SKILL.md"), ...(await filesUnder(path.join(directory, "references")))];
       for (const file of files) {
-        assert.doesNotMatch(await readFile(file, "utf8"), /\bmanifest\b/i, `${file} must not depend on the manifest`);
+        assertAbsentFromMarkdownSections(
+          await readFile(file, "utf8"),
+          /\bmanifest\b/i,
+          `${file} must not depend on the manifest`,
+        );
       }
     }
   });
