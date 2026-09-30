@@ -30,7 +30,7 @@ npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 
 ### ไม่ควรใช้เมื่อไร
 
-- ถ้าต้องการให้ทำถึงขั้น implement และ review โค้ดใน run เดียว ใช้ `/engineering-workflow` (หรือทำต่อจาก ticket ด้วย `/subagent-implement` แล้วตามด้วย `/review-to-pr`)
+- ถ้าต้องการให้ทำถึงขั้น implement และ review โค้ดใน run เดียว ใช้ `/engineering-workflow` (หรือทำต่อจาก ticket ด้วย `/implement-tickets` แล้วตามด้วย `/review-to-pr`)
 - ถ้าต้องการแค่ discipline เดียว เรียก `/grilling`, `/scrutinize` ตรง ๆ
 
 ### วิธีทำงานหลัก
@@ -42,7 +42,7 @@ npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 3. **Stage 2 — Design Review Gate**: ส่ง `scrutinize` มาตรวจ spec; ดู [สัญญา Design Review Gate](../../../skills/agents/grill-to-tickets/references/design-review-gate.md) สำหรับ routing, resume และทางออกของ gate
 4. **Stage 3 — Tickets** (Ticket review / Stage 3.5): แตก spec เป็น vertical tickets ใน `.scratch/<feature-slug>/issues/`; tickets ใช้ Stories, Seam, Context และ Budget ตาม `ticket-format.md`; checker สรุป coverage, budget, DAG และ warnings และสร้าง manifest ที่ `.scratch/<feature-slug>/manifest.json` ตาม [สัญญา grill-to-tickets หลัก](../../../skills/agents/grill-to-tickets/SKILL.md)
    - **Ticket review (Stage 3.5)** ทำหลัง checker PASS และก่อน quiz; ดู [สัญญาหลัก](../../../skills/agents/grill-to-tickets/SKILL.md) และ [brief สำหรับผู้รีวิว ticket](../../../skills/agents/grill-to-tickets/references/ticket-review.md)
-5. **Stop**: `.scratch/` เป็นไฟล์ local ที่ git-ignore; handoff ส่ง `/clear`, DAG summary, `recommended implementer`, `Manifest: .scratch/<feature-slug>/manifest.json` เมื่อมี และคำสั่ง implementer ให้ session ถัดไป พร้อมรายการ parked questions ที่รับเป็นสมมติฐาน (ดู [สัญญาคำถามที่พักไว้](../../../skills/agents/grill-to-tickets/references/parked-questions.md))
+5. **Stop**: `.scratch/` เป็นไฟล์ local ที่ git-ignore; handoff ส่ง `/clear`, DAG summary ที่มีบรรทัด `recommended implementer: implement-tickets`, `Manifest: .scratch/<feature-slug>/manifest.json` เมื่อมี และ `/implement-tickets .scratch/<feature-slug>/` พร้อม hint บรรทัดเดียวว่าเพิ่ม `--with <backend>` ได้; manifest ระบุ `recommendedImplementers: ["implement-tickets"]` ทุก wave width พร้อมรายการ parked questions ที่รับเป็นสมมติฐาน (ดู [สัญญาคำถามที่พักไว้](../../../skills/agents/grill-to-tickets/references/parked-questions.md))
 
 สรุป Stage 0 ใช้คำศัพท์ `hard` / `easy`, `parked` และ `resolved: assumed`; glossary อธิบายศัพท์กลาง ส่วนกติกาและ state transitions อยู่ใน [สัญญา grill-to-tickets หลัก](../../../skills/agents/grill-to-tickets/SKILL.md), [Decision Log](../../../skills/agents/grill-to-tickets/references/decision-log.md), [สัญญาคำถามที่พักไว้](../../../skills/agents/grill-to-tickets/references/parked-questions.md), [สัญญา Blind-spot pass](../../../skills/agents/grill-to-tickets/references/blind-spot-pass.md), [สัญญา Design Review Gate](../../../skills/agents/grill-to-tickets/references/design-review-gate.md) และ [ตาราง rationalization](../../../skills/agents/grill-to-tickets/references/rationalizations.md)
 
@@ -105,7 +105,7 @@ is the update tool. No issue tracker is needed: the files under `.scratch/` are 
 
 - You want one run to continue into implementation and code review — use
   `/engineering-workflow` (or continue from the tickets with
-  `/subagent-implement`, then `/review-to-pr`).
+  `/implement-tickets`, then `/review-to-pr`).
 - You only need one discipline — call `/grilling` or `/scrutinize` directly.
 
 ### Main workflow
@@ -156,8 +156,15 @@ manifest lives at `.scratch/<feature-slug>/manifest.json`. See the
 for checker and manifest rules. Stage 3.5 Ticket review runs after checker
 PASS and before the quiz; see the [ticket-review brief](../../../skills/agents/grill-to-tickets/references/ticket-review.md).
 
-Then the skill prints a handoff in this order: `/clear`, the DAG summary,
-the checker's `recommended implementer`, a `Manifest: .scratch/<feature-slug>/manifest.json` line when available, and the implementer command (`/subagent-implement`, `/agy-implement`, or `/opencode-implement`). It lists parked questions carried as assumptions; see the [parked-question contract](../../../skills/agents/grill-to-tickets/references/parked-questions.md) for details. The `.scratch/` files are local and git-ignored, so the next run can start from the ticket directory without a commit, and the skill stops.
+Then the skill prints a handoff in this order: `/clear`, the DAG summary with
+`recommended implementer: implement-tickets`, a `Manifest: .scratch/<feature-slug>/manifest.json` line when available, and the implementer command
+`/implement-tickets .scratch/<feature-slug>/`. The handoff adds one line saying
+to include `--with <backend>` to select an adapter. The manifest's
+`recommendedImplementers` array is `["implement-tickets"]` at every wave
+width. It lists parked questions carried as assumptions; see the
+[parked-question contract](../../../skills/agents/grill-to-tickets/references/parked-questions.md)
+for details. The `.scratch/` files are local and git-ignored, so the next run
+can start from the ticket directory without a commit, and the skill stops.
 
 ### Example prompt
 
@@ -174,7 +181,7 @@ the checker's `recommended implementer`, a `Manifest: .scratch/<feature-slug>/ma
   notice
 - `references/ticket-review.md` — the fresh reviewer's brief and `READY` / `ASK`
   return format for the Stage 3.5 ambiguity review
-- `.scratch/<feature-slug>/manifest.json` — the derived planning snapshot used by the handoff; the canonical grill-to-tickets contract documents its contents and rules
+- `.scratch/<feature-slug>/manifest.json` — the derived planning snapshot used by the handoff; `recommendedImplementers` is `["implement-tickets"]` at every wave width, and the canonical grill-to-tickets contract documents its contents and rules
 - `references/UPSTREAM-LICENSE.md` — the upstream MIT notice both formats carry
 - `references/blind-spot-pass.md` — the Stage 0 process for recording planning
   gaps and assumptions; see the canonical reference for the procedure

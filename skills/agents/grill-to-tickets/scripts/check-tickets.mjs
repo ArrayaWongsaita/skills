@@ -430,7 +430,7 @@ function getFile(files, normPath) {
 
 // The DAG summary: a ticket's wave is 0 when it has no blockers, otherwise one
 // more than its highest blocker's wave. The number of waves is the critical
-// path; the maximum wave width picks the implementers that fit the graph.
+// path; wave width is reported while the implementer stays the same core skill.
 function computeDag(tickets) {
   const byNumber = new Map(tickets.map((t) => [t.number, t]));
   const waveOf = new Map();
@@ -453,12 +453,7 @@ function computeDag(tickets) {
     waves[index].push(ticket.number);
   }
   const width = waves.reduce((max, numbers) => Math.max(max, numbers.length), 0);
-  const recommendation =
-    width >= 3
-      ? ["agy-implement", "opencode-implement"]
-      : width === 2
-        ? ["subagent-implement", "agy-implement", "opencode-implement"]
-        : ["subagent-implement"];
+  const recommendation = ["implement-tickets"];
   return { waves, width, criticalPath: waves.length, recommendation };
 }
 

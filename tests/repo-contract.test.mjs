@@ -391,7 +391,7 @@ describe("grill-to-tickets production records and guides", () => {
     const order = stop.split("\n").find((line) => /^   - พิมพ์ข้อความ handoff/.test(line));
     assert.ok(order, "the Stop step has the handoff-order bullet");
     const at = (needle) => order.indexOf(needle);
-    assert.ok(at("DAG summary") !== -1 && at("DAG summary") < at("Manifest:") && at("Manifest:") < at("`/subagent-implement`"),
+    assert.ok(at("DAG summary") !== -1 && at("DAG summary") < at("Manifest:") && at("Manifest:") < at("`/implement-tickets`"),
       "the Manifest line is between the DAG summary and the implementer command");
     assert.ok(at("recommended implementer") !== -1 && at("recommended implementer") < at("Manifest:"),
       "the Manifest line follows the recommended implementer line");
@@ -653,24 +653,30 @@ describe("grill-to-tickets production records and guides", () => {
 
     const guideWorkflow = sectionOf(guide, "### ขั้นตอนการทำงาน 4 ลำดับขั้น");
     assert.ok(guideWorkflow, "the guide has its four-step workflow section");
+    const guideStage3 = numberedMarkdownItem(guideWorkflow, 4);
+    assert.ok(guideStage3, "the guide workflow has its Stage 3 summary");
     const diagramLine = guideWorkflow.match(/^Stop: Handoff message[^\n]*$/m);
     assert.ok(diagramLine, "the guide's diagram has a Stop: Handoff message line");
     assertFirstMentionOrder(
       diagramLine[0],
-      ["/clear", "DAG summary", "/subagent-implement"],
+      ["/clear", "DAG summary", "/implement-tickets"],
       "guide diagram line",
     );
 
     const guideStop = numberedMarkdownItem(guideWorkflow, 5);
     assert.ok(guideStop, "the guide workflow has a Stage 5 Stop — Handoff step");
-    assertFirstMentionOrder(guideStop, ["/clear", "DAG summary", "/subagent-implement"], "guide handoff step");
+    assertFirstMentionOrder(guideStop, ["/clear", "DAG summary", "/implement-tickets"], "guide handoff step");
     const message = guideStop.match(/```text\n([\s\S]*?)```/);
     assert.ok(message, "the guide's handoff step shows the message");
     assertFirstMentionOrder(
       message[1],
-      ["/clear", "recommended implementer", "/subagent-implement"],
+      ["/clear", "recommended implementer", "/implement-tickets"],
       "guide handoff message",
     );
+    assert.match(message[1], /\/implement-tickets \.scratch\/<feature-slug>\//);
+    assert.match(message[1], /--with <backend>/);
+    assert.match(guideStage3, /recommendedImplementers:\s*\["implement-tickets"\]/,
+      "the guide states the manifest recommendation at every width");
 
     const page = await readTextOrNull("docs/skills/agents/grill-to-tickets.md");
     assert.ok(page, "the grill-to-tickets skill page exists");
@@ -681,9 +687,24 @@ describe("grill-to-tickets production records and guides", () => {
     assert.ok(english, "the skill page's English text describes the handoff");
     assertFirstMentionOrder(
       english,
-      ["/clear", "DAG summary", "recommended implementer", "/subagent-implement"],
+      ["/clear", "DAG summary", "recommended implementer", "/implement-tickets"],
       "skill page English handoff",
     );
+    assert.match(english, /\/implement-tickets \.scratch\/<feature-slug>\//);
+    assert.match(english, /--with <backend>/);
+    assert.match(english, /recommendedImplementers[\s\S]{0,80}\["implement-tickets"\]/,
+      "the skill page documents the manifest recommendation");
+
+    const evals = JSON.parse(await readTextOrNull("skills/agents/grill-to-tickets/evals/evals.json"));
+    for (const id of [1, 38]) {
+      const evaluation = evals.evals.find((item) => item.id === id);
+      assert.ok(evaluation, `handoff eval ${id} exists`);
+      const contract = `${evaluation.expected_output}\n${evaluation.expectations.join("\n")}`;
+      assert.match(contract, /\/implement-tickets \.scratch\//, `handoff eval ${id} names the command`);
+      assert.match(contract, /--with <backend>/, `handoff eval ${id} documents the adapter hint`);
+      assert.match(contract, /recommendedImplementers[\s\S]{0,80}implement-tickets/,
+        `handoff eval ${id} documents the manifest field`);
+    }
 
     const thaiWorkflow = sectionOf(page, "### วิธีทำงานหลัก");
     assert.ok(thaiWorkflow, "the skill page has its Thai workflow section");

@@ -68,8 +68,8 @@ describe("grill-to-tickets composite skill contract", () => {
       }
       assert.match(
         content,
-        /\/subagent-implement\b/,
-        "must hand the ticket directory to a later implementer run",
+        /\/implement-tickets \.scratch\/<feature-slug>\//,
+        "must hand the ticket directory to a later implement-tickets run",
       );
       assert.match(
         content,
@@ -352,10 +352,11 @@ describe("grill-to-tickets composite skill contract", () => {
       assert.match(handoff, /\.scratch\/ is local and git-ignored[\s\S]*clean\s+working tree/);
       assert.doesNotMatch(handoff, /catalog/i, "the handoff has no catalog-commit step");
       assert.match(handoff, /\/clear/);
-      assert.match(handoff, /\/subagent-implement \.scratch\/<feature-slug>\//);
-      assert.match(handoff, /\/agy-implement[\s\S]{0,40}\/opencode-implement/);
+      assert.match(handoff, /\/implement-tickets \.scratch\/<feature-slug>\//);
+      assert.match(handoff, /--with <backend>/, "the handoff gives the adapter option in one line");
+      assert.doesNotMatch(handoff, /\/(?:subagent-implement|agy-implement|opencode-implement)\b/);
       assert.ok(
-        handoff.indexOf("/clear") < handoff.indexOf("/subagent-implement"),
+        handoff.indexOf("/clear") < handoff.indexOf("/implement-tickets"),
         "/clear, then the implementer",
       );
     }
@@ -425,13 +426,14 @@ describe("grill-to-tickets composite skill contract", () => {
       const content = await readFile(file, "utf8");
       const handoff = content.slice(content.indexOf("## Stop — Handoff"));
       const clearIndex = handoff.indexOf("/clear");
-      const implementerIndex = handoff.indexOf("/subagent-implement");
+      const implementerIndex = handoff.indexOf("/implement-tickets");
       assert.ok(clearIndex !== -1 && implementerIndex !== -1, "the handoff has /clear and the implementer command");
       const between = handoff.slice(clearIndex + "/clear".length, implementerIndex);
       assert.match(between, /DAG summary/i, "the DAG summary sits after /clear");
       assert.match(between, /recommended implementer/i, "the recommendation sits after /clear");
       const recommendation = between.split("\n").find((line) => /recommended implementer/i.test(line));
       assert.ok(recommendation, "the DAG summary carries the recommendation line");
+      assert.equal(recommendation.trim(), "recommended implementer: implement-tickets");
       assert.doesNotMatch(recommendation, /\//, "the recommended skills carry no leading slash");
     }
   });
@@ -455,7 +457,7 @@ describe("grill-to-tickets composite skill contract", () => {
       const dagEnd = handoff.indexOf("recommended implementer:");
       const manifestIndex = handoff.indexOf(manifestLine);
       const implementerIntro = handoff.indexOf("Then implement the whole ticket directory");
-      const implementerCommand = handoff.indexOf("/subagent-implement");
+      const implementerCommand = handoff.indexOf("/implement-tickets");
       assert.ok(
         dagEnd !== -1 && dagEnd < manifestIndex && manifestIndex < implementerIntro && implementerIntro < implementerCommand,
         "the manifest line follows the DAG summary and precedes the implementer command",
