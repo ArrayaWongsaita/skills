@@ -96,8 +96,8 @@ describe("grill-to-tickets composite skill contract", () => {
   it("steers positively — no 'Never' or 'Do not' in the instruction body", async () => {
     for (const file of skillFiles) {
       const body = (await readFile(file, "utf8")).replace(/^---\n[\s\S]*?\n---\n/, "");
-      assert.doesNotMatch(body, /\bNever\b/i, "prompt the positive instead of 'Never'");
-      assert.doesNotMatch(body, /\bDo not\b/i, "prompt the positive instead of 'Do not'");
+      assertAbsentFromMarkdownSections(body, /\bNever\b/i, "prompt the positive instead of 'Never'");
+      assertAbsentFromMarkdownSections(body, /\bDo not\b/i, "prompt the positive instead of 'Do not'");
     }
   });
 
@@ -570,9 +570,11 @@ describe("grill-to-tickets composite skill contract", () => {
       assert.match(license, /Permission is hereby granted, free of charge/);
 
       // Process & template
-      assert.match(content, /explore/i);
-      assert.match(content, /seam/i);
-      for (const section of [
+      const process = markdownSection(content, "Process");
+      assert.ok(process, "spec-format.md has its Process section");
+      assert.match(process, /explore/i);
+      assert.match(process, /seam/i);
+      const expectedSections = [
         "Problem Statement",
         "Solution",
         "User Stories",
@@ -580,25 +582,31 @@ describe("grill-to-tickets composite skill contract", () => {
         "Testing Decisions",
         "Out of Scope",
         "Further Notes",
-      ]) {
-        assert.match(content, new RegExp(`## ${section}`));
-      }
-      const templateStart = content.indexOf("## Spec Template");
-      const templateFenceStart = content.indexOf("```", templateStart);
+      ];
+      const templateHeading = content.indexOf("## Spec Template");
+      const templateFenceStart = content.indexOf("```", templateHeading);
       const templateFenceEnd = content.indexOf("```", templateFenceStart + 3);
       assert.ok(templateFenceStart >= 0 && templateFenceEnd > templateFenceStart, "the spec template is a fenced block");
-      const specTemplate = content.slice(templateFenceStart, templateFenceEnd);
+      const specTemplate = content.slice(templateFenceStart + 3, templateFenceEnd);
+      const templateHeadings = markdownHeadings(specTemplate).map(({ title }) => title);
+      for (const section of expectedSections) {
+        assert.ok(templateHeadings.includes(section), `spec template has a ${section} section`);
+      }
       assert.doesNotMatch(specTemplate, /### Reuse Plan/);
-      assert.match(content, /every decision in the log|every logged decision/i);
-      assert.match(content, /blind-spot assumption/i);
-      assert.match(content, /heading.*never.*repeat|unique/i);
-      assert.match(content, /bold lines/i);
-      assert.match(content, /### Changed tests and wording/);
+      const userStories = markdownSection(specTemplate, "User Stories");
+      assert.ok(userStories, "the spec template has a User Stories section");
+      assert.match(process, /every decision in the log|every logged decision/i);
+      assert.match(process, /blind-spot assumption/i);
+      assert.match(process, /heading.*never.*repeat|unique/i);
+      assert.match(process, /bold lines/i);
+      const testingDecisions = markdownSection(specTemplate, "Testing Decisions");
+      assert.ok(testingDecisions, "the spec template has Testing Decisions");
+      assert.match(testingDecisions, /### Changed tests and wording/);
 
       // No tracker, label, or /setup-matt-pocock-skills
-      assert.doesNotMatch(content, /tracker/i);
-      assert.doesNotMatch(content, /ready-for-agent/i);
-      assert.doesNotMatch(content, /\/setup-matt-pocock-skills/);
+      assertAbsentFromMarkdownSections(content, /tracker/i, "spec format has no tracker reference");
+      assertAbsentFromMarkdownSections(content, /ready-for-agent/i, "spec format has no ready-for-agent label");
+      assertAbsentFromMarkdownSections(content, /\/setup-matt-pocock-skills/, "spec format has no setup command");
     }
   });
 
@@ -645,23 +653,43 @@ describe("grill-to-tickets composite skill contract", () => {
       assert.match(firstLine, /\[UPSTREAM-LICENSE\.md\]\(UPSTREAM-LICENSE\.md\)/);
 
       // Process & vertical slices
-      assert.match(content, /vertical slice/i);
-      assert.match(content, /prefactor/i);
-      assert.match(content, /expand–contract|expand-contract/i);
-      assert.match(content, /quiz/i);
-      assert.match(content, /# <NN>:/);
-      assert.match(content, /\*\*What to build:\*\*/);
-      assert.match(content, /\*\*Blocked by:\*\*/);
+      const process = markdownSection(content, "Process");
+      assert.ok(process, "ticket-format.md has its Process section");
+      assert.match(process, /vertical slice/i);
+      const prefactoring = markdownSection(content, "2. Explore the codebase (optional)");
+      assert.ok(prefactoring, "ticket-format.md has its codebase exploration section");
+      assert.match(prefactoring, /prefactor/i);
+      const verticalSlices = markdownSection(content, "Vertical-slice rules");
+      assert.ok(verticalSlices, "ticket-format.md has its vertical-slice rules section");
+      assert.match(verticalSlices, /prefactor/i);
+      const expandContract = markdownSection(content, "Wide refactors: the expand–contract exception");
+      assert.ok(expandContract, "ticket-format.md has its wide-refactor exception section");
+      const expandContractBody = expandContract.slice(expandContract.indexOf("\n") + 1);
+      assert.match(expandContractBody, /expand–contract|expand-contract/i);
+      const quiz = markdownSection(content, "4. Quiz the user");
+      assert.ok(quiz, "ticket-format.md has its quiz section");
+      const quizBody = quiz.slice(quiz.indexOf("\n") + 1);
+      assert.match(quizBody, /quiz/i);
+      const ticketTemplateHeading = content.indexOf("## Local Ticket Template");
+      const ticketFenceStart = content.indexOf("```", ticketTemplateHeading);
+      const ticketFenceEnd = content.indexOf("```", ticketFenceStart + 3);
+      assert.ok(ticketFenceStart >= 0 && ticketFenceEnd > ticketFenceStart, "the local ticket template is fenced");
+      const ticketTemplate = content.slice(ticketFenceStart + 3, ticketFenceEnd);
+      assert.match(ticketTemplate, /# <NN>:/);
+      assert.match(ticketTemplate, /\*\*What to build:\*\*/);
+      assert.match(ticketTemplate, /\*\*Blocked by:\*\*/);
 
       // Acceptance criteria rules
-      assert.match(content, /suite.*typecheck.*lint.*not acceptance criteria|not acceptance criteria/i);
-      assert.match(content, /testable statement/i);
-      assert.match(content, /no file paths|avoid specific file paths/i);
+      const criteriaRules = markdownSection(content, "Rules for ticket contents and acceptance criteria");
+      assert.ok(criteriaRules, "ticket-format.md has its acceptance-criteria rules section");
+      assert.match(criteriaRules, /suite.*typecheck.*lint.*not acceptance criteria|not acceptance criteria/i);
+      assert.match(criteriaRules, /testable statement/i);
+      assert.match(criteriaRules, /no file paths|avoid specific file paths/i);
 
       // No tracker, label, or /setup-matt-pocock-skills
-      assert.doesNotMatch(content, /tracker/i);
-      assert.doesNotMatch(content, /triage label/i);
-      assert.doesNotMatch(content, /\/setup-matt-pocock-skills/);
+      assertAbsentFromMarkdownSections(content, /tracker/i, "ticket format has no tracker reference");
+      assertAbsentFromMarkdownSections(content, /triage label/i, "ticket format has no triage label");
+      assertAbsentFromMarkdownSections(content, /\/setup-matt-pocock-skills/, "ticket format has no setup command");
     }
   });
 
@@ -689,13 +717,15 @@ describe("grill-to-tickets composite skill contract", () => {
       const content = await readFile(file, "utf8");
 
       // Intro and diagram
-      assert.match(content, /spec-format\.md/);
-      assert.match(content, /ticket-format\.md/);
-      assert.match(content, /locate the three stage skills/);
-      assert.doesNotMatch(content, /five stage skills/);
+      const overview = markdownHeaderBlock(content);
+      assert.match(overview, /spec-format\.md/);
+      assert.match(overview, /ticket-format\.md/);
+      assert.match(overview, /locate the three stage skills/);
+      assertAbsentFromMarkdownSections(content, /five stage skills/i, "the overview names three stage skills");
 
       // Inline Execution
-      const inlineSection = content.slice(content.indexOf("## Inline Execution"), content.indexOf("## Preflight"));
+      const inlineSection = markdownSection(content, "Inline Execution");
+      assert.ok(inlineSection, "SKILL.md has its Inline Execution section");
       assert.match(inlineSection, /Stages 0, 1, and 3 run \*\*inline\*\*/);
       assert.match(inlineSection, /at the\s+path Preflight found/);
       for (const skill of ["grilling", "domain-modeling", "scrutinize"]) {
@@ -706,21 +736,25 @@ describe("grill-to-tickets composite skill contract", () => {
       assert.doesNotMatch(inlineSection, /tracker/i);
 
       // Feature-Scoped Storage carries "local files are the tracker"
-      const storageSection = content.slice(content.indexOf("## Feature-Scoped Storage"), content.indexOf("## Stage 0"));
+      const storageSection = markdownSection(content, "Feature-Scoped Storage");
+      assert.ok(storageSection, "SKILL.md has its Feature-Scoped Storage section");
       assert.match(storageSection, /local files are the tracker/);
 
       // Stage 1 follows spec-format.md
-      const stage1 = content.slice(content.indexOf("## Stage 1"), content.indexOf("## Stage 2"));
+      const stage1 = markdownSection(content, "Stage 1 — Spec");
+      assert.ok(stage1, "SKILL.md has its Stage 1 section");
       assert.match(stage1, /spec-format\.md/);
       assert.match(stage1, /every\s+decision in the log appears in it/);
 
       // Stage 2 rework names Stage 1
-      const stage2 = content.slice(content.indexOf("## Stage 2"), content.indexOf("## Stage 3"));
+      const stage2 = markdownSection(content, "Stage 2 — Design Review Gate");
+      assert.ok(stage2, "SKILL.md has its Stage 2 section");
       assert.match(stage2, /re-run Stage 1/);
       assert.doesNotMatch(stage2, /re-run `?to-spec`?/);
 
       // Stage 3 follows ticket-format.md
-      const stage3 = content.slice(content.indexOf("## Stage 3"), content.indexOf("## Stop"));
+      const stage3 = markdownSection(content, "Stage 3 — Tickets");
+      assert.ok(stage3, "SKILL.md has its Stage 3 section");
       assert.match(stage3, /ticket-format\.md/);
       assert.match(stage3, /Re-run the checker after every change/);
       assert.match(stage3, /story-coverage table/);
@@ -730,13 +764,19 @@ describe("grill-to-tickets composite skill contract", () => {
     for (const dir of skillDirs) {
       // design-review-gate.md
       const gate = await readFile(path.resolve(dir, "references/design-review-gate.md"), "utf8");
-      assert.match(gate, /Stage 3 \(`ticket-format\.md`\)/);
-      assert.match(gate, /re-run Stage 1 inline/);
-      assert.match(gate, /Stage 1 cannot/);
-      assert.match(gate, /re-run Stage 1 and re-review/);
-      assert.match(gate, /re-run Stage 1 inline with the finding/);
-      assert.doesNotMatch(gate, /`to-spec`/);
-      assert.doesNotMatch(gate, /`to-tickets`/);
+      const ship = markdownSection(gate, "`SHIP`");
+      assert.ok(ship, "design-review-gate.md has its SHIP route");
+      assert.match(ship, /Stage 3 \(`ticket-format\.md`\)/);
+      const specLevel = markdownSection(gate, "`REWORK` — spec-level");
+      assert.ok(specLevel, "design-review-gate.md has its spec-level rework route");
+      assert.match(specLevel, /re-run Stage 1 inline/);
+      assert.match(specLevel, /re-run Stage 1 inline with the finding/);
+      const decisionLevel = markdownSection(gate, "`REWORK` — decision-level");
+      assert.ok(decisionLevel, "design-review-gate.md has its decision-level rework route");
+      assert.match(decisionLevel, /Stage 1 cannot/);
+      assert.match(decisionLevel, /re-run Stage 1 and re-review/);
+      assertAbsentFromMarkdownSections(gate, /`to-spec`/, "the gate uses the owned spec format");
+      assertAbsentFromMarkdownSections(gate, /`to-tickets`/, "the gate uses the owned ticket format");
     }
   });
 
@@ -1090,7 +1130,8 @@ describe("rationalization table contract", () => {
     assert.equal(next?.title, "Rationalizations", "table section immediately follows Invocation");
     assert.ok(localSkillLinks(markdownSection(skill, "Rationalizations")).includes(links[0]), "link belongs to the post-Invocation section");
     assert.ok(await access(path.resolve(root, links[0])).then(() => true, () => false), "table link resolves");
-    assert.ok(!/\bNever\b|\bDo not\b/i.test(skill), "skill body keeps positive instructions");
+    const body = skill.replace(/^---\n[\s\S]*?\n---\n/, "");
+    assertAbsentFromMarkdownSections(body, /\bNever\b|\bDo not\b/i, "skill body keeps positive instructions");
   });
 
   it("keeps rationalizations out of both reviewer briefs", async () => {

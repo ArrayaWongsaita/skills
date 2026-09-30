@@ -65,6 +65,81 @@ describe("Markdown contract assertion scope", () => {
       "Scenario-format assertions use the User Stories template section");
   });
 
+  it("scopes the spec-format contract to its process, template, and individual sections", async () => {
+    const source = await testCase(
+      "tests/grill-to-tickets-contract.test.mjs",
+      "owns spec-format.md adapted from to-spec with upstream source line and license",
+    );
+    assert.doesNotMatch(source, /assert\.(?:match|doesNotMatch)\(content\s*,/,
+      "spec-format content assertions must not search the entire Markdown file");
+    for (const scope of ["process", "testingDecisions"]) {
+      assert.match(source, new RegExp(`assert\\.(?:match|doesNotMatch)\\(${scope}\\s*,`),
+        `spec-format assertions use ${scope}`);
+    }
+    assert.match(source, /markdownSection\(specTemplate,\s*["']User Stories["']\)/,
+      "template story checks use the parsed User Stories section");
+    assert.match(source, /assert\.ok\(userStories,/,
+      "the User Stories section is present in the specific template");
+    assert.match(source, /assertAbsentFromMarkdownSections\(content,/,
+      "spec-wide exclusions check each Markdown section");
+  });
+
+  it("scopes the ticket-format contract to its owning sections and template", async () => {
+    const source = await testCase(
+      "tests/grill-to-tickets-contract.test.mjs",
+      "owns ticket-format.md adapted from to-tickets with upstream source line and license",
+    );
+    assert.doesNotMatch(source, /assert\.(?:match|doesNotMatch)\(content\s*,/,
+      "ticket-format content assertions must not search the entire Markdown file");
+    for (const scope of ["process", "prefactoring", "verticalSlices", "quizBody", "ticketTemplate", "criteriaRules"]) {
+      assert.match(source, new RegExp(`assert\\.(?:match|doesNotMatch)\\(${scope}\\s*,`),
+        `ticket-format assertions use ${scope}`);
+    }
+    assert.match(source, /assert\.match\(expandContractBody,/,
+      "the expand-contract term is checked in its section body");
+    assert.match(source, /assertAbsentFromMarkdownSections\(content,/,
+      "ticket-wide exclusions check each Markdown section");
+  });
+
+  it("scopes the overview and Design Review Gate assertions to their Markdown sections", async () => {
+    const source = await testCase(
+      "tests/grill-to-tickets-contract.test.mjs",
+      "points SKILL.md and design-review-gate at owned formats",
+    );
+    assert.doesNotMatch(source, /assert\.(?:match|doesNotMatch)\(content\s*,/,
+      "overview assertions must not search the entire skill file");
+    assert.match(source, /const overview = markdownHeaderBlock\(content\)/,
+      "overview claims use the Markdown header block");
+    assert.doesNotMatch(source, /assert\.(?:match|doesNotMatch)\(gate\s*,/,
+      "Design Review Gate assertions must not search the entire reference");
+    for (const scope of ["ship", "specLevel", "decisionLevel"]) {
+      assert.match(source, new RegExp(`assert\\.(?:match|doesNotMatch)\\(${scope}\\s*,`),
+        `gate assertions use ${scope}`);
+    }
+    assert.match(source, /assertAbsentFromMarkdownSections\(gate,/,
+      "gate-wide exclusions check each Markdown section");
+  });
+
+  it("enforces the positive-instruction prohibition independently in each skill section", async () => {
+    const positive = await testCase(
+      "tests/grill-to-tickets-contract.test.mjs",
+      "steers positively — no 'Never' or 'Do not' in the instruction body",
+    );
+    assert.doesNotMatch(positive, /assert\.doesNotMatch\(body\s*,/,
+      "the positive-instruction prohibition must not scan the whole body at once");
+    assert.match(positive, /assertAbsentFromMarkdownSections\(body,/,
+      "the positive-instruction prohibition checks every body section");
+
+    const rationalizations = await testCase(
+      "tests/grill-to-tickets-contract.test.mjs",
+      "links the reference once in the section immediately after Invocation and resolves it",
+    );
+    assert.doesNotMatch(rationalizations, /assert\.ok\(!\/.*\.test\(skill\)/,
+      "the rationalizations contract must not scan the whole skill file at once");
+    assert.match(rationalizations, /assertAbsentFromMarkdownSections\(body,/,
+      "the rationalizations contract checks the prohibition in every skill section");
+  });
+
   it("checks Stage 3.5 placement against parsed top-level headings", async () => {
     const source = await testCase(
       "tests/grill-to-tickets-contract.test.mjs",
