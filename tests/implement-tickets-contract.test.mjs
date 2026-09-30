@@ -9,6 +9,10 @@ import assert from "node:assert/strict";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const skillRoot = path.join(repoRoot, "skills/agents/implement-tickets");
 const wavesScript = path.join(skillRoot, "scripts/waves.mjs");
+const preflightScript = path.join(skillRoot, "scripts/preflight.mjs");
+const adapterFixtureRoot = path.join(repoRoot, "tests/fixtures/implement-tickets/adapters");
+const envelopeFixtureRoot = path.join(repoRoot, "tests/fixtures/implement-tickets/envelopes");
+const fixtureLock = path.join(repoRoot, "tests/fixtures/implement-tickets/locks/skills-lock.json");
 
 async function exists(file) {
   try {
@@ -59,6 +63,33 @@ async function runWaves(dir, options = []) {
   const result = spawnSync(process.execPath, [wavesScript, dir, ...options], { encoding: "utf8" });
   assert.equal(result.status, 0, `wave script exits successfully: ${result.stderr || result.stdout}`);
   return JSON.parse(result.stdout);
+}
+
+async function invokePreflight(options = []) {
+  assert.equal(await exists(preflightScript), true, "adapter preflight behavior is missing: scripts/preflight.mjs does not exist");
+  return spawnSync(process.execPath, [preflightScript, ...options], { encoding: "utf8" });
+}
+
+function preflightOutput(result) {
+  assert.ok(result.stdout.trim(), `preflight prints its result: ${result.stderr}`);
+  return JSON.parse(result.stdout);
+}
+
+async function addAdapter(root, name) {
+  const adapterDirectory = path.join(root, `implement-tickets-${name}`);
+  await mkdir(adapterDirectory, { recursive: true });
+  await writeFile(
+    path.join(adapterDirectory, "SKILL.md"),
+    `---\nname: implement-tickets-${name}\ndescription: Fixture adapter for contract tests.\n---\n`,
+    "utf8",
+  );
+  return adapterDirectory;
+}
+
+async function writeLock(file, source) {
+  await mkdir(path.dirname(file), { recursive: true });
+  const skills = source ? { "implement-tickets": { source } } : {};
+  await writeFile(file, `${JSON.stringify({ version: 1, skills }, null, 2)}\n`, "utf8");
 }
 
 function wavesAsNumbers(output) {
@@ -302,6 +333,183 @@ describe("implement-tickets worker dispatch and verification contract", () => {
       for (const [name, expression] of requirements) {
         assert.ok(expression.test(doc), `${file} describes ${name}`);
       }
+    }
+  });
+});
+
+describe("implement-tickets adapter and preflight contract", () => {
+  it("searches project and user adapter roots in order and preserves a raw model value", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "implement-tickets-adapter-roots-"));
+    const roots = [
+      path.join(root, "project-agent-skills"),
+      path.join(root, "project-claude-skills"),
+      path.join(root, "user-agent-skills"),
+      path.join(root, "user-claude-skills"),
+    ];
+    const model = "provider/model --raw-option='keep this value'";
+    try {
+      const adapterPaths = [];
+      for (const adapterRoot of roots) {
+        await mkdir(adapterRoot, { recursive: true });
+        adapterPaths.push(await addAdapter(adapterRoot, "fixture"));
+      }
+      for (let priority = 0; priority < roots.length; priority += 1) {
+        for (let previous = 0; previous < priority; previous += 1) {
+          await rm(adapterPaths[previous], { recursive: true, force: true });
+        }
+        const result = await invokePreflight([
+          "--with", "fixture",
+          "--model", model,
+          "--roots", ...roots,
+        ]);
+        assert.equal(result.status, 0, result.stderr);
+        const output = preflightOutput(result);
+        assert.equal(output.backend, "fixture");
+        assert.equal(output.adapterPath, adapterPaths[priority]);
+        assert.equal(output.model, model);
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("uses the project lock source first and the user lock source as fallback", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "implement-tickets-lock-order-"));
+    const roots = [path.join(root, "no-project-adapter"), path.join(root, "no-user-adapter")];
+    const projectLock = path.join(root, "project", "skills-lock.json");
+    const userLock = path.join(root, "user", ".skill-lock.json");
+    try {
+      for (const adapterRoot of roots) await mkdir(adapterRoot, { recursive: true });
+      await writeLock(projectLock, "project/core-source");
+      await writeLock(userLock, "user/core-source");
+      const options = ["--with", "codex", "--roots", ...roots, "--lock", projectLock, userLock];
+
+      const projectFirst = await invokePreflight(options);
+      assert.notEqual(projectFirst.status, 0);
+      assert.equal(preflightOutput(projectFirst).installLine, "npx skills add project/core-source --skill implement-tickets-codex");
+
+      await writeLock(projectLock, null);
+      const userFallback = await invokePreflight(options);
+      assert.notEqual(userFallback.status, 0);
+      assert.equal(preflightOutput(userFallback).installLine, "npx skills add user/core-source --skill implement-tickets-codex");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("prints a source placeholder and guidance when neither lock has the core entry", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "implement-tickets-no-lock-entry-"));
+    const roots = [path.join(root, "project-agent"), path.join(root, "project-claude")];
+    const projectLock = path.join(root, "project", "skills-lock.json");
+    const userLock = path.join(root, "user", ".skill-lock.json");
+    try {
+      for (const adapterRoot of roots) await mkdir(adapterRoot, { recursive: true });
+      await writeLock(projectLock, null);
+      await writeLock(userLock, null);
+      const result = await invokePreflight([
+        "--with", "codex",
+        "--roots", ...roots,
+        "--lock", projectLock, userLock,
+      ]);
+      assert.notEqual(result.status, 0);
+      const output = preflightOutput(result);
+      assert.equal(output.installLine, "npx skills add <source of implement-tickets> --skill implement-tickets-codex");
+      assert.match(output.note, /source that installed the core/i);
+      assert.ok(result.stdout.includes("npx skills add <source of implement-tickets> --skill implement-tickets-codex"));
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a native agent pin with an adapter before planning", async () => {
+    const result = await invokePreflight(["--with", "codex", "--agent", "general-purpose"]);
+    assert.notEqual(result.status, 0);
+    assert.match(`${result.stderr}\n${result.stdout}`, /--agent[\s\S]*--with|--with[\s\S]*--agent/i);
+    assert.doesNotMatch(`${result.stderr}\n${result.stdout}`, /planning starts|plan created/i);
+  });
+
+  it("defines the adapter input, resume, failover, worktree lifecycle, envelope, and routing table", async () => {
+    const contract = await readTextOrNull(path.join(skillRoot, "references/adapter-contract.md"));
+    const schemaText = await readTextOrNull(path.join(skillRoot, "references/envelope.schema.json"));
+    const skill = await readTextOrNull(path.join(skillRoot, "SKILL.md"));
+    assert.ok(contract, "the adapter contract exists");
+    assert.ok(schemaText, "the envelope schema exists");
+    assert.ok(skill, "the core skill exists");
+
+    for (const heading of ["Input", "Resume", "Failover", "Worktree cleanup"]) {
+      assert.match(contract, new RegExp(`^## ${heading}(?:$|\\s)`, "m"), `the adapter contract documents ${heading.toLowerCase()}`);
+    }
+    const schema = JSON.parse(schemaText);
+    assert.deepEqual(schema.properties.outcome.enum, ["completed", "failed_infra", "failed_other"]);
+    assert.deepEqual(schema.required, ["outcome", "session_id", "report", "usage"]);
+    assert.match(contract, /\| `completed` \|[^\n]*verification/i);
+    assert.match(contract, /\| `failed_infra` \|[^\n]*not counted[^\n]*two[^\n]*BLOCKED \(TICKET_PROVIDER_FAILED\)/i);
+    assert.match(contract, /\| `failed_other` \|[^\n]*one counted attempt/i);
+    assert.match(contract, /core creates[\s\S]*?worker branch[\s\S]*?worktree/i);
+    assert.match(contract, /passes[\s\S]*?worktree path/i);
+    assert.match(contract, /removes?[\s\S]*?after integration/i);
+    assert.match(contract, /native[\s\S]*?harness-managed isolation/i);
+    assert.match(skill, /`--with <backend>`[\s\S]*adapter/i);
+    assert.match(skill, /selected adapter\s+name is the Plan's backend/i);
+    assert.match(skill, /creates?[\s\S]*?worker branch[\s\S]*?worktree/i);
+    assert.match(skill, /passes[\s\S]*?path[\s\S]*?adapter/i);
+    assert.match(skill, /removes?[\s\S]*?after integration/i);
+  });
+
+  it("validates every scripted fixture envelope through preflight and rejects a malformed envelope", async () => {
+    const fixtureAdapter = path.join(adapterFixtureRoot, "implement-tickets-fixture", "SKILL.md");
+    const envelopeNames = ["completed.json", "failed-infra.json", "failed-other.json", "resume.json"];
+    const root = await mkdtemp(path.join(tmpdir(), "implement-tickets-malformed-envelope-"));
+    const malformed = path.join(root, "malformed.json");
+    try {
+      assert.equal(await exists(fixtureAdapter), true, "the scripted fixture adapter exists");
+      assert.equal(await exists(fixtureLock), true, "the fixture lock file exists");
+      const schemaText = await readTextOrNull(path.join(skillRoot, "references/envelope.schema.json"));
+      assert.ok(schemaText, "the envelope schema exists");
+      const schema = JSON.parse(schemaText);
+      assert.deepEqual(schema.properties.outcome.enum, ["completed", "failed_infra", "failed_other"]);
+
+      for (const name of envelopeNames) {
+        const envelope = path.join(envelopeFixtureRoot, name);
+        assert.equal(await exists(envelope), true, `the ${name} scripted envelope exists`);
+        const result = await invokePreflight([
+          "--with", "fixture",
+          "--roots", adapterFixtureRoot,
+          "--lock", fixtureLock,
+          "--envelope", envelope,
+        ]);
+        assert.equal(result.status, 0, result.stderr);
+        assert.equal(preflightOutput(result).envelopeValidation.valid, true, `${name} validates against the schema`);
+      }
+
+      await writeFile(malformed, JSON.stringify({
+        outcome: "completed",
+        session_id: "missing-required-fields",
+        report: "incomplete envelope",
+      }), "utf8");
+      const rejected = await invokePreflight([
+        "--with", "fixture",
+        "--roots", adapterFixtureRoot,
+        "--lock", fixtureLock,
+        "--envelope", malformed,
+      ]);
+      assert.notEqual(rejected.status, 0);
+      assert.equal(preflightOutput(rejected).envelopeValidation.valid, false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("documents adapter selection, the contract, and its source-based install line", async () => {
+    for (const file of ["docs/guides/implement-tickets.md", "docs/skills/agents/implement-tickets.md"]) {
+      const doc = await readTextOrNull(path.join(repoRoot, file));
+      assert.ok(doc, `${file} exists`);
+      assert.ok(/--with <name>/.test(doc), `${file} documents adapter selection`);
+      assert.ok(/adapter-contract\.md/.test(doc), `${file} links the adapter contract`);
+      assert.ok(
+        /npx skills add <source> --skill implement-tickets-<name>/i.test(doc),
+        `${file} documents the source-based install line`,
+      );
     }
   });
 });

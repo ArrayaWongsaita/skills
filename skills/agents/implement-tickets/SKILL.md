@@ -34,6 +34,23 @@ Options are set once for the run:
 - `--concurrency N` sets the shared worker and verifier cap; default `4`.
 - `--serial` puts one ticket in each wave.
 
+When `--with <name>` is supplied, run
+[`scripts/preflight.mjs`](scripts/preflight.mjs) before planning. It searches the
+project agent-skill directory, project Claude-skill directory, user agent-skill
+directory, and user Claude-skill directory in that order. The selected adapter
+name is the Plan's backend. If the adapter is missing, stop before presenting
+the Plan and print the install line from the `implement-tickets` lock entry,
+checking the project lock before the user lock. If neither has the entry, print
+the `<source of implement-tickets>` placeholder and tell the person to use the
+source that installed the core. `--agent` with `--with` is an error before
+planning; pass `--model` to the adapter as its raw value.
+
+The adapter input, resume, failover, worktree ownership, and envelope are
+defined in [references/adapter-contract.md](references/adapter-contract.md).
+The core creates each adapter worker branch and worktree under the feature's
+`worktrees/` directory, passes the worktree path to the adapter, and removes the
+worktree after integration. Native runs keep harness-managed isolation.
+
 Existing runs can be inspected or resumed with:
 
 - `/implement-tickets status [slug]` to read one run's `status.md`;

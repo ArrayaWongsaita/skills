@@ -37,6 +37,24 @@ npx skills add ArrayaWongsaita/skills --skill implement-tickets
 ทุกใบเป็น wave ของตัวเอง Ticket ที่ไม่มี touch set จะได้ wave เดี่ยวและ warning
 เมื่อ marker เป็น `status: not validated` Plan จะแสดง `parallel not yet validated`
 
+ใช้ `--with <name>` เพื่อเลือก adapter ที่ติดตั้งแยกชื่อ
+`implement-tickets-<name>`. Preflight ค้นหา `.agents/skills/`, `.claude/skills/`,
+`~/.agents/skills/` และ `~/.claude/skills/` ตามลำดับ หากไม่พบจะหยุดก่อน Plan
+และสร้าง install line จาก `implement-tickets` ใน project `skills-lock.json`
+ก่อน fallback ไป `~/.agents/.skill-lock.json`; ถ้าไม่มี entry จะใช้
+`<source of implement-tickets>` พร้อม note ให้ใช้ source ที่ติดตั้ง core
+
+รูปแบบ install line คือ:
+
+```text
+npx skills add <source> --skill implement-tickets-<name>
+```
+
+[Adapter contract](../../../skills/agents/implement-tickets/references/adapter-contract.md)
+กำหนด input, resume, failover, envelope schema และ worktree cleanup. Core
+สร้าง worker branch และ worktree ใต้ feature directory ส่ง path ให้ adapter
+และลบ worktree หลัง integration
+
 ### Dispatch, verifier และ timeout
 
 หลัง approval orchestrator dispatch worker หนึ่งตัวต่อ ticket ใน wave prompt
@@ -116,6 +134,26 @@ The default backend is native harness subagents, with a concurrency cap of four.
 wave and a warning. When the marker says `status: not validated`, the Plan prints
 `parallel not yet validated`.
 
+Use `--with <name>` to select a separately installed `implement-tickets-<name>`
+adapter. Preflight searches `.agents/skills/`, `.claude/skills/`,
+`~/.agents/skills/`, and `~/.claude/skills/` in that order. If it cannot find the
+adapter, it stops before planning and builds the install line from the
+`implement-tickets` entry in the project `skills-lock.json`, then falls back to
+`~/.agents/.skill-lock.json`. With no lock entry, it uses
+`<source of implement-tickets>` and tells the person to use the source that
+installed the core.
+
+The generated install line has this form:
+
+```text
+npx skills add <source> --skill implement-tickets-<name>
+```
+
+The [adapter contract](../../../skills/agents/implement-tickets/references/adapter-contract.md)
+defines input, resume, failover, the envelope schema, and worktree cleanup. The
+core creates each worker branch and worktree under the feature directory, passes
+the path to the adapter, and removes the worktree after integration.
+
 After approval, the orchestrator dispatches one background worker per ticket.
 Every worker prompt starts with a sync step: check out the worker branch at the
 integration SHA and assert that `HEAD` equals it. A mismatch returns
@@ -178,3 +216,5 @@ plain paths and `(from NN)` are read-only, while `(edit)`, `(new)`, and
   — verifier dispatch, evidence, and timeout contract
 - [`waves.mjs`](../../../skills/agents/implement-tickets/scripts/waves.mjs) —
   deterministic ticket wave planner
+- [`adapter-contract.md`](../../../skills/agents/implement-tickets/references/adapter-contract.md)
+  — adapter input, outcomes, envelope, and worktree rules

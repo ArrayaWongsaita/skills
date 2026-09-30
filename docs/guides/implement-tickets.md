@@ -26,7 +26,7 @@ $implement-tickets <dir|slug>
 
 ระบุ feature root, โฟลเดอร์ `issues/` หรือ slug ใต้ `.scratch/` ได้ ตัวเลือกที่ใช้ได้:
 
-- `--with <backend>` เลือก adapter; ถ้าไม่ระบุใช้ native harness subagents
+- `--with <name>` เลือก adapter `implement-tickets-<name>`; ถ้าไม่ระบุใช้ native harness subagents
 - `--agent <name>` pin worker agent สำหรับ native backend
 - `--model <id>` ส่งต่อ model ให้ backend ที่เลือก
 - `--concurrency N` จำกัดจำนวน worker และ verifier ที่ทำงานพร้อมกัน ค่าเริ่มต้น 4
@@ -41,6 +41,24 @@ Implicit invocation ปิดไว้ทั้ง Claude Code (`disable-model-i
 ```bash
 npx skills add ArrayaWongsaita/skills --skill implement-tickets
 ```
+
+เมื่อระบุ `--with <name>` preflight จะค้นหา adapter ตามลำดับใน
+`.agents/skills/`, `.claude/skills/`, `~/.agents/skills/` และ `~/.claude/skills/`
+ถ้าไม่พบ จะหยุดก่อนแสดง Plan และพิมพ์คำสั่งติดตั้ง adapter โดยใช้ source จาก
+entry `implement-tickets` ใน `skills-lock.json` ของโปรเจกต์ก่อน แล้วจึงใช้
+`~/.agents/.skill-lock.json` หากไม่พบ entry จะแสดง `<source of implement-tickets>`
+พร้อมบอกให้ใช้ source ที่ติดตั้ง core
+
+รูปแบบคำสั่งติดตั้ง adapter:
+
+```text
+npx skills add <source> --skill implement-tickets-<name>
+```
+
+Adapter รับ input, resume และส่งผลตาม envelope ที่ระบุใน
+[`adapter-contract.md`](../../skills/agents/implement-tickets/references/adapter-contract.md)
+และ schema ของ envelope. Core สร้าง worker branch กับ worktree ใต้ feature
+directory, ส่ง path ให้ adapter และลบ worktree หลัง integration
 
 ### ขั้นตอนหลัก
 
@@ -136,6 +154,27 @@ Install with:
 npx skills add ArrayaWongsaita/skills --skill implement-tickets
 ```
 
+Use `--with <name>` to select the separately installed `implement-tickets-<name>`
+adapter. Preflight searches `.agents/skills/`, `.claude/skills/`,
+`~/.agents/skills/`, then `~/.claude/skills/`. If it cannot find the adapter,
+it stops before the Plan and prints an install command using the
+`implement-tickets` source from the project `skills-lock.json`, falling back to
+`~/.agents/.skill-lock.json`. If neither lock has that entry, the command uses
+`<source of implement-tickets>` and says to use the source that installed the
+core.
+
+The generated install line has this form:
+
+```text
+npx skills add <source> --skill implement-tickets-<name>
+```
+
+The [adapter contract](../../skills/agents/implement-tickets/references/adapter-contract.md)
+defines the worker input, resume and failover behavior, envelope schema, and
+worktree ownership. The core creates the worker branch and worktree under the
+feature directory, passes its path to the adapter, and removes it after
+integration.
+
 When the marker says `status: not validated`, the Plan prints the line
 `parallel not yet validated`. A ticket with no declared change path or a glob
 gets an exclusive wave and a warning. `--concurrency N` does not change wave
@@ -199,3 +238,4 @@ plain and `(from NN)` items are read-only, while `(edit)`, `(new)`, and
 - `references/planning.md` — ticket parsing, wave calculation, and Plan rules
 - `references/parallel-validation.md` — the validation marker
 - `scripts/waves.mjs` — deterministic wave planner
+- `references/adapter-contract.md` — adapter input, outcomes, and worktree rules
