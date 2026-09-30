@@ -68,14 +68,17 @@ cheaply.
    `continue` ใช้ State `done` หรือ `skipped` ที่บันทึกไว้
 
 5. This is the ambiguity-only form of the readiness dry-runs ADR 0014 deferred.
-   That deferral is lifted for the ticket review alone. Limits, profiles,
+   That deferral is lifted for the ticket review alone. ADR 0014 rejected
+   dry-runs as a cost on every run, calibrated against nothing; this review is
+   accepted anyway. Limits, profiles,
    over-budget warnings, and Budget calibration stay deferred. The default-on
    cost is accepted because this review needs no calibration data, sets no
    limit, and can catch a blocking question before implementation, while
    `--ticket-review 0` lets a person opt out of its one fresh-reviewer pass.
 
    นี่คือ readiness dry-run รูปแบบตรวจเฉพาะความกำกวมที่ ADR 0014 เคยเลื่อนออกไป
-   จึงยกเว้นการเลื่อนนั้นเฉพาะ ticket review ส่วน limits, profiles, over-budget
+   จึงยกเว้นการเลื่อนนั้นเฉพาะ ticket review ADR 0014 ไม่เลือก dry-run เพราะเป็นต้นทุน
+   ทุก run ที่ calibrate กับอะไรไม่ได้เลย แต่ยอมรับรีวิวนี้ ส่วน limits, profiles, over-budget
    warnings และ Budget calibration ยังคงเลื่อนออกไป ยอมรับต้นทุนที่เปิดเป็นค่าเริ่มต้น
    เพราะการรีวิวนี้ไม่ต้องใช้ข้อมูล calibration ไม่กำหนด limit และจับคำถามที่ขวางงาน
    ได้ก่อนเริ่ม implement โดยผู้ใช้เลือกข้ามการรีวิว fresh reviewer หนึ่งรอบได้ด้วย

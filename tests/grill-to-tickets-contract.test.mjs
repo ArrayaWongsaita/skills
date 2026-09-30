@@ -737,6 +737,17 @@ describe("grill-to-tickets composite skill contract", () => {
     }
   });
 
+  it("carries the scenario rules in the Stage 3 body ahead of the review step", async () => {
+    const skill = await readFile(path.resolve(canonicalDir, "SKILL.md"), "utf8");
+    const stage3 = markdownSection(skill, "Stage 3 — Tickets");
+    const body = stage3.slice(0, stage3.indexOf("Stage 3.5"));
+    assertPattern(body, /acceptance criteria[\s\S]*Scenario/i, "ticket acceptance criteria come from the story's Scenario lines");
+    assertPattern(body, /given[\s\S]*when[\s\S]*then[\s\S]*in order/i, "the checker enforces given, when, then in order");
+    assertPattern(body, /under every story/i, "every story needs a Scenario");
+    assertPattern(body, /without Scenarios[\s\S]*warning/i, "older specs without Scenarios pass with a warning");
+    assertPattern(body, /\(references\/ticket-format\.md\)/, "the paragraph links ticket-format.md");
+  });
+
   it("runs Stage 3.5 once after a passing check and before the quiz, with the whole-token skip flag", async () => {
     const skill = await readFile(path.resolve(canonicalDir, "SKILL.md"), "utf8");
     const invocation = markdownSection(skill, "Invocation");

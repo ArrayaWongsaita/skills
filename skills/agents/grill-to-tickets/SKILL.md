@@ -228,6 +228,12 @@ numbered from `01` in dependency order. Every ticket carries a `**Stories:**` li
 user-story numbers it delivers (`2, 5`, or a range `3-6`), or `none` for a
 prefactor.
 
+Draw each ticket's acceptance criteria from the Scenario lines of the stories
+it delivers. The checker enforces Scenario form: `given`, `when`, `then` in
+order, and a Scenario under every story; an older spec without Scenarios
+passes with a warning
+([ticket-format.md](references/ticket-format.md)).
+
 **Draft, measure, fix, then quiz.** Write the draft tickets first, then run the
 ticket checker that ships with this skill with `--write-budget`, so it writes
 every ticket's Budget line from its measurement:

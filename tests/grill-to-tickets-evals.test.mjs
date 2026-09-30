@@ -82,6 +82,16 @@ describe("grill-to-tickets eval suite contract", () => {
       );
     });
 
+    it("describes the handoff eval as two subagent dispatches, Stage 2 and Stage 3.5", async () => {
+      const { evals } = await evalsJson();
+      const lines = evals.flatMap((item) => item.expectations ?? []).filter((line) => /^Prints the handoff/.test(line));
+      assert.ok(lines.length > 0, "an eval expectation covers the handoff");
+      for (const line of lines) {
+        assert.match(line, /Stage 2[\s\S]*Stage 3\.5/, "the handoff expectation names both dispatches");
+        assert.doesNotMatch(line, /only for the Stage 2 review/, "the handoff expectation is not limited to Stage 2");
+      }
+    });
+
     it("covers every planning safeguard: decision log, resume, blind spots, fresh reviewer, sweep, ticket check", async () => {
       const { evals } = await evalsJson();
       const ticketReview = evals.find((item) => item.name === "ticket review shows each ASK before the user decides");

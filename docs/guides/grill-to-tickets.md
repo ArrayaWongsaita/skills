@@ -122,7 +122,7 @@ Stop: Handoff message (/clear, DAG summary + recommended implementer แล้�
    - warning ทุกตัวที่ checker รายงานต้องถูกบันทึกใต้ `## Ticket warnings` ใน `decisions.md` บรรทัดละหนึ่งตัว เป็น `<warning> — acknowledged` หรือ `<warning> — fixed: <change>` จึงจะถือว่า Stage 3 เสร็จ
    - รัน checker ซ้ำด้วย `--write-budget` ทุกครั้งที่ quiz ทำให้ ticket เปลี่ยน
 5. **Stop — Handoff (ส่งมอบงาน):**
-   - พิมพ์ข้อความ handoff ตามลำดับ: `/clear` → **DAG summary** จาก checker (wave, ความกว้างสูงสุด, critical-path length) → บรรทัด `.scratch/<feature-slug>/manifest.json` (เมื่อ checker run สุดท้ายเขียน manifest สำเร็จ) → บรรทัด `recommended implementer` ที่บอกว่า `subagent-implement`, `agy-implement` หรือ `opencode-implement` เหมาะกับ ticket set นี้ (ชื่อ skill ไม่มี slash นำหน้า) → คำสั่ง `/subagent-implement`
+   - พิมพ์ข้อความ handoff ตามลำดับ: `/clear` → **DAG summary** จาก checker (wave, ความกว้างสูงสุด, critical-path length) → บรรทัด `recommended implementer` ที่บอกว่า `subagent-implement`, `agy-implement` หรือ `opencode-implement` เหมาะกับ ticket set นี้ (ชื่อ skill ไม่มี slash นำหน้า) → บรรทัด `Manifest: .scratch/<feature-slug>/manifest.json` (เมื่อ checker run สุดท้ายออกด้วย 0 และเขียน manifest สำเร็จ) → คำสั่ง `/subagent-implement`
    - `recommended implementer` เลือกจาก maximum wave width (จำนวน ticket มากสุดที่ทำพร้อมกันได้ใน wave เดียว): 1 → `subagent-implement`, 2 → ทั้งสามตัว, 3 ขึ้นไป → `agy-implement` หรือ `opencode-implement` เป็นคำแนะนำเท่านั้น คุณเป็นคนเลือกเอง
    - แสดงข้อความสรุปและแนะนำขั้นตอนสำหรับเซสชันถัดไป:
      ```text
@@ -133,8 +133,8 @@ Stop: Handoff message (/clear, DAG summary + recommended implementer แล้�
      wave 1: 02, 03
      maximum wave width: 2
      critical-path length: 2
-     manifest: .scratch/<feature-slug>/manifest.json
      recommended implementer: subagent-implement, agy-implement, opencode-implement
+     Manifest: .scratch/<feature-slug>/manifest.json
      # 3. implement ทั้งโฟลเดอร์ใน session ใหม่
      /subagent-implement .scratch/<feature-slug>/
      # หรือ /agy-implement หรือ /opencode-implement ด้วย argument เดียวกัน

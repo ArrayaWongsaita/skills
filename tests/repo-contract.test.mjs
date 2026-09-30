@@ -317,6 +317,51 @@ describe("grill-to-tickets production records and guides", () => {
     assert.match(stage3[1], /^     - [^\n]*ASK/m, "the guide nests quiz handling under the ticket-review sub-bullet");
   });
 
+  it("orders the guide handoff to match SKILL.md: recommended implementer, then Manifest", async () => {
+    const guide = await readTextOrNull("docs/guides/grill-to-tickets.md");
+    const stop = guide.match(/^5\. \*\*Stop[^\n]*\n([\s\S]*?)(?=\n#{2,3} )/m);
+    assert.ok(stop, "the guide has the Stop step");
+    const order = stop[1].split("\n").find((line) => /^   - พิมพ์ข้อความ handoff/.test(line));
+    assert.ok(order, "the Stop step has the handoff-order bullet");
+    const at = (needle) => order.indexOf(needle);
+    assert.ok(at("DAG summary") !== -1 && at("DAG summary") < at("Manifest:") && at("Manifest:") < at("`/subagent-implement`"),
+      "the Manifest line is between the DAG summary and the implementer command");
+    assert.ok(at("recommended implementer") !== -1 && at("recommended implementer") < at("Manifest:"),
+      "the Manifest line follows the recommended implementer line");
+    assert.match(order, /Manifest: `?\.scratch\/<feature-slug>\/manifest\.json/, "the line is spelled Manifest:");
+    const example = stop[1].match(/recommended implementer: [^\n]*\n\s*(\S+):/);
+    assert.ok(example, "the example shows a line after recommended implementer");
+    assert.equal(example[1], "Manifest", "the example prints Manifest: after recommended implementer");
+    assert.doesNotMatch(stop[1], /^\s*manifest: /m, "no lowercase manifest: example line");
+  });
+
+  it("mentions the conditional manifest line in the skill page Stop item and English handoff", async () => {
+    const page = await readTextOrNull("docs/skills/agents/grill-to-tickets.md");
+    const englishStart = page.indexOf("## English / ภาษาอังกฤษ");
+    const thaiStop = page.slice(0, englishStart).match(/^5\. \*\*Stop\*\*[^\n]*$/m);
+    assert.ok(thaiStop, "the Thai Stop item exists");
+    assert.match(thaiStop[0], /Manifest: \.scratch\/<feature-slug>\/manifest\.json/, "the Thai Stop item names the Manifest line");
+    assert.match(thaiStop[0], /exit 0|exited 0|ออกด้วย 0/, "the Thai Stop item makes the line conditional on exit 0");
+    const english = page.slice(englishStart);
+    const para = english.slice(english.indexOf("prints a handoff in this order"));
+    const handoff = para.slice(0, para.indexOf("### Example prompt"));
+    assert.match(handoff, /Manifest: \.scratch\/<feature-slug>\/manifest\.json/, "the English handoff names the Manifest line");
+    assert.match(handoff, /exited 0/, "the English handoff makes the line conditional on exit 0");
+    assert.ok(handoff.indexOf("DAG summary") < handoff.indexOf("Manifest:"), "the Manifest line follows the DAG summary");
+    assert.ok(handoff.indexOf("Manifest:") < handoff.indexOf("implementer command"), "the Manifest line precedes the implementer command");
+  });
+
+  it("ADR 0018 names ADR 0014's rejection of dry-runs as a cost calibrated against nothing", async () => {
+    const adr18 = await readTextOrNull("docs/decisions/0018-grill-to-tickets-scenarios-manifest-and-ticket-review.md");
+    const decision5 = adr18.match(/^5\. [\s\S]*?(?=^6\. )/m)[0];
+    const thaiStart = decision5.search(/[\u0E00-\u0E7F]/);
+    const english = decision5.slice(0, thaiStart);
+    const thai = decision5.slice(thaiStart);
+    assert.match(english, /ADR 0014 rejected[\s\S]*calibrated against nothing/i, "the English half names ADR 0014's rejection");
+    assert.match(english, /no calibration data[\s\S]*sets no\s+limit[\s\S]*--ticket-review 0/i, "the English half gives the reasons the cost is accepted");
+    assert.match(thai, /ADR 0014[\s\S]*(ปฏิเสธ|ไม่เลือก)[\s\S]*calibrat/i, "the Thai half names ADR 0014's rejection");
+  });
+
   it("updates both skill-page halves and their related-file lists for the ticket review", async () => {
     const page = await readTextOrNull("docs/skills/agents/grill-to-tickets.md");
     assert.ok(page, "the grill-to-tickets skill page exists");
