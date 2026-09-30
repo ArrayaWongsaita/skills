@@ -139,12 +139,15 @@ a `REJECT` — a fresh attempt is a human decision, not an automatic transition.
 
 ## Budget and early stops
 
-**Entry question.** On entering Stage 2, ask once whether to review and at most
-how many rounds. Propose 3. `0` skips the review: record `ended: skipped` and go
-on to Stage 3. `--review N` on the invocation answers it and nothing is asked; a
-missing or invalid value falls back to asking. Write `maxRounds` and
-`roundsUsed` into `decisions.md` State, so `continue` resumes with both and
-rounds spent stay spent.
+**Entry answer.** The Stage 0 pause records the review maximum and rounds used
+in `decisions.md` State; read that answer here and copy the maximum to
+`maxRounds` and completed rounds to `roundsUsed` in the report. The pause and Stage 2 ask only
+when State holds no review answer. For a resumed older run with no review answer,
+ask once whether to review and at most how many rounds, proposing 3; record the
+answer in State. A recorded State answer wins over a `--review` flag on
+`continue`; decision-level rework keeps it. When State says `review: skipped`,
+including `--review 0` answered at the pause, record `ended: skipped` and advance
+to Stage 3. Otherwise retain the maximum and rounds used: rounds spent stay spent.
 
 **Round accounting.** Only a completed `scrutinize` review consumes a round.
 Editing `spec.md` between reviews does not.

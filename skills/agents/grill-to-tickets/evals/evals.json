@@ -4,8 +4,8 @@
     {
       "id": 1,
       "name": "first-pass SHIP straight through the stages",
-      "prompt": "/grill-to-tickets Add a \"copy shareable link\" button to the report detail page that copies the report's existing public URL to the clipboard and shows a confirmation toast. One component, no API or schema change, acceptance behavior is explicit, and no open decisions remain — treat the Stage 0 frontier as empty and already confirmed.",
-      "expected_output": "With the Stage 0 frontier already empty and confirmed, pass straight through: synthesize spec.md in Stage 1, run scrutinize once in a fresh reviewer subagent (Stage 2), normalize its closing line to SHIP, and advance to Stage 3 (ticket-format.md). Publish tickets under .scratch/<feature-slug>/issues/ and print the handoff: .scratch/ needs no commit, /clear, then /subagent-implement .scratch/<feature-slug>/.",
+      "prompt": "/grill-to-tickets Add a \"copy shareable link\" button to the report detail page that copies the report's existing public URL to the clipboard and shows a confirmation toast. One component, no API or schema change, acceptance behavior is explicit, and no open decisions remain — treat the Stage 0 frontier as empty and already confirmed. decisions.md State already holds review: 0/3 rounds from the confirmed pause.",
+      "expected_output": "With the Stage 0 frontier already empty and confirmed, pass straight through: synthesize spec.md in Stage 1, use the recorded review answer without asking again and run scrutinize once in a fresh reviewer subagent (Stage 2), normalize its closing line to SHIP, and advance to Stage 3 (ticket-format.md). Publish tickets under .scratch/<feature-slug>/issues/ and print the handoff: .scratch/ needs no commit, /clear, then /subagent-implement .scratch/<feature-slug>/.",
       "expectations": [
         "Confirms the empty Stage 0 frontier, then moves through Stage 1 -> Stage 2 -> Stage 3 in order",
         "Runs scrutinize exactly once and records cycle 1 with verdict SHIP in a single .scratch/<feature-slug>/design-review.md file",
@@ -383,11 +383,11 @@
     },
     {
       "id": 39,
-      "name": "Stage 2 entry asks once for a review round count",
-      "prompt": "$grill-to-tickets Add CSV export to the members table. Stage 1 has just written spec.md.",
-      "expected_output": "Before the first review, ask once whether to review and at most how many rounds, proposing 3 (0 skips the review). Write the maximum into decisions.md State and do not ask again in this run.",
+      "name": "Stage 0 pause combines confirmation and review maximum",
+      "prompt": "$grill-to-tickets The frontier is empty and the blind-spot pass is finished. Show the Stage 0 pause.",
+      "expected_output": "Ask for confirmation and the review maximum in the same message, proposing 3; 0 skips. Record the answer in decisions.md State when given and ask nothing at Stage 2.",
       "expectations": [
-        "Asks the review question once before dispatching any reviewer",
+        "Asks the review question once at the Stage 0 pause",
         "Proposes 3 rounds and states that 0 skips the review",
         "Records the answer in decisions.md State",
         "Does not ask the question again after a FIX_THEN_SHIP cycle"
@@ -396,25 +396,25 @@
     },
     {
       "id": 40,
-      "name": "--review flag answers the entry question up front",
+      "name": "--review flag answers the Stage 0 pause up front",
       "prompt": "$grill-to-tickets Add CSV export to the members table --review 2",
-      "expected_output": "Take a maximum of 2 rounds from the flag, ask no entry question at Stage 2, and record the maximum in decisions.md State. With --review 0 the review is skipped and the run goes from Stage 1 to Stage 3, recording that the gate was skipped.",
+      "expected_output": "At the Stage 0 pause take maximum 2 from --review 2 and ask no review question. Write review: 0/2 rounds to State. With --review 0 write review: skipped at the pause, then Stage 2 writes ended: skipped in design-review.md and advances to Stage 3.",
       "expectations": [
         "Does not ask the review entry question",
         "Records a maximum of 2 rounds in State",
-        "Treats --review 0 as skipping Stage 2 and records that it was skipped"
+        "Treats --review 0 as skipping the review and records that it was skipped"
       ],
       "files": []
     },
     {
       "id": 42,
-      "name": "missing and invalid --review values ask for the budget",
+      "name": "missing and invalid --review values ask at the pause",
       "prompt": "Run /grill-to-tickets Add CSV export to the members table with --review but no value. In a separate run, use --review many.",
-      "expected_output": "For each invocation, treat the missing or invalid --review value as unset. At Stage 2, ask once whether to review and at most how many rounds, propose 3, and wait for the user's answer before dispatching a reviewer.",
+      "expected_output": "Treat missing and invalid values as unset. At the Stage 0 pause ask for confirmation and the review maximum together, proposing 3, before any reviewer.",
       "expectations": [
         "Falls back to asking when --review has no value",
         "Falls back to asking when --review is not a non-negative integer",
-        "Asks the Stage 2 question once before dispatching a reviewer",
+        "Asks the Stage 0 pause question once before dispatching a reviewer",
         "Proposes 3 rounds"
       ],
       "files": []
@@ -422,8 +422,8 @@
     {
       "id": 41,
       "name": "continue resumes with rounds spent kept spent",
-      "prompt": "/grill-to-tickets continue wishlist-sync. decisions.md State says review: 2/3 rounds; design-review.md holds two completed cycles.",
-      "expected_output": "Resume in Stage 2 with a maximum of 3 and 2 rounds used, without asking the entry question and without refilling the budget. Only one more review may run before the exhaustion question.",
+      "prompt": "/grill-to-tickets continue wishlist-sync --review 9. State says review: 2/3 rounds; design-review.md holds two completed cycles.",
+      "expected_output": "Recorded State wins over --review 9: retain maximum 3 and used 2, ask no entry question and run at most one more round before exhaustion.",
       "expectations": [
         "Reads the maximum and rounds used from State and design-review.md",
         "Does not ask the review entry question again",
@@ -473,6 +473,36 @@
         "Downgrade and non-blocking confirmation resolve defaults explicitly",
         "Further Notes carries assumed defaults; a late answer creates a new decision",
         "Pause summary and handoff list every resolved: assumed entry labelled assumed"
+      ],
+      "files": []
+    },
+    {
+      "id": 46,
+      "name": "older resumed Stage 2 run with no review answer",
+      "prompt": "$grill-to-tickets continue legacy-export. State is Stage 2 and has no review answer.",
+      "expected_output": "Ask the entry question once at Stage 2, propose 3, 0 skips, record State.",
+      "expectations": [
+        "Ask the entry question once at Stage 2, propose 3, 0 skips, record State."
+      ],
+      "files": []
+    },
+    {
+      "id": 47,
+      "name": "blocking parked pause retains review answer",
+      "prompt": "$grill-to-tickets At the Stage 0 pause retention is blocking and open. I choose 2 review rounds but cannot answer retention. Continue, then accept retention default.",
+      "expected_output": "Record review: 0/2 rounds when given while retention holds the pause open. Keep waiting on retention. Ask no review question on resume or confirmation.",
+      "expectations": [
+        "Record review: 0/2 rounds when given while retention holds the pause open. Keep waiting on retention. Ask no review question on resume or confirmation."
+      ],
+      "files": []
+    },
+    {
+      "id": 48,
+      "name": "decision-level rework keeps review answer",
+      "prompt": "$grill-to-tickets Stage 2 returns decision-level REWORK with State review: 1/3 rounds. Resolve the decision and reach the pause again.",
+      "expected_output": "Keep review: 1/3 rounds and ask only for confirmation; do not repeat the review question or refill spent rounds.",
+      "expectations": [
+        "Keep review: 1/3 rounds and ask only for confirmation; do not repeat the review question or refill spent rounds."
       ],
       "files": []
     }

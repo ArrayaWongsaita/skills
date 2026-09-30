@@ -163,7 +163,11 @@ describe("grill-to-tickets eval suite contract", () => {
     it("covers the review entry question, the --review flag, and resume with rounds kept spent", async () => {
       const { evals } = await evalsJson();
       const cases = [
-        { label: "entry question", match: /entry asks once|review round count/i },
+        { label: "merged Stage 0 pause", match: /Stage 0 pause.*review/i },
+        { label: "invalid flag asks at pause", match: /missing and invalid.*pause/i },
+        { label: "legacy Stage 2 resume", match: /older.*Stage 2.*no.*answer/i },
+        { label: "blocked pause retains answer", match: /blocking parked.*review answer/i },
+        { label: "rework retains answer", match: /decision-level rework.*review answer/i },
         { label: "--review flag", match: /--review/ },
         { label: "resume keeps rounds spent", match: /rounds spent kept spent/i },
       ];

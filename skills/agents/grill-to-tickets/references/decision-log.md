@@ -67,7 +67,7 @@ For a run that skips the review, the State key is `ticket review: skipped` and
   thing the run needs from the user next — a round's answers, Stage 0
   confirmation, test-seam confirmation, ticket-quiz approval, the review entry
   question, a blocking parked question (name it when it alone holds the run),
-  or the add-rounds choice — or `nothing` while the run works. In Stage 2, State also carries
+  or the add-rounds choice — or `nothing` while the run works. From the Stage 0 pause, State carries
   `review: <used>/<max> rounds` (or `review: skipped`), the user's answer to
   the entry question. It also carries `ticket review: pending`, `done`, or
   `skipped`; Stage 0 step 1 writes `skipped` when `--ticket-review 0` is present
@@ -109,7 +109,10 @@ For a run that skips the review, the State key is `ticket review: skipped` and
    A later answer is logged as a new decision entry naming the parked question;
    update its status in `parked.md` to `resolved: answered`.
    Fill in the remaining answers before you post the next round.
-3. At every stage transition, and before every pause that waits on the user,
+3. At the Stage 0 pause, record the review answer in State when given, even
+   while a blocking parked question holds the pause open. Use `review: 0/<max> rounds`
+   or `review: skipped` for 0; keep the answer on re-grill and resume.
+4. At every stage transition, and before every pause that waits on the user,
    update State.
 
 A round is closed when every question in it carries a `decided:` other than
@@ -123,7 +126,10 @@ A round is closed when every question in it carries a `decided:` other than
    `CONTEXT.md`, `adr/`, and whichever of `spec.md`, `design-review.md`, and
    `issues/` exist.
 2. Take the gate's maximum and rounds used from State and `design-review.md`;
-   never ask the entry question again and never refill spent rounds.
+   keep a recorded answer without asking again; never refill spent rounds.
+   A recorded State answer wins over a `--review` flag on `continue`.
+   The pause and Stage 2 each ask only when State holds no review answer;
+   an older run resuming at Stage 2 with none gets the entry question there.
 3. Resume at the recorded `stage` and `waiting on`. When the run waits on a
    round, re-post that round's open questions. Every logged decision is settled:
    a question returns only when a gate finding reopens it.

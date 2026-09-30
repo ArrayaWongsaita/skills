@@ -42,9 +42,10 @@ Explicit invocation only:
   continue <feature-slug>`) — pick up from the Decision Log's State, as
   [decision-log.md](references/decision-log.md) — Resume describes.
 
-Add `--review N` to the idea to answer the Stage 2 review question up front — `N`
+Add `--review N` to the idea to answer the Stage 0 pause review question up front — `N`
 is the most rounds of design review to run, and `--review 0` skips the review.
-Without the flag, Stage 2 asks.
+A missing or invalid value asks at the pause; `N` must be a non-negative integer.
+A recorded State answer wins over a flag on `continue`.
 
 Match `--ticket-review 0` as whole tokens to skip Stage 3.5. Only
 that exact value skips; any other value is treated as absent.
@@ -171,7 +172,13 @@ Run `grilling` and `domain-modeling` together as one discovery pass.
 5. **Pause.** When the frontier is empty and the blind-spot pass is done,
    summarize the agreed glossary, the decisions, the blind-spot table with its
    assumptions, then pause for explicit user
-   confirmation before Stage 1. An open blocking parked question holds the
+   confirmation and the review maximum in the same message before Stage 1,
+   proposing 3; `0` skips the review. The pause asks only when State holds no review answer.
+   A valid `--review N` answers it at the pause and nothing is asked; a missing
+   or invalid value asks at the pause. Record the answer in `decisions.md` State
+   when given, including while a blocking parked question holds the pause open;
+   it is not asked again. Write `review: 0/<max> rounds`, or `review: skipped`
+   for 0. An open blocking parked question holds the
    pause: the pause cannot complete until it is answered or downgraded.
    The person can downgrade it by accepting its default; set its status to
    `resolved: assumed` and carry its default into Further Notes.
@@ -199,12 +206,15 @@ and blocking entries the person downgraded.
 
 ## Stage 2 — Design Review Gate
 
-Enter with one question, asked once: *"Do you want a design review, and at most
-how many rounds?"* Propose **3**; `0` skips the review and goes on to Stage 3. A
-valid `--review N` answers it and nothing is asked; a missing or invalid value
-falls back to asking. Write the maximum and the rounds used into `decisions.md`
-State, so `continue` resumes without asking again and without refilling the
-budget. A round is one completed review.
+Read the review answer from `decisions.md` State. Stage 2 asks only when State holds no review answer:
+for a resumed older run with no recorded answer, ask once *"Do you want a design
+review, and at most how many rounds?"* Propose 3; `0` skips the review. Record
+that answer in State using the pause's format. A fresh run already answered at
+Stage 0. A decision-level rework keeps the answer and does not repeat the
+question. A recorded State answer wins over any `--review` flag on `continue`.
+When State says `review: skipped` (including `--review 0` at the pause), write
+`ended: skipped` in the gate report and advance to Stage 3. Otherwise keep the
+maximum and rounds used without refilling the budget. A round is one completed review.
 
 Each round, dispatch a fresh reviewer subagent that runs `scrutinize` against
 `spec.md` from files alone and edits nothing — its brief is in
