@@ -1021,3 +1021,56 @@ describe("question tiers", () => {
     assert.match(await section("SKILL.md", "Stop — Handoff"), /every[\s\S]*resolved: assumed[\s\S]*labelled assumed/);
   });
 });
+
+
+describe("rationalization table contract", () => {
+  const root = "skills/agents/grill-to-tickets";
+  const reference = `${root}/references/rationalizations.md`;
+  const readTable = async () => {
+    assert.ok(await access(reference).then(() => true, () => false), "rationalization reference must exist");
+    return markdownSection(await readFile(reference, "utf8"), "Shortcuts");
+  };
+
+  it("ships at least eight complete excuse, reality, action rows for real flow shortcuts", async () => {
+    const table = await readTable();
+    const lines = table.split("\n").filter((line) => line.startsWith("|"));
+    assert.equal(lines[0], "| Excuse | Reality | Action |");
+    assert.ok(/^\|(?:[ :|-]+)\|$/.test(lines[1]), "table has a separator row");
+    const rows = lines.slice(2).map((line) => line.split("|").slice(1, -1).map((cell) => cell.trim()));
+    assert.ok(rows.length >= 8, "table has at least eight shortcut rows");
+    for (const row of rows) {
+      assert.equal(row.length, 3, "each row has excuse, reality, action cells");
+      assert.ok(row.every((cell) => cell.length > 0), "every table cell is nonempty");
+    }
+    for (const [shortcut, pattern] of [
+      ["skipping design review", /skip[^.]*review/i],
+      ["answering a human decision", /answer[^.]*question[^.]*(?:myself|yourself)/i],
+      ["writing the spec from memory", /spec[^.]*memory/i],
+      ["skipping the checker", /skip[^.]*checker/i],
+      ["skipping preflight", /skip[^.]*preflight/i],
+      ["skipping the blind-spot pass", /skip[^.]*blind-spot/i],
+      ["bypassing a parked blocker", /blocking parked question/i],
+      ["implementing after handoff", /implement[^.]*tickets/i],
+    ]) assert.ok(rows.some(([excuse]) => pattern.test(excuse)), `table names ${shortcut}`);
+    for (const [, , action] of rows) assert.ok(/\b(?:Never|Do not)\b/i.test(action), "each action states its refusal plainly");
+  });
+
+  it("links the reference once in the section immediately after Invocation and resolves it", async () => {
+    const skill = await readFile(`${root}/SKILL.md`, "utf8");
+    const links = localSkillLinks(skill).filter((target) => target === "references/rationalizations.md");
+    assert.equal(links.length, 1, "skill links rationalizations exactly once");
+    const headings = markdownHeadings(skill).filter(({ level }) => level === 2);
+    const next = headings[headings.findIndex(({ title }) => title === "Invocation") + 1];
+    assert.equal(next?.title, "Rationalizations", "table section immediately follows Invocation");
+    assert.ok(localSkillLinks(markdownSection(skill, "Rationalizations")).includes(links[0]), "link belongs to the post-Invocation section");
+    assert.ok(await access(path.resolve(root, links[0])).then(() => true, () => false), "table link resolves");
+    assert.ok(!/\bNever\b|\bDo not\b/i.test(skill), "skill body keeps positive instructions");
+  });
+
+  it("keeps rationalizations out of both reviewer briefs", async () => {
+    for (const file of ["design-review-gate.md", "ticket-review.md"]) {
+      const reviewer = markdownSection(await readFile(`${root}/references/${file}`, "utf8"), "Reviewer");
+      assert.ok(!/rationalizations?|excuse\s*\|\s*reality|shortcut table/i.test(reviewer), `${file} reviewer receives no rationalization table`);
+    }
+  });
+});

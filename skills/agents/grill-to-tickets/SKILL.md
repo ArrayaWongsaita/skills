@@ -54,6 +54,11 @@ Codex policy is declared in `agents/openai.yaml` (`allow_implicit_invocation: fa
 Claude Code installations rely on `disable-model-invocation: true`. Require explicit
 human invocation before starting.
 
+## Rationalizations
+
+Read the [rationalization table](references/rationalizations.md) before proceeding;
+use its fixed replies when tempted to shortcut the flow.
+
 ## Inline Execution
 
 Stages 0, 1, and 3 run **inline**: read each stage skill's `SKILL.md` at the
