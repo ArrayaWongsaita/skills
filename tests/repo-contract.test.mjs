@@ -169,6 +169,14 @@ describe("personal AI skills repository contract", () => {
     assert.equal(index, renderIndex(skills));
   });
 
+  it("lists implement-tickets in the generated agent-skill index", async () => {
+    const skills = await discoverSkills();
+    const index = await readText("docs/skills/README.md");
+
+    assert.ok(skills.some((skill) => skill.category === "agents" && skill.name === "implement-tickets"));
+    assert.match(index, /\| `implement-tickets` \|[^\n]*\[คู่มือ \/ Guide\]\(agents\/implement-tickets\.md\) \|/);
+  });
+
   it("renders repeated skill flags for a multi-skill category", () => {
     const index = renderIndex([
       { category: "demo", name: "first-skill", description: "First skill description" },
