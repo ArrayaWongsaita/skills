@@ -1,7 +1,7 @@
 # Fix dispatch and the fix(review) commit (Stage 2)
 
 How a cycle's blockers become `fix(review):` commits on the integration branch.
-The worker + verifier contract here is **copied from `subagent-implement`** — the
+The worker + verifier contract here is **copied from `implement-tickets`** — the
 same dispatch, the same retry budget, the same fresh-verifier judgment — so a fix
 that touches real files stays out of the orchestrator's context.
 
@@ -25,7 +25,7 @@ Decide per cluster:
 The orchestrator writes fix code itself **only** for an inline one-file no-test
 cluster. Every other cluster goes to a worker.
 
-## 3. The dispatch contract (copied from `subagent-implement`)
+## 3. The dispatch contract (copied from `implement-tickets`)
 
 ### Worker branch and prompt
 
@@ -132,7 +132,7 @@ fallback.
 
 The harness's Agent / Task tool behaviour varies. Confirm these on the first real
 fix dispatch and fold the answers back into this file — the same list
-`subagent-implement` confirms, because the contract is copied:
+`implement-tickets` confirms, because the contract is copied:
 
 | assumption | how to confirm |
 | --- | --- |

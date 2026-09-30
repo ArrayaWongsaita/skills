@@ -50,7 +50,7 @@ describe("review-to-pr eval suite contract", () => {
     it("has a negative case for a bare 'review this branch' and for a sibling skill", async () => {
       const negatives = (await triggerJson()).filter((t) => !t.should_trigger);
       assert.ok(negatives.some((t) => /review (this|the) .*branch/i.test(t.query)));
-      assert.ok(negatives.some((t) => /subagent-implement|agy-implement|engineering-workflow|\/code-review\b/i.test(t.query)));
+      assert.ok(negatives.some((t) => /implement-tickets|agy-implement|engineering-workflow|\/code-review\b/i.test(t.query)));
     });
   });
 
@@ -79,6 +79,15 @@ describe("review-to-pr eval suite contract", () => {
           `case ${item.id} must invoke review-to-pr explicitly (disable-model-invocation)`,
         );
       }
+    });
+
+    it("uses implement-tickets/foo and implement-tickets-work/foo/ in the no-argument eval", async () => {
+      const { evals } = await evalsJson();
+      const noArgument = evals.find((item) => /no argument reviews/i.test(item.name));
+      assert.ok(noArgument, "the no-argument review case exists");
+      assert.match(noArgument.prompt, /implement-tickets\/foo/);
+      assert.match(noArgument.prompt, /implement-tickets-work\/foo\//);
+      assert.match(noArgument.expected_output, /feature slug.*foo.*integration branch/i);
     });
 
     it("covers the trigger-policy and handoff branches (ticket 01)", async () => {

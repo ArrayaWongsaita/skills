@@ -8,7 +8,11 @@
 
 ## 1. review-to-pr คืออะไรและมีไว้สำหรับทำอะไร?
 
-`review-to-pr` เป็น **Review & Fix Orchestrator Skill** ที่รับช่วงต่อจาก Integration Branch ที่ได้จากการลงโค้ด (เช่น จาก `subagent-implement`, `agy-implement`, หรือ `implement`) ซึ่งมี commit ราย ticket ครบแล้วและเทสต์เบื้องต้นผ่านแล้ว แต่ **ยังไม่เคยผ่านการรีวิวโค้ดอย่างจริงจัง**
+`review-to-pr` เป็น **Review & Fix Orchestrator Skill** ที่รับช่วงต่อจาก Integration Branch ที่ได้จากการลงโค้ด (เช่น จาก `implement-tickets`, `agy-implement`, หรือ `implement`) ซึ่งมี commit ราย ticket ครบแล้วและเทสต์เบื้องต้นผ่านแล้ว แต่ **ยังไม่เคยผ่านการรีวิวโค้ดอย่างจริงจัง**
+
+เมื่อเรียก `/review-to-pr` โดยไม่ระบุ argument ให้ใช้ slug จาก integration branch
+`implement-tickets/<slug>` เท่านั้น ตัวอย่าง `implement-tickets/foo` ได้ slug `foo`;
+worker branches `implement-tickets-work/foo/01` ไม่ได้กำหนด slug
 
 Skill นี้จะนำ Branch ดังกล่าวมาผ่านกระบวนการตรวจสอบคุณภาพโค้ด, แก้ไขข้อบกพร่อง, ตรวจสอบความเสี่ยงของระบบ และรันชุดทดสอบเต็ม จนได้สถานะที่ "พร้อมเปิด Pull Request (PR-ready)" อย่างแท้จริง
 
