@@ -47,7 +47,7 @@
 // Exit codes: 0 clean, 1 errors found, 2 unusable input.
 
 import { createHash } from "node:crypto";
-import { chmod, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
+import { chmod, lstat, readFile, readlink, readdir, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -269,6 +269,48 @@ function contextItemsOf(ticket) {
   const value = ticket.field("Context");
   if (!value) return [];
   return value.split("·").map((s) => s.trim()).filter(Boolean).map(parseContextItem);
+}
+
+function contextPathProblem(rawPath) {
+  const win32Root = path.win32.parse(rawPath).root;
+  if (path.isAbsolute(rawPath) || path.posix.isAbsolute(rawPath) || path.win32.isAbsolute(rawPath) || win32Root) {
+    return "absolute";
+  }
+
+  const escapesRoot = (normalized) => normalized === ".." || normalized.startsWith("../");
+  const posixPath = path.posix.normalize(rawPath);
+  const windowsPath = path.posix.normalize(rawPath.replaceAll("\\", "/"));
+  return escapesRoot(posixPath) || escapesRoot(windowsPath) ? "escapes" : null;
+}
+
+function isWithinDirectory(root, candidate) {
+  const relative = path.relative(root, candidate);
+  return relative === "" || (relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
+}
+
+async function canonicalExistingPrefix(candidate) {
+  let current = candidate;
+  while (true) {
+    try {
+      return await realpath(current);
+    } catch (error) {
+      if (error.code !== "ENOENT" && error.code !== "ENOTDIR") throw error;
+
+      try {
+        const entry = await lstat(current);
+        if (entry.isSymbolicLink()) {
+          const target = await readlink(current);
+          return await canonicalExistingPrefix(path.resolve(path.dirname(current), target));
+        }
+      } catch (entryError) {
+        if (entryError.code !== "ENOENT" && entryError.code !== "ENOTDIR") throw entryError;
+      }
+
+      const parent = path.dirname(current);
+      if (parent === current) throw error;
+      current = parent;
+    }
+  }
 }
 
 // The read tokens, criteria, and modules a ticket's Budget line records.
@@ -651,18 +693,22 @@ export function checkFeature({ spec, tickets: ticketFiles, files }) {
       }
 
       const { marker, rawPath } = item;
-      if (path.posix.isAbsolute(rawPath)) {
+      const pathProblem = contextPathProblem(rawPath);
+      if (pathProblem === "absolute") {
         contextError(`${where}: Context path "${rawPath}" is absolute`);
         continue;
       }
-
       const norm = path.posix.normalize(rawPath);
-      if (norm.startsWith("../") || norm === ".." || norm.startsWith("/..")) {
+      if (pathProblem === "escapes") {
         contextError(`${where}: Context path "${rawPath}" escapes the project root`);
         continue;
       }
 
       const fileEntry = getFile(files, norm);
+      if (fileEntry && typeof fileEntry === "object" && fileEntry.escaped) {
+        contextError(`${where}: Context path "${rawPath}" escapes the project root`);
+        continue;
+      }
       if (fileEntry && typeof fileEntry === "object" && fileEntry.directory) {
         contextError(`${where}: Context path "${norm}" is a directory`);
         continue;
@@ -828,6 +874,7 @@ async function writeManifest(target, contents) {
 
 export async function checkFeatureDir(dir, { writeBudget = false } = {}) {
   const projectRoot = findProjectRoot(dir);
+  const canonicalRoot = await realpath(projectRoot);
   const spec = await readFile(path.join(dir, "spec.md"), "utf8").catch(() => null);
   const issuesDir = path.join(dir, "issues");
   const names = (await readdir(issuesDir)).filter((name) => name.endsWith(".md")).sort();
@@ -840,12 +887,21 @@ export async function checkFeatureDir(dir, { writeBudget = false } = {}) {
     for (const item of contextItemsOf(parseTicket(file, text))) {
       if (item.kind === "spec") continue;
       const norm = path.posix.normalize(item.rawPath);
-      if (path.posix.isAbsolute(norm) || norm.startsWith("../") || norm === "..") {
+      if (contextPathProblem(item.rawPath)) {
         continue;
       }
       if (!files.has(norm)) {
         const fullPath = path.resolve(projectRoot, norm);
+        if (!isWithinDirectory(projectRoot, fullPath)) {
+          files.set(norm, { escaped: true });
+          continue;
+        }
         try {
+          const canonicalPath = await canonicalExistingPrefix(fullPath);
+          if (!isWithinDirectory(canonicalRoot, canonicalPath)) {
+            files.set(norm, { escaped: true });
+            continue;
+          }
           const st = await stat(fullPath);
           if (st.isDirectory()) {
             files.set(norm, { directory: true });

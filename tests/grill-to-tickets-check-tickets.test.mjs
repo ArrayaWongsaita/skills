@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { readFile, readdir, stat, chmod, mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { readFile, readdir, stat, chmod, mkdtemp, mkdir, writeFile, rm, symlink } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import os from "node:os";
@@ -863,6 +863,87 @@ describe("check-tickets", () => {
 
       const res = await checkFeatureDir(dir);
       assert.deepEqual(res.errors, []);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects an internal symlink to an outside Context file before reading or writing its budget", async (t) => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "check-tickets-context-symlink-"));
+    const outsidePath = `${root}-outside.mjs`;
+    const dir = path.join(root, ".scratch", "my-slug");
+    const linkedPath = path.join(root, "src", "linked.mjs");
+    const outsideBody = "outside-secret-".repeat(5000);
+    const context = "spec § User Stories · src/linked.mjs";
+    const tickets = passing();
+    tickets[0] = ticket("01", "Export members", { stories: "1, 1a", context, budget: null });
+    const expectedTokens = checkFeature({ spec, tickets, files: new Map() }).budgets[0].tokens;
+
+    try {
+      await mkdir(path.join(dir, "issues"), { recursive: true });
+      await mkdir(path.dirname(linkedPath), { recursive: true });
+      await writeFile(path.join(dir, "spec.md"), spec);
+      await writeFile(outsidePath, outsideBody);
+      for (const item of tickets) await writeFile(path.join(dir, "issues", item.file), item.text);
+      try {
+        await symlink(outsidePath, linkedPath);
+      } catch (error) {
+        if (["EACCES", "EPERM", "ENOSYS", "ENOTSUP", "EOPNOTSUPP"].includes(error.code)) {
+          t.skip(`host cannot create symlinks (${error.code})`);
+          return;
+        }
+        throw error;
+      }
+
+      const result = await checkFeatureDir(dir, { writeBudget: true });
+      const budget = result.budgets.find((item) => item.number === 1);
+      const ticketPath = path.join(dir, "issues", tickets[0].file);
+      const findings = [];
+      if (!result.errors.some((error) => error.includes('Context path "src/linked.mjs" escapes the project root'))) {
+        findings.push("the symlinked Context path was not reported as escaping the project root");
+      }
+      if (!budget?.contextErrors) findings.push("the ticket budget was not marked as having a Context error");
+      if (budget?.tokens !== expectedTokens) findings.push("the outside file contributed to the ticket budget");
+      if ((await readFile(ticketPath, "utf8")) !== tickets[0].text) {
+        findings.push("--write-budget changed the Context-error ticket");
+      }
+      try {
+        await readFile(path.join(dir, "manifest.json"));
+        findings.push("--write-budget created a manifest for a failing Context path");
+      } catch (error) {
+        if (error.code !== "ENOENT") throw error;
+      }
+      assert.deepEqual(findings, []);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+      await rm(outsidePath, { force: true });
+    }
+  });
+
+  it("rejects Windows-style Context traversal and drive paths on every host", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "check-tickets-context-winpath-"));
+    const dir = path.join(root, ".scratch", "my-slug");
+    const windowsEscape = String.raw`..\..\outside.txt`;
+    const windowsDrivePath = String.raw`C:\outside\secret.mjs`;
+    try {
+      await mkdir(path.join(dir, "issues"), { recursive: true });
+      await writeFile(path.join(dir, "spec.md"), spec);
+      const tickets = passing();
+      tickets[0] = ticket("01", "Export members", {
+        stories: "1, 1a",
+        context: `spec § User Stories · ${windowsEscape} · ${windowsDrivePath}`,
+      });
+      for (const item of tickets) await writeFile(path.join(dir, "issues", item.file), item.text);
+
+      const result = await checkFeatureDir(dir);
+      assert.ok(
+        result.errors.some((error) => error.includes(`Context path "${windowsEscape}" escapes the project root`)),
+        result.errors.join("\n"),
+      );
+      assert.ok(
+        result.errors.some((error) => error.includes(`Context path "${windowsDrivePath}" is absolute`)),
+        result.errors.join("\n"),
+      );
     } finally {
       await rm(root, { recursive: true, force: true });
     }
