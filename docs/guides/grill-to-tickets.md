@@ -70,7 +70,7 @@ Skill นี้ถูกตั้งค่าแบบ Explicit Invocation (ต�
 ├── adr/                # บันทึกการตัดสินใจทางสถาปัตยกรรม (NNNN-<slug>.md)
 ├── spec.md             # เอกสารข้อกำหนดของฟีเจอร์ (Specification)
 ├── design-review.md    # รายงานผลการตรวจสอบ Design Review Gate
-├── manifest.json       # snapshot จาก checker: spec fingerprint, DAG และข้อมูล ticket ตอนวางแผน
+├── manifest.json       # derived planning snapshot สำหรับ handoff
 └── issues/             # รายการ tickets ที่พร้อมพัฒนา (NN-<slug>.md)
 ```
 
@@ -114,8 +114,8 @@ Stop: Handoff message (/clear, DAG summary + recommended implementer แล้�
      ```bash
      node <โฟลเดอร์ของ skill>/scripts/check-tickets.mjs .scratch/<feature-slug>/ --write-budget
      ```
-     สคริปต์ตรวจว่า Scenario ที่ใช้มี `given`, `when`, `then` เรียงตามลำดับและทุก story มี Scenario; spec เก่าที่ไม่มี Scenario ผ่านพร้อม warning ส่วน Scenario ที่ขาดหรือผิดรูปแบบเป็น error ตรวจต่อว่าทุก story มี ticket, `Stories` และ `Blocked by` ชี้ของที่มีจริง (blocker ต้องเลขต่ำกว่า), และ Seam/Context/Budget ครบ เป็นบรรทัดเดียว เรียงถูก และอ้างถึงของจริง ทุกครั้งที่ `--write-budget` จบด้วย PASS จะเขียน `.scratch/<feature-slug>/manifest.json` ซึ่งเป็น snapshot ที่สร้างจาก spec fingerprint, DAG และ planning facts ของ ticket ไม่มี Status หรือ timestamp แก้จนขึ้น `result: PASS` แล้วแสดงตาราง story coverage, ตาราง budget, สรุป DAG และ warning ทุกตัวใน quiz
-   - **Ticket review (Stage 3.5):** หลัง checker พิมพ์ PASS และก่อน quiz ส่ง fresh reviewer ไปอ่าน ticket set กับไฟล์ที่ระบุใน `**Context:**` ของแต่ละ ticket แล้วให้ verdict `READY` หรือ `ASK: <คำถามที่ worker ใหม่ต้องถาม>` ครบทุกใบ รีวิวนี้ตรวจเฉพาะ ambiguity ไม่ใช่ Budget check และไม่ตั้ง limit; ค่าเริ่มต้นทำหนึ่งครั้ง ส่วน `--ticket-review 0` ใช้ข้ามได้
+     checker ตรวจรูปแบบ Scenario (`given`, `when`, `then` ตามลำดับ), story coverage และฟิลด์ของ ticket แล้วแสดงตาราง coverage, budget, DAG และ warnings; manifest ที่ได้อยู่ที่ `.scratch/<feature-slug>/manifest.json` สำหรับ handoff รายละเอียด checker และ manifest อยู่ใน [สัญญา grill-to-tickets หลัก](../../skills/agents/grill-to-tickets/SKILL.md)
+   - **Ticket review (Stage 3.5):** หลัง checker PASS และก่อน quiz ให้รีวิว ticket set และคืน `READY` หรือ `ASK` สำหรับแต่ละใบ ดู [สัญญา grill-to-tickets หลัก](../../skills/agents/grill-to-tickets/SKILL.md) และ [brief สำหรับผู้รีวิว ticket](../../skills/agents/grill-to-tickets/references/ticket-review.md) สำหรับพฤติกรรมและรูปแบบ verdict
      - แสดงคำถาม `ASK` ข้าง `Seam`, `Context` และ `Budget` ใน quiz ให้คนตัดสินใจว่าจะ fix หรือ acknowledge แล้ว main thread รัน checker ด้วย `--write-budget` ซ้ำและบันทึกผลใน `## Ticket review` ของ `decisions.md`
      - `continue` อ่าน State `ticket review: done` หรือ `skipped` เพื่อไม่เริ่มซ้ำ; review รอบสองเริ่มเมื่อผู้ใช้ขอเท่านั้น
    - warning ที่ checker ออกให้มี 3 แบบ และไม่เปลี่ยนผล `PASS` / `FAIL`: acceptance criterion ที่พูดถึงการรัน suite หรือ tool (`npm test`, `tests pass`, `typecheck passes`, `lint passes`, `suite passes`); ticket สองใบที่แก้ path เดียวกัน (`(edit)`, `(new)` หรือ `(edit from NN)`) โดยไม่มีใบไหน block อีกใบทางอ้อม (transitively); และ feature ที่มีเกิน 15 ticket

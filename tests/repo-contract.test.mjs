@@ -105,6 +105,23 @@ function listItem(list, label) {
   return [lines[start], ...(end === -1 ? rest : rest.slice(0, end))].join(" ").replace(/\s+/g, " ");
 }
 
+async function assertLinksToCanonicalContracts(file, section, language) {
+  const links = [...section.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)].map((match) => match[1]);
+  const canonicalFiles = [
+    "skills/agents/grill-to-tickets/SKILL.md",
+    "skills/agents/grill-to-tickets/references/ticket-review.md",
+  ];
+
+  for (const canonicalFile of canonicalFiles) {
+    const expected = path.resolve(canonicalFile);
+    assert.ok(
+      links.some((target) => path.resolve(path.dirname(file), target) === expected),
+      `${language} section links to ${canonicalFile} from ${file}`,
+    );
+    await fileExists(canonicalFile);
+  }
+}
+
 // The glossary table row whose Term cell is `term`, backticks aside.
 function tableRow(doc, term) {
   const row = doc
@@ -435,6 +452,62 @@ describe("grill-to-tickets production records and guides", () => {
     }
   });
 
+  it("links concise ticket-review and manifest summaries to the canonical contracts", async () => {
+    const guideFile = "docs/guides/grill-to-tickets.md";
+    const guide = await readTextOrNull(guideFile);
+    assert.ok(guide, "the grill-to-tickets guide exists");
+    const guideWorkflow = sectionOf(guide, "### ขั้นตอนการทำงาน 4 ลำดับขั้น");
+    const guideStage3 = numberedMarkdownItem(guideWorkflow, 4);
+    assert.ok(guideStage3, "the guide has a Stage 3 section");
+    assert.match(guideStage3, /manifest\.json/, "the guide keeps the derived manifest summary");
+    assert.match(guideStage3, /Ticket review/i, "the guide keeps the Stage 3.5 ticket-review summary");
+    assert.doesNotMatch(guideStage3, /--ticket-review 0/, "the guide does not duplicate the ticket-review skip flag");
+    assert.doesNotMatch(guideStage3, /spec fingerprint|planning-time ticket facts|no Status or timestamp/i, "the guide does not repeat manifest internals");
+    await assertLinksToCanonicalContracts(guideFile, guideStage3, "Thai guide Stage 3");
+    const guideStorage = guide.match(/```text\n(\.scratch\/<feature-slug>\/[\s\S]*?)```/);
+    assert.ok(guideStorage, "the guide keeps the feature storage tree");
+    assert.match(guideStorage[1], /manifest\.json/, "the storage tree keeps the manifest path");
+    assert.doesNotMatch(guideStorage[1], /spec fingerprint|planning facts|timestamp/i, "the storage tree does not duplicate manifest internals");
+
+    const pageFile = "docs/skills/agents/grill-to-tickets.md";
+    const page = await readTextOrNull(pageFile);
+    assert.ok(page, "the grill-to-tickets skill page exists");
+    const thaiPageSection = sectionOf(page, "## ภาษาไทย / Thai");
+    const englishPageSection = sectionOf(page, "## English / ภาษาอังกฤษ");
+    assert.ok(thaiPageSection && englishPageSection, "the skill page keeps both language sections");
+    assert.doesNotMatch(thaiPageSection, /--ticket-review 0/, "the Thai skill page does not restate the ticket-review skip flag");
+    assert.doesNotMatch(englishPageSection, /--ticket-review 0/, "the English skill page does not restate the ticket-review skip flag");
+
+    const thaiWorkflow = sectionOf(page, "### วิธีทำงานหลัก");
+    assert.ok(thaiWorkflow, "the skill page has a Thai main workflow section");
+    const thaiStage3 = numberedMarkdownItem(thaiWorkflow, 4);
+    assert.ok(thaiStage3, "the skill page keeps the Thai Stage 3 summary");
+    assert.match(thaiStage3, /Ticket review/i, "the Thai summary keeps Stage 3.5 ticket review");
+    assert.match(thaiStage3, /manifest\.json/, "the Thai summary keeps the derived manifest path");
+    assert.doesNotMatch(thaiStage3, /--ticket-review 0/, "the Thai summary does not repeat the skip flag");
+    assert.doesNotMatch(thaiStage3, /spec fingerprint|planning-time ticket facts|no Status or timestamp/i, "the Thai summary does not repeat manifest internals");
+    await assertLinksToCanonicalContracts(pageFile, thaiStage3, "Thai skill-page Stage 3");
+
+    const englishWorkflow = sectionOf(page, "### Main workflow");
+    assert.ok(englishWorkflow, "the skill page has an English Main workflow section");
+    const englishTicketParagraph = englishWorkflow.split(/\n\s*\n/).find((paragraph) => /After `SHIP`/.test(paragraph));
+    assert.ok(englishTicketParagraph, "the English ticket workflow is one paragraph");
+    assert.match(englishTicketParagraph, /manifest\.json/, "the English summary keeps the derived manifest path");
+    assert.match(englishTicketParagraph, /Ticket review/i, "the English summary keeps Stage 3.5 ticket review");
+    assert.doesNotMatch(englishTicketParagraph, /--ticket-review 0/, "the English summary does not repeat the skip flag");
+    assert.doesNotMatch(englishTicketParagraph, /spec fingerprint|planning-time ticket facts|no Status or timestamp/i, "the English summary does not repeat manifest internals");
+    await assertLinksToCanonicalContracts(pageFile, englishTicketParagraph, "English skill-page ticket workflow");
+
+    const relatedFiles = sectionOf(page, "### Related files");
+    assert.ok(relatedFiles, "the skill page has a Related files section");
+    const manifestItem = listItem(relatedFiles, ".scratch/<feature-slug>/manifest.json");
+    assert.ok(manifestItem, "the related-files list keeps the manifest path");
+    assert.doesNotMatch(manifestItem, /--write-budget|fingerprint|planning-time ticket facts|timestamp|on PASS/i, "the manifest entry does not duplicate write semantics");
+    const checkerItem = listItem(relatedFiles, "scripts/check-tickets.mjs");
+    assert.ok(checkerItem, "the related-files list describes the checker");
+    assert.doesNotMatch(checkerItem, /writes?[^\n]*manifest\.json[^\n]*PASS|manifest\.json[^\n]*on PASS/i, "the checker entry defers manifest write conditions to the canonical contract");
+  });
+
   it("describes owned formats, the three-skill Preflight, ticket fields, --write-budget, warnings, and the handoff recommendation", async () => {
     for (const file of ["docs/guides/grill-to-tickets.md", "docs/skills/agents/grill-to-tickets.md"]) {
       const doc = await readTextOrNull(file);
@@ -733,10 +806,11 @@ describe("grill-to-tickets production records and guides", () => {
 
     const page = await readTextOrNull("docs/skills/agents/grill-to-tickets.md");
     assert.ok(page, "the grill-to-tickets skill page exists");
-    const thaiStage3 = page.match(/^4\. \*\*Stage 3 — Tickets\*\*[^\n]*$/m);
-    const thaiStop = page.match(/^5\. \*\*Stop\*\*[^\n]*$/m);
-    assert.ok(thaiStage3 && thaiStop, "the skill page's Thai text has Stage 3 and Stop lines");
-    assertWarningsAndRecommendation("the skill page's Thai text", { warnings: thaiStage3[0], recommendation: thaiStop[0] }, thai);
+    const thaiWorkflow = sectionOf(page, "### วิธีทำงานหลัก");
+    const thaiStage3 = numberedMarkdownItem(thaiWorkflow, 4);
+    const thaiStop = numberedMarkdownItem(thaiWorkflow, 5);
+    assert.ok(thaiStage3 && thaiStop, "the skill page's Thai text has Stage 3 and Stop sections");
+    assertWarningsAndRecommendation("the skill page's Thai text", { warnings: thaiStage3, recommendation: thaiStop }, thai);
 
     const englishWorkflow = sectionOf(page, "### Main workflow");
     assert.ok(englishWorkflow, "the skill page has an English Main workflow section");
