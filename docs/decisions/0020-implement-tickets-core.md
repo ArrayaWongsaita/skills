@@ -84,9 +84,14 @@ core เดียวเป็นเจ้าของ Plan, wave, contract ข�
 
 ## Parallel validation record / บันทึกผล parallel validation
 
-Status: not validated. No human parallel-validation run has been recorded yet.
-Parallel readiness remains gated until Ticket 09 records a human run and its
-date here.
+Status: awaiting human validation. No result has been recorded; parallel
+readiness remains gated. Follow
+[`parallel-validation.md`](../../skills/agents/implement-tickets/references/parallel-validation.md)
+in a disposable scratch repository, then record the date, harness setup, and
+the observed result for each required check here. Keep the reference marker at
+`status: not validated` unless every check passes. After a successful run, set
+the marker to `status: validated YYYY-MM-DD` using the run date.
 
-สถานะ: ยังไม่ validated และยังไม่มีการบันทึกผล human parallel-validation run
-ความพร้อมของ parallel ยังถูกกั้นไว้จนกว่า Ticket 09 จะบันทึกผลและวันที่ไว้ที่นี่
+สถานะ: กำลังรอ human validation และยังไม่มีการบันทึกผล
+หลังทำ run ให้บันทึกวันที่ การตั้งค่า harness และผลของแต่ละ check ไว้ที่นี่
+ความพร้อมของ parallel ยังคงถูกกั้นไว้จนกว่าจะมีผลสำเร็จที่บันทึกไว้

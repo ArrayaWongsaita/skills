@@ -269,10 +269,23 @@ describe("implement-tickets skill and documentation contract", () => {
     }
   });
 
-  it("puts the parallel-validation marker in the skill reference", async () => {
+  it("documents the human parallel-validation procedure and its marker", async () => {
     const marker = await readTextOrNull(path.join(skillRoot, "references/parallel-validation.md"));
     assert.ok(marker, "the parallel-validation reference exists");
-    assert.match(marker, /^status: not validated$/m);
+    assert.match(marker, /^status: (?:not validated|validated \d{4}-\d{2}-\d{2})$/m);
+    assert.match(marker, /scratch repository/i);
+    assert.match(marker, /two independent tickets/i);
+    assert.match(marker, /\/implement-tickets/);
+    assert.match(marker, /two-wide wave/i);
+    assert.match(marker, /background workers/i);
+    assert.match(marker, /TaskStop/);
+    assert.match(marker, /permission prompts[\s\S]*main session/i);
+    assert.match(marker, /docs\/decisions\/0020-implement-tickets-core\.md/);
+    assert.match(marker, /status: validated YYYY-MM-DD/);
+
+    const adr = await readTextOrNull(path.join(repoRoot, "docs/decisions/0020-implement-tickets-core.md"));
+    assert.ok(adr, "ADR 0020 exists");
+    assert.match(adr, /Parallel validation record[\s\S]*awaiting/i);
   });
 });
 
