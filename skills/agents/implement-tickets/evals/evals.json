@@ -1,0 +1,192 @@
+{
+  "skill_name": "implement-tickets",
+  "evals": [
+    {
+      "id": 1,
+      "name": "planning pauses for approval before any source mutation",
+      "prompt": "/implement-tickets .scratch/approval-demo/issues/ with a valid ticket set. Present the Plan and wait.",
+      "expected_output": "The orchestrator presents the Plan, pauses for explicit approval, and confirms no file outside the feature directory changes before approval.",
+      "expectations": [
+        "Reads the ticket set and required parent context before planning",
+        "Does not dispatch, write status, or mutate source before explicit approval"
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "ticket Seam and Context become the worker test boundary and read list",
+      "prompt": "/implement-tickets .scratch/context-demo/issues/ after Plan approval. Ticket 01 has a Seam and Context field.",
+      "expected_output": "Copies the ticket Seam verbatim into the worker prompt and turns Context into the worker's read list.",
+      "expectations": [
+        "Does not paraphrase the Seam",
+        "Uses Context as a read list and touch-set input"
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "fresh verifier reproduces red and checks acceptance coverage",
+      "prompt": "/implement-tickets .scratch/verify-demo/issues/ after Plan approval. Worker 01 returns green with a new test and a report.",
+      "expected_output": "A fresh verifier reproduces red on the test change at the pre-ticket integration SHA, reruns green with the worker commit, and returns evidence covering every acceptance criterion.",
+      "expectations": [
+        "Verifier is a separate fresh subagent, not the orchestrator",
+        "Checks that the new tests fail before the implementation and verifies acceptance coverage"
+      ],
+      "files": []
+    },
+    {
+      "id": 4,
+      "name": "blocked dependency branch preserves independent tickets",
+      "prompt": "/implement-tickets .scratch/partial-demo/issues/ after approval. Ticket 01 becomes BLOCKED and ticket 03 depends on it; ticket 02 is independent.",
+      "expected_output": "Ticket 01 is BLOCKED, its dependants are held, and the independent ticket 02 continues to the verified partial path.",
+      "expectations": [
+        "Does not start a dependant whose blocker is blocked",
+        "Preserves independent work and reports the resume path"
+      ],
+      "files": []
+    },
+    {
+      "id": 5,
+      "name": "status and list remain read-only",
+      "prompt": "/implement-tickets status demo and then /implement-tickets list. The run has a dirty feature tree.",
+      "expected_output": "Status and list are read-only: they report saved run state and do not change files, dispatch work, or reconcile Git.",
+      "expectations": [
+        "Does not dispatch, edit files, or run resume reconciliation from status or list"
+      ],
+      "files": []
+    },
+    {
+      "id": 6,
+      "name": "handoff stops before review and publication",
+      "prompt": "/implement-tickets .scratch/handoff-demo/issues/ has passed the final integration gate.",
+      "expected_output": "The handoff reports the integration branch and review commands, then stops before review, push, or pull request creation.",
+      "expectations": [
+        "Does not begin review or publish the branch",
+        "Provides the integration branch and next review commands"
+      ],
+      "files": []
+    },
+    {
+      "id": 7,
+      "name": "independent tickets share a deterministic wave",
+      "prompt": "/implement-tickets .scratch/wave-demo/issues/ has three independent tickets with disjoint touch sets.",
+      "expected_output": "Independent tickets with disjoint known touch sets enter the same wave, subject to the concurrency cap.",
+      "expectations": [
+        "Preserves ticket-number order in wave reporting"
+      ],
+      "files": []
+    },
+    {
+      "id": 8,
+      "name": "overlapping touch sets move to successive waves",
+      "prompt": "/implement-tickets .scratch/overlap-demo/issues/ has two otherwise independent tickets that both edit the same file.",
+      "expected_output": "The overlapping touch sets are serialized into successive waves so both workers do not edit the same known path at once.",
+      "expectations": [
+        "Names the overlap reason in the Plan"
+      ],
+      "files": []
+    },
+    {
+      "id": 9,
+      "name": "serial mode creates one ticket per wave",
+      "prompt": "/implement-tickets --serial .scratch/serial-demo/issues/ contains four independent tickets.",
+      "expected_output": "With --serial, the Plan places one ticket per wave regardless of independent touch sets.",
+      "expectations": [
+        "Explains that --serial changes wave width, not the ticket dependency graph"
+      ],
+      "files": []
+    },
+    {
+      "id": 10,
+      "name": "concurrency cap counts workers and verifiers together",
+      "prompt": "/implement-tickets --concurrency 3 .scratch/cap-demo/issues/ has a worker return while three subagents are active.",
+      "expected_output": "The concurrency cap of three counts workers and verifiers together; a pending verifier is started before a new worker.",
+      "expectations": [
+        "Does not exceed the combined active worker and verifier cap"
+      ],
+      "files": []
+    },
+    {
+      "id": 11,
+      "name": "first worker command syncs and asserts the integration SHA",
+      "prompt": "/implement-tickets .scratch/sync-demo/issues/ after approval. The worker worktree was checked out at the wrong commit.",
+      "expected_output": "The first command checks out the worker branch at the integration SHA and asserts HEAD equals that SHA; a mismatch returns failed_infra without counting an attempt.",
+      "expectations": [
+        "Includes the sync step in every worker prompt, including the first ticket"
+      ],
+      "files": []
+    },
+    {
+      "id": 12,
+      "name": "fresh native Explore verifier returns raw evidence without a verdict",
+      "prompt": "/implement-tickets .scratch/verifier-demo/issues/ after a worker returns with a shallow report.",
+      "expected_output": "A fresh native Explore verifier starts immediately; if its report is too shallow to judge, a fresh read-only general-purpose verifier returns raw evidence and no verdict.",
+      "expectations": [
+        "Verifier is never the orchestrator",
+        "Verifier reports observations and command output rather than passing or failing the ticket"
+      ],
+      "files": []
+    },
+    {
+      "id": 13,
+      "name": "timeouts crashes and lost subagents are infra retries outside ticket attempts",
+      "prompt": "/implement-tickets .scratch/infra-demo/issues/ after approval. A worker wait ends before its dispatch returns, then the replacement subagent crashes.",
+      "expected_output": "Timeout, crash, or lost subagent is recorded as failed_infra. Infra retries occur without counting an attempt; after two infra retries the ticket becomes BLOCKED (TICKET_PROVIDER_FAILED).",
+      "expectations": [
+        "Arms one background wait for each worker and verifier dispatch",
+        "Stops a subagent when the wait ends first"
+      ],
+      "files": []
+    },
+    {
+      "id": 14,
+      "name": "adapter selection reports the lock source and install line",
+      "prompt": "/implement-tickets --with codex .scratch/adapter-demo/issues/ has a lock entry from the user lock.",
+      "expected_output": "The --with adapter is resolved before planning, and missing-adapter guidance names the lock source and prints its source-derived install line.",
+      "expectations": [
+        "Passes the raw model value to the selected adapter"
+      ],
+      "files": []
+    },
+    {
+      "id": 15,
+      "name": "missing adapter stops before planning",
+      "prompt": "/implement-tickets --with absent .scratch/adapter-missing/issues/ has no matching installed adapter.",
+      "expected_output": "The missing adapter is reported before planning, with an install line derived from the project lock first and user lock second.",
+      "expectations": [
+        "Does not present a Plan or create run state for an unavailable adapter"
+      ],
+      "files": []
+    },
+    {
+      "id": 16,
+      "name": "adapter envelope outcomes preserve their required order",
+      "prompt": "/implement-tickets --with codex .scratch/envelope-demo/issues/ receives one result for each adapter outcome.",
+      "expected_output": "The adapter envelope handles failed_infra first, failed_other second, and completed last, with each outcome carrying the required evidence fields.",
+      "expectations": [
+        "Treats infrastructure failure without spending a ticket attempt"
+      ],
+      "files": []
+    },
+    {
+      "id": 17,
+      "name": "integration gate runs after verified tickets in ticket order",
+      "prompt": "/implement-tickets .scratch/gate-demo/issues/ has a fully verified wave with tickets 01 and 02.",
+      "expected_output": "The integration gate squash-merges tickets in ticket order, then runs the full typecheck and full suite on the integration branch before opening the next wave.",
+      "expectations": [
+        "A gate failure prevents dispatch of the next wave"
+      ],
+      "files": []
+    },
+    {
+      "id": 18,
+      "name": "first failing merge keeps the last good commit and retries the culprit serially",
+      "prompt": "/implement-tickets .scratch/recovery-demo/issues/ has a failed gate after replaying ticket commits.",
+      "expected_output": "The orchestrator isolates the first failing merge, returns the integration branch to the last good commit, keeps later verified tickets without re-verifying them, and runs the culprit in a serial attempt.",
+      "expectations": [
+        "Records the culprit and recovery sequence in status"
+      ],
+      "files": []
+    }
+  ]
+}

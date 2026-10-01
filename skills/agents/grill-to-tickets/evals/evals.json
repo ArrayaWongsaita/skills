@@ -4,14 +4,15 @@
     {
       "id": 1,
       "name": "first-pass SHIP straight through the stages",
-      "prompt": "/grill-to-tickets Add a \"copy shareable link\" button to the report detail page that copies the report's existing public URL to the clipboard and shows a confirmation toast. One component, no API or schema change, acceptance behavior is explicit, and no open decisions remain — treat the Stage 0 frontier as empty and already confirmed.",
-      "expected_output": "With the Stage 0 frontier already empty and confirmed, pass straight through: synthesize spec.md in Stage 1, run scrutinize once in a fresh reviewer subagent (Stage 2), normalize its closing line to SHIP, and advance to Stage 3 (ticket-format.md). Publish tickets under .scratch/<feature-slug>/issues/ and print the handoff: .scratch/ needs no commit, /clear, then /subagent-implement .scratch/<feature-slug>/.",
+      "prompt": "/grill-to-tickets Add a \"copy shareable link\" button to the report detail page that copies the report's existing public URL to the clipboard and shows a confirmation toast. One component, no API or schema change, acceptance behavior is explicit, and no open decisions remain — treat the Stage 0 frontier as empty and already confirmed. decisions.md State already holds review: 0/3 rounds from the confirmed pause.",
+      "expected_output": "With the Stage 0 frontier already empty and confirmed, pass straight through: synthesize spec.md in Stage 1, use the recorded review answer without asking again and run scrutinize once in a fresh reviewer subagent (Stage 2), normalize its closing line to SHIP, and advance to Stage 3 (ticket-format.md). Publish tickets under .scratch/<feature-slug>/issues/ and print the handoff: .scratch/ needs no commit, /clear, the DAG recommendation and manifest, then /implement-tickets .scratch/<feature-slug>/ with a one-line --with <backend> adapter hint. The manifest recommends [\"implement-tickets\"] at every wave width.",
       "expectations": [
         "Confirms the empty Stage 0 frontier, then moves through Stage 1 -> Stage 2 -> Stage 3 in order",
         "Runs scrutinize exactly once and records cycle 1 with verdict SHIP in a single .scratch/<feature-slug>/design-review.md file",
         "Normalizes the scrutinize verdict to the token SHIP with no paraphrasing",
         "Does not enter FIX_THEN_SHIP, REWORK, or a backward transition to Stage 0",
-        "Prints the handoff — .scratch/ needs no commit, /clear, then /subagent-implement .scratch/<feature-slug>/ — never invokes an implementer, and dispatches a subagent only for the Stage 2 review"
+        "Prints the handoff — .scratch/ needs no commit, /clear, then /implement-tickets .scratch/<feature-slug>/ with one-line --with <backend> adapter hint — never invokes an implementer, and dispatches a subagent only twice: the Stage 2 design reviewer and the Stage 3.5 ticket reviewer",
+        "Records recommendedImplementers as [\"implement-tickets\"] at every wave width"
       ],
       "files": []
     },
@@ -267,14 +268,14 @@
     },
     {
       "id": 32,
-      "name": "Preflight records the lock by location",
-      "prompt": "/grill-to-tickets Add export feature. grilling is found under .agents/skills/grilling/, domain-modeling under .claude/skills/domain-modeling/, and scrutinize under ~/.agents/skills/scrutinize/. The project skills-lock.json holds computedHash values for grilling and domain-modeling. Global ~/.agents/.skill-lock.json has no entry for scrutinize.",
-      "expected_output": "Preflight resolves grilling (.agents/skills/) and domain-modeling (.claude/skills/) from the project and scrutinize (~/.agents/skills/) from home. It reads skills-lock.json computedHash for grilling and domain-modeling, and ~/.agents/.skill-lock.json for scrutinize. Because scrutinize has no entry in the global lock, Preflight records 'no lock entry'. It writes these into decisions.md under ## Preflight as ### Preflight <date> when initializing Stage 0.",
+      "name": "Preflight records paths only on resume",
+      "prompt": "/grill-to-tickets continue export-feature. grilling is found under .agents/skills/grilling/, domain-modeling under .claude/skills/domain-modeling/, and scrutinize under ~/.agents/skills/scrutinize/. decisions.md has older Preflight lines carrying lock hashes. Resume the run.",
+      "expected_output": "Keep the older Preflight lines with lock hashes as written. Append a new dated entry under ## Preflight in decisions.md: each line records the skill and the path found, with no hash. The new entries record paths only, without reading either lock file. Resume at the recorded State.",
       "expectations": [
-        "Resolves project skills against skills-lock.json computedHash",
-        "Resolves global skills against ~/.agents/.skill-lock.json skillFolderHash",
-        "Records 'no lock entry' when a lock file, entry, or value is missing",
-        "Writes the dated entry under ## Preflight in decisions.md without recomputation or warning"
+        "Records the skill and the path found for grilling, domain-modeling, and scrutinize in their resolved locations",
+        "Older Preflight lines carrying lock hashes are kept on resume",
+        "New dated entries record paths only under ## Preflight",
+        "Appends the entry without reading either lock file"
       ],
       "files": []
     },
@@ -372,22 +373,23 @@
       "id": 38,
       "name": "handoff recommends an implementer from the DAG",
       "prompt": "$grill-to-tickets continue member-export. The checker's final run shows wave 0: 01, wave 1: 02, 03, 04; maximum wave width 3; critical-path length 2.",
-      "expected_output": "Print the handoff in order: /clear, then the DAG summary — waves, maximum wave width, critical-path length, and recommended implementer — between /clear and the implementer commands, recommending agy-implement or opencode-implement for width 3 and naming the skills without a leading slash. Then /subagent-implement .scratch/member-export/ with /agy-implement and /opencode-implement as the alternatives.",
+      "expected_output": "Use the checker's final DAG summary as the source for the recommendation: wave 0: 01, wave 1: 02, 03, 04; maximum wave width 3; critical-path length 2; recommended implementer: implement-tickets. Write recommendedImplementers as [\"implement-tickets\"]. Print /clear, the DAG summary and Manifest line, then /implement-tickets .scratch/member-export/ with a one-line --with <backend> adapter hint. Do not list the legacy implementer commands.",
       "expectations": [
         "Prints the DAG summary and recommended implementer after /clear and before the implementer commands",
-        "Recommends agy-implement or opencode-implement for a maximum wave width of 3",
-        "Names the recommended skills without a leading slash",
-        "Keeps the Commit -> /clear -> /subagent-implement order"
+        "Takes the recommendation from the final DAG summary, names implement-tickets at maximum wave width 3, and records [\"implement-tickets\"] in recommendedImplementers",
+        "Names the recommendation without a leading slash",
+        "Prints /implement-tickets .scratch/member-export/ after the DAG summary and Manifest line",
+        "Mentions --with <backend> as a one-line adapter hint, without listing the legacy implementer commands"
       ],
       "files": []
     },
     {
       "id": 39,
-      "name": "Stage 2 entry asks once for a review round count",
-      "prompt": "$grill-to-tickets Add CSV export to the members table. Stage 1 has just written spec.md.",
-      "expected_output": "Before the first review, ask once whether to review and at most how many rounds, proposing 3 (0 skips the review). Write the maximum into decisions.md State and do not ask again in this run.",
+      "name": "Stage 0 pause combines confirmation and review maximum",
+      "prompt": "$grill-to-tickets The frontier is empty and the blind-spot pass is finished. Show the Stage 0 pause.",
+      "expected_output": "Ask for confirmation and the review maximum in the same message, proposing 3; 0 skips. Record the answer in decisions.md State when given and ask nothing at Stage 2.",
       "expectations": [
-        "Asks the review question once before dispatching any reviewer",
+        "Asks the review question once at the Stage 0 pause",
         "Proposes 3 rounds and states that 0 skips the review",
         "Records the answer in decisions.md State",
         "Does not ask the question again after a FIX_THEN_SHIP cycle"
@@ -396,25 +398,25 @@
     },
     {
       "id": 40,
-      "name": "--review flag answers the entry question up front",
+      "name": "--review flag answers the Stage 0 pause up front",
       "prompt": "$grill-to-tickets Add CSV export to the members table --review 2",
-      "expected_output": "Take a maximum of 2 rounds from the flag, ask no entry question at Stage 2, and record the maximum in decisions.md State. With --review 0 the review is skipped and the run goes from Stage 1 to Stage 3, recording that the gate was skipped.",
+      "expected_output": "At the Stage 0 pause take maximum 2 from --review 2 and ask no review question. Write review: 0/2 rounds to State. With --review 0 write review: skipped at the pause, then Stage 2 writes ended: skipped in design-review.md and advances to Stage 3.",
       "expectations": [
         "Does not ask the review entry question",
         "Records a maximum of 2 rounds in State",
-        "Treats --review 0 as skipping Stage 2 and records that it was skipped"
+        "Treats --review 0 as skipping the review and records that it was skipped"
       ],
       "files": []
     },
     {
       "id": 42,
-      "name": "missing and invalid --review values ask for the budget",
+      "name": "missing and invalid --review values ask at the pause",
       "prompt": "Run /grill-to-tickets Add CSV export to the members table with --review but no value. In a separate run, use --review many.",
-      "expected_output": "For each invocation, treat the missing or invalid --review value as unset. At Stage 2, ask once whether to review and at most how many rounds, propose 3, and wait for the user's answer before dispatching a reviewer.",
+      "expected_output": "Treat missing and invalid values as unset. At the Stage 0 pause ask for confirmation and the review maximum together, proposing 3, before any reviewer.",
       "expectations": [
         "Falls back to asking when --review has no value",
         "Falls back to asking when --review is not a non-negative integer",
-        "Asks the Stage 2 question once before dispatching a reviewer",
+        "Asks the Stage 0 pause question once before dispatching a reviewer",
         "Proposes 3 rounds"
       ],
       "files": []
@@ -422,12 +424,95 @@
     {
       "id": 41,
       "name": "continue resumes with rounds spent kept spent",
-      "prompt": "/grill-to-tickets continue wishlist-sync. decisions.md State says review: 2/3 rounds; design-review.md holds two completed cycles.",
-      "expected_output": "Resume in Stage 2 with a maximum of 3 and 2 rounds used, without asking the entry question and without refilling the budget. Only one more review may run before the exhaustion question.",
+      "prompt": "/grill-to-tickets continue wishlist-sync --review 9. State says review: 2/3 rounds; design-review.md holds two completed cycles.",
+      "expected_output": "Recorded State wins over --review 9: retain maximum 3 and used 2, ask no entry question and run at most one more round before exhaustion.",
       "expectations": [
         "Reads the maximum and rounds used from State and design-review.md",
         "Does not ask the review entry question again",
         "Runs at most one more round before the add-rounds-or-continue question"
+      ],
+      "files": []
+    },
+    {
+      "id": 43,
+      "name": "ticket review shows each ASK before the user decides",
+      "prompt": "$grill-to-tickets continue member-export. Stage 3 has drafted tickets 01 and 02 and the checker has just printed result: PASS. The invocation has no --ticket-review flag and the harness offers a subagent. Run Stage 3.5 for both tickets.",
+      "expected_output": "Run one fresh, read-only ticket reviewer after the passing check and before the quiz. Read the whole ticket set, the spec, every file named in the Context lines, the feature glossary and ADRs, and the repository glossary and ADRs. For each ticket decide whether a fresh worker holding only that ticket and its Context paths could start without asking anyone. Return one numbered line per ticket as READY or ASK with a question. Show each ASK question next to that ticket's Seam, Context, and Budget; the person chooses whether to fix or acknowledge before the main thread acts. Re-run the checker with --write-budget after a fix and start a second review only if the person asks.",
+      "expectations": [
+        "Runs Stage 3.5 once after result: PASS and before the quiz",
+        "Uses one fresh reviewer that reads the ticket set, the spec, and the Context-named files",
+        "Reads the feature and repository glossaries and ADRs to understand terms",
+        "Returns READY or ASK with the question a fresh worker would ask",
+        "Shows each ASK beside Seam, Context, and Budget before the person chooses fix or acknowledge",
+        "Re-runs the checker with --write-budget after a fix and leaves another review to the person's request"
+      ],
+      "files": []
+    },
+    {
+      "id": 44,
+      "name": "question tiers: partial reply and blind-spot round",
+      "prompt": "$grill-to-tickets Add team exports. Post round 1 with export permissions (changes a story), default filename (safe default), and an unsure choice. I answer only the permissions question and ask you to raise filename to hard. In the next round I answer only one hard question and do not object to its easy default. Later post the blind-spot final round.",
+      "expected_output": "Tag every question hard or easy. Permissions and the unsure choice are hard, with numbered titles, full bodies, and recommended answers. Filename starts easy, one line stating its default unless the person objects, and is raised to hard with full text and a recommendation on request. Record tiers in decisions.md. When the partial reply to the next round is recorded, log every unobjected easy question as decided: default; unanswered hard questions remain open. The blind-spot final round uses the same tiers.",
+      "expectations": [
+        "Classifies story, interface, test-seam, and hard-to-reverse choices as hard; unsure means hard",
+        "Shows hard questions with numbered titles, full bodies, and recommended answers",
+        "Shows easy questions as one line with a default unless the person objects",
+        "Raises filename to hard and re-posts its full text and recommendation",
+        "Logs tiers and decided: default for unobjected easy questions on the partial reply, retaining unanswered hard questions as open",
+        "Tags each blind-spot question hard or easy using the same rules"
+      ],
+      "files": []
+    },
+    {
+      "id": 45,
+      "name": "parked-flow: blocking downgrade, default confirmation, resume and late answer scope ticket review history",
+      "prompt": "$grill-to-tickets Add exports. I cannot answer retention or filename now: park retention as blocking with default 30 days owned by the compliance lead, and filename as non-blocking with default export.csv owned by me. Resume before the pause. At the pause I accept retention’s default and confirm. Draft tickets 01 and 02, pass the checker, and run Review 1; it returns 01 READY and 02 ASK: confirm the 30-day retention window. Show me the ticket quiz. Later the compliance lead answers 90 days, changing ticket 02; ticket 01's content stays unchanged. Reconcile the spec and tickets. I have not asked for another review yet, so proceed without starting one automatically and show me the revised-set quiz. When I ask for a second fresh review, run it as Review 2, then show me the quiz again; I approve the revised set. Finish the handoff.",
+      "expected_output": "Write both questions with six fields in parked.md, status open. Their round lines read decided: parked and count as closed. On resume read parked.md. The open blocking retention question holds the pause. Accepting its 30-day default makes it resolved: assumed; confirming the pause makes non-blocking filename resolved: assumed without a fresh ask. Stage 1 writes both defaults to Further Notes. Review 1 records 01 READY and 02 ASK about the 30-day retention window. When the compliance lead later answers 90 days, log a new decision superseding the 30-day assumption and change retention to resolved: answered. Because the spec already contains the 30-day assumption, return to Stage 1, replace it in Further Notes, and check the revised spec against every decision. Resume the affected Stage 2 review using the maximum and rounds already recorded in State; do not reset or re-ask for the budget. Preserve Review 1 and identify ticket 02 as historical because its content changed: mark the numbered heading historical for ticket 02 due to the late decision, retain its 01 READY and 02 ASK output, and keep ticket 01's READY verdict current because ticket 01 is unchanged. Mark the still-open 02 ASK line — superseded: <late decision>; it is closed history and is not carried into the revised quiz as an open question. Changed-ticket verdicts are not current for ticket 02, while unchanged ticket 01 READY remains current. Reconcile existing tickets against the 90-day spec, rerun the checker, and repeat the user quiz without automatically starting Review 2. The user quiz remains the approval gate. Only after the person asks for a second fresh review, append Review 2, review the revised set, and quiz the user again before handoff. The pause summary lists both entries labelled assumed after confirmation; the final handoff lists every remaining resolved: assumed entry, filename only.",
+      "expectations": [
+        "Stores six fields: question, why parked, blocking or non-blocking, default assumption, owner, status",
+        "Resume restores parked state and waiting on names the blocking parked question",
+        "Pause cannot complete with an open blocker",
+        "Downgrade and non-blocking confirmation resolve defaults explicitly",
+        "Stage 1 carries the 30-day default into Further Notes before the late answer",
+        "The 90-day answer supersedes the 30-day assumption and resolves retention as answered",
+        "Resynchronizes the spec in Stage 1 and reruns affected review stages with the State review budget unchanged",
+        "Review 1 has open 02 ASK when the 90-day late answer changes its ticket content",
+        "Preserves Review 1 and marks only ticket 02 historical because its content changed; unchanged ticket 01 READY remains current",
+        "Marks the old open ticket 02 ASK with — superseded: <late decision> and excludes it from revised-set open questions",
+        "Does not treat changed-ticket verdicts as current or start Review 2 before the user asks",
+        "Appends numbered Review 2 only after the user asks, then repeats the user quiz as the approval gate",
+        "Reconciles existing tickets against the revised spec, then reruns the checker and quiz before handoff",
+        "Pause summary and handoff list every resolved: assumed entry labelled assumed"
+      ],
+      "files": []
+    },
+    {
+      "id": 46,
+      "name": "older resumed Stage 2 run with no review answer",
+      "prompt": "$grill-to-tickets continue legacy-export. State is Stage 2 and has no review answer.",
+      "expected_output": "Ask the entry question once at Stage 2, propose 3, 0 skips, record State.",
+      "expectations": [
+        "Ask the entry question once at Stage 2, propose 3, 0 skips, record State."
+      ],
+      "files": []
+    },
+    {
+      "id": 47,
+      "name": "blocking parked pause retains review answer",
+      "prompt": "$grill-to-tickets At the Stage 0 pause retention is blocking and open. I choose 2 review rounds but cannot answer retention. Continue, then accept retention default.",
+      "expected_output": "Record review: 0/2 rounds when given while retention holds the pause open. Keep waiting on retention. Ask no review question on resume or confirmation.",
+      "expectations": [
+        "Record review: 0/2 rounds when given while retention holds the pause open. Keep waiting on retention. Ask no review question on resume or confirmation."
+      ],
+      "files": []
+    },
+    {
+      "id": 48,
+      "name": "decision-level rework keeps review answer",
+      "prompt": "$grill-to-tickets Stage 2 returns decision-level REWORK with State review: 1/3 rounds. Resolve the decision and reach the pause again.",
+      "expected_output": "Keep review: 1/3 rounds and ask only for confirmation; do not repeat the review question or refill spent rounds.",
+      "expectations": [
+        "Keep review: 1/3 rounds and ask only for confirmation; do not repeat the review question or refill spent rounds."
       ],
       "files": []
     }

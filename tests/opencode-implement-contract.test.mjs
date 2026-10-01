@@ -159,7 +159,7 @@ describe("opencode-implement skill contract", () => {
           "has a negative case for a bare 'implement this'",
         );
         assert.ok(
-          triggers.some((t) => t.should_trigger === false && /(agy-implement|subagent-implement)/i.test(t.query)),
+          triggers.some((t) => t.should_trigger === false && /(agy-implement|implement-tickets)/i.test(t.query)),
           "has a negative case for a sibling skill",
         );
       }
@@ -1083,7 +1083,7 @@ describe("opencode-implement skill contract", () => {
       assert.match(adr, /## Decision \/ การตัดสินใจ/);
       assert.match(adr, /## Consequences \/ ผลที่ตามมา/);
       assert.match(adr, /agy-implement/);
-      assert.match(adr, /subagent-implement/);
+      assert.match(adr, new RegExp(["subagent", "implement"].join("-")));
       assert.match(adr, /standalone/i);
       assert.match(adr, /local/i);
       assert.match(adr, /own(s)? (its )?(own )?(copy|machinery)/i);

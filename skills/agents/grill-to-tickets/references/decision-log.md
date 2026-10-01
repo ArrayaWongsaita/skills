@@ -17,23 +17,33 @@ decision, including the small ones neither of them takes.
 - stage: 0 — Grill
 - waiting on: answers to round 3
 - updated: 2026-09-24
+- ticket review: done
 
 ## Preflight
 
 ### Preflight 2026-09-24
 
-- `grilling` — `.agents/skills/grilling/SKILL.md` — lock: `a1b2c3d4...`
-- `domain-modeling` — `.agents/skills/domain-modeling/SKILL.md` — lock: `e5f6a7b8...`
-- `scrutinize` — `~/.agents/skills/scrutinize/SKILL.md` — lock: `no lock entry`
+- `grilling` — `.agents/skills/grilling/SKILL.md`
+- `domain-modeling` — `.agents/skills/domain-modeling/SKILL.md`
+- `scrutinize` — `~/.agents/skills/scrutinize/SKILL.md`
 
 ## Round 1
 
-- **Q1 — <question title>** — recommended: <answer> — decided: <answer> — why: <the user's reason, when given>
-- **Q2 — <question title>** — recommended: <answer> — decided: <answer>
+- **Q1 — <question title>** — tier: hard — recommended: <answer> — decided: <answer> — why: <the user's reason, when given>
+- **Q2 — <question title>** — tier: easy — recommended: <default> — decided: default
 
 ## Round 2
 
-- **Q1 — <question title>** — recommended: <answer> — decided: open
+- **Q1 — <question title>** — tier: hard — recommended: <answer> — decided: open
+
+## Ticket review
+
+### Review 1 — current ticket set
+
+- reviewer: subagent
+- 01 READY
+- 02 ASK: <question> — resolved: <change>
+- 03 ASK: <question> — acknowledged
 
 ## Ticket warnings
 
@@ -41,14 +51,59 @@ decision, including the small ones neither of them takes.
 - `the feature has 16 tickets; split it into separate feature slugs` — acknowledged
 ```
 
+For a run that skips the review, the State key is `ticket review: skipped` and
+`- review skipped` is the only entry under `## Ticket review`:
+
+```markdown
+## State
+
+- ticket review: skipped
+
+## Ticket review
+
+- review skipped
+```
+
+When a changed late answer changes reviewed ticket content, preserve the
+reviewer output and mark its numbered entry historical for the affected ticket
+numbers, for example
+`### Review N — historical for ticket 02: superseded by <late decision>`. Keep
+its `READY` and `ASK` text. For unchanged tickets, verdicts remain current, and
+their open `ASK` questions remain open. Changed tickets have no current
+verdict from earlier reviews. Add
+`— superseded: <late decision>` to each still-open `ASK` line for a changed
+ticket; those lines are closed history and are excluded from current open
+questions.
+
 - **State** is rewritten in place. `stage` is one of `0 — Grill`, `1 — Spec`,
   `2 — Design Review Gate`, `3 — Tickets`, or `done`. `waiting on` names the one
   thing the run needs from the user next — a round's answers, Stage 0
   confirmation, test-seam confirmation, ticket-quiz approval, the review entry
-  question, or the add-rounds choice — or `nothing` while the run works. In Stage 2, State also carries
+  question, a blocking parked question (name it when it alone holds the run),
+  or the add-rounds choice — or `nothing` while the run works. From the Stage 0 pause, State carries
   `review: <used>/<max> rounds` (or `review: skipped`), the user's answer to
-  the entry question.
-- **Preflight** records the stage skills found and their lock values. Stage 0
+  the entry question. It also carries `ticket review: pending`, `done`, or
+  `skipped`; Stage 0 step 1 writes `skipped` when `--ticket-review 0` is present
+  and `pending` otherwise, and the key becomes `done` after the review.
+- **Ticket review** records chronological, numbered review entries under
+  `## Ticket review` (`### Review 1`, `### Review 2`, and so on). Each entry has
+  one reviewer line, either `- reviewer: subagent` or `- reviewer: inline`,
+  followed by one line per ticket: `- NN READY` or `- NN ASK: <question>`. An
+  open ASK line has no suffix; when settled, that same line carries
+  `— resolved: <change>` or `— acknowledged`. If a late answer changes ticket
+  content, retain the output under its numbered heading and mark it historical
+  for the changed ticket numbers, for example
+  `historical for ticket 02: superseded by <late decision>`. For unchanged
+  tickets, verdicts remain current, including their open ASK questions.
+  Changed tickets have no current verdict from earlier reviews. Add
+  `— superseded: <late decision>` to each still-open ASK line for a
+  changed ticket; those lines are closed history and are not current open
+  questions. A second fresh review runs only when the
+  person asks, and is appended under the next review number. Existing unnumbered
+  review output is treated as Review 1; preserve it under that heading when
+  numbering or marking it historical. A skipped review records `- review
+  skipped` as its only Ticket review entry, alongside the State key.
+- **Preflight** records the skill and the path found for each stage skill. Stage 0
   step 1 writes the first `### Preflight <date>` entry under `## Preflight` when
   it creates the log, and each `continue` appends another, keeping earlier entries.
 - **Ticket warnings** logs the checker's Stage 3 warnings, one line each with the
@@ -65,11 +120,25 @@ decision, including the small ones neither of them takes.
 
 ## When to write
 
-1. When you post a round, append it with each question's recommended answer and
+1. When you post a round, append it with each question's tier, recommended answer and
    `decided: open`, and set `waiting on` to that round.
-2. When the answers arrive, fill in every `decided:` before you post the next
-   round.
-3. At every stage transition, and before every pause that waits on the user,
+2. When the person's reply to a round is recorded, log every easy question they
+   did not object to as `decided: default`, including when they answered only some hard questions.
+   `decided: default` means the stated default was accepted by exception; keep
+   that default in the question's recommended answer so the decision is durable.
+   Record explicit answers and objections; unanswered hard questions stay
+   `decided: open` until answered. A request to raise an easy question to hard
+   changes its tier to hard, keeps it open, and re-posts its full text and recommendation.
+   A parked question leaves its round with `decided: parked`, which counts as
+   closed; write its state in `parked.md` using `parked-questions.md`.
+   A later answer is logged as a new decision entry naming the parked question
+   and superseding its assumed decision; update its status in `parked.md` to
+   `resolved: answered`.
+   Fill in the remaining answers before you post the next round.
+3. At the Stage 0 pause, record the review answer in State when given, even
+   while a blocking parked question holds the pause open. Use `review: 0/<max> rounds`
+   or `review: skipped` for 0; keep the answer on re-grill and resume.
+4. At every stage transition, and before every pause that waits on the user,
    update State.
 
 A round is closed when every question in it carries a `decided:` other than
@@ -77,13 +146,45 @@ A round is closed when every question in it carries a `decided:` other than
 
 ## Resume — `continue <feature-slug>`
 
-1. Read `decisions.md`, State first, then `CONTEXT.md`, `adr/`, and whichever of
-   `spec.md`, `design-review.md`, and `issues/` exist.
+1. Read `decisions.md`, State first, and its `## Ticket review` section to
+   recover verdicts and ASK questions that are still open for the current
+   ticket set; then read
+   `parked.md` when present to recover each parked question's current state,
+   `CONTEXT.md`, `adr/`, and whichever of `spec.md`, `design-review.md`, and
+   `issues/` exist.
 2. Take the gate's maximum and rounds used from State and `design-review.md`;
-   never ask the entry question again and never refill spent rounds.
+   keep a recorded answer without asking again; never refill spent rounds.
+   A recorded State answer wins over a `--review` flag on `continue`.
+   The pause and Stage 2 each ask only when State holds no review answer;
+   an older run resuming at Stage 2 with none gets the entry question there.
+   Older Preflight lines with lock hashes are kept as written on resume;
+   new entries record paths only. Append the dated entry without reading either lock file.
 3. Resume at the recorded `stage` and `waiting on`. When the run waits on a
    round, re-post that round's open questions. Every logged decision is settled:
    a question returns only when a gate finding reopens it.
 4. With no `decisions.md` — a run begun before the log existed — rebuild State
    from the artifacts present, tell the user which decisions survive only as
    spec text, and start the log from there.
+5. A `ticket review` State key wins over any invocation flag. An explicit
+   `--ticket-review 0` turns `pending` into `skipped`; a `done` review stays
+   `done` with every flag, and a `skipped` review stays `skipped`. A State with
+   no `ticket review` key takes the invocation's flag and otherwise runs the
+   review once. Keep the review State and `## Ticket review` entries together:
+   a `done` State keeps its numbered entries, and a `skipped` State keeps the
+   review skipped. On resume, select current verdicts per ticket based on
+   whether that ticket's content changed. In a partially historical review, the
+   heading alone does not disqualify unchanged-ticket verdicts or their open
+   ASK questions. Revised tickets have no current verdict from a review whose
+   ticket content changed; superseded ASK lines are closed history and excluded
+   from open questions.
+   The revised set still goes through its checker and user quiz. A fresh review
+   of that set starts only when the person asks and is appended as the next
+   numbered entry.
+6. If a late answer changes an assumed parked value already present in
+   `spec.md`, log the superseding decision, update `parked.md`, set State to
+   Stage 1, and synchronize the spec before handoff. Resume through the affected
+   Stage 2 and ticket stages. Keep the review maximum and rounds used from State;
+   never reset or re-ask for the review budget. When tickets already exist,
+   reconcile them against the revised spec, rerun the checker, and repeat the
+   ticket quiz. If the answer confirms the assumption, downstream artifacts
+   remain valid.

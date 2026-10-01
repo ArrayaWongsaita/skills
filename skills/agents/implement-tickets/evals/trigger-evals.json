@@ -1,0 +1,26 @@
+[
+  {
+    "query": "/implement-tickets .scratch/feature/issues/",
+    "should_trigger": true
+  },
+  {
+    "query": "Please run $implement-tickets on feature",
+    "should_trigger": true
+  },
+  {
+    "query": "Implement this ticket set for me.",
+    "should_trigger": false
+  },
+  {
+    "query": "Use agy-implement to spread these tickets across providers.",
+    "should_trigger": false
+  },
+  {
+    "query": "Run /implement on the first ticket.",
+    "should_trigger": false
+  },
+  {
+    "query": "Dispatch each ticket to its own subagent and integrate the results.",
+    "should_trigger": false
+  }
+]

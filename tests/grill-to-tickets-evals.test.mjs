@@ -82,9 +82,24 @@ describe("grill-to-tickets eval suite contract", () => {
       );
     });
 
+    it("describes the handoff eval as two subagent dispatches, Stage 2 and Stage 3.5", async () => {
+      const { evals } = await evalsJson();
+      const lines = evals.flatMap((item) => item.expectations ?? []).filter((line) => /^Prints the handoff/.test(line));
+      assert.ok(lines.length > 0, "an eval expectation covers the handoff");
+      for (const line of lines) {
+        assert.match(line, /Stage 2[\s\S]*Stage 3\.5/, "the handoff expectation names both dispatches");
+        assert.doesNotMatch(line, /only for the Stage 2 review/, "the handoff expectation is not limited to Stage 2");
+      }
+    });
+
     it("covers every planning safeguard: decision log, resume, blind spots, fresh reviewer, sweep, ticket check", async () => {
       const { evals } = await evalsJson();
+      const ticketReview = evals.find((item) => item.name === "ticket review shows each ASK before the user decides");
+      assert.ok(ticketReview, "a ticket-review eval exercises Stage 3.5");
+      assert.match(ticketReview.prompt, /result: PASS[\s\S]*no --ticket-review flag[\s\S]*Run Stage 3\.5/i);
+      assert.match(ticketReview.expected_output, /one fresh, read-only ticket reviewer[\s\S]*READY or ASK[\s\S]*Seam, Context, and Budget/i);
       const safeguards = [
+        { label: "question tiers", match: /question tiers/i },
         { label: "decision log", match: /decision log records/i },
         { label: "resume", match: /^continue .*decision log/i },
         { label: "blind-spot pass", match: /blind-spot pass/i },
@@ -94,7 +109,7 @@ describe("grill-to-tickets eval suite contract", () => {
         { label: "ticket checker", match: /ticket checker/i },
         { label: "preflight: missing stage skill", match: /preflight stops/i },
         { label: "preflight: global install", match: /preflight uses a globally installed/i },
-        { label: "preflight: lock by location", match: /preflight records the lock by location/i },
+        { label: "preflight: paths only on resume", match: /preflight records paths only on resume/i },
         { label: "local tracker", match: /local files replace/i },
         { label: "git-ignored scratch", match: /local exclude/i },
         { label: "budget-line mismatch", match: /budget-line mismatch/i },
@@ -103,6 +118,7 @@ describe("grill-to-tickets eval suite contract", () => {
         { label: "same-file warning adds an edge", match: /same-file warning adds an edge/i },
         { label: "above 15 tickets proposes a split", match: /above 15 tickets proposes a split/i },
         { label: "handoff recommends from the DAG", match: /handoff recommends an implementer from the DAG/i },
+        { label: "ticket review", match: /ticket review/i },
       ];
       for (const safeguard of safeguards) {
         assert.ok(
@@ -147,7 +163,11 @@ describe("grill-to-tickets eval suite contract", () => {
     it("covers the review entry question, the --review flag, and resume with rounds kept spent", async () => {
       const { evals } = await evalsJson();
       const cases = [
-        { label: "entry question", match: /entry asks once|review round count/i },
+        { label: "merged Stage 0 pause", match: /Stage 0 pause.*review/i },
+        { label: "invalid flag asks at pause", match: /missing and invalid.*pause/i },
+        { label: "legacy Stage 2 resume", match: /older.*Stage 2.*no.*answer/i },
+        { label: "blocked pause retains answer", match: /blocking parked.*review answer/i },
+        { label: "rework retains answer", match: /decision-level rework.*review answer/i },
         { label: "--review flag", match: /--review/ },
         { label: "resume keeps rounds spent", match: /rounds spent kept spent/i },
       ];
@@ -167,3 +187,43 @@ describe("grill-to-tickets eval suite contract", () => {
     });
   });
 });
+
+it("covers parked-flow and retires stale ticket-review verdicts", async () => {
+  const entry = (await evalsJson()).evals.find((e) => /parked-flow/.test(e.name));
+  assert.ok(entry, "no eval case covers parked-flow");
+  const text = `${entry.prompt} ${entry.expected_output} ${entry.expectations.join(" ")}`;
+  for (const requirement of [
+    /six fields/,
+    /decided: parked/,
+    /blocking/,
+    /non-blocking/,
+    /resolved: assumed/,
+    /resolved: answered/,
+    /30-day/,
+    /90-day/,
+    /superseding the 30-day assumption/,
+    /Stage 1[\s\S]*Further Notes/,
+    /State review budget unchanged/,
+    /existing tickets[\s\S]*checker and quiz/,
+    /Review 1[\s\S]*01 READY[\s\S]*02 ASK/,
+    /ticket 01 is unchanged[\s\S]*01 READY remains current/i,
+    /Later the compliance lead answers 90 days, changing ticket 02/i,
+    /Review 1[\s\S]*heading historical for ticket 02[\s\S]*ticket 01's READY verdict current/i,
+    /02 ASK line[\s\S]*— superseded: <late decision>/,
+    /changed-ticket verdicts are not current[\s\S]*unchanged ticket 01 READY remains current/i,
+    /without automatically starting Review 2/,
+    /Only after the person asks[\s\S]*append Review 2/,
+    /user quiz remains the approval gate/,
+    /Further Notes/,
+    /resume/,
+    /handoff/,
+    /pause/,
+  ]) assert.match(text, requirement);
+});
+
+ it("covers path-only Preflight resume while retaining older lock lines", async () => {
+  const entry = (await evalsJson()).evals.find((e) => /preflight records paths only on resume/i.test(e.name));
+  assert.ok(entry, "no eval case covers path-only Preflight resume");
+  const text = entry.expected_output + entry.expectations.join(" ");
+  for (const requirement of [/skill and the path found/i, /older.*lock.*kept/i, /new.*paths only/i, /without reading either lock file/i]) assert.match(text, requirement);
+ });

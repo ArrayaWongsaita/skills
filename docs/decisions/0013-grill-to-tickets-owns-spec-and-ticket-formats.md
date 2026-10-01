@@ -4,6 +4,8 @@
 - Date / วันที่: 2026-09-25
 - Amends / แก้ไขบริบทของ: ADR 0003
 
+- Amended by ADR 0019 / แก้ไขโดย: [ADR 0019](0019-grill-to-tickets-tiers-parked-questions-and-one-pause.md) (decision 3)
+
 ## Context / บริบท
 
 `grill-to-tickets` inline-followed two skills whose output it parses: one wrote

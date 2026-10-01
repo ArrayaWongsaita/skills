@@ -113,5 +113,5 @@ Stop: Handoff (ส่งมอบ integration branch พร้อมสรุป
 
 ## 5. ข้อควรระวังและสิ่งที่ไม่ควรใช้
 - **ต้องมีชุด Tickets ก่อนเสมอ:** ต้องผ่านการวางแผนจาก `grill-to-tickets` มาก่อน
-- **เหมาะสำหรับงานที่มี Tickets จำนวนมาก:** หากมีเพียง 1-2 tickets เล็กๆ การใช้ `/subagent-implement` หรือ implement ปกติอาจเร็วกว่า
+- **เหมาะสำหรับงานที่มี Tickets จำนวนมาก:** หากมีเพียง 1-2 tickets เล็กๆ การใช้ `/implement-tickets` หรือ implement ปกติอาจเร็วกว่า
 - **Skill นี้หยุดก่อน Review:** จะไม่มีการรัน Code Review และไม่เปิด PR บน GitHub ให้เอง

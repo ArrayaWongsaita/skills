@@ -1,6 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { readFile, readdir, stat, chmod, mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { readFile, readdir, stat, chmod, mkdtemp, mkdir, writeFile, rm, symlink } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import os from "node:os";
@@ -26,9 +27,13 @@ const spec = `# Spec
 ## User Stories
 
 1. As an admin, I want to export members, so that I can audit them
+   Scenario: given an admin requests an export when export is available then the members are included
 1a. As an admin, I want the export to include roles, so that I can review access
+   Scenario: given an export includes members when roles are enabled then each role is included
 2. As an admin, I want a CSV file, so that I can open it anywhere
+   Scenario: given an admin requests a CSV when records exist then the CSV can be opened
 3. As a member, I want my email hidden from non-admins, so that it stays private
+   Scenario: given a non-admin views a member when the profile is shown then the email is hidden
    - a nested note that is not a story
 
 ## Implementation Decisions
@@ -50,15 +55,19 @@ function countTokens(text) {
   return Math.ceil(ascii / 4) + nonAscii;
 }
 
+function withoutScenarios(source) {
+  return source.replace(/^[ \t]+Scenario:.*(?:\n|$)/gm, "");
+}
+
 // The Budget line the checker should measure for a ticket fixture.
-function autoBudget(text, context, files = {}) {
+function autoBudget(text, context, files = {}, specContent = spec) {
   const sources = [text.split("\n").filter((line) => !line.startsWith("**Budget:**")).join("\n")];
   const modules = new Set();
   let allowance = 0;
   for (const item of (context ?? "").split("·").map((s) => s.trim()).filter(Boolean)) {
     const specRef = item.match(/^spec\s+§\s+(.+)$/);
     if (specRef) {
-      const section = sectionOf(spec, specRef[1]);
+      const section = sectionOf(specContent, specRef[1]);
       if (section?.text) sources.push(section.text);
       continue;
     }
@@ -88,6 +97,7 @@ function ticket(
     budget,
     files = {},
     extra = "",
+    specText = spec,
   } = {},
 ) {
   const lines = [`# ${number}: ${title}`, "", "**What to build:** something end to end.", ""];
@@ -103,7 +113,7 @@ function ticket(
   const insertAt = contextIndex === -1 ? lines.length : contextIndex + 1;
   const withBudget = [...lines];
   withBudget.splice(insertAt, 0, "**Budget:** placeholder");
-  const line = budget ?? autoBudget(withBudget.join("\n"), context, files);
+  const line = budget ?? autoBudget(withBudget.join("\n"), context, files, specText);
   withBudget[insertAt] = `**Budget:** ${line}`;
   return { file, text: withBudget.join("\n") };
 }
@@ -112,6 +122,12 @@ const passing = () => [
   ticket("01", "Export members", { stories: "1, 1a" }),
   ticket("02", "CSV download", { blockedBy: "01", stories: "2" }),
   ticket("03", "Hide emails", { blockedBy: "01: Export members", stories: "3" }),
+];
+
+const passingFor = (specText) => [
+  ticket("01", "Export members", { stories: "1, 1a", specText }),
+  ticket("02", "CSV download", { blockedBy: "01", stories: "2", specText }),
+  ticket("03", "Hide emails", { blockedBy: "01: Export members", stories: "3", specText }),
 ];
 
 // A temporary project for the --write-budget file-replacement tests. Ticket 01
@@ -163,7 +179,116 @@ describe("check-tickets", () => {
   it("passes a ticket set that covers every story and keeps every rule", () => {
     const result = checkFeature({ spec, tickets: passing() });
     assert.deepEqual(result.errors, []);
+    assert.deepEqual(result.warnings, []);
     assert.deepEqual([...result.coverage], [["1", [1]], ["1a", [1]], ["2", [2]], ["3", [3]]]);
+  });
+
+  it("returns ticket numbers separately from ordered, deduplicated planning facts", () => {
+    const tickets = passing();
+    tickets[0] = ticket("01", "Export members", { stories: "1a, 1, 1a" });
+    tickets[2] = ticket("03", "Hide emails", { blockedBy: "02, 01", stories: "3, 1a, 1" });
+    tickets.push(ticket("04", "Planning note", { stories: "none" }));
+
+    const result = checkFeature({ spec, tickets });
+
+    assert.deepEqual(result.errors, []);
+    assert.deepEqual(result.tickets, [1, 2, 3, 4]);
+    assert.deepEqual(result.ticketFacts, tickets.map((item, index) => ({
+      number: index + 1,
+      file: `issues/${item.file}`,
+      title: ["Export members", "CSV download", "Hide emails", "Planning note"][index],
+      stories: [["1", "1a"], ["2"], ["1", "1a", "3"], []][index],
+      blockedBy: [[], [1], [1, 2], []][index],
+      seam: "test boundary",
+      budget: item.text.match(/^\*\*Budget:\*\* (.+)$/m)?.[1],
+    })));
+  });
+
+  it("accepts a Scenario under every story and several Scenarios under one story", () => {
+    const multiple = spec.replace(
+      "   Scenario: given an admin requests an export when export is available then the members are included",
+      "   Scenario: given an admin requests an export when export is available then the members are included\n" +
+        "   Scenario: GIVEN an admin requests an export WHEN no members exist THEN an empty export is returned",
+    );
+    const result = checkFeature({ spec: multiple, tickets: passingFor(multiple) });
+    assert.deepEqual(result.errors, []);
+    assert.deepEqual(result.warnings, []);
+  });
+
+  it("warns once for an older spec with no Scenario lines and ignores mentions outside the line pattern", () => {
+    const noScenarios = withoutScenarios(spec).replace(
+      "## Implementation Decisions",
+      "A note mentions Scenario: inline, but is not a Scenario line.\n\n## Implementation Decisions",
+    );
+    const outsideSection = noScenarios.replace(
+      "## Testing Decisions",
+      "## Testing Decisions\n\nScenario: given a check runs when the file is read then it is outside User Stories",
+    );
+    const result = checkFeature({ spec: outsideSection, tickets: passingFor(outsideSection) });
+    assert.deepEqual(result.errors, []);
+    assert.deepEqual(result.warnings, ["spec.md carries no scenarios"]);
+  });
+
+  it("names the first story without a Scenario when a spec has partial scenario coverage", () => {
+    const partial = spec
+      .replace("   Scenario: given an export includes members when roles are enabled then each role is included\n", "")
+      .replace("   Scenario: given an admin requests a CSV when records exist then the CSV can be opened\n", "");
+    const errors = checkFeature({ spec: partial, tickets: passingFor(partial) }).errors;
+    assert.deepEqual(
+      errors.filter((error) => /^story .+ has no Scenario line$/.test(error)),
+      ["story 1a has no Scenario line", "story 2 has no Scenario line"],
+    );
+  });
+
+  it("reports the first missing whole keyword, once per malformed Scenario line", () => {
+    for (const [line, missing] of [
+      ["Scenario: actor opens when a record exists then the record appears", "given"],
+      ["Scenario: given an actor opens then the record appears", "when"],
+      ["Scenario: given an actor opens when a record exists", "then"],
+      ["Scenario: givenly when a record exists then the record appears", "given"],
+    ]) {
+      const malformed = spec.replace(
+        "   Scenario: given an admin requests an export when export is available then the members are included",
+        `   ${line}`,
+      );
+      const result = checkFeature({ spec: malformed, tickets: passingFor(malformed) });
+      const scenarioErrors = result.errors.filter((error) => /Scenario line/.test(error));
+      const lineNumber = malformed.split("\n").indexOf(`   ${line}`) + 1;
+      assert.deepEqual(scenarioErrors, [`line ${lineNumber}: Scenario line is missing "${missing}"`]);
+    }
+  });
+
+  it("rejects Scenario keywords that are all present but out of order", () => {
+    const outOfOrder = spec.replace(
+      "   Scenario: given an admin requests an export when export is available then the members are included",
+      "   Scenario: when an action happens given a starting state then output",
+    );
+    const result = checkFeature({ spec: outOfOrder, tickets: passingFor(outOfOrder) });
+    const line = outOfOrder.split("\n").indexOf("   Scenario: when an action happens given a starting state then output") + 1;
+    assert.deepEqual(
+      result.errors.filter((error) => /^line \d+: Scenario line/.test(error)),
+      [`line ${line}: Scenario line is missing "when"`],
+    );
+  });
+
+  it("reports outside-a-story before indentation and keyword faults, and an unindented line covers no story", () => {
+    const inserted = spec.replace(
+      "## User Stories\n\n",
+      "## User Stories\n\nScenario: before a story\n\n",
+    );
+    const malformedPlacement = inserted.replace(
+      "   Scenario: given an admin requests an export when export is available then the members are included",
+      "Scenario: story one without indentation",
+    );
+    const result = checkFeature({ spec: malformedPlacement, tickets: passingFor(malformedPlacement) });
+    const scenarioErrors = result.errors.filter((error) => /^line \d+: Scenario line/.test(error));
+    const outsideLine = malformedPlacement.split("\n").indexOf("Scenario: before a story") + 1;
+    const unindentedLine = malformedPlacement.split("\n").indexOf("Scenario: story one without indentation") + 1;
+    assert.deepEqual(scenarioErrors, [
+      `line ${outsideLine}: Scenario line sits outside a story`,
+      `line ${unindentedLine}: Scenario line must be indented under its story`,
+    ]);
+    assert.ok(result.errors.includes("story 1 has no Scenario line"), result.errors.join("\n"));
   });
 
   it("ignores a leftover Reuse line without an error or a warning", () => {
@@ -743,6 +868,87 @@ describe("check-tickets", () => {
     }
   });
 
+  it("rejects an internal symlink to an outside Context file before reading or writing its budget", async (t) => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "check-tickets-context-symlink-"));
+    const outsidePath = `${root}-outside.mjs`;
+    const dir = path.join(root, ".scratch", "my-slug");
+    const linkedPath = path.join(root, "src", "linked.mjs");
+    const outsideBody = "outside-secret-".repeat(5000);
+    const context = "spec § User Stories · src/linked.mjs";
+    const tickets = passing();
+    tickets[0] = ticket("01", "Export members", { stories: "1, 1a", context, budget: null });
+    const expectedTokens = checkFeature({ spec, tickets, files: new Map() }).budgets[0].tokens;
+
+    try {
+      await mkdir(path.join(dir, "issues"), { recursive: true });
+      await mkdir(path.dirname(linkedPath), { recursive: true });
+      await writeFile(path.join(dir, "spec.md"), spec);
+      await writeFile(outsidePath, outsideBody);
+      for (const item of tickets) await writeFile(path.join(dir, "issues", item.file), item.text);
+      try {
+        await symlink(outsidePath, linkedPath);
+      } catch (error) {
+        if (["EACCES", "EPERM", "ENOSYS", "ENOTSUP", "EOPNOTSUPP"].includes(error.code)) {
+          t.skip(`host cannot create symlinks (${error.code})`);
+          return;
+        }
+        throw error;
+      }
+
+      const result = await checkFeatureDir(dir, { writeBudget: true });
+      const budget = result.budgets.find((item) => item.number === 1);
+      const ticketPath = path.join(dir, "issues", tickets[0].file);
+      const findings = [];
+      if (!result.errors.some((error) => error.includes('Context path "src/linked.mjs" escapes the project root'))) {
+        findings.push("the symlinked Context path was not reported as escaping the project root");
+      }
+      if (!budget?.contextErrors) findings.push("the ticket budget was not marked as having a Context error");
+      if (budget?.tokens !== expectedTokens) findings.push("the outside file contributed to the ticket budget");
+      if ((await readFile(ticketPath, "utf8")) !== tickets[0].text) {
+        findings.push("--write-budget changed the Context-error ticket");
+      }
+      try {
+        await readFile(path.join(dir, "manifest.json"));
+        findings.push("--write-budget created a manifest for a failing Context path");
+      } catch (error) {
+        if (error.code !== "ENOENT") throw error;
+      }
+      assert.deepEqual(findings, []);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+      await rm(outsidePath, { force: true });
+    }
+  });
+
+  it("rejects Windows-style Context traversal and drive paths on every host", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "check-tickets-context-winpath-"));
+    const dir = path.join(root, ".scratch", "my-slug");
+    const windowsEscape = String.raw`..\..\outside.txt`;
+    const windowsDrivePath = String.raw`C:\outside\secret.mjs`;
+    try {
+      await mkdir(path.join(dir, "issues"), { recursive: true });
+      await writeFile(path.join(dir, "spec.md"), spec);
+      const tickets = passing();
+      tickets[0] = ticket("01", "Export members", {
+        stories: "1, 1a",
+        context: `spec § User Stories · ${windowsEscape} · ${windowsDrivePath}`,
+      });
+      for (const item of tickets) await writeFile(path.join(dir, "issues", item.file), item.text);
+
+      const result = await checkFeatureDir(dir);
+      assert.ok(
+        result.errors.some((error) => error.includes(`Context path "${windowsEscape}" escapes the project root`)),
+        result.errors.join("\n"),
+      );
+      assert.ok(
+        result.errors.some((error) => error.includes(`Context path "${windowsDrivePath}" is absolute`)),
+        result.errors.join("\n"),
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("checkFeatureDir rejects when there is no .scratch ancestor", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "check-tickets-noscratch-"));
     const dir = path.join(root, "some-dir", "my-slug");
@@ -1086,6 +1292,220 @@ describe("check-tickets", () => {
     }
   });
 
+  it("writes a deterministic version 1 manifest from a passing --write-budget run", async () => {
+    await withBudgetProject(async ({ dir, issuesDir, tickets }) => {
+      const { stdout } = await run("node", [script, dir, "--write-budget"]);
+      assert.match(stdout, /result: PASS/);
+
+      const manifestPath = path.join(dir, "manifest.json");
+      const firstBytes = await readFile(manifestPath);
+      const firstText = firstBytes.toString("utf8");
+      const manifest = JSON.parse(firstText);
+      assert.equal(firstText, `${JSON.stringify(manifest, null, 2)}\n`);
+      assert.deepEqual(Object.keys(manifest), [
+        "version",
+        "specSha256",
+        "waves",
+        "maxWaveWidth",
+        "criticalPathLength",
+        "recommendedImplementers",
+        "tickets",
+      ]);
+      assert.equal(manifest.version, 1);
+      assert.equal(
+        manifest.specSha256,
+        createHash("sha256").update(await readFile(path.join(dir, "spec.md"))).digest("hex"),
+      );
+      assert.deepEqual(manifest.waves, [[1], [2, 3]]);
+      assert.equal(manifest.maxWaveWidth, 2);
+      assert.equal(manifest.criticalPathLength, 2);
+      assert.deepEqual(manifest.recommendedImplementers, ["implement-tickets"]);
+      assert.deepEqual(
+        manifest.tickets.map(({ number, title, file, stories, blockedBy, seam, budget }) => ({
+          number,
+          title,
+          file,
+          stories,
+          blockedBy,
+          seam,
+          budget,
+        })),
+        [
+          {
+            number: 1,
+            title: "Export members",
+            file: "issues/01-export-members.md",
+            stories: ["1", "1a"],
+            blockedBy: [],
+            seam: "test boundary",
+            budget: (await readFile(path.join(issuesDir, tickets[0].file), "utf8"))
+              .match(/^\*\*Budget:\*\* (.+)$/m)[1],
+          },
+          {
+            number: 2,
+            title: "CSV download",
+            file: "issues/02-csv-download.md",
+            stories: ["2"],
+            blockedBy: [1],
+            seam: "test boundary",
+            budget: (await readFile(path.join(issuesDir, tickets[1].file), "utf8"))
+              .match(/^\*\*Budget:\*\* (.+)$/m)[1],
+          },
+          {
+            number: 3,
+            title: "Hide emails",
+            file: "issues/03-hide-emails.md",
+            stories: ["3"],
+            blockedBy: [1],
+            seam: "test boundary",
+            budget: (await readFile(path.join(issuesDir, tickets[2].file), "utf8"))
+              .match(/^\*\*Budget:\*\* (.+)$/m)[1],
+          },
+        ],
+      );
+      assert.doesNotMatch(firstText, /\bStatus\b|timestamp|verify|passes/i);
+
+      const { stdout: secondStdout } = await run("node", [script, "--write-budget", dir]);
+      assert.match(secondStdout, /result: PASS/);
+      assert.deepEqual(await readFile(manifestPath), firstBytes);
+    });
+  });
+
+  it("writes the same core implementer to the manifest at every wave width", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "check-tickets-recommendation-"));
+    const projects = [
+      {
+        width: 1,
+        tickets: [ticket("01", "All stories", { stories: "1, 1a, 2, 3" })],
+      },
+      { width: 2, tickets: passing() },
+      {
+        width: 3,
+        tickets: [
+          ticket("01", "Base", { stories: "1" }),
+          ticket("02", "Left", { blockedBy: "01", stories: "1a" }),
+          ticket("03", "Middle", { blockedBy: "01", stories: "2" }),
+          ticket("04", "Right", { blockedBy: "01", stories: "3" }),
+        ],
+      },
+    ];
+    try {
+      for (const { width, tickets } of projects) {
+        const dir = path.join(root, ".scratch", `width-${width}`);
+        const issuesDir = path.join(dir, "issues");
+        await mkdir(issuesDir, { recursive: true });
+        await writeFile(path.join(dir, "spec.md"), spec);
+        for (const { file, text } of tickets) await writeFile(path.join(issuesDir, file), text);
+
+        const { stdout } = await run("node", [script, dir, "--write-budget"]);
+        assert.match(stdout, /result: PASS/);
+        assert.match(stdout, /recommended implementer: implement-tickets/);
+        const manifest = JSON.parse(await readFile(path.join(dir, "manifest.json"), "utf8"));
+        assert.equal(manifest.maxWaveWidth, width);
+        assert.deepEqual(manifest.recommendedImplementers, ["implement-tickets"]);
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rewrites the manifest after a Status-only edit without recording Status", async () => {
+    await withBudgetProject(async ({ dir, issuesDir, tickets }) => {
+      await checkFeatureDir(dir, { writeBudget: true });
+      const manifestPath = path.join(dir, "manifest.json");
+      const beforeText = await readFile(manifestPath, "utf8");
+      const before = JSON.parse(beforeText);
+
+      const firstTicketPath = path.join(issuesDir, tickets[0].file);
+      const firstTicket = await readFile(firstTicketPath, "utf8");
+      await writeFile(firstTicketPath, firstTicket.replace("**Status:** ready-for-agent", "**Status:** implemented"));
+      await checkFeatureDir(dir, { writeBudget: true });
+
+      const afterText = await readFile(manifestPath, "utf8");
+      const after = JSON.parse(afterText);
+      const expected = structuredClone(after);
+      for (let i = 0; i < expected.tickets.length; i++) {
+        expected.tickets[i].budget = before.tickets[i].budget;
+      }
+      assert.deepEqual(before, expected, "only a ticket budget may differ after changing Status");
+      assert.doesNotMatch(afterText, /\bStatus\b|ready-for-agent|implemented/);
+    });
+  });
+
+  it("--write-budget preserves an existing manifest's custom file mode", async () => {
+    await withBudgetProject(async ({ dir }) => {
+      await checkFeatureDir(dir, { writeBudget: true });
+      const manifestPath = path.join(dir, "manifest.json");
+      const normalMode = 0o666 & ~process.umask();
+      const customMode = normalMode ^ 0o100;
+      assert.equal((await stat(manifestPath)).mode & 0o777, normalMode);
+      await chmod(manifestPath, customMode);
+      assert.equal((await stat(manifestPath)).mode & 0o777, customMode);
+
+      const { stdout } = await run("node", [script, dir, "--write-budget"]);
+      assert.match(stdout, /result: PASS/);
+      assert.equal((await stat(manifestPath)).mode & 0o777, customMode);
+    });
+  });
+
+  it("does not create a manifest for older directories or runs without --write-budget", async () => {
+    await withBudgetProject(async ({ dir }) => {
+      await checkFeatureDir(dir, { writeBudget: true });
+      await rm(path.join(dir, "manifest.json"), { force: true });
+      const { stdout } = await run("node", [script, dir]);
+      assert.match(stdout, /result: PASS/);
+      await assert.rejects(readFile(path.join(dir, "manifest.json")), { code: "ENOENT" });
+    });
+  });
+
+  it("leaves a failing run's manifest absent or byte-identical to its earlier contents", async () => {
+    await withBudgetProject(async ({ dir, issuesDir, tickets }) => {
+      const absentResult = await checkFeatureDir(dir, { writeBudget: true });
+      assert.deepEqual(absentResult.errors, []);
+      const manifestPath = path.join(dir, "manifest.json");
+      const earlierBytes = await readFile(manifestPath);
+
+      const thirdTicketPath = path.join(issuesDir, tickets[2].file);
+      const thirdTicket = await readFile(thirdTicketPath, "utf8");
+      await writeFile(thirdTicketPath, thirdTicket.replace("**Stories:** 3", "**Stories:** 9"));
+      await assert.rejects(run("node", [script, dir, "--write-budget"]), (error) => {
+        assert.equal(error.code, 1);
+        assert.match(error.stdout, /result: FAIL/);
+        return true;
+      });
+      assert.deepEqual(await readFile(manifestPath), earlierBytes);
+    });
+
+    const root = await mkdtemp(path.join(os.tmpdir(), "check-tickets-manifest-fail-"));
+    const dir = path.join(root, ".scratch", "export-feature");
+    try {
+      await mkdir(path.join(dir, "issues"), { recursive: true });
+      await writeFile(path.join(dir, "spec.md"), spec);
+      const tickets = passing();
+      tickets[0] = ticket("01", "Export members", { stories: "9" });
+      for (const item of tickets) await writeFile(path.join(dir, "issues", item.file), item.text);
+
+      const result = await checkFeatureDir(dir, { writeBudget: true });
+      assert.ok(result.errors.length > 0);
+      await assert.rejects(readFile(path.join(dir, "manifest.json")), { code: "ENOENT" });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports manifest write failure after the normal report and exits 2", async () => {
+    await withBudgetProject(async ({ dir }) => {
+      await mkdir(path.join(dir, "manifest.json"));
+
+      await assert.rejects(run("node", [script, dir, "--write-budget"]), (error) => {
+        assert.equal(error.code, 2);
+        assert.match(error.stdout, /result: PASS/);
+        assert.match(error.stderr, /^manifest could not be written:/);
+        return true;
+      });
+    });
+  });
+
   it("--write-budget leaves a ticket with Context errors unchanged", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "check-tickets-ctx-budget-"));
     const dir = path.join(root, ".scratch", "export-feature");
@@ -1361,7 +1781,7 @@ describe("check-tickets", () => {
     assert.deepEqual(checkFeature({ spec, tickets: many(15) }).warnings, []);
   });
 
-  // --- DAG summary: waves, width, critical path, recommendation ---
+  // --- DAG summary: waves, width, critical path, fixed core recommendation ---
   it("computes each ticket's wave, the maximum wave width, and the critical-path length", () => {
     const chain = [
       ticket("01", "First", { stories: "1" }),
@@ -1372,7 +1792,7 @@ describe("check-tickets", () => {
       waves: [[1], [2], [3]],
       width: 1,
       criticalPath: 3,
-      recommendation: ["subagent-implement"],
+      recommendation: ["implement-tickets"],
     });
 
     const diamond = [
@@ -1385,7 +1805,7 @@ describe("check-tickets", () => {
       waves: [[1], [2, 3], [4]],
       width: 2,
       criticalPath: 3,
-      recommendation: ["subagent-implement", "agy-implement", "opencode-implement"],
+      recommendation: ["implement-tickets"],
     });
 
     const wide = [
@@ -1398,7 +1818,7 @@ describe("check-tickets", () => {
       waves: [[1], [2, 3, 4]],
       width: 3,
       criticalPath: 2,
-      recommendation: ["agy-implement", "opencode-implement"],
+      recommendation: ["implement-tickets"],
     });
   });
 
@@ -1417,7 +1837,7 @@ describe("check-tickets", () => {
     assert.deepEqual([...positions].sort((a, b) => a - b), positions, report);
     assert.match(
       report,
-      /dag:\n  wave 0: 01\n  wave 1: 02, 03\n  maximum wave width: 2\n  critical-path length: 2\n  recommended implementer: subagent-implement, agy-implement, opencode-implement/,
+      /dag:\n  wave 0: 01\n  wave 1: 02, 03\n  maximum wave width: 2\n  critical-path length: 2\n  recommended implementer: implement-tickets/,
     );
   });
 
@@ -1463,7 +1883,7 @@ describe("check-tickets", () => {
     assert.match(template, /\*\*Context:\*\*[\s\S]*?\*\*Budget:\*\*[\s\S]*?\*\*Status:\*\*/);
   });
 
-  it("the checker header lists the Budget checks, the measurement, and --write-budget", async () => {
+  it("the checker header lists Budget checks, manifest data, and manifest write rules", async () => {
     const content = await readFile(script, "utf8");
     const header = content.slice(0, content.indexOf("\nimport "));
     assert.match(header, /\*\*Budget:\*\*/);
@@ -1471,5 +1891,8 @@ describe("check-tickets", () => {
     assert.match(header, /--write-budget/);
     assert.match(header, /warning/i);
     assert.match(header, /wave/i);
+    assert.match(header, /manifest\.json/);
+    assert.match(header, /manifest/i);
+    assert.match(header, /only.*PASS|PASS.*only/i);
   });
 });

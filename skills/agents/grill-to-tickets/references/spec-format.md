@@ -38,6 +38,12 @@ The solution to the problem, from the user's perspective.
 A numbered list of user stories. Each user story follows the format:
 
 1. As an <actor>, I want a <feature>, so that <benefit>
+   Scenario: given <precondition> when <action> then <outcome>
+
+Every new spec carries at least one `Scenario:` line under every story. A
+Scenario is one line. It contains the whole words `given`, `when`, and `then`
+in that order, ignoring case. A story may carry several Scenario lines. Older
+specs with no Scenario line remain valid and receive one checker warning.
 
 This list should be extensive and cover all aspects of the feature. When grouping stories, format category headers as bold lines (e.g. `**Category Name**`), not headings.
 

@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "implement-tickets": {
+      "source": "ArrayaWongsaita/skills",
+      "sourceType": "github",
+      "skillPath": "skills/agents/implement-tickets/SKILL.md"
+    }
+  }
+}

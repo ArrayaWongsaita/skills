@@ -28,7 +28,10 @@ of GitHub Spec Kit's `/clarify`.
 2. **Ask.** For each `partial` or `missing` category, find the gaps that would
    change the spec — a story, an interface, a test. Put them to the user as one
    final round, highest impact first and at most five questions, each with a
-   recommended answer, logged like any round.
+   tier tagged `hard` or `easy`, following the same tier rules as the Stage 0
+   interview, and logged like any round. Hard questions carry a numbered title,
+   full body, and recommended answer; easy questions use one line stating the
+   default unless the person objects.
 3. **Assume out loud.** Every other gap — one that would not change the spec, or
    one beyond the five — becomes a stated assumption in the table. The pause
    summary shows the assumptions, so the user can overturn any of them, and
