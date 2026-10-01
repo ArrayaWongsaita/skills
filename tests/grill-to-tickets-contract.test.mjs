@@ -62,12 +62,14 @@ describe("grill-to-tickets composite skill contract", () => {
   it("inline-executes the three stage skills and two owned formats and hands the tickets to a later implementer run", async () => {
     for (const file of skillFiles) {
       const content = await readFile(file, "utf8");
+      const handoff = markdownSection(content, "Stop — Handoff");
       assert.match(content, /inline/i, "must instruct inline execution");
       for (const item of ["grilling", "domain-modeling", "scrutinize", "spec-format", "ticket-format"]) {
         assert.match(content, new RegExp(item), `must name stage skill or owned format ${item}`);
       }
+      assert.ok(handoff, "must have a Stop — Handoff section");
       assert.match(
-        content,
+        handoff,
         /\/implement-tickets \.scratch\/<feature-slug>\//,
         "must hand the ticket directory to a later implement-tickets run",
       );

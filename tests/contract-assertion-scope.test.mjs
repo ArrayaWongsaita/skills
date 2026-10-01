@@ -539,4 +539,46 @@ describe("Markdown contract assertion scope", () => {
     assert.match(source, /assert\.doesNotMatch\(reviewer\s*,/,
       "the tracker exclusion uses the ticket-review brief section");
   });
+
+  it("scopes invocation, handoff, ADR status, and bilingual-body claims", async () => {
+    const invocation = await testCase(
+      "tests/implement-tickets-contract.test.mjs",
+      "declares explicit-only invocation for Claude Code and Codex",
+    );
+    assert.doesNotMatch(invocation, /assert\.match\(agent,\s*\/\^\\s\*allow_implicit_invocation/,
+      "Codex invocation metadata is not searched outside its owning YAML mapping");
+    assert.match(invocation, /const policyMapping = agent\.match\(/,
+      "Codex invocation metadata is extracted from its policy mapping");
+    assert.match(invocation, /assert\.match\(policyMapping,\s*\/\^\\s\+allow_implicit_invocation/,
+      "the Codex policy field is checked within the policy mapping");
+
+    const handoff = await testCase(
+      "tests/grill-to-tickets-contract.test.mjs",
+      "inline-executes the three stage skills and two owned formats and hands the tickets to a later implementer run",
+    );
+    assert.doesNotMatch(handoff, /assert\.match\(\s*content\s*,\s*\/\\\/implement-tickets/,
+      "the later implementer command is not accepted from anywhere in the whole skill");
+    assert.match(handoff, /markdownSection\(content,\s*["']Stop — Handoff["']\)/,
+      "the later implementer command is extracted from the Stop handoff section");
+    assert.match(handoff, /assert\.match\([\s\S]*?handoff,\s*\/\\\/implement-tickets/,
+      "the command is checked within the extracted handoff section");
+
+    const adr = await testCase(
+      "tests/repo-contract.test.mjs",
+      "records ADR 0020 as the implement-family core and supersedes the standalone statuses",
+    );
+    assert.doesNotMatch(adr, /previous\.split\(/,
+      "superseded status checks do not scan the complete ADR text");
+    assert.match(adr, /file\.includes\(["']0007-["']\)[\s\S]*markdownHeaderBlock\(previous\)/,
+      "inline ADR status metadata is read from the header block");
+    assert.match(adr, /markdownSection\(previous,\s*["']Status \/ สถานะ["']\)/,
+      "ADR 0007 continues to use its dedicated status section");
+
+    assert.doesNotMatch(adr, /\.test\(section\)/,
+      "bilingual ADR claims do not count Thai characters in the heading itself");
+    assert.match(adr, /const body = section\?\.split\(/,
+      "ADR section checks extract body text after the heading");
+    assert.match(adr, /\.test\(body\)/,
+      "Thai presence is checked within each ADR section body");
+  });
 });

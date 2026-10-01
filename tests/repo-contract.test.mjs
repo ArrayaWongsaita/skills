@@ -1007,7 +1007,8 @@ describe("grill-to-tickets production records and guides", () => {
     assert.match(header, /^# ADR 0020: Implement Tickets is the one core for the implement family$/m, "ADR 0020 has its expected header");
     for (const heading of ["Context / บริบท", "Decision / การตัดสินใจ", "Consequences / ผลที่ตามมา", "Rejected alternatives / ทางเลือกที่ไม่เลือก"]) {
       const section = markdownSection(doc, heading);
-      assert.ok(section && /[\u0e00-\u0e7f]/.test(section), `ADR 0020 has bilingual ${heading}`);
+      const body = section?.split(/\r?\n/).slice(1).join("\n") ?? "";
+      assert.ok(body && /[\u0e00-\u0e7f]/.test(body), `ADR 0020 has bilingual ${heading}`);
     }
 
     const decision = markdownSection(doc, "Decision / การตัดสินใจ");
@@ -1031,16 +1032,12 @@ describe("grill-to-tickets production records and guides", () => {
     ]) {
       const previous = await readTextOrNull(file);
       assert.ok(previous, `${file} exists`);
-      if (file.includes("0007-")) {
-        const status = markdownSection(previous, "Status / สถานะ");
-        assert.ok(
-          status?.split("\n").some((line) => line.trim() === expectedStatusLine),
-          `${file} has the labeled bilingual superseded status line`,
-        );
-      } else {
-        const status = previous.split("\n").find((line) => line.startsWith("- Status / สถานะ:"));
-        assert.equal(status, expectedStatusLine, `${file} has the exact bilingual superseded status`);
-      }
+      const statusBlock = file.includes("0007-")
+        ? markdownSection(previous, "Status / สถานะ")
+        : markdownHeaderBlock(previous);
+      assert.ok(statusBlock, `${file} has a status metadata block`);
+      const status = statusBlock.split("\n").find((line) => line.startsWith("- Status / สถานะ:"));
+      assert.equal(status, expectedStatusLine, `${file} has the exact bilingual superseded status`);
     }
   });
 

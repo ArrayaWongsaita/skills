@@ -227,7 +227,9 @@ describe("implement-tickets skill and documentation contract", () => {
     assert.match(header[1], /^name: implement-tickets$/m);
     assert.match(header[1], /^disable-model-invocation: true$/m);
     assert.ok(agent, "the Codex agent metadata exists");
-    assert.match(agent, /^\s*allow_implicit_invocation:\s*false\s*$/m);
+    const policyMapping = agent.match(/^policy:[ \t]*\r?\n((?:[ \t]+[^\r\n]*(?:\r?\n|$))*)/m)?.[1];
+    assert.ok(policyMapping, "the Codex agent metadata has a root policy mapping");
+    assert.match(policyMapping, /^\s+allow_implicit_invocation:\s*false\s*$/m);
   });
 
   it("specifies every Plan field and pauses before changes outside the feature directory", async () => {
