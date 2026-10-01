@@ -101,12 +101,24 @@ const englishProseMarkers = new Set([
   "with", "without", "would",
 ]);
 
+function markdownProse(body) {
+  return body
+    .replace(/```[\s\S]*?```|~~~[\s\S]*?~~~/g, " ")
+    .replace(/^\s{0,3}#{1,6}(?:\s+|$).*$/gm, " ")
+    .replace(/`+[^`]*`+/g, " ");
+}
+
+function hasThaiProse(body) {
+  return /[\u0e00-\u0e7f]/.test(markdownProse(body));
+}
+
 function hasEnglishProse(body) {
-  const prose = body.replace(/`[^`]*`/g, " ");
+  const prose = markdownProse(body);
   return prose.split(/[.!?]\s+/).some((sentence) => {
     const words = sentence.match(/\b[a-z]{2,}\b/gi) ?? [];
     const proseWords = words.filter((word) => englishProseMarkers.has(word.toLowerCase()));
-    return words.length >= 8 && proseWords.length >= 2;
+    const contentWords = words.filter((word) => !englishProseMarkers.has(word.toLowerCase()));
+    return words.length >= 8 && proseWords.length >= 2 && contentWords.length >= 4;
   });
 }
 
@@ -1023,7 +1035,7 @@ describe("grill-to-tickets production records and guides", () => {
     for (const heading of ["Context / บริบท", "Decision / การตัดสินใจ", "Consequences / ผลที่ตามมา", "Rejected alternatives / ทางเลือกที่ไม่เลือก"]) {
       const section = markdownSection(doc, heading);
       const body = section?.split(/\r?\n/).slice(1).join("\n") ?? "";
-      assert.ok(body && /[\u0e00-\u0e7f]/.test(body), `ADR 0020 has Thai text in ${heading}`);
+      assert.ok(body && hasThaiProse(body), `ADR 0020 has Thai prose in ${heading}`);
       assert.ok(hasEnglishProse(body), `ADR 0020 has English prose in ${heading}`);
     }
 
@@ -1055,6 +1067,22 @@ describe("grill-to-tickets production records and guides", () => {
       const status = statusBlock.split("\n").find((line) => line.startsWith("- Status / สถานะ:"));
       assert.equal(status, expectedStatusLine, `${file} has the exact bilingual superseded status`);
     }
+  });
+
+  it("rejects ADR language evidence found only in inline code or Markdown headings", () => {
+    const thaiInCode = "`ข้อความภาษาไทย`";
+    const thaiInHeading = "### ภาษาไทยที่เป็นเพียงหัวข้อ";
+    const repeatedFunctionWords = "the the the the the the the the.";
+
+    assert.equal(hasThaiProse(thaiInCode), false, "Thai in inline code is not prose evidence");
+    assert.equal(hasThaiProse(thaiInHeading), false, "Thai in a Markdown heading is not prose evidence");
+    assert.equal(hasEnglishProse(repeatedFunctionWords), false, "repeated English function words are not prose evidence");
+    assert.equal(hasThaiProse("นี่คือข้อความภาษาไทยที่เป็นเนื้อหาจริง"), true, "Thai prose is accepted");
+    assert.equal(
+      hasEnglishProse("The adapter remains ready while workers can complete the review."),
+      true,
+      "English prose with content words is accepted",
+    );
   });
 
   it("defines implement-tickets vocabulary and both Worker senses in bilingual glossary rows", async () => {

@@ -110,14 +110,24 @@ describe("Markdown contract assertion scope", () => {
       "records ADR 0020 as the implement-family core and supersedes the standalone statuses",
     );
     const assertions = await readFile("tests/repo-contract.test.mjs", "utf8");
-    assert.match(source, /assert\.ok\(body && \/\[\\u0e00-\\u0e7f\]\/\.test\(body\)/,
-      "ADR 0020 sections keep a Thai-character check after each heading");
-    assert.ok(assertions.includes('const prose = body.replace(/`[^`]*`/g, " ");'),
-      "English prose evidence removes inline code identifiers first");
-    assert.match(assertions, /return words\.length >= 8 && proseWords\.length >= 2;/,
-      "English evidence requires a sentence with multiple natural-language words");
+    assert.match(source, /assert\.ok\(body && hasThaiProse\(body\)/,
+      "ADR 0020 sections use the shared prose extractor for Thai evidence");
+    assert.match(assertions, /function markdownProse\(body\)[\s\S]*?replace\(\/\^\\s\{0,3\}\#\{1,6\}/,
+      "the shared prose extractor removes Markdown headings");
+    assert.match(assertions, /function markdownProse\(body\)[\s\S]*?replace\(\/`\+\[\^`\]\*`\+\/g, " "\)/,
+      "the shared prose extractor removes inline code");
+    assert.match(assertions, /function hasThaiProse\(body\)[\s\S]*?markdownProse\(body\)/,
+      "Thai evidence is checked only after shared prose extraction");
+    assert.match(assertions, /function hasEnglishProse\(body\)[\s\S]*?markdownProse\(body\)/,
+      "English evidence uses the same prose extraction as Thai evidence");
+    assert.match(assertions, /const contentWords = words\.filter\(\(word\) => !englishProseMarkers\.has\(word\.toLowerCase\(\)\)\)/,
+      "English prose evidence counts content words separately from function words");
+    assert.match(assertions, /return words\.length >= 8 && proseWords\.length >= 2 && contentWords\.length >= 4;/,
+      "English evidence requires a sentence with multiple function and content words");
     assert.match(source, /assert\.ok\(hasEnglishProse\(body\),/,
       "each section asserts its own English prose evidence");
+    assert.match(assertions, /it\("rejects ADR language evidence found only in inline code or Markdown headings"/,
+      "a regression covers code-only, heading-only, and repeated-function-word false positives");
   });
 
   it("scopes adapter routing claims to the adapter contract and invocation section", async () => {
@@ -607,8 +617,8 @@ describe("Markdown contract assertion scope", () => {
       "bilingual ADR claims do not count Thai characters in the heading itself");
     assert.match(adr, /const body = section\?\.split\(/,
       "ADR section checks extract body text after the heading");
-    assert.match(adr, /\.test\(body\)/,
-      "Thai presence is checked within each ADR section body");
+    assert.match(adr, /hasThaiProse\(body\)/,
+      "Thai prose is checked within each ADR section body after Markdown extraction");
     assert.match(adr, /assert\.ok\(hasEnglishProse\(body\),/,
       "English prose is checked within each ADR section body");
   });
