@@ -229,7 +229,14 @@ describe("implement-tickets skill and documentation contract", () => {
     assert.ok(agent, "the Codex agent metadata exists");
     const policyMapping = agent.match(/^policy:[ \t]*\r?\n((?:[ \t]+[^\r\n]*(?:\r?\n|$))*)/m)?.[1];
     assert.ok(policyMapping, "the Codex agent metadata has a root policy mapping");
-    assert.match(policyMapping, /^\s+allow_implicit_invocation:\s*false\s*$/m);
+    const policyLines = policyMapping.split(/\r?\n/).filter((line) => line.trim() && !line.trimStart().startsWith("#"));
+    const policyChildIndent = Math.min(...policyLines.map((line) => line.length - line.trimStart().length));
+    assert.ok(Number.isFinite(policyChildIndent), "the Codex policy has direct mapping entries");
+    const directPolicyChildren = policyLines.filter((line) => line.length - line.trimStart().length === policyChildIndent);
+    assert.ok(
+      directPolicyChildren.some((line) => line.slice(policyChildIndent).match(/^allow_implicit_invocation:\s*false\s*(?:#.*)?$/)),
+      "allow_implicit_invocation is false as a direct child of the root policy mapping",
+    );
   });
 
   it("specifies every Plan field and pauses before changes outside the feature directory", async () => {

@@ -95,6 +95,21 @@ function paragraphOf(section, start) {
   return section.split(/\n\s*\n/).find((paragraph) => paragraph.startsWith(start)) ?? null;
 }
 
+const englishProseMarkers = new Set([
+  "a", "an", "and", "are", "as", "because", "but", "by", "for", "from", "has", "have", "in", "into", "is",
+  "it", "its", "of", "on", "or", "the", "their", "they", "this", "to", "until", "was", "were", "when", "while",
+  "with", "without", "would",
+]);
+
+function hasEnglishProse(body) {
+  const prose = body.replace(/`[^`]*`/g, " ");
+  return prose.split(/[.!?]\s+/).some((sentence) => {
+    const words = sentence.match(/\b[a-z]{2,}\b/gi) ?? [];
+    const proseWords = words.filter((word) => englishProseMarkers.has(word.toLowerCase()));
+    return words.length >= 8 && proseWords.length >= 2;
+  });
+}
+
 // One "- `label` ..." bullet of a file list with its wrapped lines, on one line.
 function listItem(list, label) {
   const lines = list.split("\n");
@@ -1008,7 +1023,8 @@ describe("grill-to-tickets production records and guides", () => {
     for (const heading of ["Context / บริบท", "Decision / การตัดสินใจ", "Consequences / ผลที่ตามมา", "Rejected alternatives / ทางเลือกที่ไม่เลือก"]) {
       const section = markdownSection(doc, heading);
       const body = section?.split(/\r?\n/).slice(1).join("\n") ?? "";
-      assert.ok(body && /[\u0e00-\u0e7f]/.test(body), `ADR 0020 has bilingual ${heading}`);
+      assert.ok(body && /[\u0e00-\u0e7f]/.test(body), `ADR 0020 has Thai text in ${heading}`);
+      assert.ok(hasEnglishProse(body), `ADR 0020 has English prose in ${heading}`);
     }
 
     const decision = markdownSection(doc, "Decision / การตัดสินใจ");

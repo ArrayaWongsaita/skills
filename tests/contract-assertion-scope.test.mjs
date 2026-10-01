@@ -91,6 +91,35 @@ describe("Markdown contract assertion scope", () => {
       "the ADR title is checked in its header block");
   });
 
+  it("requires Codex invocation policy to be a direct policy child", async () => {
+    const source = await testCase(
+      "tests/implement-tickets-contract.test.mjs",
+      "declares explicit-only invocation for Claude Code and Codex",
+    );
+    assert.match(source, /const policyChildIndent = Math\.min\(\.\.\.policyLines\.map\(/,
+      "the Codex policy assertion derives the direct-child indentation");
+    assert.match(source, /line\.length - line\.trimStart\(\)\.length === policyChildIndent/,
+      "the Codex policy assertion only considers entries at that indentation");
+    assert.ok(source.includes("directPolicyChildren.some((line) => line.slice(policyChildIndent).match(/^allow_implicit_invocation:"),
+      "the required invocation setting is checked on a direct policy entry");
+  });
+
+  it("requires English prose as well as Thai text in ADR 0020 sections", async () => {
+    const source = await testCase(
+      "tests/repo-contract.test.mjs",
+      "records ADR 0020 as the implement-family core and supersedes the standalone statuses",
+    );
+    const assertions = await readFile("tests/repo-contract.test.mjs", "utf8");
+    assert.match(source, /assert\.ok\(body && \/\[\\u0e00-\\u0e7f\]\/\.test\(body\)/,
+      "ADR 0020 sections keep a Thai-character check after each heading");
+    assert.ok(assertions.includes('const prose = body.replace(/`[^`]*`/g, " ");'),
+      "English prose evidence removes inline code identifiers first");
+    assert.match(assertions, /return words\.length >= 8 && proseWords\.length >= 2;/,
+      "English evidence requires a sentence with multiple natural-language words");
+    assert.match(source, /assert\.ok\(hasEnglishProse\(body\),/,
+      "each section asserts its own English prose evidence");
+  });
+
   it("scopes adapter routing claims to the adapter contract and invocation section", async () => {
     const source = await testCase(
       "tests/implement-tickets-contract.test.mjs",
@@ -549,8 +578,8 @@ describe("Markdown contract assertion scope", () => {
       "Codex invocation metadata is not searched outside its owning YAML mapping");
     assert.match(invocation, /const policyMapping = agent\.match\(/,
       "Codex invocation metadata is extracted from its policy mapping");
-    assert.match(invocation, /assert\.match\(policyMapping,\s*\/\^\\s\+allow_implicit_invocation/,
-      "the Codex policy field is checked within the policy mapping");
+    assert.ok(invocation.includes("directPolicyChildren.some((line) => line.slice(policyChildIndent).match(/^allow_implicit_invocation:"),
+      "the Codex policy field is checked at direct-child indentation");
 
     const handoff = await testCase(
       "tests/grill-to-tickets-contract.test.mjs",
@@ -580,5 +609,7 @@ describe("Markdown contract assertion scope", () => {
       "ADR section checks extract body text after the heading");
     assert.match(adr, /\.test\(body\)/,
       "Thai presence is checked within each ADR section body");
+    assert.match(adr, /assert\.ok\(hasEnglishProse\(body\),/,
+      "English prose is checked within each ADR section body");
   });
 });
