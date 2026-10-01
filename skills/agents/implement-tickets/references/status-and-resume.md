@@ -72,7 +72,10 @@ For a valid status file:
    `git checkout -B <integration-branch> <sha>`. Record the discarded commits
    and invalidate affected ticket state before dispatching again.
 3. Re-present the Plan using reconciled Git state, current blockers, and
-   eligible tickets. Wait for approval before dispatching.
+   eligible tickets. When `continue` re-presents the Plan, rerun the manifest
+   check against the current spec and ticket files. If `spec.md` was edited
+   between sessions, include the spec-hash warning in the Plan. Wait for
+   approval before dispatching.
 4. Resume from the earliest eligible frontier. Keep blocked tickets and their
    dependants held; an explicit continue may proceed with the independent
    partial path.

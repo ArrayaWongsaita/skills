@@ -42,6 +42,10 @@ npx skills add ArrayaWongsaita/skills --skill implement-tickets
 marker ของ parallel execution อยู่ใน
 [parallel-validation reference](../../../skills/agents/implement-tickets/references/parallel-validation.md)
 
+ตัวอ่าน manifest เปรียบเทียบ spec และชุด ticket. Plan แสดงคำเตือน spec-hash และคำเตือน ticket-set
+ส่วนคอลัมน์ Budget แสดง Budget ของ ticket แต่ละใบ คำเตือนเป็นข้อมูลประกอบและไม่หยุดการวางแผน
+[planning reference](../../../skills/agents/implement-tickets/references/planning.md) อธิบายวิธีแก้คำเตือน spec-hash.
+
 ### Dispatch, verifier และ timeout
 
 หลัง approval ให้ทำตาม [dispatch contract](../../../skills/agents/implement-tickets/references/dispatch-contract.md),
@@ -96,6 +100,11 @@ Touch-set and wave planning are covered by the
 [planning reference](../../../skills/agents/implement-tickets/references/planning.md).
 The parallel-validation marker is covered by the
 [parallel-validation reference](../../../skills/agents/implement-tickets/references/parallel-validation.md).
+
+The manifest reader compares the spec and ticket set. The Plan reports a spec-hash
+warning and a ticket-set warning. The Budget column shows each ticket's Budget;
+warnings are advisory and do not stop planning. The [planning reference](../../../skills/agents/implement-tickets/references/planning.md)
+explains how to clear the spec-hash warning.
 
 ### Main workflow
 

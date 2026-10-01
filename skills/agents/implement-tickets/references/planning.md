@@ -15,8 +15,9 @@ feature directory.
   ticket set.
 
 Do not create prompts, reports, status files, branches, worktrees, or commits
-during planning. The wave script only reads ticket files and the optional
-parallel-validation marker.
+during planning. Wave computation uses ticket files only. The script also reads
+the optional parallel-validation marker and the feature's `manifest.json` for
+advisory warnings; manifest contents never determine waves.
 
 ## 2. Parse and validate tickets
 
@@ -54,8 +55,11 @@ overlap. `--serial` assigns each ticket its own wave in ticket order.
 `--concurrency N` is echoed in the JSON output and does not change the waves;
 the orchestrator enforces the cap across workers and verifiers.
 
-The output is JSON with `waves`, per-ticket `wave`, `blockers`, `touchSet`, and
-`warnings`, the `concurrency` value, and `parallelValidated`. The marker is
+The output is JSON with `waves`, per-ticket `wave`, `blockers`, `touchSet`,
+`budget`, and `warnings`, the `concurrency` value, `parallelValidated`, and a
+`manifest` field shaped as `{statuses, warnings}`. Manifest warnings are also
+included in the top-level `warnings` list, alongside ticket warnings, so the
+Plan can present every planning warning. The marker is
 `references/parallel-validation.md` by default and can be replaced with
 `--marker <file>` for a fixture. A line `status: not validated` makes
 `parallelValidated` false. A line `status: validated <date>` makes it true.
@@ -76,8 +80,12 @@ orchestrator. Record the matched worker agent for each ticket.
 
 Present one row for every ticket, in ticket order:
 
-| Ticket | Wave | Blockers | Touch set | Seam | Matched agent | Retry budget |
-| --- | ---: | --- | --- | --- | --- | ---: |
+| Ticket | Wave | Blockers | Budget | Touch set | Seam | Matched agent | Retry budget |
+| --- | ---: | --- | --- | --- | --- | --- | ---: |
+
+The Budget column shows the text after each ticket file's own Budget field
+label, or `none` when that field is absent. It is information only and applies
+no limit or triage.
 
 Also state:
 
@@ -85,6 +93,10 @@ Also state:
   adapter;
 - concurrency cap: `4` by default or the supplied `--concurrency N`;
 - all script and planning warnings, including unknown touch sets;
+- manifest warnings join the other planning warnings in the Plan. Include the
+  spec-hash warning and its cure as reported: “Spec changed since the tickets
+  were checked; re-run the ticket checker with `--write-budget` to refresh the
+  manifest.”;
 - the standalone line `parallel not yet validated` when the marker says
   `status: not validated`;
 - retry budget: three ticket attempts, unless the run contract later defines

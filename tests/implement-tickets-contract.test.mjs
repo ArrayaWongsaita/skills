@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { access, mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -11,6 +12,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const skillRoot = path.join(repoRoot, "skills/agents/implement-tickets");
 const wavesScript = path.join(skillRoot, "scripts/waves.mjs");
 const preflightScript = path.join(skillRoot, "scripts/preflight.mjs");
+const ticketCheckerScript = path.join(repoRoot, "skills/agents/grill-to-tickets/scripts/check-tickets.mjs");
 const adapterFixtureRoot = path.join(repoRoot, "tests/fixtures/implement-tickets/adapters");
 const envelopeFixtureRoot = path.join(repoRoot, "tests/fixtures/implement-tickets/envelopes");
 const fixtureLock = path.join(repoRoot, "tests/fixtures/implement-tickets/locks/skills-lock.json");
@@ -49,14 +51,44 @@ function ticket(number, { blockers = [], context = "", seam = "the core contract
   ].join("\n");
 }
 
-async function fixture(tickets) {
+async function fixture(tickets, { spec } = {}) {
   const root = await mkdtemp(path.join(tmpdir(), "implement-tickets-contract-"));
   const issues = path.join(root, "issues");
   await mkdir(issues, { recursive: true });
+  if (spec !== undefined) await writeFile(path.join(root, "spec.md"), spec, "utf8");
   for (const [number, contents] of Object.entries(tickets)) {
     await writeFile(path.join(issues, `${number}-fixture.md`), contents, "utf8");
   }
   return { root, issues };
+}
+
+function sha256(bytes) {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+function manifestFor(spec, tickets) {
+  return {
+    version: 1,
+    specSha256: sha256(Buffer.from(spec)),
+    waves: [],
+    tickets,
+  };
+}
+
+function manifestTicket(number, blockedBy = []) {
+  return {
+    number: Number(number),
+    file: `issues/${number}-fixture.md`,
+    blockedBy: blockedBy.map(Number),
+  };
+}
+
+async function writeManifest(root, manifest) {
+  await writeFile(
+    path.join(root, "manifest.json"),
+    typeof manifest === "string" ? manifest : `${JSON.stringify(manifest, null, 2)}\n`,
+    "utf8",
+  );
 }
 
 async function gitRepository() {
@@ -75,6 +107,14 @@ async function runWaves(dir, options = []) {
   const result = await invokeWaves(dir, options);
   assert.equal(result.status, 0, `wave script exits successfully: ${result.stderr || result.stdout}`);
   return JSON.parse(result.stdout);
+}
+
+function assertTicketSetWarning(output, number) {
+  assert.ok(output.manifest.statuses.includes("ticket set differs"));
+  assert.ok(output.manifest.warnings.some((warning) =>
+    new RegExp(`ticket ${number}\\b`, "i").test(warning)));
+  assert.deepEqual(output.warnings, output.manifest.warnings);
+  assert.ok(!output.manifest.statuses.includes("matches"));
 }
 
 async function invokePreflight(options = [], { cwd } = {}) {
@@ -131,6 +171,478 @@ function linkedReferences(sections) {
 }
 
 describe("implement-tickets wave planner contract", () => {
+  it("reports each ticket's own Budget line, or none when absent", async () => {
+    const ownBudget = "read ~19k tokens · 4 criteria · 3 modules";
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(edit) src/one.mjs" })
+        .replace("**Budget:** read ~1k tokens · 1 criteria · 1 modules", "**Budget:** " + ownBudget),
+      "02": ticket("02", { context: "(edit) src/two.mjs" })
+        .replace(/^\*\*Budget:\*\*[^\r\n]*\r?\n/m, ""),
+    });
+    try {
+      await writeManifest(root, manifestFor("# Fixture spec\n", [
+        { ...manifestTicket("01"), budget: "manifest copy must be ignored" },
+        { ...manifestTicket("02"), budget: "manifest copy must not fill a missing ticket value" },
+      ]));
+
+      const output = await runWaves(issues);
+      assert.deepEqual(output.tickets.map(({ budget }) => budget), [ownBudget, "none"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+  it("reports a changed spec in manifest and top-level warnings without failing planning", async () => {
+    const spec = "# Fixture spec\n";
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(edit) src/one.mjs" }),
+    }, { spec });
+    try {
+      const manifest = manifestFor(spec, [manifestTicket("01")]);
+      manifest.specSha256 = "0".repeat(64);
+      await writeManifest(root, manifest);
+
+      const result = await invokeWaves(issues);
+      assert.equal(result.status, 0, result.stderr);
+      const output = JSON.parse(result.stdout);
+      assert.deepEqual(output.manifest.statuses, ["spec changed"]);
+      assert.equal(output.manifest.warnings.length, 1);
+      assert.match(output.manifest.warnings[0], /spec changed since the tickets were checked/i);
+      assert.match(output.manifest.warnings[0], /re-run the ticket checker with --write-budget/i);
+      assert.deepEqual(output.warnings, output.manifest.warnings);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports matches without a manifest warning when the raw spec fingerprint matches", async () => {
+    const spec = "# Fixture spec\n";
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(edit) src/one.mjs" }),
+    }, { spec });
+    try {
+      await writeManifest(root, manifestFor(spec, [manifestTicket("01")]));
+
+      const output = await runWaves(issues);
+      assert.deepEqual(output.manifest.statuses, ["matches"]);
+      assert.deepEqual(output.manifest.warnings, []);
+      assert.deepEqual(output.warnings, []);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("warns when a ticket is added after the manifest was written", async () => {
+    const spec = "# Fixture spec\n";
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(edit) src/one.mjs" }),
+    }, { spec });
+    try {
+      await writeManifest(root, manifestFor(spec, [manifestTicket("01")]));
+      await writeFile(path.join(issues, "02-fixture.md"), ticket("02", { context: "(edit) src/two.mjs" }), "utf8");
+
+      const output = await runWaves(issues);
+      assertTicketSetWarning(output, "02");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("warns when a ticket recorded in the manifest has been removed", async () => {
+    const spec = "# Fixture spec\n";
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(edit) src/one.mjs" }),
+    }, { spec });
+    try {
+      await writeManifest(root, manifestFor(spec, [manifestTicket("01"), manifestTicket("02")]));
+
+      const output = await runWaves(issues);
+      assertTicketSetWarning(output, "02");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("warns when a ticket file is renamed without changing its number", async () => {
+    const spec = "# Fixture spec\n";
+    const contents = ticket("01", { context: "(edit) src/one.mjs" });
+    const { root, issues } = await fixture({ "01": contents }, { spec });
+    try {
+      await writeManifest(root, manifestFor(spec, [manifestTicket("01")]));
+      await rm(path.join(issues, "01-fixture.md"));
+      await writeFile(path.join(issues, "01-renamed.md"), contents, "utf8");
+
+      const output = await runWaves(issues);
+      assertTicketSetWarning(output, "01");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("warns when a ticket's resolved blockers differ from the manifest", async () => {
+    const spec = "# Fixture spec\n";
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(new) src/base.mjs" }),
+      "02": ticket("02", { blockers: ["01"], context: "(edit) src/next.mjs" }),
+    }, { spec });
+    try {
+      await writeManifest(root, manifestFor(spec, [manifestTicket("01"), manifestTicket("02")]));
+
+      const output = await runWaves(issues);
+      assertTicketSetWarning(output, "02");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps equivalent numeric and title blocker references silent", async () => {
+    const spec = "# Fixture spec\n";
+    for (const blocker of ["# 1", "Groundwork"]) {
+      const { root, issues } = await fixture({
+        "01": ticket("01", { title: "Groundwork", context: "(new) src/base.mjs" }),
+        "02": ticket("02", { blockers: [blocker], context: "(edit) src/next.mjs" }),
+      }, { spec });
+      try {
+        await writeManifest(root, manifestFor(spec, [manifestTicket("01"), manifestTicket("02", ["01"])]));
+
+        const output = await runWaves(issues);
+        assert.deepEqual(output.manifest.statuses, ["matches"], `blocker reference ${blocker}`);
+        assert.deepEqual(output.manifest.warnings, [], `blocker reference ${blocker}`);
+        assert.deepEqual(output.warnings, [], `blocker reference ${blocker}`);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it("keeps title and non-dependency ticket edits silent", async () => {
+    const spec = "# Fixture spec\n";
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(edit) src/one.mjs" }),
+    }, { spec });
+    try {
+      await writeManifest(root, manifestFor(spec, [manifestTicket("01")]));
+      const changed = ticket("01", {
+        title: "A revised title",
+        seam: "a revised seam",
+        context: "(edit) src/elsewhere.mjs",
+      }).replace("**Budget:** read ~1k tokens · 1 criteria · 1 modules", "**Budget:** read ~9k tokens · 8 criteria · 4 modules");
+      await writeFile(path.join(issues, "01-fixture.md"), changed, "utf8");
+
+      const output = await runWaves(issues);
+      assert.deepEqual(output.manifest.statuses, ["matches"]);
+      assert.deepEqual(output.manifest.warnings, []);
+      assert.deepEqual(output.warnings, []);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores files outside the ticket naming pattern on both sides", async () => {
+    const spec = "# Fixture spec\n";
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(edit) src/one.mjs" }),
+    }, { spec });
+    try {
+      await writeFile(path.join(issues, "notes.md"), "not a ticket\n", "utf8");
+      const manifest = manifestFor(spec, [
+        manifestTicket("01"),
+        { number: 99, file: "issues/notes.md", blockedBy: [] },
+      ]);
+      await writeManifest(root, manifest);
+
+      const output = await runWaves(issues);
+      assert.deepEqual(output.manifest.statuses, ["matches"]);
+      assert.deepEqual(output.manifest.warnings, []);
+      assert.deepEqual(output.warnings, []);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports a changed spec and a differing ticket set together", async () => {
+    const spec = "# Current fixture spec\n";
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(edit) src/one.mjs" }),
+      "02": ticket("02", { context: "(edit) src/two.mjs" }),
+    }, { spec });
+    try {
+      const manifest = manifestFor("# Previous fixture spec\n", [manifestTicket("01")]);
+      await writeManifest(root, manifest);
+
+      const output = await runWaves(issues);
+      assert.deepEqual(output.manifest.statuses, ["spec changed", "ticket set differs"]);
+      assert.ok(output.manifest.warnings.some((warning) => /spec changed/i.test(warning)));
+      assert.ok(output.manifest.warnings.some((warning) => /ticket 02\b/i.test(warning)));
+      assert.deepEqual(output.warnings, output.manifest.warnings);
+      assert.ok(!output.manifest.statuses.includes("matches"));
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("clears a changed-spec warning after the real checker rewrites the manifest", async () => {
+    const scratch = path.join(repoRoot, ".scratch");
+    await mkdir(scratch, { recursive: true });
+    const root = await mkdtemp(path.join(scratch, "implement-tickets-manifest-reader-"));
+    const issues = path.join(root, "issues");
+    const spec = [
+      "# Checker fixture",
+      "",
+      "## User Stories",
+      "",
+      "1. A fixture story.",
+      "   Scenario: given a fixture when checked then it passes.",
+      "",
+      "## Implementation Decisions",
+      "",
+      "No additional decisions.",
+      "",
+    ].join("\n");
+    try {
+      await mkdir(issues, { recursive: true });
+      await writeFile(path.join(root, "spec.md"), spec, "utf8");
+      await writeFile(
+        path.join(issues, "01-fixture.md"),
+        ticket("01", { context: "(new) src/manifest-reader-fixture.mjs" }),
+        "utf8",
+      );
+
+      const initialCheck = spawnSync(process.execPath, [ticketCheckerScript, root, "--write-budget"], {
+        cwd: repoRoot,
+        encoding: "utf8",
+      });
+      assert.equal(initialCheck.status, 0, `${initialCheck.stdout}\n${initialCheck.stderr}`);
+
+      await writeFile(path.join(root, "spec.md"), `${spec}\n`, "utf8");
+      const stale = await runWaves(issues);
+      assert.deepEqual(stale.manifest.statuses, ["spec changed"]);
+
+      const refreshedCheck = spawnSync(process.execPath, [ticketCheckerScript, root, "--write-budget"], {
+        cwd: repoRoot,
+        encoding: "utf8",
+      });
+      assert.equal(refreshedCheck.status, 0, `${refreshedCheck.stdout}\n${refreshedCheck.stderr}`);
+
+      const refreshed = await runWaves(root);
+      assert.deepEqual(refreshed.manifest.statuses, ["matches"]);
+      assert.deepEqual(refreshed.manifest.warnings, []);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("warns when the manifest is missing and continues with a successful plan", async () => {
+    const spec = "# Fixture spec\n";
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(edit) src/one.mjs" }),
+    }, { spec });
+    try {
+      const result = await invokeWaves(issues);
+      assert.equal(result.status, 0, result.stderr);
+      const output = JSON.parse(result.stdout);
+      assert.deepEqual(output.manifest.statuses, ["missing"]);
+      assert.equal(output.manifest.warnings.length, 1);
+      assert.match(output.manifest.warnings[0], /manifest.*missing/i);
+      assert.deepEqual(output.warnings, output.manifest.warnings);
+      assert.deepEqual(output.waves, [["01"]]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores invalid JSON, unsupported versions, incomplete schemas, and invalid ticket entries", async () => {
+    const spec = "# Fixture spec\n";
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(edit) src/one.mjs" }),
+    }, { spec });
+    const valid = manifestFor(spec, [manifestTicket("01")]);
+    const invalidCases = [
+      ["invalid JSON", "{"],
+      ["unsupported version", { ...valid, version: 2 }],
+      ["missing fingerprint", { version: 1, tickets: valid.tickets }],
+      ["missing tickets", { version: 1, specSha256: valid.specSha256 }],
+      ["null ticket", { ...valid, tickets: [null] }],
+      ["non-object ticket", { ...valid, tickets: ["01"] }],
+      ["non-integer number", { ...valid, tickets: [{ ...valid.tickets[0], number: "01" }] }],
+      ["non-string file", { ...valid, tickets: [{ ...valid.tickets[0], file: 1 }] }],
+      ["non-array blockers", { ...valid, tickets: [{ ...valid.tickets[0], blockedBy: null }] }],
+      ["string blocker member", { ...valid, tickets: [{ ...valid.tickets[0], blockedBy: ["01"] }] }],
+      ["fractional blocker member", { ...valid, tickets: [{ ...valid.tickets[0], blockedBy: [1.5] }] }],
+    ];
+    try {
+      for (const [label, contents] of invalidCases) {
+        await writeManifest(root, contents);
+        const result = await invokeWaves(issues);
+        assert.equal(result.status, 0, `${label}: ${result.stderr}`);
+        const output = JSON.parse(result.stdout);
+        assert.deepEqual(output.manifest.statuses, ["ignored"], label);
+        assert.equal(output.manifest.warnings.length, 1, label);
+        assert.match(output.manifest.warnings[0], /manifest.*ignored/i, label);
+        assert.deepEqual(output.warnings, output.manifest.warnings, label);
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores malformed manifest blocker members and keeps the ticket-file wave plan", async () => {
+    const spec = "# Fixture spec\n";
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(new) src/base.mjs" }),
+      "02": ticket("02", { blockers: ["01"], context: "(edit) src/next.mjs" }),
+    }, { spec });
+    const manifest = manifestFor(spec, [
+      manifestTicket("01"),
+      { ...manifestTicket("02"), blockedBy: [{ toString: 1 }] },
+    ]);
+    try {
+      await writeManifest(root, manifest);
+
+      const result = await invokeWaves(issues);
+      assert.equal(result.status, 0, `wave script continues with an advisory manifest warning: ${result.stderr}`);
+      const output = JSON.parse(result.stdout);
+      assert.deepEqual(output.manifest.statuses, ["ignored"]);
+      assert.match(output.manifest.warnings.join(" "), /manifest.*ignored/i);
+      assert.deepEqual(output.warnings, output.manifest.warnings);
+      assert.deepEqual(output.waves, [["01"], ["02"]]);
+      assert.deepEqual(output.tickets.map(({ blockers }) => blockers), [[], ["01"]]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores duplicate manifest ticket numbers and retains ticket-file planning facts", async () => {
+    const spec = "# Fixture spec\n";
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(edit) src/one.mjs" }),
+    }, { spec });
+    const manifest = manifestFor(spec, [
+      { ...manifestTicket("01", ["99"]), file: "issues/01-old.md" },
+      manifestTicket("01"),
+    ]);
+    try {
+      await writeManifest(root, manifest);
+
+      const result = await invokeWaves(issues);
+      assert.equal(result.status, 0, `wave script treats the duplicate manifest as advisory: ${result.stderr}`);
+      const output = JSON.parse(result.stdout);
+      assert.deepEqual(output.manifest.statuses, ["ignored"]);
+      assert.equal(output.manifest.warnings.length, 1);
+      assert.match(output.manifest.warnings[0], /manifest.*ignored/i);
+      assert.deepEqual(output.warnings, output.manifest.warnings);
+      assert.deepEqual(output.waves, [["01"]]);
+      assert.deepEqual(output.tickets.map(({ blockers }) => blockers), [[]]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores non-ticket manifest entries during duplicate validation", async () => {
+    const spec = "# Fixture spec\n";
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(edit) src/one.mjs" }),
+    }, { spec });
+    const manifest = manifestFor(spec, [
+      manifestTicket("01"),
+      { number: 1, file: "issues/notes.md", blockedBy: [] },
+    ]);
+    try {
+      await writeManifest(root, manifest);
+
+      const result = await invokeWaves(issues);
+      assert.equal(result.status, 0, result.stderr);
+      const output = JSON.parse(result.stdout);
+      assert.deepEqual(output.manifest.statuses, ["matches"]);
+      assert.deepEqual(output.manifest.warnings, []);
+      assert.deepEqual(output.warnings, []);
+      assert.deepEqual(output.waves, [["01"]]);
+      assert.deepEqual(output.tickets.map(({ blockers }) => blockers), [[]]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports an unavailable spec fingerprint when the manifest exists but spec.md does not", async () => {
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(edit) src/one.mjs" }),
+    });
+    try {
+      await writeManifest(root, {
+        ...manifestFor("# Removed spec\n", [manifestTicket("01")]),
+      });
+
+      const result = await invokeWaves(issues);
+      assert.equal(result.status, 0, result.stderr);
+      const output = JSON.parse(result.stdout);
+      assert.deepEqual(output.manifest.statuses, ["spec unavailable"]);
+      assert.match(output.manifest.warnings.join(" "), /fingerprint cannot be checked/i);
+      assert.deepEqual(output.warnings, output.manifest.warnings);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("finds the same manifest from feature and issues paths in relative, absolute, and trailing-slash forms", async () => {
+    const spec = "# Fixture spec\n";
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(edit) src/one.mjs" }),
+    }, { spec });
+    try {
+      await writeManifest(root, manifestFor(spec, [manifestTicket("01")]));
+      const featureRelative = path.relative(repoRoot, root);
+      const issuesRelative = path.relative(repoRoot, issues);
+      const outputs = await Promise.all([
+        runWaves(root),
+        runWaves(`${root}${path.sep}`),
+        runWaves(issues),
+        runWaves(`${issues}${path.sep}`),
+        runWaves(`${issuesRelative}${path.sep}`),
+        runWaves(issuesRelative),
+        runWaves(featureRelative),
+        runWaves(`${featureRelative}${path.sep}`),
+      ]);
+
+      for (const output of outputs) assert.deepEqual(output.manifest, outputs[0].manifest);
+      assert.deepEqual(outputs[0].manifest.statuses, ["matches"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps waves, blockers, and touch sets independent of manifest contents", async () => {
+    const spec = "# Fixture spec\n";
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(new) src/base.mjs" }),
+      "02": ticket("02", { blockers: ["01"], context: "(edit) src/left.mjs" }),
+      "03": ticket("03", { blockers: ["01"], context: "(edit) src/right.mjs" }),
+    }, { spec });
+    const entries = [manifestTicket("01"), manifestTicket("02", ["01"]), manifestTicket("03", ["01"])];
+    try {
+      const missing = await runWaves(issues);
+      const matchingManifest = manifestFor(spec, entries);
+      matchingManifest.waves = [["99"]];
+      await writeManifest(root, matchingManifest);
+      const matching = await runWaves(issues);
+
+      const changedSpec = { ...matchingManifest, specSha256: "0".repeat(64) };
+      await writeManifest(root, changedSpec);
+      const changed = await runWaves(issues);
+
+      await writeManifest(root, "{");
+      const ignored = await runWaves(issues);
+      const planningFacts = ({ waves, tickets }) => ({
+        waves,
+        tickets: tickets.map(({ number, blockers, touchSet }) => ({ number, blockers, touchSet })),
+      });
+      assert.deepEqual(planningFacts(matching), planningFacts(missing));
+      assert.deepEqual(planningFacts(changed), planningFacts(missing));
+      assert.deepEqual(planningFacts(ignored), planningFacts(missing));
+      assert.deepEqual(matching.waves, [["01"], ["02", "03"]]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("rejects a ticket with no Context field and names the ticket and field", async () => {
     const missingContext = ticket("01", { context: "(edit) src/one.mjs" })
       .replace(/^\*\*Context:\*\*.*\n/m, "");
@@ -305,8 +817,13 @@ describe("implement-tickets skill and documentation contract", () => {
     assert.ok(plan, "the Plan presentation and approval subsection exists");
     assert.match(
       plan,
-      /\| Ticket \| Wave \| Blockers \| Touch set \| Seam \| Matched agent \| Retry budget \|/,
+      /\| Ticket \| Wave \| Blockers \| Budget \| Touch set \| Seam \| Matched agent \| Retry budget \|/,
       "the Plan has a row for every ticket with all required columns",
+    );
+    assert.match(
+      plan,
+      /Budget column[\s\S]*ticket file's own Budget field[\s\S]*information only[\s\S]*no limit[\s\S]*triage/i,
+      "the Budget column uses the ticket's own field and has no limit or triage effect",
     );
     assert.match(plan, /backend:\s*native harness subagents/i, "the Plan names the default backend");
     assert.match(plan, /concurrency cap:\s*`4` by default/i, "the Plan names the default concurrency cap");
@@ -314,6 +831,92 @@ describe("implement-tickets skill and documentation contract", () => {
     assert.match(plan, /parallel not yet validated/, "the pending marker is printed in the Plan");
     assert.match(plan, /pause for explicit approval/i, "the Plan waits for explicit approval");
     assert.match(plan, /no file outside the\s+feature directory changes until approval/i, "files outside the feature directory stay untouched before approval");
+  });
+
+  it("documents advisory manifest warnings in planning and resume procedures", async () => {
+    const skill = await readTextOrNull(path.join(skillRoot, "SKILL.md"));
+    const planning = await readTextOrNull(path.join(skillRoot, "references/planning.md"));
+    const resume = await readTextOrNull(path.join(skillRoot, "references/status-and-resume.md"));
+    assert.ok(skill, "the implement-tickets skill exists");
+    assert.ok(planning, "the planning procedure exists");
+    assert.ok(resume, "the status and resume procedure exists");
+
+    const stage0 = markdownSection(skill, "Stage 0 — Plan, then pause");
+    const compute = markdownSection(planning, "3. Compute waves");
+    const presentPlan = markdownSection(planning, "5. Present the Plan and pause");
+    const continueRun = markdownSection(resume, "Continue and reconcile");
+    assert.match(compute, /JSON[\s\S]*`manifest` field/i, "the planning reference documents the script's manifest field");
+    assert.match(presentPlan, /manifest warnings join the other planning warnings/i, "manifest warnings join the Plan's other warnings");
+    assert.match(presentPlan, /Spec changed since the tickets\s+were checked; re-run the ticket checker with `--write-budget` to refresh the\s+manifest\./, "the Plan pins the spec-hash warning wording and its cure");
+    assert.match(continueRun, /continue[\s\S]*re-present(?:s|ing) the Plan/i, "continue re-presents the Plan");
+    assert.match(continueRun, /manifest\s+check/i, "continue reruns the manifest check");
+    assert.match(continueRun, /spec\.md/i, "the resume check names the spec file");
+    assert.match(continueRun, /edited\s+between sessions[\s\S]*spec-hash warning/i, "continue surfaces a spec edit made between sessions");
+    assert.match(stage0, /every manifest state[\s\S]*cannot stop the run[\s\S]*not recorded in\s+the run status file[\s\S]*approval pause is always reached/i, "manifest state is advisory and does not affect run state or the approval pause");
+    assert.match(stage0, /wave planning comes from ticket files\s+and never from the manifest/i, "waves are computed from ticket files only");
+  });
+
+  it("summarizes manifest comparisons, named warnings, and Budget in both languages with a linked remedy", async () => {
+    for (const file of ["docs/guides/implement-tickets.md", "docs/skills/agents/implement-tickets.md"]) {
+      const doc = await readTextOrNull(path.join(repoRoot, file));
+      assert.ok(doc, `${file} exists`);
+      const thai = markdownSection(doc, "ภาษาไทย / Thai");
+      const english = markdownSection(doc, "English / ภาษาอังกฤษ");
+      assert.ok(thai && english, `${file} has Thai and English sections`);
+
+      for (const [language, section] of [["Thai", thai], ["English", english]]) {
+        const summary = section.split(/\r?\n\s*\r?\n/).find((paragraph) =>
+          /manifest/i.test(paragraph) && /Budget/i.test(paragraph));
+        assert.ok(summary, `${file} ${language} has a concise manifest and Budget summary`);
+        if (language === "Thai") {
+          assert.match(summary, /ตัวอ่าน manifest[\s\S]*เปรียบเทียบ spec และชุด ticket/i,
+            `${file} Thai summary says the manifest reader compares the spec and ticket set`);
+          assert.match(summary, /Plan[\s\S]*คำเตือน spec-hash[\s\S]*คำเตือน ticket-set/i,
+            `${file} Thai summary names both Plan warning types`);
+          assert.match(summary, /คอลัมน์ Budget[\s\S]*แสดง Budget ของ ticket แต่ละใบ/i,
+            `${file} Thai summary says Budget shows each ticket's Budget`);
+          assert.match(summary, /\[planning reference\]\([^)]+planning\.md\)[\s\S]*อธิบายวิธีแก้คำเตือน spec-hash/i,
+            `${file} Thai summary says the linked planning reference explains the spec-hash remedy`);
+        } else {
+          assert.match(summary, /manifest reader[\s\S]*compares the spec and ticket set/i,
+            `${file} English summary says the manifest reader compares the spec and ticket set`);
+          assert.match(summary, /Plan[\s\S]*spec-hash\s+warning[\s\S]*ticket-set\s+warning/i,
+            `${file} English summary names both Plan warning types`);
+          assert.match(summary, /Budget column[\s\S]*shows each ticket's Budget/i,
+            `${file} English summary says Budget shows each ticket's Budget`);
+          assert.match(summary, /\[planning reference\]\([^)]+planning\.md\)[\s\S]*explains how to clear the spec-hash warning/i,
+            `${file} English summary says the linked planning reference explains the spec-hash remedy`);
+        }
+        assert.doesNotMatch(summary, /--write-budget|re-run the ticket checker/i,
+          `${file} ${language} summary does not duplicate detailed manifest mechanics`);
+      }
+    }
+  });
+
+  it("records the manifest reader, warn-only rule, and raw-byte fingerprint in a dated bilingual ADR addendum", async () => {
+    const adr = await readTextOrNull(path.join(repoRoot, "docs/decisions/0020-implement-tickets-core.md"));
+    assert.ok(adr, "ADR 0020 exists");
+    const heading = markdownHeadings(adr).find(({ title }) => title.startsWith("Addendum (2026-10-01) / ภาคผนวก"));
+    assert.ok(heading, "ADR 0020 has a dated bilingual addendum");
+    const addendum = markdownSection(adr, heading.title);
+    assert.match(addendum, /manifest reader/i);
+    assert.match(addendum, /warn-only[\s\S]*advisory/i);
+    assert.match(addendum, /SHA-256 of the raw\s+bytes/i);
+    assert.match(addendum, /ตัวอ่าน manifest/);
+    assert.match(addendum, /เตือนเท่านั้น/);
+    assert.match(addendum, /ไบต์ดิบ/);
+  });
+
+  it("pins the spec-hash warning eval for a produced Plan after the spec changes", async () => {
+    const evalText = await readTextOrNull(path.join(skillRoot, "evals/evals.json"));
+    assert.ok(evalText, "the implement-tickets evals exist");
+    const { evals } = JSON.parse(evalText);
+    const evalCase = evals.find(({ id }) => id === 19);
+    assert.ok(evalCase, "eval 19 covers a spec-hash warning in the Plan");
+    assert.equal(evalCase.name, "spec-hash warning appears in the produced Plan after the spec changes");
+    assert.match(evalCase.prompt, /\/implement-tickets/);
+    assert.match(evalCase.prompt, /ticket checker wrote manifest\.json[\s\S]*spec\.md changed/i);
+    assert.match(evalCase.expected_output, /produced Plan[\s\S]*Spec changed since the tickets were checked[\s\S]*--write-budget/i);
   });
 
   it("links bilingual Seam and Context guidance to the planning reference in both user-facing pages", async () => {
