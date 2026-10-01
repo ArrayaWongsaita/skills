@@ -59,6 +59,13 @@ async function fixture(tickets) {
   return { root, issues };
 }
 
+async function gitRepository() {
+  const root = await mkdtemp(path.join(tmpdir(), "implement-tickets-git-repo-"));
+  const result = spawnSync("git", ["init", "--quiet"], { cwd: root, encoding: "utf8" });
+  assert.equal(result.status, 0, `temporary Git repository initializes: ${result.stderr || result.stdout}`);
+  return root;
+}
+
 async function runWaves(dir, options = []) {
   assert.equal(await exists(wavesScript), true, "wave planning behavior is missing: scripts/waves.mjs does not exist");
   const result = spawnSync(process.execPath, [wavesScript, dir, ...options], { encoding: "utf8" });
@@ -66,9 +73,17 @@ async function runWaves(dir, options = []) {
   return JSON.parse(result.stdout);
 }
 
-async function invokePreflight(options = []) {
+async function invokePreflight(options = [], { cwd } = {}) {
   assert.equal(await exists(preflightScript), true, "adapter preflight behavior is missing: scripts/preflight.mjs does not exist");
-  return spawnSync(process.execPath, [preflightScript, ...options], { encoding: "utf8" });
+  const temporaryRoot = cwd ? null : await gitRepository();
+  try {
+    return spawnSync(process.execPath, [preflightScript, ...options], {
+      cwd: cwd ?? temporaryRoot,
+      encoding: "utf8",
+    });
+  } finally {
+    if (temporaryRoot) await rm(temporaryRoot, { recursive: true, force: true });
+  }
 }
 
 function preflightOutput(result) {
@@ -237,6 +252,22 @@ describe("implement-tickets skill and documentation contract", () => {
       directPolicyChildren.some((line) => line.slice(policyChildIndent).match(/^allow_implicit_invocation:\s*false\s*(?:#.*)?$/)),
       "allow_implicit_invocation is false as a direct child of the root policy mapping",
     );
+  });
+
+  it("runs clean-tree preflight for every backend before presenting the Plan", async () => {
+    const skill = await readTextOrNull(path.join(skillRoot, "SKILL.md"));
+    assert.ok(skill, "the implement-tickets skill exists");
+    const invocation = markdownSection(skill, "Invocation");
+    assert.ok(invocation, "the skill has an Invocation section");
+    assert.match(invocation, /Before presenting any Plan, run/i);
+    assert.match(invocation, /scripts\/preflight\.mjs/);
+    assert.match(invocation, /every backend,\s+including\s+native/i);
+    assert.match(invocation, /Git repository with a clean working tree/i);
+    assert.match(invocation, /If preflight\s+fails,[\s\S]*stop before presenting the Plan/i);
+    assert.match(invocation, /Pass the run's `--with`, `--agent`, and `--model` options to preflight/i);
+    assert.match(invocation, /rejects `--agent` combined with `--with`/i);
+    assert.match(invocation, /When `--with <name>`[\s\S]*also searches/i,
+      "adapter discovery remains part of preflight when an adapter is selected");
   });
 
   it("specifies every Plan field and pauses before changes outside the feature directory", async () => {
@@ -496,6 +527,59 @@ describe("implement-tickets worker dispatch and verification contract", () => {
 });
 
 describe("implement-tickets adapter and preflight contract", () => {
+  it("accepts native preflight from a clean Git checkout", async () => {
+    const cwd = await gitRepository();
+    try {
+      const result = await invokePreflight([], { cwd });
+      assert.equal(result.status, 0, result.stderr);
+      const output = preflightOutput(result);
+      assert.equal(output.backend, "native");
+      assert.equal(output.error, null);
+    } finally {
+      await rm(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a dirty native checkout before planning", async () => {
+    const cwd = await gitRepository();
+    try {
+      await writeFile(path.join(cwd, "untracked-change.txt"), "dirty\n", "utf8");
+      const result = await invokePreflight([], { cwd });
+      assert.notEqual(result.status, 0, "a dirty native checkout cannot produce a Plan");
+      assert.match(preflightOutput(result).error, /working tree is not clean/i);
+    } finally {
+      await rm(cwd, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a dirty adapter checkout before planning", async () => {
+    const cwd = await gitRepository();
+    const adapterRoot = `${cwd}-adapters`;
+    try {
+      await addAdapter(adapterRoot, "fixture");
+      await writeFile(path.join(cwd, "untracked-change.txt"), "dirty\n", "utf8");
+      const result = await invokePreflight(["--with", "fixture", "--roots", adapterRoot], { cwd });
+      assert.notEqual(result.status, 0, "a dirty adapter checkout cannot produce a Plan");
+      const output = preflightOutput(result);
+      assert.equal(output.backend, "fixture");
+      assert.match(output.error, /working tree is not clean/i);
+    } finally {
+      await rm(cwd, { recursive: true, force: true });
+      await rm(adapterRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects preflight outside a Git repository", async () => {
+    const cwd = await mkdtemp(path.join(tmpdir(), "implement-tickets-no-git-repo-"));
+    try {
+      const result = await invokePreflight([], { cwd });
+      assert.notEqual(result.status, 0, "planning requires a Git checkout");
+      assert.match(preflightOutput(result).error, /Git repository/i);
+    } finally {
+      await rm(cwd, { recursive: true, force: true });
+    }
+  });
+
   it("searches project and user adapter roots in order and preserves a raw model value", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "implement-tickets-adapter-roots-"));
     const roots = [

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { access, readFile, stat } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
 import { constants } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
@@ -85,6 +86,20 @@ function defaultLockFiles(projectRoot) {
     path.join(projectRoot, "skills-lock.json"),
     path.join(homedir(), ".agents", ".skill-lock.json"),
   ];
+}
+
+function gitWorkingTreeError(projectRoot) {
+  const result = spawnSync("git", ["status", "--porcelain", "--untracked-files=all"], {
+    cwd: projectRoot,
+    encoding: "utf8",
+  });
+  if (result.error || result.status !== 0) {
+    return "Git repository required: unable to inspect the working tree before planning";
+  }
+  if (result.stdout.trim()) {
+    return "working tree is not clean; commit or remove changes before planning";
+  }
+  return null;
 }
 
 async function findAdapter(backend, roots) {
@@ -174,6 +189,7 @@ async function validateEnvelope(envelopeFile) {
 
 export async function preflight(options) {
   const projectRoot = await findProjectRoot();
+  let error = gitWorkingTreeError(projectRoot);
   const roots = options.roots ?? defaultSearchRoots(projectRoot);
   const locks = options.locks ?? defaultLockFiles(projectRoot);
   const source = await lockSource(locks);
@@ -181,11 +197,10 @@ export async function preflight(options) {
 
   let installLine = null;
   let note = null;
-  let error = null;
   if (options.with && !adapter.adapterPath) {
     const installSource = source ?? "<source of implement-tickets>";
     installLine = `npx skills add ${installSource} --skill ${adapter.adapterName}`;
-    error = `adapter ${adapter.adapterName} was not found`;
+    error ??= `adapter ${adapter.adapterName} was not found`;
     if (!source) note = "No implement-tickets entry was found in either lock file; use the source that installed the core.";
   }
 

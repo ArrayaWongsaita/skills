@@ -34,16 +34,21 @@ Options are set once for the run:
 - `--concurrency N` sets the shared worker and verifier cap; default `4`.
 - `--serial` puts one ticket in each wave.
 
-When `--with <name>` is supplied, run
-[`scripts/preflight.mjs`](scripts/preflight.mjs) before planning. It searches the
-project agent-skill directory, project Claude-skill directory, user agent-skill
-directory, and user Claude-skill directory in that order. The selected adapter
+Before presenting any Plan, run
+[`scripts/preflight.mjs`](scripts/preflight.mjs) for every backend, including
+native. It requires a Git repository with a clean working tree. If preflight
+fails, stop before presenting the Plan and report the error.
+Pass the run's `--with`, `--agent`, and `--model` options to preflight so it
+selects the requested adapter and rejects `--agent` combined with `--with`.
+
+When `--with <name>` is supplied, preflight also searches the project agent-skill
+directory, project Claude-skill directory, user agent-skill directory, and user
+Claude-skill directory in that order. The selected adapter
 name is the Plan's backend. If the adapter is missing, stop before presenting
 the Plan and print the install line from the `implement-tickets` lock entry,
-checking the project lock before the user lock. If neither has the entry, print
-the `<source of implement-tickets>` placeholder and tell the person to use the
-source that installed the core. `--agent` with `--with` is an error before
-planning; pass `--model` to the adapter as its raw value.
+checking the project lock before the user lock. If neither has the entry, print the
+`<source of implement-tickets>` placeholder and tell the person to use the
+source that installed the core. Pass `--model` to the adapter as its raw value.
 
 The adapter input, resume, failover, worktree ownership, and envelope are
 defined in [references/adapter-contract.md](references/adapter-contract.md).
