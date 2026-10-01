@@ -68,13 +68,14 @@ describe("grill-to-tickets composite skill contract", () => {
         assert.match(content, new RegExp(item), `must name stage skill or owned format ${item}`);
       }
       assert.ok(handoff, "must have a Stop — Handoff section");
+      const handoffBody = handoff.replace(/^## Stop — Handoff\s*\r?\n/u, "");
       assert.match(
         handoff,
         /\/implement-tickets \.scratch\/<feature-slug>\//,
         "must hand the ticket directory to a later implement-tickets run",
       );
       assert.match(
-        content,
+        handoffBody,
         /hands? off|handoff/i,
         "must frame the stop as a handoff rather than implementation",
       );

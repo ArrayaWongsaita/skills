@@ -234,6 +234,21 @@ describe("Markdown contract assertion scope", () => {
     assert.match(source, /assertAbsentFromMarkdownSections\(/, "the implementer scan checks each Markdown section");
   });
 
+  it("scopes grill-to-tickets handoff framing to its handoff section", async () => {
+    const source = await testCase(
+      "tests/grill-to-tickets-contract.test.mjs",
+      "inline-executes the three stage skills and two owned formats and hands the tickets to a later implementer run",
+    );
+    assert.doesNotMatch(source, /assert\.match\(\s*content,\s*\/hands\?\s+off\|handoff\/i/,
+      "handoff framing must not be satisfied by wording elsewhere in the skill");
+    assert.doesNotMatch(source, /assert\.match\(\s*handoff,\s*\/hands\?\s+off\|handoff\/i/,
+      "the Stop — Handoff heading itself must not satisfy the body claim");
+    assert.ok(source.includes('const handoffBody = handoff.replace(/^## Stop — Handoff\\s*\\r?\\n/u, "");'),
+      "the heading is removed before checking handoff wording in the body");
+    assert.match(source, /assert\.match\(\s*handoffBody,\s*\/hands\?\s+off\|handoff\/i/,
+      "handoff framing is asserted in the Stop — Handoff section body");
+  });
+
   it("scopes ADR 0018 content checks to their Markdown sections", async () => {
     const source = await testCase(
       "tests/repo-contract.test.mjs",
