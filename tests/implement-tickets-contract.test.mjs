@@ -109,6 +109,14 @@ async function runWaves(dir, options = []) {
   return JSON.parse(result.stdout);
 }
 
+function assertTicketSetWarning(output, number) {
+  assert.ok(output.manifest.statuses.includes("ticket set differs"));
+  assert.ok(output.manifest.warnings.some((warning) =>
+    new RegExp(`ticket ${number}\\b`, "i").test(warning)));
+  assert.deepEqual(output.warnings, output.manifest.warnings);
+  assert.ok(!output.manifest.statuses.includes("matches"));
+}
+
 async function invokePreflight(options = [], { cwd } = {}) {
   assert.equal(await exists(preflightScript), true, "adapter preflight behavior is missing: scripts/preflight.mjs does not exist");
   const temporaryRoot = cwd ? null : await gitRepository();
@@ -198,6 +206,155 @@ describe("implement-tickets wave planner contract", () => {
       assert.deepEqual(output.manifest.statuses, ["matches"]);
       assert.deepEqual(output.manifest.warnings, []);
       assert.deepEqual(output.warnings, []);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("warns when a ticket is added after the manifest was written", async () => {
+    const spec = "# Fixture spec\n";
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(edit) src/one.mjs" }),
+    }, { spec });
+    try {
+      await writeManifest(root, manifestFor(spec, [manifestTicket("01")]));
+      await writeFile(path.join(issues, "02-fixture.md"), ticket("02", { context: "(edit) src/two.mjs" }), "utf8");
+
+      const output = await runWaves(issues);
+      assertTicketSetWarning(output, "02");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("warns when a ticket recorded in the manifest has been removed", async () => {
+    const spec = "# Fixture spec\n";
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(edit) src/one.mjs" }),
+    }, { spec });
+    try {
+      await writeManifest(root, manifestFor(spec, [manifestTicket("01"), manifestTicket("02")]));
+
+      const output = await runWaves(issues);
+      assertTicketSetWarning(output, "02");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("warns when a ticket file is renamed without changing its number", async () => {
+    const spec = "# Fixture spec\n";
+    const contents = ticket("01", { context: "(edit) src/one.mjs" });
+    const { root, issues } = await fixture({ "01": contents }, { spec });
+    try {
+      await writeManifest(root, manifestFor(spec, [manifestTicket("01")]));
+      await rm(path.join(issues, "01-fixture.md"));
+      await writeFile(path.join(issues, "01-renamed.md"), contents, "utf8");
+
+      const output = await runWaves(issues);
+      assertTicketSetWarning(output, "01");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("warns when a ticket's resolved blockers differ from the manifest", async () => {
+    const spec = "# Fixture spec\n";
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(new) src/base.mjs" }),
+      "02": ticket("02", { blockers: ["01"], context: "(edit) src/next.mjs" }),
+    }, { spec });
+    try {
+      await writeManifest(root, manifestFor(spec, [manifestTicket("01"), manifestTicket("02")]));
+
+      const output = await runWaves(issues);
+      assertTicketSetWarning(output, "02");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps equivalent numeric and title blocker references silent", async () => {
+    const spec = "# Fixture spec\n";
+    for (const blocker of ["# 1", "Groundwork"]) {
+      const { root, issues } = await fixture({
+        "01": ticket("01", { title: "Groundwork", context: "(new) src/base.mjs" }),
+        "02": ticket("02", { blockers: [blocker], context: "(edit) src/next.mjs" }),
+      }, { spec });
+      try {
+        await writeManifest(root, manifestFor(spec, [manifestTicket("01"), manifestTicket("02", ["01"])]));
+
+        const output = await runWaves(issues);
+        assert.deepEqual(output.manifest.statuses, ["matches"], `blocker reference ${blocker}`);
+        assert.deepEqual(output.manifest.warnings, [], `blocker reference ${blocker}`);
+        assert.deepEqual(output.warnings, [], `blocker reference ${blocker}`);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it("keeps title and non-dependency ticket edits silent", async () => {
+    const spec = "# Fixture spec\n";
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(edit) src/one.mjs" }),
+    }, { spec });
+    try {
+      await writeManifest(root, manifestFor(spec, [manifestTicket("01")]));
+      const changed = ticket("01", {
+        title: "A revised title",
+        seam: "a revised seam",
+        context: "(edit) src/elsewhere.mjs",
+      }).replace("**Budget:** read ~1k tokens · 1 criteria · 1 modules", "**Budget:** read ~9k tokens · 8 criteria · 4 modules");
+      await writeFile(path.join(issues, "01-fixture.md"), changed, "utf8");
+
+      const output = await runWaves(issues);
+      assert.deepEqual(output.manifest.statuses, ["matches"]);
+      assert.deepEqual(output.manifest.warnings, []);
+      assert.deepEqual(output.warnings, []);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores files outside the ticket naming pattern on both sides", async () => {
+    const spec = "# Fixture spec\n";
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(edit) src/one.mjs" }),
+    }, { spec });
+    try {
+      await writeFile(path.join(issues, "notes.md"), "not a ticket\n", "utf8");
+      const manifest = manifestFor(spec, [
+        manifestTicket("01"),
+        { number: 99, file: "issues/notes.md", blockedBy: [] },
+      ]);
+      await writeManifest(root, manifest);
+
+      const output = await runWaves(issues);
+      assert.deepEqual(output.manifest.statuses, ["matches"]);
+      assert.deepEqual(output.manifest.warnings, []);
+      assert.deepEqual(output.warnings, []);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports a changed spec and a differing ticket set together", async () => {
+    const spec = "# Current fixture spec\n";
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(edit) src/one.mjs" }),
+      "02": ticket("02", { context: "(edit) src/two.mjs" }),
+    }, { spec });
+    try {
+      const manifest = manifestFor("# Previous fixture spec\n", [manifestTicket("01")]);
+      await writeManifest(root, manifest);
+
+      const output = await runWaves(issues);
+      assert.deepEqual(output.manifest.statuses, ["spec changed", "ticket set differs"]);
+      assert.ok(output.manifest.warnings.some((warning) => /spec changed/i.test(warning)));
+      assert.ok(output.manifest.warnings.some((warning) => /ticket 02\b/i.test(warning)));
+      assert.deepEqual(output.warnings, output.manifest.warnings);
+      assert.ok(!output.manifest.statuses.includes("matches"));
     } finally {
       await rm(root, { recursive: true, force: true });
     }

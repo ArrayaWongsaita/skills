@@ -36,6 +36,7 @@ function parseTicket(file, text) {
   }
 
   return {
+    file,
     number,
     numberText,
     title: heading[2],
@@ -219,7 +220,59 @@ function manifestStatus(status, warning) {
   return { statuses: [status], warnings: warning ? [warning] : [] };
 }
 
-async function readManifest(featureDirectory) {
+function manifestTicketFacts(value) {
+  const tickets = new Map();
+  for (const ticket of value.tickets) {
+    const file = path.posix.basename(ticket.file.replaceAll("\\", "/"));
+    const match = file.match(TICKET_FILE);
+    if (!match) continue;
+
+    tickets.set(ticket.number, {
+      file,
+      blockers: [...new Set(ticket.blockedBy.map(Number))].sort((a, b) => a - b),
+    });
+  }
+  return tickets;
+}
+
+function currentTicketFacts(tickets) {
+  return new Map(tickets.map((ticket) => [ticket.number, {
+    file: ticket.file,
+    blockers: ticket.blockers.map(Number).sort((a, b) => a - b),
+  }]));
+}
+
+function ticketSetWarnings(manifestTickets, tickets) {
+  const currentTickets = currentTicketFacts(tickets);
+  const numbers = [...new Set([...manifestTickets.keys(), ...currentTickets.keys()])]
+    .sort((a, b) => a - b);
+  const warnings = [];
+
+  for (const number of numbers) {
+    const recorded = manifestTickets.get(number);
+    const current = currentTickets.get(number);
+    const numberText = padTicket(number);
+    if (!recorded) {
+      warnings.push(`Ticket ${numberText} was added after the manifest was written.`);
+      continue;
+    }
+    if (!current) {
+      warnings.push(`Ticket ${numberText} recorded in the manifest is missing from the current ticket set.`);
+      continue;
+    }
+    if (recorded.file !== current.file) {
+      warnings.push(`Ticket ${numberText} was renamed from ${recorded.file} to ${current.file} after the manifest was written.`);
+    }
+    if (recorded.blockers.length !== current.blockers.length
+      || recorded.blockers.some((blocker, index) => blocker !== current.blockers[index])) {
+      warnings.push(`Ticket ${numberText} has different resolved blockers than the manifest.`);
+    }
+  }
+
+  return warnings;
+}
+
+async function readManifest(featureDirectory, tickets) {
   let bytes;
   try {
     bytes = await readFile(path.join(featureDirectory, "manifest.json"));
@@ -240,19 +293,31 @@ async function readManifest(featureDirectory) {
     return manifestStatus("ignored", "Manifest was ignored because its version or required data is unsupported.");
   }
 
+  const statuses = [];
+  const warnings = [];
   let specBytes;
   try {
     specBytes = await readFile(path.join(featureDirectory, "spec.md"));
   } catch {
-    return manifestStatus("spec unavailable", "Spec fingerprint cannot be checked because spec.md is unavailable.");
+    statuses.push("spec unavailable");
+    warnings.push("Spec fingerprint cannot be checked because spec.md is unavailable.");
   }
 
-  const currentSpecSha256 = createHash("sha256").update(specBytes).digest("hex");
-  if (currentSpecSha256 === value.specSha256) return manifestStatus("matches");
-  return manifestStatus(
-    "spec changed",
-    "Spec changed since the tickets were checked; re-run the ticket checker with --write-budget to refresh the manifest.",
-  );
+  if (specBytes) {
+    const currentSpecSha256 = createHash("sha256").update(specBytes).digest("hex");
+    if (currentSpecSha256 !== value.specSha256) {
+      statuses.push("spec changed");
+      warnings.push("Spec changed since the tickets were checked; re-run the ticket checker with --write-budget to refresh the manifest.");
+    }
+  }
+
+  const comparisonWarnings = ticketSetWarnings(manifestTicketFacts(value), tickets);
+  if (comparisonWarnings.length > 0) {
+    statuses.push("ticket set differs");
+    warnings.push(...comparisonWarnings);
+  }
+  if (statuses.length === 0) statuses.push("matches");
+  return { statuses, warnings };
 }
 
 function featureDirectoryFor(directory, ticketDirectory) {
@@ -299,7 +364,7 @@ export async function planWaves({ directory, serial = false, concurrency = DEFAU
   const { ticketDirectory, tickets } = await loadTickets(directory);
   const waves = makeWaves(tickets, { serial });
   const validation = await readParallelValidation(marker);
-  const manifest = await readManifest(featureDirectoryFor(directory, ticketDirectory));
+  const manifest = await readManifest(featureDirectoryFor(directory, ticketDirectory), tickets);
   const warnings = [...tickets.flatMap((ticket) => ticket.warnings), ...manifest.warnings];
 
   return {
