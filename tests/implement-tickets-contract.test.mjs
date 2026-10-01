@@ -777,6 +777,50 @@ describe("implement-tickets skill and documentation contract", () => {
     assert.match(stage0, /wave planning comes from ticket files\s+and never from the manifest/i, "waves are computed from ticket files only");
   });
 
+  it("describes manifest warnings and the Budget column in both languages on both user-facing pages", async () => {
+    for (const file of ["docs/guides/implement-tickets.md", "docs/skills/agents/implement-tickets.md"]) {
+      const doc = await readTextOrNull(path.join(repoRoot, file));
+      assert.ok(doc, `${file} exists`);
+      const thai = markdownSection(doc, "ภาษาไทย / Thai");
+      const english = markdownSection(doc, "English / ภาษาอังกฤษ");
+      assert.ok(thai && english, `${file} has Thai and English sections`);
+
+      for (const [language, section] of [["Thai", thai], ["English", english]]) {
+        assert.match(section, /manifest reader/i, `${file} ${language} describes the manifest reader`);
+        assert.match(section, /spec-hash warning/i, `${file} ${language} describes the spec-hash warning`);
+        assert.match(section, /--write-budget/i, `${file} ${language} names the cure for the spec-hash warning`);
+        assert.match(section, /ticket-set warning/i, `${file} ${language} describes the ticket-set warning`);
+        assert.match(section, /Budget column|คอลัมน์ Budget/i, `${file} ${language} describes the Budget column`);
+      }
+    }
+  });
+
+  it("records the manifest reader, warn-only rule, and raw-byte fingerprint in a dated bilingual ADR addendum", async () => {
+    const adr = await readTextOrNull(path.join(repoRoot, "docs/decisions/0020-implement-tickets-core.md"));
+    assert.ok(adr, "ADR 0020 exists");
+    const heading = markdownHeadings(adr).find(({ title }) => title.startsWith("Addendum (2026-10-01) / ภาคผนวก"));
+    assert.ok(heading, "ADR 0020 has a dated bilingual addendum");
+    const addendum = markdownSection(adr, heading.title);
+    assert.match(addendum, /manifest reader/i);
+    assert.match(addendum, /warn-only[\s\S]*advisory/i);
+    assert.match(addendum, /SHA-256 of the raw\s+bytes/i);
+    assert.match(addendum, /ตัวอ่าน manifest/);
+    assert.match(addendum, /เตือนเท่านั้น/);
+    assert.match(addendum, /ไบต์ดิบ/);
+  });
+
+  it("pins the spec-hash warning eval for a produced Plan after the spec changes", async () => {
+    const evalText = await readTextOrNull(path.join(skillRoot, "evals/evals.json"));
+    assert.ok(evalText, "the implement-tickets evals exist");
+    const { evals } = JSON.parse(evalText);
+    const evalCase = evals.find(({ id }) => id === 19);
+    assert.ok(evalCase, "eval 19 covers a spec-hash warning in the Plan");
+    assert.equal(evalCase.name, "spec-hash warning appears in the produced Plan after the spec changes");
+    assert.match(evalCase.prompt, /\/implement-tickets/);
+    assert.match(evalCase.prompt, /ticket checker wrote manifest\.json[\s\S]*spec\.md changed/i);
+    assert.match(evalCase.expected_output, /produced Plan[\s\S]*Spec changed since the tickets were checked[\s\S]*--write-budget/i);
+  });
+
   it("links bilingual Seam and Context guidance to the planning reference in both user-facing pages", async () => {
     for (const file of ["docs/guides/implement-tickets.md", "docs/skills/agents/implement-tickets.md"]) {
       const doc = await readTextOrNull(path.join(repoRoot, file));

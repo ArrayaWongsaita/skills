@@ -60,6 +60,12 @@ marker ของ parallel execution อยู่ใน
 [parallel-validation reference](../../skills/agents/implement-tickets/references/parallel-validation.md).
 ฟิลด์ Seam และ Context ของ ticket อ้างอิง planning reference เดียวกัน
 
+ตัวอ่าน manifest (manifest reader) ใช้ตรวจว่าข้อมูลใน manifest ยังตรงกับ spec และชุด ticket ปัจจุบันหรือไม่
+ถ้า spec เปลี่ยนหลังตรวจ ticket Plan จะแสดง spec-hash warning พร้อมวิธีแก้: รัน ticket checker ด้วย
+`--write-budget` เพื่อเขียน manifest ใหม่ ถ้าชุด ticket ปัจจุบันต่างจากที่บันทึกไว้ Plan จะแสดง
+ticket-set warning ด้วย คำเตือนเหล่านี้มีไว้ให้ทบทวนและไม่หยุดการวางแผน คอลัมน์ Budget ใน Plan
+แสดง Budget ของ ticket แต่ละใบ
+
 ### Seam และ Context
 
 รายละเอียดฟิลด์ Seam และ Context อยู่ใน
@@ -120,6 +126,12 @@ Touch-set and wave planning are covered by the
 The parallel-validation marker is covered by the
 [parallel-validation reference](../../skills/agents/implement-tickets/references/parallel-validation.md).
 See the planning reference for the ticket's Seam and Context fields.
+
+The manifest reader checks whether the manifest still matches the spec and current ticket set.
+If the spec changed after the tickets were checked, the Plan shows the spec-hash warning and its cure:
+rerun the ticket checker with `--write-budget` to write a fresh manifest. If the current tickets differ
+from the recorded set, the Plan shows a ticket-set warning. These warnings are advisory and do not stop
+planning. The Budget column shows each ticket's Budget value in the Plan.
 
 ### Seam and Context
 
