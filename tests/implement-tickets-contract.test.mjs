@@ -777,7 +777,7 @@ describe("implement-tickets skill and documentation contract", () => {
     assert.match(stage0, /wave planning comes from ticket files\s+and never from the manifest/i, "waves are computed from ticket files only");
   });
 
-  it("summarizes manifest warnings and Budget in both languages with a canonical planning link", async () => {
+  it("summarizes manifest comparisons, named warnings, and Budget in both languages with a linked remedy", async () => {
     for (const file of ["docs/guides/implement-tickets.md", "docs/skills/agents/implement-tickets.md"]) {
       const doc = await readTextOrNull(path.join(repoRoot, file));
       assert.ok(doc, `${file} exists`);
@@ -790,19 +790,25 @@ describe("implement-tickets skill and documentation contract", () => {
           /manifest/i.test(paragraph) && /Budget/i.test(paragraph));
         assert.ok(summary, `${file} ${language} has a concise manifest and Budget summary`);
         if (language === "Thai") {
-          assert.match(summary, /Plan[\s\S]*คำเตือนเกี่ยวกับ manifest[\s\S]*คอลัมน์ Budget/i,
-            `${file} Thai summary says the Plan reports manifest warnings and shows Budget`);
-          assert.match(summary, /รายละเอียดการตรวจและวิธีแก้[\s\S]*planning reference/i,
-            `${file} Thai summary sends detailed checks and remedies to the canonical planning reference`);
+          assert.match(summary, /ตัวอ่าน manifest[\s\S]*เปรียบเทียบ spec และชุด ticket/i,
+            `${file} Thai summary says the manifest reader compares the spec and ticket set`);
+          assert.match(summary, /Plan[\s\S]*คำเตือน spec-hash[\s\S]*คำเตือน ticket-set/i,
+            `${file} Thai summary names both Plan warning types`);
+          assert.match(summary, /คอลัมน์ Budget[\s\S]*แสดง Budget ของ ticket แต่ละใบ/i,
+            `${file} Thai summary says Budget shows each ticket's Budget`);
+          assert.match(summary, /\[planning reference\]\([^)]+planning\.md\)[\s\S]*อธิบายวิธีแก้คำเตือน spec-hash/i,
+            `${file} Thai summary says the linked planning reference explains the spec-hash remedy`);
         } else {
-          assert.match(summary, /Plan[\s\S]*manifest warnings[\s\S]*Budget/i,
-            `${file} English summary says the Plan reports manifest warnings and shows Budget`);
-          assert.match(summary, /planning reference[\s\S]*checks and remedies/i,
-            `${file} English summary sends detailed checks and remedies to the canonical planning reference`);
+          assert.match(summary, /manifest reader[\s\S]*compares the spec and ticket set/i,
+            `${file} English summary says the manifest reader compares the spec and ticket set`);
+          assert.match(summary, /Plan[\s\S]*spec-hash\s+warning[\s\S]*ticket-set\s+warning/i,
+            `${file} English summary names both Plan warning types`);
+          assert.match(summary, /Budget column[\s\S]*shows each ticket's Budget/i,
+            `${file} English summary says Budget shows each ticket's Budget`);
+          assert.match(summary, /\[planning reference\]\([^)]+planning\.md\)[\s\S]*explains how to clear the spec-hash warning/i,
+            `${file} English summary says the linked planning reference explains the spec-hash remedy`);
         }
-        assert.match(summary, /\]\([^)]*planning\.md\)/i,
-          `${file} ${language} summary links the canonical planning reference`);
-        assert.doesNotMatch(summary, /--write-budget|spec-hash warning|ticket-set warning/i,
+        assert.doesNotMatch(summary, /--write-budget|re-run the ticket checker/i,
           `${file} ${language} summary does not duplicate detailed manifest mechanics`);
       }
     }

@@ -60,8 +60,9 @@ marker ของ parallel execution อยู่ใน
 [parallel-validation reference](../../skills/agents/implement-tickets/references/parallel-validation.md).
 ฟิลด์ Seam และ Context ของ ticket อ้างอิง planning reference เดียวกัน
 
-Plan แสดงคำเตือนเกี่ยวกับ manifest และคอลัมน์ Budget ของ ticket แต่ละใบ คำเตือนเป็นข้อมูลประกอบและไม่หยุดการวางแผน
-รายละเอียดการตรวจและวิธีแก้ดู [planning reference](../../skills/agents/implement-tickets/references/planning.md).
+ตัวอ่าน manifest เปรียบเทียบ spec และชุด ticket. Plan แสดงคำเตือน spec-hash และคำเตือน ticket-set
+ส่วนคอลัมน์ Budget แสดง Budget ของ ticket แต่ละใบ คำเตือนเป็นข้อมูลประกอบและไม่หยุดการวางแผน
+[planning reference](../../skills/agents/implement-tickets/references/planning.md) อธิบายวิธีแก้คำเตือน spec-hash.
 
 ### Seam และ Context
 
@@ -124,8 +125,10 @@ The parallel-validation marker is covered by the
 [parallel-validation reference](../../skills/agents/implement-tickets/references/parallel-validation.md).
 See the planning reference for the ticket's Seam and Context fields.
 
-The Plan reports manifest warnings and shows each ticket's Budget. Warnings are advisory and do not stop planning.
-See the [planning reference](../../skills/agents/implement-tickets/references/planning.md) for the checks and remedies.
+The manifest reader compares the spec and ticket set. The Plan reports a spec-hash
+warning and a ticket-set warning. The Budget column shows each ticket's Budget;
+warnings are advisory and do not stop planning. The [planning reference](../../skills/agents/implement-tickets/references/planning.md)
+explains how to clear the spec-hash warning.
 
 ### Seam and Context
 
