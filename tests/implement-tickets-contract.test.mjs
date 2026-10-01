@@ -171,6 +171,26 @@ function linkedReferences(sections) {
 }
 
 describe("implement-tickets wave planner contract", () => {
+  it("reports each ticket's own Budget line, or none when absent", async () => {
+    const ownBudget = "read ~19k tokens · 4 criteria · 3 modules";
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(edit) src/one.mjs" })
+        .replace("**Budget:** read ~1k tokens · 1 criteria · 1 modules", "**Budget:** " + ownBudget),
+      "02": ticket("02", { context: "(edit) src/two.mjs" })
+        .replace(/^\*\*Budget:\*\*[^\r\n]*\r?\n/m, ""),
+    });
+    try {
+      await writeManifest(root, manifestFor("# Fixture spec\n", [
+        { ...manifestTicket("01"), budget: "manifest copy must be ignored" },
+        { ...manifestTicket("02"), budget: "manifest copy must not fill a missing ticket value" },
+      ]));
+
+      const output = await runWaves(issues);
+      assert.deepEqual(output.tickets.map(({ budget }) => budget), [ownBudget, "none"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
   it("reports a changed spec in manifest and top-level warnings without failing planning", async () => {
     const spec = "# Fixture spec\n";
     const { root, issues } = await fixture({
@@ -718,8 +738,13 @@ describe("implement-tickets skill and documentation contract", () => {
     assert.ok(plan, "the Plan presentation and approval subsection exists");
     assert.match(
       plan,
-      /\| Ticket \| Wave \| Blockers \| Touch set \| Seam \| Matched agent \| Retry budget \|/,
+      /\| Ticket \| Wave \| Blockers \| Budget \| Touch set \| Seam \| Matched agent \| Retry budget \|/,
       "the Plan has a row for every ticket with all required columns",
+    );
+    assert.match(
+      plan,
+      /Budget column[\s\S]*ticket file's own Budget field[\s\S]*information only[\s\S]*no limit[\s\S]*triage/i,
+      "the Budget column uses the ticket's own field and has no limit or triage effect",
     );
     assert.match(plan, /backend:\s*native harness subagents/i, "the Plan names the default backend");
     assert.match(plan, /concurrency cap:\s*`4` by default/i, "the Plan names the default concurrency cap");

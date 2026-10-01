@@ -43,6 +43,7 @@ function parseTicket(file, text) {
     blockedByText: fieldValue(text, "Blocked by"),
     contextText,
     seam: fieldValue(text, "Seam") ?? "",
+    budget: fieldValue(text, "Budget") ?? "none",
     touchSet: null,
     warnings: [],
   };
@@ -374,12 +375,13 @@ export async function planWaves({ directory, serial = false, concurrency = DEFAU
     parallelValidationStatus: validation.status,
     manifest,
     waves,
-    tickets: tickets.map(({ numberText, title, blockers, wave, touchSet, warnings: ticketWarnings }) => ({
+    tickets: tickets.map(({ numberText, title, blockers, wave, touchSet, budget, warnings: ticketWarnings }) => ({
       number: numberText,
       title,
       wave,
       blockers,
       touchSet,
+      budget,
       warnings: ticketWarnings,
     })),
     warnings,

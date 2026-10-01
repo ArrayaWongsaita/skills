@@ -54,8 +54,9 @@ overlap. `--serial` assigns each ticket its own wave in ticket order.
 `--concurrency N` is echoed in the JSON output and does not change the waves;
 the orchestrator enforces the cap across workers and verifiers.
 
-The output is JSON with `waves`, per-ticket `wave`, `blockers`, `touchSet`, and
-`warnings`, the `concurrency` value, and `parallelValidated`. The marker is
+The output is JSON with `waves`, per-ticket `wave`, `blockers`, `touchSet`,
+`budget`, and `warnings`, the `concurrency` value, and `parallelValidated`.
+The marker is
 `references/parallel-validation.md` by default and can be replaced with
 `--marker <file>` for a fixture. A line `status: not validated` makes
 `parallelValidated` false. A line `status: validated <date>` makes it true.
@@ -76,8 +77,12 @@ orchestrator. Record the matched worker agent for each ticket.
 
 Present one row for every ticket, in ticket order:
 
-| Ticket | Wave | Blockers | Touch set | Seam | Matched agent | Retry budget |
-| --- | ---: | --- | --- | --- | --- | ---: |
+| Ticket | Wave | Blockers | Budget | Touch set | Seam | Matched agent | Retry budget |
+| --- | ---: | --- | --- | --- | --- | --- | ---: |
+
+The Budget column shows the text after each ticket file's own Budget field
+label, or `none` when that field is absent. It is information only and applies
+no limit or triage.
 
 Also state:
 
