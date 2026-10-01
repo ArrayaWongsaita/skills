@@ -819,12 +819,28 @@ describe("grill-to-tickets production records and guides", () => {
     }
   });
 
-  it("records core usage_total across dispatches and resumes, possibly cache-inclusive, and leaves sibling cache wording", async () => {
-    const guide = await readTextOrNull("docs/guides/implement-tickets.md");
-    assert.ok(guide, "the implement-tickets guide exists");
-    assert.match(guide, /usage_total[\s\S]{0,220}cache-inclusive/, "the guide says usage may be cache-inclusive");
-    assert.match(guide, /dispatch and resume/, "the guide sums every dispatch and resume");
-    assert.match(guide, /verifier_usage_total/, "the guide keeps verifier usage separate");
+  it("links implement-tickets usage semantics to the glossary and leaves sibling cache wording", async () => {
+    const pages = [
+      ["docs/guides/implement-tickets.md", [
+        ["### Integration gate, status, and resume", "../glossary.md"],
+        ["### Run status, integration, and resume", "../glossary.md"],
+      ]],
+      ["docs/skills/agents/implement-tickets.md", [
+        ["### Integration gate, status, and resume", "../../glossary.md"],
+        ["### Run status, integration, and resume", "../../glossary.md"],
+      ]],
+    ];
+    for (const [file, sections] of pages) {
+      const page = await readTextOrNull(file);
+      assert.ok(page, `${file} exists`);
+      for (const [heading, glossaryPath] of sections) {
+        const status = sectionOf(page, heading);
+        assert.ok(status, `${file} has the ${heading} section`);
+        assert.match(status, /status-and-resume\.md/, `${file} links run-state details to their contract`);
+        assert.match(status, new RegExp(`usage_total[\\s\\S]*${glossaryPath.replaceAll("/", "\\/")}`), `${file} links usage semantics to the canonical glossary`);
+        assert.doesNotMatch(status, /cache-inclusive|dispatch and resume|verifier_usage_total/, `${file} does not copy usage semantics`);
+      }
+    }
 
     for (const skill of ["agy-implement", "opencode-implement"]) {
       const guide = await readTextOrNull(`docs/guides/${skill}.md`);
@@ -910,14 +926,16 @@ describe("grill-to-tickets production records and guides", () => {
     }
   });
 
-  it("says in the implement-tickets skill page that usage_total is reported across dispatches and leaves the sibling pages alone", async () => {
+  it("links implement-tickets run state and usage definitions to their canonical references", async () => {
     const page = await readTextOrNull("docs/skills/agents/implement-tickets.md");
     assert.ok(page, "the implement-tickets skill page exists");
-    const status = sectionOf(page, "### Integration gate, status, and resume");
-    assert.ok(status, "the page has its status section");
-    assert.match(status, /usage_total[\s\S]*อาจรวม cache/, "the Thai page says usage may include cache");
-    assert.match(page, /dispatch and resume[\s\S]{0,180}cache-inclusive/, "the English page sums dispatches and resumes and says usage may include cache");
-    assert.match(status, /verifier_usage_total/, "the page keeps verifier usage separate");
+    for (const heading of ["### Integration gate, status, and resume", "### Run status, integration, and resume"]) {
+      const status = sectionOf(page, heading);
+      assert.ok(status, `the page has ${heading}`);
+      assert.match(status, /status-and-resume\.md/, "the page links run-state behavior to its contract");
+      assert.match(status, /usage_total[\s\S]*glossary\.md/, "the page links usage semantics to the glossary");
+      assert.doesNotMatch(status, /cache-inclusive|dispatch and resume|verifier_usage_total/, "the page leaves usage semantics to canonical sources");
+    }
 
     const seamParagraphs = async (skill) => {
       const file = `docs/skills/agents/${skill}.md`;

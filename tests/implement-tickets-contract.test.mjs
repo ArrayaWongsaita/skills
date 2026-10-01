@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { markdownSection } from "./helpers/markdown-contract.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const skillRoot = path.join(repoRoot, "skills/agents/implement-tickets");
@@ -359,20 +360,61 @@ describe("implement-tickets worker dispatch and verification contract", () => {
     requireText(dispatch, /after two infra retries[\s\S]*BLOCKED \(TICKET_PROVIDER_FAILED\)/i, "two infra retries end in the provider-failed status");
   });
 
-  it("describes dispatch, sync, the shared cap, verification, and timeouts on both user-facing pages", async () => {
-    for (const file of ["docs/guides/implement-tickets.md", "docs/skills/agents/implement-tickets.md"]) {
-      const doc = await readTextOrNull(path.join(repoRoot, file));
-      assert.ok(doc, `${file} exists`);
-      const requirements = [
-        ["worker dispatch", /dispatch(?:es|ing)? (?:one )?(?:background )?worker/i],
-        ["worker sync step", /sync step|integration sha/i],
-        ["shared worker and verifier cap", /concurrency cap[\s\S]*workers and verifiers/i],
-        ["fresh verifier", /fresh (?:native )?verifier/i],
-        ["worker and verifier timeouts", /2700 seconds[\s\S]*900 seconds|45 minutes[\s\S]*15 minutes/i],
-      ];
-      for (const [name, expression] of requirements) {
-        assert.ok(expression.test(doc), `${file} describes ${name}`);
+  it("points execution mechanics to canonical contracts in scoped skill and guide sections", async () => {
+    const skill = await readTextOrNull(path.join(skillRoot, "SKILL.md"));
+    const guide = await readTextOrNull(path.join(repoRoot, "docs/guides/implement-tickets.md"));
+    const page = await readTextOrNull(path.join(repoRoot, "docs/skills/agents/implement-tickets.md"));
+    assert.ok(skill && guide && page, "the skill and both user-facing pages exist");
+
+    const skillStage1 = markdownSection(skill, "Stage 1 — Execute approved waves");
+    assert.ok(skillStage1, "the skill's approved execution section exists");
+    for (const reference of ["dispatch-contract", "prompt-scaffold", "verification", "integration-gate", "status-and-resume"]) {
+      assert.match(skillStage1, new RegExp(`references/${reference}\\.md`), `the skill Stage 1 links ${reference}`);
+    }
+    assert.doesNotMatch(
+      skillStage1,
+      /2700\s+seconds|900\s+seconds|TaskStop|failed_infra|Explore|general-purpose|Concurrent subagent limit reached|TICKET_PROVIDER_FAILED|two infra retries/i,
+      "the skill Stage 1 leaves dispatch and verifier mechanics in their contracts",
+    );
+
+    const executionSections = [
+      [guide, "Dispatch, verifier และ timeout", "guide Thai execution summary"],
+      [guide, "Dispatch and verification", "guide English execution summary"],
+      [page, "Dispatch, verifier และ timeout", "skill page Thai execution summary"],
+      [page, "Dispatch and verification", "skill page English execution summary"],
+    ];
+    for (const [document, heading, label] of executionSections) {
+      const section = markdownSection(document, heading);
+      assert.ok(section, `${label} exists`);
+      for (const reference of ["dispatch-contract", "prompt-scaffold", "verification"]) {
+        assert.match(section, new RegExp(`references/${reference}\\.md`), `${label} links ${reference}`);
       }
+      assert.doesNotMatch(
+        section,
+        /2700\s+seconds|900\s+seconds|TaskStop|failed_infra|Explore|general-purpose|Concurrent subagent limit reached|TICKET_PROVIDER_FAILED|two infra retries/i,
+        `${label} summarizes mechanics instead of restating them`,
+      );
+    }
+  });
+
+  it("links run-state and usage semantics to the canonical status contract and glossary", async () => {
+    const guide = await readTextOrNull(path.join(repoRoot, "docs/guides/implement-tickets.md"));
+    const page = await readTextOrNull(path.join(repoRoot, "docs/skills/agents/implement-tickets.md"));
+    assert.ok(guide && page, "both user-facing pages exist");
+
+    const sections = [
+      [guide, "Integration gate, status, and resume", "../glossary.md", "guide Thai run-state summary"],
+      [guide, "Run status, integration, and resume", "../glossary.md", "guide English run-state summary"],
+      [page, "Integration gate, status, and resume", "../../glossary.md", "skill page Thai run-state summary"],
+      [page, "Run status, integration, and resume", "../../glossary.md", "skill page English run-state summary"],
+    ];
+
+    for (const [document, heading, glossaryPath, label] of sections) {
+      const section = markdownSection(document, heading);
+      assert.ok(section, `${label} exists`);
+      assert.match(section, /status-and-resume\.md/, `${label} links the run-state contract`);
+      assert.match(section, new RegExp(`usage_total[^\\n]*${glossaryPath.replaceAll("/", "\\/")}`), `${label} links the canonical usage_total glossary entry`);
+      assert.doesNotMatch(section, /cache-inclusive|usage reported[^\n]*dispatch|sum(?:s|med)?[^\n]*usage[^\n]*resume/i, `${label} does not repeat usage semantics`);
     }
   });
 });
@@ -641,9 +683,15 @@ describe("implement-tickets integration gate and run-state contract", () => {
     for (const file of ["docs/guides/implement-tickets.md", "docs/skills/agents/implement-tickets.md"]) {
       const doc = await readTextOrNull(path.join(repoRoot, file));
       assert.ok(doc, `${file} exists`);
-      requireText(doc, /integration gate[\s\S]*typecheck[\s\S]*suite/i, `${file} describes the integration gate`);
-      requireText(doc, /status\.md[\s\S]*skill: implement-tickets/i, `${file} describes the status file identity`);
-      requireText(doc, /\/implement-tickets continue \[slug\]/, `${file} documents the resume command`);
+      const thaiStatus = markdownSection(doc, "Integration gate, status, and resume");
+      const englishStatus = markdownSection(doc, "Run status, integration, and resume");
+      assert.ok(thaiStatus, `${file} has a Thai run-state section`);
+      assert.ok(englishStatus, `${file} has an English run-state section`);
+      for (const [label, section] of [["Thai", thaiStatus], ["English", englishStatus]]) {
+        requireText(section, /integration-gate\.md/, `${file} ${label} section links the integration contract`);
+        requireText(section, /status-and-resume\.md/, `${file} ${label} section links the run-state contract`);
+        requireText(section, /\/implement-tickets continue \[slug\]/, `${file} ${label} section names the resume command`);
+      }
     }
   });
 });

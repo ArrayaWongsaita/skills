@@ -57,46 +57,24 @@ npx skills add <source> --skill implement-tickets-<name>
 
 ### Dispatch, verifier และ timeout
 
-หลัง approval orchestrator dispatch worker หนึ่งตัวต่อ ticket ใน wave prompt
-ของ worker ทุกใบเริ่มด้วย sync step เพื่อ checkout worker branch ที่ integration
-SHA และ assert ว่า `HEAD` เท่ากับ SHA นั้น หากไม่ตรงให้คืน `failed_infra` โดยไม่
-นับ ticket attempt
-
-Concurrency cap เริ่มต้นเป็น 4; `--concurrency N` เปลี่ยนค่าได้ cap นับ worker และ
-verifier รวมกัน โดยเริ่ม verifier ก่อน worker ใหม่ เมื่อ worker คืนผลให้ dispatch
-fresh native verifier ทันที ไม่รอ worker ที่เหลือใน wave เริ่มจาก `Explore`; ถ้า
-รายงานยังตื้นเกินตัดสิน ให้ orchestrator dispatch `general-purpose` ตัวใหม่แบบ
-read-only Verifier ส่ง raw evidence โดยไม่ให้ verdict
-
-Worker และ verifier ทำงาน background โดยมี background wait หนึ่งชุดต่อ dispatch:
-worker 2700 วินาที และ verifier 900 วินาที ถ้า wait จบก่อนให้หยุด subagent ด้วย
-`TaskStop` และบันทึก `failed_infra` โดยไม่คิด attempt การ crash หรือ subagent ที่
-หายไปจัดเป็น infrastructure failure ด้วย หลัง infra retries สองครั้ง ticket เป็น
-`BLOCKED (TICKET_PROVIDER_FAILED)`; เมื่อ spawn แจ้ง
-`Concurrent subagent limit reached` ให้รอ slot ว่างแล้วลอง spawn ใหม่โดยไม่คิด
-infra retry
+หลัง approval ให้ทำตาม [dispatch contract](../../../skills/agents/implement-tickets/references/dispatch-contract.md),
+[worker prompt scaffold](../../../skills/agents/implement-tickets/references/prompt-scaffold.md)
+และ [verification contract](../../../skills/agents/implement-tickets/references/verification.md).
+เอกสารเหล่านี้เป็นแหล่งหลักของการ sync, การจัดคิว worker/verifier, timeout,
+หลักฐาน verification และ infrastructure failure
 
 ### Integration gate, status, and resume
 
-หลัง ticket ทุกใบใน wave verified แล้ว ให้ squash-merge ตาม ticket order เป็น
-หนึ่ง commit ต่อ ticket และรัน full typecheck กับ suite บน integration branch
-เมื่อ gate fail ให้ตรวจหลังแต่ละ merge หา culprit ย้าย integration branch ไปยัง
-last good commit ด้วย branch checkout แล้วคง ticket ที่ verified ภายหลังไว้
-โดยไม่ verify ซ้ำ ก่อน dispatch culprit เดี่ยวแบบ serial
+รายละเอียด integration และ recovery อยู่ใน
+[integration gate contract](../../../skills/agents/implement-tickets/references/integration-gate.md).
+สำหรับ run state และคำสั่ง status/list/continue ให้ดู
+[status and resume contract](../../../skills/agents/implement-tickets/references/status-and-resume.md).
+ความหมายของ [`usage_total`](../../glossary.md) อยู่ใน glossary กลาง
+ใช้ `/implement-tickets status [slug]`, `/implement-tickets list` หรือ
+`/implement-tickets continue [slug]` เพื่ออ่านหรือ resume run
 
-บันทึก run ที่ `.scratch/<feature-slug>/status.md` โดยบรรทัดแรกเป็น
-`skill: implement-tickets` และมี ticket table สำหรับ wave, backend, touch set,
-status, session ID, attempts, branch, commit, budget estimate, `usage_total`
-และ `verifier_usage_total`. ค่า usage รวมรายงานทุก dispatch และ resume บน
-delivering path ซึ่งอาจรวม cache หรือเป็น `unknown` หากไม่มีรายงาน
-`status [slug]` และ `list` อ่านอย่างเดียว ส่วน `continue [slug]` reconcile กับ
-Git, rewind เมื่อพบ drift, แสดง Plan อีกครั้ง แล้วทำต่อจาก frontier
-
-ถ้า verification ล้มเหลวสามครั้งให้ตั้ง
-`BLOCKED (TICKET_VERIFICATION_FAILED)`, hold dependants และรายงาน partial path
-จาก ticket อิสระพร้อม resume command เมื่อทุก ticket integrated และ suite สุดท้าย
-ผ่าน ให้แจ้ง integration branch และ review commands จากนั้นหยุดก่อน review,
-push หรือเปิด PR
+เมื่อ run สำเร็จ ให้ส่งต่อ integration branch และ review commands แล้วหยุดก่อน
+review, push หรือเปิด PR
 
 ### Seam และ Context
 
@@ -128,11 +106,11 @@ Install with:
 npx skills add ArrayaWongsaita/skills --skill implement-tickets
 ```
 
-The default backend is native harness subagents, with a concurrency cap of four.
-`--concurrency N` changes the in-flight cap without changing wave placement;
-`--serial` gives each ticket its own wave. Unknown touch sets get an exclusive
-wave and a warning. When the marker says `status: not validated`, the Plan prints
-`parallel not yet validated`.
+The default backend is native harness subagents. Use `--concurrency N` to set
+the shared in-flight cap or `--serial` for serial waves. See the
+[planning reference](../../../skills/agents/implement-tickets/references/planning.md)
+and [parallel-validation reference](../../../skills/agents/implement-tickets/references/parallel-validation.md)
+for wave placement and marker behavior.
 
 Use `--with <name>` to select a separately installed `implement-tickets-<name>`
 adapter. Preflight searches `.agents/skills/`, `.claude/skills/`,
@@ -149,48 +127,27 @@ The generated install line has this form:
 npx skills add <source> --skill implement-tickets-<name>
 ```
 
-The [adapter contract](../../../skills/agents/implement-tickets/references/adapter-contract.md)
-defines input, resume, failover, the envelope schema, and worktree cleanup. The
-core creates each worker branch and worktree under the feature directory, passes
-the path to the adapter, and removes the worktree after integration.
+Use the [adapter contract](../../../skills/agents/implement-tickets/references/adapter-contract.md)
+for adapter input, outcomes, and worktree ownership.
 
-After approval, the orchestrator dispatches one background worker per ticket.
-Every worker prompt starts with a sync step: check out the worker branch at the
-integration SHA and assert that `HEAD` equals it. A mismatch returns
-`failed_infra` without counting a ticket attempt. The concurrency cap counts
-workers and verifiers together, with verifiers starting before new workers. As
-soon as a worker returns, dispatch a fresh native verifier without waiting for
-the rest of the wave. Start it as `Explore`; when its report is too shallow to
-judge, dispatch a fresh read-only `general-purpose` verifier. The verifier
-returns raw evidence and no verdict for the orchestrator to judge.
+### Dispatch and verification
 
-Workers and verifiers run in the background. Arm one background wait per
-dispatch: 2700 seconds for a worker and 900 seconds for a verifier. If a wait
-ends first, stop the subagent with `TaskStop` and record `failed_infra` without
-counting an attempt. A crash or lost subagent is also an infrastructure failure.
-After two infra retries, mark the ticket `BLOCKED (TICKET_PROVIDER_FAILED)`. If
-spawn reports `Concurrent subagent limit reached`, wait for a free slot and
-retry without using an infra retry.
+After approval, dispatch and verification follow the
+[dispatch contract](../../../skills/agents/implement-tickets/references/dispatch-contract.md),
+[worker prompt scaffold](../../../skills/agents/implement-tickets/references/prompt-scaffold.md),
+and [verification contract](../../../skills/agents/implement-tickets/references/verification.md).
+Those references define synchronization, scheduling, verifier evidence, timeout,
+and infrastructure-failure handling.
 
-After every ticket in a wave is verified, squash-merge its branches in ticket
-order as one commit per ticket and run the full typecheck and suite on the
-integration branch. If the gate fails, test each replayed merge to locate the
-first failing ticket, rewind with `git checkout -B`, retain later verified
-tickets without re-verifying them, run the gate again, and re-dispatch the
-culprit alone as one serial attempt.
+### Run status, integration, and resume
 
-Save run state in `.scratch/<feature-slug>/status.md`, starting with
-`skill: implement-tickets`. Its ticket table records wave, backend, touch set,
-status, session ID, attempts, branch, commit, budget estimate, `usage_total`,
-and `verifier_usage_total`. Usage sums reports across every dispatch and resume
-on the path that delivered the ticket, may be cache-inclusive, and is
-`unknown` when none was reported. `/implement-tickets status [slug]` and
-`/implement-tickets list` only read state. `/implement-tickets continue [slug]`
-refuses a missing identity line, reconciles against Git, rewinds on drift,
-re-presents the Plan, and resumes from the frontier. Three verification
-failures block that ticket and hold its dependants while independent tickets
-remain an available partial path. Once all tickets are integrated and the
-final suite is green, hand off the integration branch and review commands;
+The [integration gate contract](../../../skills/agents/implement-tickets/references/integration-gate.md)
+defines integration and recovery. The [status and resume contract](../../../skills/agents/implement-tickets/references/status-and-resume.md)
+defines saved run state and the status, list, and continue commands. For
+`usage_total` semantics, see the canonical [glossary entry](../../glossary.md).
+Run `/implement-tickets continue [slug]` to resume a saved run.
+
+After a successful run, hand off the integration branch and review commands;
 stop before review, push, or a pull request.
 
 ### Seam and Context

@@ -80,49 +80,18 @@ until approval. Do not dispatch workers or write run state before approval.
 
 ## Stage 1 — Execute approved waves
 
-After approval, follow [references/dispatch-contract.md](references/dispatch-contract.md),
-[references/prompt-scaffold.md](references/prompt-scaffold.md),
-[references/verification.md](references/verification.md),
-[references/integration-gate.md](references/integration-gate.md), and
-[references/parallel-validation.md](references/parallel-validation.md). Run waves in order.
-Tickets in one wave have satisfied blockers and non-overlapping known touch
-sets. A ticket with an unknown touch set runs alone. `--serial` is the
-one-ticket-per-wave mode; `--concurrency N` sets the in-flight cap but does not
-change computed waves.
+After approval, execute the approved waves using the
+[dispatch contract](references/dispatch-contract.md),
+[worker prompt scaffold](references/prompt-scaffold.md),
+[verification contract](references/verification.md),
+[integration gate](references/integration-gate.md), and
+[run status and resume contract](references/status-and-resume.md). Follow the
+[parallel validation procedure](references/parallel-validation.md) when that
+marker applies. These references own worker synchronization, dispatch and
+verification mechanics, recovery, and run-state details.
 
-Every worker prompt starts with a sync command that checks out its worker
-branch at the wave's integration SHA and asserts that `HEAD` equals that SHA.
-A mismatch returns `failed_infra` without spending a ticket attempt. Workers
-and verifiers run in the background. The default cap is four active workers
-and verifiers combined; pending verifiers start before new workers. As soon as
-a worker returns, start its fresh native `Explore` verifier without waiting
-for the rest of the wave. If the report is too shallow to judge, dispatch a
-fresh read-only `general-purpose` verifier. Verifiers return raw evidence and
-no verdict; the orchestrator judges the reports and integrates verified work
-in ticket order.
-
-After all tickets in a wave are verified, squash-merge them one commit per
-ticket in ticket order and run the full typecheck and suite on the integration
-branch. If the gate fails, trace the first failing merge and preserve
-already-verified later tickets as described in the gate procedure. Record the
-run in `.scratch/<feature-slug>/status.md`.
-
-After three failed verification attempts, mark the ticket
-`BLOCKED (TICKET_VERIFICATION_FAILED)`, hold its dependants, and report the
-independent partial path with the resume command. When every ticket is
-integrated and the final suite is green, print the integration branch and
-review commands as a handoff, then stop before review, push, or a pull request.
-
-Arm one background wait per dispatch: 2700 seconds for a worker and 900 seconds
-for a verifier. If a wait ends first, stop that subagent with `TaskStop` and
-record `failed_infra`, without counting an attempt. A crash or lost subagent is
-also `failed_infra`. Allow two infrastructure retries per ticket; after two
-infra retries, mark it `BLOCKED (TICKET_PROVIDER_FAILED)`. A harness rejection
-with `Concurrent subagent limit reached` waits for a free slot and retries the
-spawn without using an infra retry.
-
-Stop before review, push, or a pull request; hand off the integration branch
-and review commands for a later pass.
+When all tickets are integrated and the gate passes, hand off the integration
+branch and review commands. Stop before review, push, or a pull request.
 
 ## Constraints
 
