@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { access, mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -11,6 +12,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const skillRoot = path.join(repoRoot, "skills/agents/implement-tickets");
 const wavesScript = path.join(skillRoot, "scripts/waves.mjs");
 const preflightScript = path.join(skillRoot, "scripts/preflight.mjs");
+const ticketCheckerScript = path.join(repoRoot, "skills/agents/grill-to-tickets/scripts/check-tickets.mjs");
 const adapterFixtureRoot = path.join(repoRoot, "tests/fixtures/implement-tickets/adapters");
 const envelopeFixtureRoot = path.join(repoRoot, "tests/fixtures/implement-tickets/envelopes");
 const fixtureLock = path.join(repoRoot, "tests/fixtures/implement-tickets/locks/skills-lock.json");
@@ -49,14 +51,44 @@ function ticket(number, { blockers = [], context = "", seam = "the core contract
   ].join("\n");
 }
 
-async function fixture(tickets) {
+async function fixture(tickets, { spec } = {}) {
   const root = await mkdtemp(path.join(tmpdir(), "implement-tickets-contract-"));
   const issues = path.join(root, "issues");
   await mkdir(issues, { recursive: true });
+  if (spec !== undefined) await writeFile(path.join(root, "spec.md"), spec, "utf8");
   for (const [number, contents] of Object.entries(tickets)) {
     await writeFile(path.join(issues, `${number}-fixture.md`), contents, "utf8");
   }
   return { root, issues };
+}
+
+function sha256(bytes) {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+function manifestFor(spec, tickets) {
+  return {
+    version: 1,
+    specSha256: sha256(Buffer.from(spec)),
+    waves: [],
+    tickets,
+  };
+}
+
+function manifestTicket(number, blockedBy = []) {
+  return {
+    number: Number(number),
+    file: `issues/${number}-fixture.md`,
+    blockedBy: blockedBy.map(Number),
+  };
+}
+
+async function writeManifest(root, manifest) {
+  await writeFile(
+    path.join(root, "manifest.json"),
+    typeof manifest === "string" ? manifest : `${JSON.stringify(manifest, null, 2)}\n`,
+    "utf8",
+  );
 }
 
 async function gitRepository() {
@@ -131,6 +163,230 @@ function linkedReferences(sections) {
 }
 
 describe("implement-tickets wave planner contract", () => {
+  it("reports a changed spec in manifest and top-level warnings without failing planning", async () => {
+    const spec = "# Fixture spec\n";
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(edit) src/one.mjs" }),
+    }, { spec });
+    try {
+      const manifest = manifestFor(spec, [manifestTicket("01")]);
+      manifest.specSha256 = "0".repeat(64);
+      await writeManifest(root, manifest);
+
+      const result = await invokeWaves(issues);
+      assert.equal(result.status, 0, result.stderr);
+      const output = JSON.parse(result.stdout);
+      assert.deepEqual(output.manifest.statuses, ["spec changed"]);
+      assert.equal(output.manifest.warnings.length, 1);
+      assert.match(output.manifest.warnings[0], /spec changed since the tickets were checked/i);
+      assert.match(output.manifest.warnings[0], /re-run the ticket checker with --write-budget/i);
+      assert.deepEqual(output.warnings, output.manifest.warnings);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports matches without a manifest warning when the raw spec fingerprint matches", async () => {
+    const spec = "# Fixture spec\n";
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(edit) src/one.mjs" }),
+    }, { spec });
+    try {
+      await writeManifest(root, manifestFor(spec, [manifestTicket("01")]));
+
+      const output = await runWaves(issues);
+      assert.deepEqual(output.manifest.statuses, ["matches"]);
+      assert.deepEqual(output.manifest.warnings, []);
+      assert.deepEqual(output.warnings, []);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("clears a changed-spec warning after the real checker rewrites the manifest", async () => {
+    const scratch = path.join(repoRoot, ".scratch");
+    await mkdir(scratch, { recursive: true });
+    const root = await mkdtemp(path.join(scratch, "implement-tickets-manifest-reader-"));
+    const issues = path.join(root, "issues");
+    const spec = [
+      "# Checker fixture",
+      "",
+      "## User Stories",
+      "",
+      "1. A fixture story.",
+      "   Scenario: given a fixture when checked then it passes.",
+      "",
+      "## Implementation Decisions",
+      "",
+      "No additional decisions.",
+      "",
+    ].join("\n");
+    try {
+      await mkdir(issues, { recursive: true });
+      await writeFile(path.join(root, "spec.md"), spec, "utf8");
+      await writeFile(
+        path.join(issues, "01-fixture.md"),
+        ticket("01", { context: "(new) src/manifest-reader-fixture.mjs" }),
+        "utf8",
+      );
+
+      const initialCheck = spawnSync(process.execPath, [ticketCheckerScript, root, "--write-budget"], {
+        cwd: repoRoot,
+        encoding: "utf8",
+      });
+      assert.equal(initialCheck.status, 0, `${initialCheck.stdout}\n${initialCheck.stderr}`);
+
+      await writeFile(path.join(root, "spec.md"), `${spec}\n`, "utf8");
+      const stale = await runWaves(issues);
+      assert.deepEqual(stale.manifest.statuses, ["spec changed"]);
+
+      const refreshedCheck = spawnSync(process.execPath, [ticketCheckerScript, root, "--write-budget"], {
+        cwd: repoRoot,
+        encoding: "utf8",
+      });
+      assert.equal(refreshedCheck.status, 0, `${refreshedCheck.stdout}\n${refreshedCheck.stderr}`);
+
+      const refreshed = await runWaves(root);
+      assert.deepEqual(refreshed.manifest.statuses, ["matches"]);
+      assert.deepEqual(refreshed.manifest.warnings, []);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("warns when the manifest is missing and continues with a successful plan", async () => {
+    const spec = "# Fixture spec\n";
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(edit) src/one.mjs" }),
+    }, { spec });
+    try {
+      const result = await invokeWaves(issues);
+      assert.equal(result.status, 0, result.stderr);
+      const output = JSON.parse(result.stdout);
+      assert.deepEqual(output.manifest.statuses, ["missing"]);
+      assert.equal(output.manifest.warnings.length, 1);
+      assert.match(output.manifest.warnings[0], /manifest.*missing/i);
+      assert.deepEqual(output.warnings, output.manifest.warnings);
+      assert.deepEqual(output.waves, [["01"]]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores invalid JSON, unsupported versions, incomplete schemas, and invalid ticket entries", async () => {
+    const spec = "# Fixture spec\n";
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(edit) src/one.mjs" }),
+    }, { spec });
+    const valid = manifestFor(spec, [manifestTicket("01")]);
+    const invalidCases = [
+      ["invalid JSON", "{"],
+      ["unsupported version", { ...valid, version: 2 }],
+      ["missing fingerprint", { version: 1, tickets: valid.tickets }],
+      ["missing tickets", { version: 1, specSha256: valid.specSha256 }],
+      ["null ticket", { ...valid, tickets: [null] }],
+      ["non-object ticket", { ...valid, tickets: ["01"] }],
+      ["non-integer number", { ...valid, tickets: [{ ...valid.tickets[0], number: "01" }] }],
+      ["non-string file", { ...valid, tickets: [{ ...valid.tickets[0], file: 1 }] }],
+      ["non-array blockers", { ...valid, tickets: [{ ...valid.tickets[0], blockedBy: null }] }],
+    ];
+    try {
+      for (const [label, contents] of invalidCases) {
+        await writeManifest(root, contents);
+        const result = await invokeWaves(issues);
+        assert.equal(result.status, 0, `${label}: ${result.stderr}`);
+        const output = JSON.parse(result.stdout);
+        assert.deepEqual(output.manifest.statuses, ["ignored"], label);
+        assert.equal(output.manifest.warnings.length, 1, label);
+        assert.match(output.manifest.warnings[0], /manifest.*ignored/i, label);
+        assert.deepEqual(output.warnings, output.manifest.warnings, label);
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports an unavailable spec fingerprint when the manifest exists but spec.md does not", async () => {
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(edit) src/one.mjs" }),
+    });
+    try {
+      await writeManifest(root, {
+        ...manifestFor("# Removed spec\n", [manifestTicket("01")]),
+      });
+
+      const result = await invokeWaves(issues);
+      assert.equal(result.status, 0, result.stderr);
+      const output = JSON.parse(result.stdout);
+      assert.deepEqual(output.manifest.statuses, ["spec unavailable"]);
+      assert.match(output.manifest.warnings.join(" "), /fingerprint cannot be checked/i);
+      assert.deepEqual(output.warnings, output.manifest.warnings);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("finds the same manifest from feature and issues paths in relative, absolute, and trailing-slash forms", async () => {
+    const spec = "# Fixture spec\n";
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(edit) src/one.mjs" }),
+    }, { spec });
+    try {
+      await writeManifest(root, manifestFor(spec, [manifestTicket("01")]));
+      const featureRelative = path.relative(repoRoot, root);
+      const issuesRelative = path.relative(repoRoot, issues);
+      const outputs = await Promise.all([
+        runWaves(root),
+        runWaves(`${root}${path.sep}`),
+        runWaves(issues),
+        runWaves(`${issues}${path.sep}`),
+        runWaves(`${issuesRelative}${path.sep}`),
+        runWaves(issuesRelative),
+        runWaves(featureRelative),
+        runWaves(`${featureRelative}${path.sep}`),
+      ]);
+
+      for (const output of outputs) assert.deepEqual(output.manifest, outputs[0].manifest);
+      assert.deepEqual(outputs[0].manifest.statuses, ["matches"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps waves, blockers, and touch sets independent of manifest contents", async () => {
+    const spec = "# Fixture spec\n";
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(new) src/base.mjs" }),
+      "02": ticket("02", { blockers: ["01"], context: "(edit) src/left.mjs" }),
+      "03": ticket("03", { blockers: ["01"], context: "(edit) src/right.mjs" }),
+    }, { spec });
+    const entries = [manifestTicket("01"), manifestTicket("02", ["01"]), manifestTicket("03", ["01"])];
+    try {
+      const missing = await runWaves(issues);
+      const matchingManifest = manifestFor(spec, entries);
+      matchingManifest.waves = [["99"]];
+      await writeManifest(root, matchingManifest);
+      const matching = await runWaves(issues);
+
+      const changedSpec = { ...matchingManifest, specSha256: "0".repeat(64) };
+      await writeManifest(root, changedSpec);
+      const changed = await runWaves(issues);
+
+      await writeManifest(root, "{");
+      const ignored = await runWaves(issues);
+      const planningFacts = ({ waves, tickets }) => ({
+        waves,
+        tickets: tickets.map(({ number, blockers, touchSet }) => ({ number, blockers, touchSet })),
+      });
+      assert.deepEqual(planningFacts(matching), planningFacts(missing));
+      assert.deepEqual(planningFacts(changed), planningFacts(missing));
+      assert.deepEqual(planningFacts(ignored), planningFacts(missing));
+      assert.deepEqual(matching.waves, [["01"], ["02", "03"]]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("rejects a ticket with no Context field and names the ticket and field", async () => {
     const missingContext = ticket("01", { context: "(edit) src/one.mjs" })
       .replace(/^\*\*Context:\*\*.*\n/m, "");

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createHash } from "node:crypto";
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -196,7 +197,70 @@ async function loadTickets(directory) {
     ticket.blockers = parseBlockers(ticket, ticketsByNumber, ticketsByTitle);
     ticket.touchSet = parseTouchSet(ticket.contextText);
   }
-  return tickets;
+  return { ticketDirectory, tickets };
+}
+
+function isUsableManifest(value) {
+  return value !== null
+    && typeof value === "object"
+    && !Array.isArray(value)
+    && value.version === 1
+    && typeof value.specSha256 === "string"
+    && Array.isArray(value.tickets)
+    && value.tickets.every((ticket) => ticket !== null
+      && typeof ticket === "object"
+      && !Array.isArray(ticket)
+      && Number.isInteger(ticket.number)
+      && typeof ticket.file === "string"
+      && Array.isArray(ticket.blockedBy));
+}
+
+function manifestStatus(status, warning) {
+  return { statuses: [status], warnings: warning ? [warning] : [] };
+}
+
+async function readManifest(featureDirectory) {
+  let bytes;
+  try {
+    bytes = await readFile(path.join(featureDirectory, "manifest.json"));
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      return manifestStatus("missing", "Manifest is missing; run the ticket checker with --write-budget to create it.");
+    }
+    return manifestStatus("ignored", "Manifest was ignored because it could not be read.");
+  }
+
+  let value;
+  try {
+    value = JSON.parse(bytes.toString("utf8"));
+  } catch {
+    return manifestStatus("ignored", "Manifest was ignored because it is not valid JSON.");
+  }
+  if (!isUsableManifest(value)) {
+    return manifestStatus("ignored", "Manifest was ignored because its version or required data is unsupported.");
+  }
+
+  let specBytes;
+  try {
+    specBytes = await readFile(path.join(featureDirectory, "spec.md"));
+  } catch {
+    return manifestStatus("spec unavailable", "Spec fingerprint cannot be checked because spec.md is unavailable.");
+  }
+
+  const currentSpecSha256 = createHash("sha256").update(specBytes).digest("hex");
+  if (currentSpecSha256 === value.specSha256) return manifestStatus("matches");
+  return manifestStatus(
+    "spec changed",
+    "Spec changed since the tickets were checked; re-run the ticket checker with --write-budget to refresh the manifest.",
+  );
+}
+
+function featureDirectoryFor(directory, ticketDirectory) {
+  const absoluteTicketDirectory = path.resolve(ticketDirectory);
+  if (path.basename(absoluteTicketDirectory) === "issues") {
+    return path.dirname(absoluteTicketDirectory);
+  }
+  return path.resolve(directory);
 }
 
 function parseArguments(argv) {
@@ -232,16 +296,18 @@ function parseArguments(argv) {
 }
 
 export async function planWaves({ directory, serial = false, concurrency = DEFAULT_CONCURRENCY, marker = DEFAULT_MARKER }) {
-  const tickets = await loadTickets(directory);
+  const { ticketDirectory, tickets } = await loadTickets(directory);
   const waves = makeWaves(tickets, { serial });
   const validation = await readParallelValidation(marker);
-  const warnings = tickets.flatMap((ticket) => ticket.warnings);
+  const manifest = await readManifest(featureDirectoryFor(directory, ticketDirectory));
+  const warnings = [...tickets.flatMap((ticket) => ticket.warnings), ...manifest.warnings];
 
   return {
     concurrency,
     serial,
     parallelValidated: validation.validated,
     parallelValidationStatus: validation.status,
+    manifest,
     waves,
     tickets: tickets.map(({ numberText, title, blockers, wave, touchSet, warnings: ticketWarnings }) => ({
       number: numberText,
