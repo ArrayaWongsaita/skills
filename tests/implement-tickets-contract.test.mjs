@@ -537,6 +537,31 @@ describe("implement-tickets wave planner contract", () => {
     }
   });
 
+  it("ignores non-ticket manifest entries during duplicate validation", async () => {
+    const spec = "# Fixture spec\n";
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(edit) src/one.mjs" }),
+    }, { spec });
+    const manifest = manifestFor(spec, [
+      manifestTicket("01"),
+      { number: 1, file: "issues/notes.md", blockedBy: [] },
+    ]);
+    try {
+      await writeManifest(root, manifest);
+
+      const result = await invokeWaves(issues);
+      assert.equal(result.status, 0, result.stderr);
+      const output = JSON.parse(result.stdout);
+      assert.deepEqual(output.manifest.statuses, ["matches"]);
+      assert.deepEqual(output.manifest.warnings, []);
+      assert.deepEqual(output.warnings, []);
+      assert.deepEqual(output.waves, [["01"]]);
+      assert.deepEqual(output.tickets.map(({ blockers }) => blockers), [[]]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("reports an unavailable spec fingerprint when the manifest exists but spec.md does not", async () => {
     const { root, issues } = await fixture({
       "01": ticket("01", { context: "(edit) src/one.mjs" }),

@@ -202,6 +202,20 @@ async function loadTickets(directory) {
   return { ticketDirectory, tickets };
 }
 
+function manifestTicketBasename(file) {
+  return path.posix.basename(file.replaceAll("\\", "/"));
+}
+
+function hasUniqueManifestTicketNumbers(tickets) {
+  const numbers = new Set();
+  for (const ticket of tickets) {
+    if (!TICKET_FILE.test(manifestTicketBasename(ticket.file))) continue;
+    if (numbers.has(ticket.number)) return false;
+    numbers.add(ticket.number);
+  }
+  return true;
+}
+
 function isUsableManifest(value) {
   return value !== null
     && typeof value === "object"
@@ -216,7 +230,7 @@ function isUsableManifest(value) {
       && typeof ticket.file === "string"
       && Array.isArray(ticket.blockedBy)
       && ticket.blockedBy.every((blocker) => Number.isInteger(blocker)))
-    && new Set(value.tickets.map((ticket) => ticket.number)).size === value.tickets.length;
+    && hasUniqueManifestTicketNumbers(value.tickets);
 }
 
 function manifestStatus(status, warning) {
@@ -226,7 +240,7 @@ function manifestStatus(status, warning) {
 function manifestTicketFacts(value) {
   const tickets = new Map();
   for (const ticket of value.tickets) {
-    const file = path.posix.basename(ticket.file.replaceAll("\\", "/"));
+    const file = manifestTicketBasename(ticket.file);
     const match = file.match(TICKET_FILE);
     if (!match) continue;
 
