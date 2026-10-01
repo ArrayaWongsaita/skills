@@ -214,7 +214,8 @@ function isUsableManifest(value) {
       && !Array.isArray(ticket)
       && Number.isInteger(ticket.number)
       && typeof ticket.file === "string"
-      && Array.isArray(ticket.blockedBy));
+      && Array.isArray(ticket.blockedBy)
+      && ticket.blockedBy.every((blocker) => Number.isInteger(blocker)));
 }
 
 function manifestStatus(status, warning) {

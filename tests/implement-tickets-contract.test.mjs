@@ -466,6 +466,8 @@ describe("implement-tickets wave planner contract", () => {
       ["non-integer number", { ...valid, tickets: [{ ...valid.tickets[0], number: "01" }] }],
       ["non-string file", { ...valid, tickets: [{ ...valid.tickets[0], file: 1 }] }],
       ["non-array blockers", { ...valid, tickets: [{ ...valid.tickets[0], blockedBy: null }] }],
+      ["string blocker member", { ...valid, tickets: [{ ...valid.tickets[0], blockedBy: ["01"] }] }],
+      ["fractional blocker member", { ...valid, tickets: [{ ...valid.tickets[0], blockedBy: [1.5] }] }],
     ];
     try {
       for (const [label, contents] of invalidCases) {
@@ -478,6 +480,32 @@ describe("implement-tickets wave planner contract", () => {
         assert.match(output.manifest.warnings[0], /manifest.*ignored/i, label);
         assert.deepEqual(output.warnings, output.manifest.warnings, label);
       }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores malformed manifest blocker members and keeps the ticket-file wave plan", async () => {
+    const spec = "# Fixture spec\n";
+    const { root, issues } = await fixture({
+      "01": ticket("01", { context: "(new) src/base.mjs" }),
+      "02": ticket("02", { blockers: ["01"], context: "(edit) src/next.mjs" }),
+    }, { spec });
+    const manifest = manifestFor(spec, [
+      manifestTicket("01"),
+      { ...manifestTicket("02"), blockedBy: [{ toString: 1 }] },
+    ]);
+    try {
+      await writeManifest(root, manifest);
+
+      const result = await invokeWaves(issues);
+      assert.equal(result.status, 0, `wave script continues with an advisory manifest warning: ${result.stderr}`);
+      const output = JSON.parse(result.stdout);
+      assert.deepEqual(output.manifest.statuses, ["ignored"]);
+      assert.match(output.manifest.warnings.join(" "), /manifest.*ignored/i);
+      assert.deepEqual(output.warnings, output.manifest.warnings);
+      assert.deepEqual(output.waves, [["01"], ["02"]]);
+      assert.deepEqual(output.tickets.map(({ blockers }) => blockers), [[], ["01"]]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
