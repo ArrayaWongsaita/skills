@@ -13,7 +13,7 @@ function padTicket(number) {
 
 function fieldValue(text, name) {
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return text.match(new RegExp(`^\\*\\*${escaped}:\\*\\*\\s*(.*?)\\s*$`, "m"))?.[1];
+  return text.match(new RegExp(`^\\*\\*${escaped}:\\*\\*[ \\t]*([^\\r\\n]*?)[ \\t]*$`, "m"))?.[1];
 }
 
 function parseTicket(file, text) {
@@ -28,12 +28,18 @@ function parseTicket(file, text) {
     throw new Error(`${file}: heading number ${padTicket(Number(heading[1]))} differs from the filename`);
   }
 
+  const numberText = padTicket(number);
+  const contextText = fieldValue(text, "Context");
+  if (!contextText?.trim()) {
+    throw new Error(`issues/${numberText}: **Context:** is missing or empty`);
+  }
+
   return {
     number,
-    numberText: padTicket(number),
+    numberText,
     title: heading[2],
     blockedByText: fieldValue(text, "Blocked by"),
-    contextText: fieldValue(text, "Context") ?? "",
+    contextText,
     seam: fieldValue(text, "Seam") ?? "",
     touchSet: null,
     warnings: [],

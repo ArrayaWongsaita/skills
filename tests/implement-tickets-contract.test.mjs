@@ -66,9 +66,13 @@ async function gitRepository() {
   return root;
 }
 
-async function runWaves(dir, options = []) {
+async function invokeWaves(dir, options = []) {
   assert.equal(await exists(wavesScript), true, "wave planning behavior is missing: scripts/waves.mjs does not exist");
-  const result = spawnSync(process.execPath, [wavesScript, dir, ...options], { encoding: "utf8" });
+  return spawnSync(process.execPath, [wavesScript, dir, ...options], { encoding: "utf8" });
+}
+
+async function runWaves(dir, options = []) {
+  const result = await invokeWaves(dir, options);
   assert.equal(result.status, 0, `wave script exits successfully: ${result.stderr || result.stdout}`);
   return JSON.parse(result.stdout);
 }
@@ -127,6 +131,30 @@ function linkedReferences(sections) {
 }
 
 describe("implement-tickets wave planner contract", () => {
+  it("rejects a ticket with no Context field and names the ticket and field", async () => {
+    const missingContext = ticket("01", { context: "(edit) src/one.mjs" })
+      .replace(/^\*\*Context:\*\*.*\n/m, "");
+    const { root, issues } = await fixture({ "01": missingContext });
+    try {
+      const result = await invokeWaves(issues);
+      assert.notEqual(result.status, 0, "malformed ticket stops planning");
+      assert.match(result.stderr, /issues\/01.*Context/i, "error identifies ticket 01 and its missing Context field");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects an explicitly empty Context field", async () => {
+    const { root, issues } = await fixture({ "01": ticket("01", { context: "" }) });
+    try {
+      const result = await invokeWaves(issues);
+      assert.notEqual(result.status, 0, "empty Context stops planning");
+      assert.match(result.stderr, /issues\/01.*Context/i, "error identifies ticket 01 and its empty Context field");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("puts independent tickets behind the same blocker in one wave when their touch sets differ", async () => {
     const { root, issues } = await fixture({
       "01": ticket("01", { context: "(new) src/right.mjs" }),
