@@ -754,6 +754,29 @@ describe("implement-tickets skill and documentation contract", () => {
     assert.match(plan, /no file outside the\s+feature directory changes until approval/i, "files outside the feature directory stay untouched before approval");
   });
 
+  it("documents advisory manifest warnings in planning and resume procedures", async () => {
+    const skill = await readTextOrNull(path.join(skillRoot, "SKILL.md"));
+    const planning = await readTextOrNull(path.join(skillRoot, "references/planning.md"));
+    const resume = await readTextOrNull(path.join(skillRoot, "references/status-and-resume.md"));
+    assert.ok(skill, "the implement-tickets skill exists");
+    assert.ok(planning, "the planning procedure exists");
+    assert.ok(resume, "the status and resume procedure exists");
+
+    const stage0 = markdownSection(skill, "Stage 0 — Plan, then pause");
+    const compute = markdownSection(planning, "3. Compute waves");
+    const presentPlan = markdownSection(planning, "5. Present the Plan and pause");
+    const continueRun = markdownSection(resume, "Continue and reconcile");
+    assert.match(compute, /JSON[\s\S]*`manifest` field/i, "the planning reference documents the script's manifest field");
+    assert.match(presentPlan, /manifest warnings join the other planning warnings/i, "manifest warnings join the Plan's other warnings");
+    assert.match(presentPlan, /Spec changed since the tickets\s+were checked; re-run the ticket checker with `--write-budget` to refresh the\s+manifest\./, "the Plan pins the spec-hash warning wording and its cure");
+    assert.match(continueRun, /continue[\s\S]*re-present(?:s|ing) the Plan/i, "continue re-presents the Plan");
+    assert.match(continueRun, /manifest\s+check/i, "continue reruns the manifest check");
+    assert.match(continueRun, /spec\.md/i, "the resume check names the spec file");
+    assert.match(continueRun, /edited\s+between sessions[\s\S]*spec-hash warning/i, "continue surfaces a spec edit made between sessions");
+    assert.match(stage0, /every manifest state[\s\S]*cannot stop the run[\s\S]*not recorded in\s+the run status file[\s\S]*approval pause is always reached/i, "manifest state is advisory and does not affect run state or the approval pause");
+    assert.match(stage0, /wave planning comes from ticket files\s+and never from the manifest/i, "waves are computed from ticket files only");
+  });
+
   it("links bilingual Seam and Context guidance to the planning reference in both user-facing pages", async () => {
     for (const file of ["docs/guides/implement-tickets.md", "docs/skills/agents/implement-tickets.md"]) {
       const doc = await readTextOrNull(path.join(repoRoot, file));
