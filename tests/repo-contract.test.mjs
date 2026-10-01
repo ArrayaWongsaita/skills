@@ -109,7 +109,7 @@ function markdownProse(body) {
 }
 
 function hasThaiProse(body) {
-  return /[\u0e00-\u0e7f]/.test(markdownProse(body));
+  return /[\u0e00-\u0e7f]{8,}/.test(markdownProse(body));
 }
 
 function hasEnglishProse(body) {
@@ -1076,6 +1076,7 @@ describe("grill-to-tickets production records and guides", () => {
 
     assert.equal(hasThaiProse(thaiInCode), false, "Thai in inline code is not prose evidence");
     assert.equal(hasThaiProse(thaiInHeading), false, "Thai in a Markdown heading is not prose evidence");
+    assert.equal(hasThaiProse("ก"), false, "one Thai codepoint is too short to count as prose");
     assert.equal(hasEnglishProse(repeatedFunctionWords), false, "repeated English function words are not prose evidence");
     assert.equal(hasThaiProse("นี่คือข้อความภาษาไทยที่เป็นเนื้อหาจริง"), true, "Thai prose is accepted");
     assert.equal(

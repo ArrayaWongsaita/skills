@@ -109,6 +109,10 @@ describe("Markdown contract assertion scope", () => {
       "tests/repo-contract.test.mjs",
       "records ADR 0020 as the implement-family core and supersedes the standalone statuses",
     );
+    const languageEvidence = await testCase(
+      "tests/repo-contract.test.mjs",
+      "rejects ADR language evidence found only in inline code or Markdown headings",
+    );
     const assertions = await readFile("tests/repo-contract.test.mjs", "utf8");
     assert.match(source, /assert\.ok\(body && hasThaiProse\(body\)/,
       "ADR 0020 sections use the shared prose extractor for Thai evidence");
@@ -118,6 +122,10 @@ describe("Markdown contract assertion scope", () => {
       "the shared prose extractor removes inline code");
     assert.match(assertions, /function hasThaiProse\(body\)[\s\S]*?markdownProse\(body\)/,
       "Thai evidence is checked only after shared prose extraction");
+    assert.match(languageEvidence, /assert\.equal\(hasThaiProse\("ก"\),\s*false,/,
+      "the language-evidence regression rejects one Thai codepoint");
+    assert.match(languageEvidence, /assert\.equal\(hasThaiProse\("นี่คือข้อความภาษาไทยที่เป็นเนื้อหาจริง"\),\s*true,/,
+      "the language-evidence regression accepts a genuine Thai sentence");
     assert.match(assertions, /function hasEnglishProse\(body\)[\s\S]*?markdownProse\(body\)/,
       "English evidence uses the same prose extraction as Thai evidence");
     assert.match(assertions, /const contentWords = words\.filter\(\(word\) => !englishProseMarkers\.has\(word\.toLowerCase\(\)\)\)/,
