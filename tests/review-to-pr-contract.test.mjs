@@ -173,9 +173,19 @@ describe("review-to-pr skill contract", () => {
 
     it("the guide names the sibling skills it defers to", async () => {
       const guide = await readFile(path.resolve("docs/skills/agents/review-to-pr.md"), "utf8");
-      for (const sibling of ["grill-to-tickets", "engineering-workflow", "subagent-implement", "agy-implement"]) {
-        assert.match(guide, new RegExp(sibling));
+      for (const sibling of ["grill-to-tickets", "engineering-workflow", "implement-tickets", "agy-implement"]) {
+        assert.ok(guide.includes(sibling), `the guide names ${sibling}`);
       }
+    });
+
+    it("names the implement-tickets branch stems on both guides", async () => {
+      const guide = await readFile(path.resolve("docs/guides/review-to-pr.md"), "utf8");
+      const page = await readFile(path.resolve("docs/skills/agents/review-to-pr.md"), "utf8");
+      for (const content of [guide, page]) {
+        assert.ok(/implement-tickets\/foo/.test(content), "the guide names the integration branch stem");
+        assert.ok(/implement-tickets-work\/foo\//.test(content), "the guide names the worker branch stem");
+      }
+      assert.ok(page.includes("npx skills add ArrayaWongsaita/skills --skill review-to-pr"));
     });
 
     it("ships a bilingual ADR 0006 recording the standalone §8–9 split", async () => {
@@ -248,7 +258,8 @@ describe("review-to-pr skill contract", () => {
         const c = await readFile(path.resolve(dir, "references/review-point.md"), "utf8");
         assert.match(c, /explicit `?<slug>`? argument/i);
         assert.match(c, /branch-name stem|segment after the last `?\/`?/i);
-        assert.match(c, /subagent-implement\/wishlist-sync.*wishlist-sync/i);
+        assert.ok(/implement-tickets\/wishlist-sync.*wishlist-sync/i.test(c), "the integration stem example uses implement-tickets");
+        assert.ok(/implement-tickets-work\/wishlist-sync\//i.test(c), "the related worker stem is documented");
         assert.match(c, /most recently modified `?\.scratch\/\*\/`? director/i);
         assert.match(c, /named back[\s\S]*?confirm/i);
       }
@@ -386,10 +397,10 @@ describe("review-to-pr skill contract", () => {
       }
     });
 
-    it("fix-dispatch.md cites subagent-implement and carries the worktree dispatch contract", async () => {
+    it("fix-dispatch.md cites implement-tickets and carries the worktree dispatch contract", async () => {
       for (const dir of skillDirs) {
         const c = await readFile(path.resolve(dir, "references/fix-dispatch.md"), "utf8");
-        assert.match(c, /subagent-implement/);
+        assert.ok(c.includes("implement-tickets"), "the dispatch reference cites implement-tickets");
         assert.match(c, /review-to-pr\/<feature-slug>\/fix-<n>/);
         assert.match(c, /integration `?HEAD`?/i);
         assert.match(c, /\.scratch\/<feature-slug>\/prompts\/fix-<n>\.md/);
@@ -450,6 +461,17 @@ describe("review-to-pr skill contract", () => {
         assert.match(c, /token usage/i);
         assert.match(c, /`?Explore`? reads deeply enough/i);
       }
+    });
+  });
+
+  describe("ticket 05 — implement-tickets integration branch stem", () => {
+    it("derives foo without an argument from implement-tickets/foo, not its worker branches", async () => {
+      const skill = await readFile(skillFiles[0], "utf8");
+      const omitted = skill.match(/\*\*omitted\*\*[\s\S]*?(?=\n- \*\*)/)?.[0];
+      assert.ok(omitted, "the no-argument invocation behavior is documented");
+      assert.match(omitted, /integration branch `implement-tickets\/foo`/i);
+      assert.match(omitted, /worker branches?\s+(?:are\s+)?under\s+`implement-tickets-work\/foo\//i);
+      assert.match(omitted, /feature slug[\s\S]*?foo/i);
     });
   });
 

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Implement Tickets"
+  short_description: "Plan and implement ticket sets in verified deterministic waves"
+  default_prompt: "Use $implement-tickets to plan this ticket directory, show me the waves and touch sets, and pause for approval before execution: [dir|slug]."
+policy:
+  allow_implicit_invocation: false

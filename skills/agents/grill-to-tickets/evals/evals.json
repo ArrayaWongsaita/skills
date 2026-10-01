@@ -5,13 +5,14 @@
       "id": 1,
       "name": "first-pass SHIP straight through the stages",
       "prompt": "/grill-to-tickets Add a \"copy shareable link\" button to the report detail page that copies the report's existing public URL to the clipboard and shows a confirmation toast. One component, no API or schema change, acceptance behavior is explicit, and no open decisions remain — treat the Stage 0 frontier as empty and already confirmed. decisions.md State already holds review: 0/3 rounds from the confirmed pause.",
-      "expected_output": "With the Stage 0 frontier already empty and confirmed, pass straight through: synthesize spec.md in Stage 1, use the recorded review answer without asking again and run scrutinize once in a fresh reviewer subagent (Stage 2), normalize its closing line to SHIP, and advance to Stage 3 (ticket-format.md). Publish tickets under .scratch/<feature-slug>/issues/ and print the handoff: .scratch/ needs no commit, /clear, then /subagent-implement .scratch/<feature-slug>/.",
+      "expected_output": "With the Stage 0 frontier already empty and confirmed, pass straight through: synthesize spec.md in Stage 1, use the recorded review answer without asking again and run scrutinize once in a fresh reviewer subagent (Stage 2), normalize its closing line to SHIP, and advance to Stage 3 (ticket-format.md). Publish tickets under .scratch/<feature-slug>/issues/ and print the handoff: .scratch/ needs no commit, /clear, the DAG recommendation and manifest, then /implement-tickets .scratch/<feature-slug>/ with a one-line --with <backend> adapter hint. The manifest recommends [\"implement-tickets\"] at every wave width.",
       "expectations": [
         "Confirms the empty Stage 0 frontier, then moves through Stage 1 -> Stage 2 -> Stage 3 in order",
         "Runs scrutinize exactly once and records cycle 1 with verdict SHIP in a single .scratch/<feature-slug>/design-review.md file",
         "Normalizes the scrutinize verdict to the token SHIP with no paraphrasing",
         "Does not enter FIX_THEN_SHIP, REWORK, or a backward transition to Stage 0",
-        "Prints the handoff — .scratch/ needs no commit, /clear, then /subagent-implement .scratch/<feature-slug>/ — never invokes an implementer, and dispatches a subagent only twice: the Stage 2 design reviewer and the Stage 3.5 ticket reviewer"
+        "Prints the handoff — .scratch/ needs no commit, /clear, then /implement-tickets .scratch/<feature-slug>/ with one-line --with <backend> adapter hint — never invokes an implementer, and dispatches a subagent only twice: the Stage 2 design reviewer and the Stage 3.5 ticket reviewer",
+        "Records recommendedImplementers as [\"implement-tickets\"] at every wave width"
       ],
       "files": []
     },
@@ -372,12 +373,13 @@
       "id": 38,
       "name": "handoff recommends an implementer from the DAG",
       "prompt": "$grill-to-tickets continue member-export. The checker's final run shows wave 0: 01, wave 1: 02, 03, 04; maximum wave width 3; critical-path length 2.",
-      "expected_output": "Print the handoff in order: /clear, then the DAG summary — waves, maximum wave width, critical-path length, and recommended implementer — between /clear and the implementer commands, recommending agy-implement or opencode-implement for width 3 and naming the skills without a leading slash. Then /subagent-implement .scratch/member-export/ with /agy-implement and /opencode-implement as the alternatives.",
+      "expected_output": "Use the checker's final DAG summary as the source for the recommendation: wave 0: 01, wave 1: 02, 03, 04; maximum wave width 3; critical-path length 2; recommended implementer: implement-tickets. Write recommendedImplementers as [\"implement-tickets\"]. Print /clear, the DAG summary and Manifest line, then /implement-tickets .scratch/member-export/ with a one-line --with <backend> adapter hint. Do not list the legacy implementer commands.",
       "expectations": [
         "Prints the DAG summary and recommended implementer after /clear and before the implementer commands",
-        "Recommends agy-implement or opencode-implement for a maximum wave width of 3",
-        "Names the recommended skills without a leading slash",
-        "Keeps the Commit -> /clear -> /subagent-implement order"
+        "Takes the recommendation from the final DAG summary, names implement-tickets at maximum wave width 3, and records [\"implement-tickets\"] in recommendedImplementers",
+        "Names the recommendation without a leading slash",
+        "Prints /implement-tickets .scratch/member-export/ after the DAG summary and Manifest line",
+        "Mentions --with <backend> as a one-line adapter hint, without listing the legacy implementer commands"
       ],
       "files": []
     },

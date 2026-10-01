@@ -98,7 +98,7 @@ Stage 2: Design Review Gate   scrutinize (subagent ใหม่) → design-revi
    ▼
 Stage 3: Tickets      ticket-format.md + checker   → issues/NN-<slug>.md + manifest.json + Ticket review
    ▼
-Stop: Handoff message (/clear, DAG summary + recommended implementer แล้ว /subagent-implement)
+Stop: Handoff message (/clear, DAG summary + recommended implementer แล้ว /implement-tickets)
 ```
 
 1. **Stage 0 — Grill (สัมภาษณ์และสร้างโมเดลโดเมน):**
@@ -111,11 +111,11 @@ Stop: Handoff message (/clear, DAG summary + recommended implementer แล้�
 4. **Stage 3 — Tickets (แตกชิ้นงานย่อย):**
    - แตก `spec.md` เป็น Tracer-bullet vertical slices ใน `issues/<NN>-<slug>.md` เรียงตาม dependency
    - ทุก ticket ระบุ stories ที่ส่งมอบและ dependency พร้อม **Seam**, **Context** และ **Budget** ตามรูปแบบใน `references/ticket-format.md`
-   - checker รายงานความครอบคลุม, budget, DAG และ warnings; manifest สำหรับ handoff อยู่ที่ `.scratch/<feature-slug>/manifest.json` ดู [สัญญา grill-to-tickets หลัก](../../skills/agents/grill-to-tickets/SKILL.md) สำหรับกฎ checker และ manifest
+   - checker รายงานความครอบคลุม, budget, DAG และ warnings; manifest สำหรับ handoff อยู่ที่ `.scratch/<feature-slug>/manifest.json` และมี `recommendedImplementers: ["implement-tickets"]` ทุก wave width ดู [สัญญา grill-to-tickets หลัก](../../skills/agents/grill-to-tickets/SKILL.md) สำหรับกฎ checker และ manifest
    - **Ticket review (Stage 3.5):** หลัง checker PASS และก่อน quiz ให้ทำ ticket review ดู [สัญญา grill-to-tickets หลัก](../../skills/agents/grill-to-tickets/SKILL.md) และ [brief สำหรับผู้รีวิว ticket](../../skills/agents/grill-to-tickets/references/ticket-review.md) สำหรับรายละเอียด
    - ดูสัญญาหลักสำหรับการจัดการ warnings และการแก้ ticket ระหว่าง quiz
 5. **Stop — Handoff (ส่งมอบงาน):**
-   - พิมพ์ข้อความ handoff ตามลำดับ: `/clear` → **DAG summary** → `recommended implementer` จาก checker → `Manifest: .scratch/<feature-slug>/manifest.json` เมื่อมี → คำสั่ง `/subagent-implement`; คำแนะนำเป็นตัวช่วยเลือก
+   - พิมพ์ข้อความ handoff ตามลำดับ: `/clear` → **DAG summary** → `recommended implementer` จาก checker → `Manifest: .scratch/<feature-slug>/manifest.json` เมื่อมี → คำสั่ง `/implement-tickets`; เพิ่มบรรทัด hint `--with <backend>` ได้เมื่อใช้ adapter
    - handoff ระบุ parked questions ที่รับเป็นสมมติฐาน; ดู [สัญญาคำถามที่พักไว้](../../skills/agents/grill-to-tickets/references/parked-questions.md) สำหรับรายละเอียด
    - แสดงข้อความสรุปและแนะนำขั้นตอนสำหรับเซสชันถัดไป:
      ```text
@@ -126,11 +126,11 @@ Stop: Handoff message (/clear, DAG summary + recommended implementer แล้�
      wave 1: 02, 03
      maximum wave width: 2
      critical-path length: 2
-     recommended implementer: subagent-implement
+     recommended implementer: implement-tickets
      Manifest: .scratch/<feature-slug>/manifest.json
      # 3. implement ทั้งโฟลเดอร์ใน session ใหม่
-     /subagent-implement .scratch/<feature-slug>/
-     # หรือ /agy-implement หรือ /opencode-implement ด้วย argument เดียวกัน
+     /implement-tickets .scratch/<feature-slug>/
+     # Optional adapter hint: add --with <backend> to the command.
      ```
 
 ---

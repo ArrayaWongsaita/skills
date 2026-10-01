@@ -56,7 +56,7 @@ Example from the spec:
 ### R-opencode-implement-hosted-model-01 · Check · handed-off
 Remedy: fail a feature branch whose commits edit files of a skill the feature does not name
 Misses:
-- opencode-implement-hosted-model · review-status.md#std-1 · 2026-09-23 · "Commit 22384f6 edited subagent-implement's …"
+- opencode-implement-hosted-model · review-status.md#std-1 · 2026-09-23 · "Commit 22384f6 edited the ticket implementer's …"
 History:
 - 2026-09-23 handed-off: /grill-to-tickets prompt in .scratch/opencode-implement-hosted-model/retro.md
 ```
@@ -146,5 +146,4 @@ In Stage 1, before classifying Misses, the Retro matches candidate Remedies agai
 
 4. **The Declined Rule**:
    A `declined` Remedy returns only with a recurrence after the decline, showing both occurrences (the original occurrence and the new recurrence after the decline). Without a new occurrence after the decline, a declined Remedy is not proposed again.
-
 

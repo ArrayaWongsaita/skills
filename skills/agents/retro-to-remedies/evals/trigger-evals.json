@@ -32,7 +32,7 @@
     "should_trigger": false
   },
   {
-    "query": "Implement the next ticket in the queue using subagent-implement",
+    "query": "Implement the next ticket in the queue using implement-tickets",
     "should_trigger": false
   }
 ]

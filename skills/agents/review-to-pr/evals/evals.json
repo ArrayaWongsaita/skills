@@ -4,7 +4,7 @@
     {
       "id": 1,
       "name": "the run begins at the explicit invocation, not from earlier chat",
-      "prompt": "/review-to-pr — invoked now. Earlier in the same session the user said \"the branch subagent-implement/wishlist-sync is done, can you get it reviewed and PR-ready\" and the assistant did not act on that sentence.",
+      "prompt": "/review-to-pr — invoked now. Earlier in the same session the user said \"the branch implement-tickets/wishlist-sync is done, can you get it reviewed and PR-ready\" and the assistant did not act on that sentence.",
       "expected_output": "Because review-to-pr is disable-model-invocation with allow_implicit_invocation: false, the earlier paraphrase triggered nothing — no Stage 0, no code-review, no review-status.md. The run starts here, at the explicit /review-to-pr token, from a clean Stage 0 preflight.",
       "expectations": [
         "Confirms the earlier paraphrased sentence started no stage",
@@ -16,11 +16,11 @@
     {
       "id": 2,
       "name": "no argument reviews the whole feature against the merge-base with main",
-      "prompt": "/review-to-pr — run from the branch subagent-implement/wishlist-sync, which carries four ticket commits and a clean tree. main has advanced twelve commits since the branch was cut.",
-      "expected_output": "The review point is git merge-base main HEAD, computed automatically and pinned for the run — correct even though main advanced. The integration branch is the current branch. The feature slug is the branch-name stem wishlist-sync. Stage 0 writes review-status.md and pauses for approval before Stage 1.",
+      "prompt": "/review-to-pr — run without an argument from integration branch implement-tickets/foo, which carries four ticket commits and has a clean tree. Its worker branches are under implement-tickets-work/foo/01. main has advanced twelve commits since the branch was cut.",
+      "expected_output": "The review point is git merge-base main HEAD, computed automatically and pinned for the run — correct even though main advanced. The integration branch is the current branch implement-tickets/foo. The feature slug is foo from that integration branch stem, not from worker branches under implement-tickets-work/foo/. Stage 0 writes review-status.md and pauses for approval before Stage 1.",
       "expectations": [
         "Pins the review point to git merge-base main HEAD, not the first commit of the branch",
-        "Takes the current branch as the integration branch and wishlist-sync as the slug",
+        "Takes implement-tickets/foo as the integration branch and derives foo from its stem, not the worker branch stem",
         "Records review_point, feature_slug, integration_branch, spec_source, and stage in review-status.md",
         "Pauses for explicit approval before Stage 1"
       ],

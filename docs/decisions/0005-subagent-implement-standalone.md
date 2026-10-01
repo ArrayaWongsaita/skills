@@ -1,6 +1,6 @@
 # ADR 0005: subagent-implement is a standalone sibling of agy-implement, not a shared base
 
-- Status / สถานะ: Accepted / ยอมรับแล้ว
+- Status / สถานะ: Superseded by ADR 0020 / ถูกแทนที่โดย ADR 0020, for the implement family (was: Accepted / ยอมรับแล้ว)
 - Date / วันที่: 2026-09-04
 
 ## Context / บริบท

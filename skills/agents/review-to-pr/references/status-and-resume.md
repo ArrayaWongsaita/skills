@@ -38,7 +38,7 @@ Print the handoff and stop. It names:
 
 The run performs **no PR step** — no `git push`, no `gh`, no `/pr-to-dev`. Opening
 the PR is the next command, run by hand. This is the same terminal stance
-`subagent-implement` takes toward `/code-review`.
+`implement-tickets` takes toward `/code-review`.
 
 ### Halt / partial report
 

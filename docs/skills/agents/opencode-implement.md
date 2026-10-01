@@ -22,7 +22,7 @@ flag คู่ ticket ที่อาจชนกันใน wave เดีย�
 ticket นั้นผ่าน ไม่ต้องรอ wave-mate แล้ว **หยุดก่อน review**
 
 เป็น sibling ของ `agy-implement` (กระจาย spend ข้ามหลาย provider) และ
-`subagent-implement` (รักษา context ของ main agent) — ตัวนี้เน้นทำงานบน hosted
+`implement-tickets` (รักษา context ของ main agent) — ตัวนี้เน้นทำงานบน hosted
 model ตัวเดียวที่เลือกไว้ พร้อม fallback tier อัตโนมัติที่ `agy-implement` ไม่มี
 
 ติดตั้ง:
@@ -45,7 +45,7 @@ npx skills add ArrayaWongsaita/skills --skill opencode-implement
 - ยังไม่มี ticket — ใช้ `/grill-to-tickets` ก่อน
 - อยากขับทั้ง lifecycle รวม review และ PR — ใช้ `/engineering-workflow`
 - ต้องการกระจายงานข้ามหลาย LLM provider ด้วย round-robin failover — ใช้ `/agy-implement`
-- อยากให้ context ของ main agent เหลือเยอะโดยใช้ subagent ของ harness เป็นทางหลัก — ใช้ `/subagent-implement`
+- อยากให้ context ของ main agent เหลือเยอะโดยใช้ subagent ของ harness เป็นทางหลัก — ใช้ `/implement-tickets`
 - เป็น ticket แก้บั๊กหรือ incident — v1 รองรับเฉพาะ feature ticket set
 - อยากลง implement เองใน context เดียว — ใช้ `/implement`
 
@@ -155,7 +155,7 @@ npx skills add ArrayaWongsaita/skills --skill opencode-implement
 - You want the run spread across several providers with round-robin failover
   to dodge rate limits — use `/agy-implement`.
 - You want the main agent's context kept lean using the harness's own
-  subagents as the primary path — use `/subagent-implement`.
+  subagents as the primary path — use `/implement-tickets`.
 - The tickets are bug fixes or an incident — v1 accepts feature ticket sets only.
 - You want to implement it yourself in one context — use `/implement`.
 

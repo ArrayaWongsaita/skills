@@ -1,13 +1,13 @@
 ---
 name: review-to-pr
-description: Pick up a verified-but-unreviewed integration branch where implement, agy-implement, or subagent-implement stopped and drive it to a PR-ready state — pin a review point, run a bounded two-axis code-review loop, cluster the blockers and land each as one fix(review) commit, run a conditional system scrutinize gate, get the full suite green, then hand off the PR command without opening the PR.
+description: Pick up a verified-but-unreviewed integration branch where implement, agy-implement, or implement-tickets stopped and drive it to a PR-ready state — pin a review point, run a bounded two-axis code-review loop, cluster the blockers and land each as one fix(review) commit, run a conditional system scrutinize gate, get the full suite green, then hand off the PR command without opening the PR.
 disable-model-invocation: true
 ---
 
 # Review To PR
 
 Take the integration branch that `implement`, `agy-implement`, or
-`subagent-implement` left — one verified commit per ticket, tests green, nobody
+`implement-tickets` left — one verified commit per ticket, tests green, nobody
 has reviewed it — and drive it to a PR-ready state. The main agent — the
 **orchestrator** — pins the review point, runs each `code-review` and
 `scrutinize` pass, judges the findings, dispatches or hand-applies the fixes,
@@ -16,7 +16,7 @@ the full suite green, and stops at the handoff. The Retro and the PR are the nex
 commands, run by hand.
 
 This is `engineering-workflow`'s feature-flow §8–9 split out standalone, the same
-way `grill-to-tickets` is §1–3 and `subagent-implement` is §7. It carries its own
+way `grill-to-tickets` is §1–3 and `implement-tickets` is §7. It carries its own
 copy of the review-loop, fix-dispatch, scrutiny-gate, review-point, and
 state/resume machinery so it builds and validates on its own.
 
@@ -51,9 +51,13 @@ Explicit invocation only:
 Run from the integration branch. The argument is optional:
 
 - **omitted** — the integration branch is the current branch, the review point is
-  `git merge-base main HEAD`, and the feature slug is the branch-name stem
-  (`subagent-implement/foo` → `foo`) or the most recent `.scratch/*/` directory
-  named back to you for confirmation.
+  `git merge-base main HEAD`, and the feature slug comes from the integration
+  branch stem. For example, the integration branch `implement-tickets/foo`
+  gives the feature slug `foo`. Worker branches are under
+  `implement-tickets-work/foo/`, while the integration branch alone determines
+  the slug. If the current
+  branch is not an integration branch, use the most recent `.scratch/*/`
+  directory named back to you for confirmation.
 - **`<ref>`** — an argument that `git rev-parse --verify` resolves is the review
   point override (a commit SHA, branch, or tag).
 - **`<slug>`** — otherwise the argument names the feature directory
@@ -145,7 +149,7 @@ cycle's blockers into clusters — one cluster per coherent fix. For each cluste
 - A cluster that needs a new or changed test, or spans more than one file, goes
   to a test-first **worker** subagent (`isolation: "worktree"`, a non-`fork`
   type) and a fresh **verifier** subagent — the worker+verifier contract copied
-  from `subagent-implement`.
+  from `implement-tickets`.
 - A cluster confined to one file with no test change is hand-applied inline, with
   the affected tests and the typecheck run inline as the sanctioned context cost.
 
@@ -207,7 +211,7 @@ The next commands, in a fresh context — the Retro, then the PR:
 ```
 
 The run performs no PR step — no `git push`, no `gh`, no `/pr-to-dev` — the same
-terminal stance `subagent-implement` takes toward `/code-review`. A run that
+terminal stance `implement-tickets` takes toward `/code-review`. A run that
 ended with `unfixable` blockers or a red suite prints the partial report from
 [references/status-and-resume.md](references/status-and-resume.md) instead: the
 unresolved blockers, the stage reached, the cycles spent, the
@@ -237,6 +241,6 @@ loses nothing.
   updates are all left for the human. The handoff prints the `/retro-to-remedies`
   and `/pr-to-dev` commands; running them is the next step, by hand.
 - Keep `engineering-workflow`, `grill-to-tickets`, `agy-implement`,
-  `subagent-implement`, every `mattpocock/skills`-sourced file, and
+  `implement-tickets`, every `mattpocock/skills`-sourced file, and
   `skills-lock.json` exactly as they are — this skill is standalone by design
   (see `docs/decisions/0006-review-to-pr-standalone.md`).

@@ -70,7 +70,7 @@ describe("git guardrail hook: pr-to-dev forbidden actions", () => {
     "git restore --staged .",
     "git stash",
     "git stash pop",
-    "git merge --squash subagent-implement/foo/01",
+    "git merge --squash implement-tickets-work/foo/01",
     "git worktree remove .claude/worktrees/foo",
   ];
   for (const command of allowed) {

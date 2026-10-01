@@ -10,7 +10,245 @@ async function testCase(file, title) {
   return source.slice(start, next === -1 ? source.length : next);
 }
 
+function functionDeclaration(source, name) {
+  const declaration = source.match(new RegExp(`^function ${name}\\([^\\n]*\\) \\{[\\s\\S]*?^\\}`, "m"));
+  return declaration?.[0] ?? null;
+}
+
 describe("Markdown contract assertion scope", () => {
+  it("scopes implement-tickets planning and bilingual page claims", async () => {
+    const planning = await testCase(
+      "tests/implement-tickets-contract.test.mjs",
+      "specifies every Plan field and pauses before changes outside the feature directory",
+    );
+    assert.doesNotMatch(planning, /assert\.match\(\s*planning\s*,/,
+      "planning requirements must use the Plan subsection instead of the complete reference");
+    assert.match(planning, /markdownSection\(planning,\s*["']5\. Present the Plan and pause["']\)/,
+      "Plan requirements are read from the presentation and pause subsection");
+
+    const pages = await testCase(
+      "tests/implement-tickets-contract.test.mjs",
+      "links bilingual Seam and Context guidance to the planning reference in both user-facing pages",
+    );
+    assert.doesNotMatch(pages, /assert\.match\(\s*doc\s*,/,
+      "bilingual page claims must not search the complete guide or skill page");
+    assert.match(pages, /markdownSection\(doc,\s*["']Seam และ Context["']\)/,
+      "Thai Seam and Context claims are read from their owning section");
+    assert.match(pages, /markdownSection\(doc,\s*["']Seam and Context["']\)/,
+      "English Seam and Context claims are read from their owning section");
+
+    const adapter = await testCase(
+      "tests/implement-tickets-contract.test.mjs",
+      "links adapter guidance to its canonical contract in Thai and English",
+    );
+    assert.doesNotMatch(adapter, /assert\.(?:match|doesNotMatch)\(\s*doc\s*,|\/--with[^\n]+\.test\(doc\)/,
+      "adapter documentation claims must use their installation or usage sections");
+    assert.match(adapter, /markdownSection\(doc,\s*file\.includes\(["']docs\/guides\//,
+      "the guide adapter contract is checked in its Thai usage section");
+    assert.match(adapter, /["']วิธีทำงานหลัก["']\)/,
+      "the skill-page adapter contract is checked in its Thai workflow section");
+    assert.match(adapter, /markdownSection\(doc,\s*["']Purpose and use["']\)/,
+      "adapter install details are checked in the English usage section");
+  });
+
+  it("scopes canonical-link and duplicated-mechanics claims to each language section", async () => {
+    const source = await testCase(
+      "tests/implement-tickets-contract.test.mjs",
+      "links bilingual user documentation to canonical mechanics without copying their rules",
+    );
+    assert.doesNotMatch(source, /assert\.(?:match|doesNotMatch|deepEqual)\(\s*doc\s*,/,
+      "canonical links and copied mechanics must not be checked against a whole page");
+    assert.match(source, /\[\["Thai", "ภาษาไทย \/ Thai"\], \["English", "English \/ ภาษาอังกฤษ"\]\]/,
+      "the regression enumerates the Thai and English language sections");
+    assert.match(source, /markdownSection\(doc,\s*heading\)/,
+      "each page claim is extracted by its owning language heading");
+    assert.match(source, /assert\.match\(section,\s*expression,/,
+      "canonical links are checked within the extracted language section");
+    assert.match(source, /copiedRules\.filter\(\(\[,\s*expression\]\)\s*=>\s*expression\.test\(section\)\)/,
+      "duplicated rules are detected within the extracted language section");
+    assert.match(source, /assert\.deepEqual\(copied,\s*\[\]/,
+      "each language section must have no copied normative mechanics");
+  });
+
+  it("scopes implement-tickets marker and ADR 0020 claims", async () => {
+    const marker = await testCase(
+      "tests/implement-tickets-contract.test.mjs",
+      "documents the human parallel-validation procedure and its marker",
+    );
+    assert.doesNotMatch(marker, /assert\.match\(\s*marker\s*,/,
+      "parallel-validation prose must be checked within its procedure section");
+    assert.match(marker, /markdownSection\(marker,\s*["']Procedure["']\)/,
+      "parallel-validation procedure claims use the Procedure section");
+    assert.match(marker, /markdownHeaderBlock\(marker\)/,
+      "the status marker is checked in the document header block");
+
+    const adr = await testCase(
+      "tests/repo-contract.test.mjs",
+      "records ADR 0020 as the implement-family core and supersedes the standalone statuses",
+    );
+    assert.doesNotMatch(adr, /assert\.(?:match|doesNotMatch)\(\s*doc\s*,|assert\.ok\(\s*\/[^\n;]*?\.test\(doc\)/,
+      "ADR 0020 content claims must use their owning sections");
+    assert.match(adr, /markdownSection\(doc,\s*["']Parallel validation record \/ บันทึกผล parallel validation["']\)/,
+      "the parallel-validation marker claim uses the record section");
+    assert.match(adr, /assert\.match\(validationRecord,\s*\/status: not validated/i,
+      "the exact marker value is checked within the ADR record section");
+    assert.match(adr, /markdownHeaderBlock\(doc\)/,
+      "the ADR title is checked in its header block");
+  });
+
+  it("requires Codex invocation policy to be a direct policy child", async () => {
+    const source = await testCase(
+      "tests/implement-tickets-contract.test.mjs",
+      "declares explicit-only invocation for Claude Code and Codex",
+    );
+    assert.match(source, /const policyChildIndent = Math\.min\(\.\.\.policyLines\.map\(/,
+      "the Codex policy assertion derives the direct-child indentation");
+    assert.match(source, /line\.length - line\.trimStart\(\)\.length === policyChildIndent/,
+      "the Codex policy assertion only considers entries at that indentation");
+    assert.ok(source.includes("directPolicyChildren.some((line) => line.slice(policyChildIndent).match(/^allow_implicit_invocation:"),
+      "the required invocation setting is checked on a direct policy entry");
+  });
+
+  it("requires English prose as well as Thai text in ADR 0020 sections", async () => {
+    const source = await testCase(
+      "tests/repo-contract.test.mjs",
+      "records ADR 0020 as the implement-family core and supersedes the standalone statuses",
+    );
+    const languageEvidence = await testCase(
+      "tests/repo-contract.test.mjs",
+      "rejects ADR language evidence found only in inline code or Markdown headings",
+    );
+    const assertions = await readFile("tests/repo-contract.test.mjs", "utf8");
+    const markdownProse = functionDeclaration(assertions, "markdownProse");
+    const hasThaiProse = functionDeclaration(assertions, "hasThaiProse");
+    const hasEnglishProse = functionDeclaration(assertions, "hasEnglishProse");
+    assert.match(source, /assert\.ok\(body && hasThaiProse\(body\)/,
+      "ADR 0020 sections use the shared prose extractor for Thai evidence");
+    assert.ok(markdownProse, "the Markdown prose helper declaration exists");
+    assert.ok(hasThaiProse, "the Thai prose helper declaration exists");
+    assert.ok(hasEnglishProse, "the English prose helper declaration exists");
+    assert.match(markdownProse, /replace\(\/\^\\s\{0,3\}\#\{1,6\}/,
+      "the shared prose extractor removes Markdown headings");
+    assert.match(markdownProse, /replace\(\/`\+\[\^`\]\*`\+\/g, " "\)/,
+      "the shared prose extractor removes inline code");
+    assert.match(hasThaiProse, /markdownProse\(body\)/,
+      "Thai evidence is checked only after shared prose extraction");
+    assert.match(languageEvidence, /assert\.equal\(hasThaiProse\("ก"\),\s*false,/,
+      "the language-evidence regression rejects one Thai codepoint");
+    assert.match(languageEvidence, /assert\.equal\(hasThaiProse\("นี่คือข้อความภาษาไทยที่เป็นเนื้อหาจริง"\),\s*true,/,
+      "the language-evidence regression accepts a genuine Thai sentence");
+    assert.match(languageEvidence, /assert\.equal\(hasEnglishProse\(repeatedFunctionWords\),\s*false,/,
+      "the language-evidence regression rejects repeated English function words");
+    assert.match(languageEvidence, /hasEnglishProse\("The adapter remains ready while workers can complete the review\."\),\s*true,/,
+      "the language-evidence regression accepts English prose with content words");
+    assert.match(hasEnglishProse, /markdownProse\(body\)/,
+      "English evidence uses the same prose extraction as Thai evidence");
+    assert.match(hasEnglishProse, /const contentWords = words\.filter\(\(word\) => !englishProseMarkers\.has\(word\.toLowerCase\(\)\)\)/,
+      "English prose evidence counts content words separately from function words");
+    assert.match(hasEnglishProse, /return words\.length >= 8 && proseWords\.length >= 2 && contentWords\.length >= 4;/,
+      "English evidence requires a sentence with multiple function and content words");
+    assert.match(source, /assert\.ok\(hasEnglishProse\(body\),/,
+      "each section asserts its own English prose evidence");
+  });
+
+  it("requires ADR prose helper assertions to use each helper's own source slice", async () => {
+    const source = await testCase(
+      "tests/contract-assertion-scope.test.mjs",
+      "requires English prose as well as Thai text in ADR 0020 sections",
+    );
+    assert.doesNotMatch(source, /assert\.(?:match|doesNotMatch)\(\s*assertions\s*,/,
+      "prose-helper implementation claims must not search all of repo-contract.test.mjs");
+    for (const helper of ["markdownProse", "hasThaiProse", "hasEnglishProse"]) {
+      assert.match(source, new RegExp(`const ${helper} = functionDeclaration\\(assertions, [\"']${helper}[\"']\\)`),
+        `${helper} is extracted from its own declaration`);
+      assert.match(source, new RegExp(`assert\\.match\\(${helper}\\s*,`),
+        `${helper} implementation claims use its extracted declaration`);
+    }
+  });
+
+  it("scopes adapter routing claims to the adapter contract and invocation section", async () => {
+    const source = await testCase(
+      "tests/implement-tickets-contract.test.mjs",
+      "defines the adapter input, resume, failover, worktree lifecycle, envelope, and routing table",
+    );
+    assert.doesNotMatch(source, /assert\.match\(\s*(?:contract|skill)\s*,/,
+      "adapter routing claims must not search the complete reference or skill file");
+    for (const scope of ["input", "failover", "cleanup", "invocation"]) {
+      assert.match(source, new RegExp(`assert\\.match\\(${scope}\\s*,`),
+        `adapter routing assertions use the ${scope} section`);
+    }
+    assert.match(source, /markdownSection\(contract,\s*["']Input["']\)/,
+      "worker input behavior is checked in its contract section");
+    assert.match(source, /markdownSection\(contract,\s*["']Failover["']\)/,
+      "outcome routing is checked in its contract section");
+    assert.match(source, /markdownSection\(contract,\s*["']Worktree cleanup["']\)/,
+      "worktree lifecycle behavior is checked in its contract section");
+    assert.match(source, /markdownSection\(skill,\s*["']Invocation["']\)/,
+      "adapter invocation behavior is checked in its owning skill section");
+  });
+
+  it("scopes implement-tickets dispatch and run-state assertions to contract sections", async () => {
+    const references = await testCase(
+      "tests/implement-tickets-contract.test.mjs",
+      "keeps explicit-invocation frontmatter and the reference list aligned across the skill, guide, page, and directory",
+    );
+    assert.doesNotMatch(references, /linkedReferences\(content\)/,
+      "reference inventory is collected from parsed Markdown sections");
+    assert.match(references, /linkedReferences\(markdownSections\(content\)\)/,
+      "the reference inventory receives section slices");
+
+    const scopedCases = [
+      ["tests/implement-tickets-contract.test.mjs", "starts every worker prompt with a checkout and integration SHA assertion", "prompt"],
+      ["tests/implement-tickets-contract.test.mjs", "caps workers and verifiers together and gives pending verifiers priority", "dispatch"],
+      ["tests/implement-tickets-contract.test.mjs", "pipelines a fresh native verifier and keeps its report to raw evidence", "verification"],
+      ["tests/implement-tickets-contract.test.mjs", "runs each worker and verifier in the background with its own soft-timeout wait", "dispatch|verification"],
+      ["tests/implement-tickets-contract.test.mjs", "routes crashes, lost subagents, and harness-cap rejections through infra retries", "dispatch"],
+      ["tests/implement-tickets-contract.test.mjs", "squash-merges a fully verified wave in ticket order and gates the combined result", "gate"],
+      ["tests/implement-tickets-contract.test.mjs", "locates a gate culprit, restores the last good commit, preserves later verified tickets, and retries alone", "gate"],
+      ["tests/implement-tickets-contract.test.mjs", "blocks a ticket after three verification failures and reports held and independent paths", "state"],
+      ["tests/implement-tickets-contract.test.mjs", "defines the status header and per-ticket table, including reported usage totals", "state"],
+      ["tests/implement-tickets-contract.test.mjs", "refuses legacy state and reconciles, rewinds, replans, and resumes valid state", "state"],
+      ["tests/implement-tickets-contract.test.mjs", "keeps status and list read-only", "state"],
+      ["tests/implement-tickets-contract.test.mjs", "hands off a green integrated run without starting review or publication", "gate"],
+    ];
+    for (const [file, title, aliases] of scopedCases) {
+      const source = await testCase(file, title);
+      assert.doesNotMatch(source,
+        new RegExp(`(?:assert\\.(?:match|doesNotMatch)|requireText)\\(\\s*(?:${aliases})\\s*,`),
+        `${title} must assert against an extracted contract section`);
+      assert.match(source, /markdownSection\(/, `${title} extracts its owning Markdown section`);
+    }
+  });
+
+  it("scopes implement-tickets index entries and file-wide Markdown exclusions", async () => {
+    const indexRow = await testCase(
+      "tests/repo-contract.test.mjs",
+      "lists implement-tickets in the generated agent-skill index",
+    );
+    assert.doesNotMatch(indexRow, /assert\.match\(index\s*,/,
+      "the generated index contract must assert against the skill's table row");
+    assert.match(indexRow, /tableRow\(index,\s*["']implement-tickets["']\)/,
+      "the generated index contract locates the implement-tickets row");
+
+    const alias = await testCase(
+      "tests/repo-contract.test.mjs",
+      "removes the retired standalone skill without publishing an alias",
+    );
+    assert.doesNotMatch(alias, /index\.includes\(retiredName\)/,
+      "the catalog exclusion is scoped to skill rows");
+    assert.match(alias, /tableRow\(index,\s*retiredName\)/,
+      "the retired command is excluded from the generated skill rows");
+
+    const exclusions = await testCase(
+      "tests/repo-contract.test.mjs",
+      "has no absolute-path wording in the three implementer directories",
+    );
+    assert.match(exclusions, /assertAbsentFromMarkdownSections\(text,/,
+      "Markdown exclusions are checked within parsed sections");
+    assert.doesNotMatch(exclusions, /pattern\.test\(text\)/,
+      "the absolute-path exclusion must not scan a complete Markdown file");
+  });
+
   it("scopes implementer manifest checks to Markdown sections", async () => {
     const source = await testCase(
       "tests/grill-to-tickets-contract.test.mjs",
@@ -22,6 +260,21 @@ describe("Markdown contract assertion scope", () => {
       "tests/grill-to-tickets-contract.test.mjs:87 must not assert against an entire implementer file",
     );
     assert.match(source, /assertAbsentFromMarkdownSections\(/, "the implementer scan checks each Markdown section");
+  });
+
+  it("scopes grill-to-tickets handoff framing to its handoff section", async () => {
+    const source = await testCase(
+      "tests/grill-to-tickets-contract.test.mjs",
+      "inline-executes the three stage skills and two owned formats and hands the tickets to a later implementer run",
+    );
+    assert.doesNotMatch(source, /assert\.match\(\s*content,\s*\/hands\?\s+off\|handoff\/i/,
+      "handoff framing must not be satisfied by wording elsewhere in the skill");
+    assert.doesNotMatch(source, /assert\.match\(\s*handoff,\s*\/hands\?\s+off\|handoff\/i/,
+      "the Stop — Handoff heading itself must not satisfy the body claim");
+    assert.ok(source.includes('const handoffBody = handoff.replace(/^## Stop — Handoff\\s*\\r?\\n/u, "");'),
+      "the heading is removed before checking handoff wording in the body");
+    assert.match(source, /assert\.match\(\s*handoffBody,\s*\/hands\?\s+off\|handoff\/i/,
+      "handoff framing is asserted in the Stop — Handoff section body");
   });
 
   it("scopes ADR 0018 content checks to their Markdown sections", async () => {
@@ -375,5 +628,49 @@ describe("Markdown contract assertion scope", () => {
       "tests/grill-to-tickets-contract.test.mjs:850 must not assert against the entire brief file");
     assert.match(source, /assert\.doesNotMatch\(reviewer\s*,/,
       "the tracker exclusion uses the ticket-review brief section");
+  });
+
+  it("scopes invocation, handoff, ADR status, and bilingual-body claims", async () => {
+    const invocation = await testCase(
+      "tests/implement-tickets-contract.test.mjs",
+      "declares explicit-only invocation for Claude Code and Codex",
+    );
+    assert.doesNotMatch(invocation, /assert\.match\(agent,\s*\/\^\\s\*allow_implicit_invocation/,
+      "Codex invocation metadata is not searched outside its owning YAML mapping");
+    assert.match(invocation, /const policyMapping = agent\.match\(/,
+      "Codex invocation metadata is extracted from its policy mapping");
+    assert.ok(invocation.includes("directPolicyChildren.some((line) => line.slice(policyChildIndent).match(/^allow_implicit_invocation:"),
+      "the Codex policy field is checked at direct-child indentation");
+
+    const handoff = await testCase(
+      "tests/grill-to-tickets-contract.test.mjs",
+      "inline-executes the three stage skills and two owned formats and hands the tickets to a later implementer run",
+    );
+    assert.doesNotMatch(handoff, /assert\.match\(\s*content\s*,\s*\/\\\/implement-tickets/,
+      "the later implementer command is not accepted from anywhere in the whole skill");
+    assert.match(handoff, /markdownSection\(content,\s*["']Stop — Handoff["']\)/,
+      "the later implementer command is extracted from the Stop handoff section");
+    assert.match(handoff, /assert\.match\([\s\S]*?handoff,\s*\/\\\/implement-tickets/,
+      "the command is checked within the extracted handoff section");
+
+    const adr = await testCase(
+      "tests/repo-contract.test.mjs",
+      "records ADR 0020 as the implement-family core and supersedes the standalone statuses",
+    );
+    assert.doesNotMatch(adr, /previous\.split\(/,
+      "superseded status checks do not scan the complete ADR text");
+    assert.match(adr, /file\.includes\(["']0007-["']\)[\s\S]*markdownHeaderBlock\(previous\)/,
+      "inline ADR status metadata is read from the header block");
+    assert.match(adr, /markdownSection\(previous,\s*["']Status \/ สถานะ["']\)/,
+      "ADR 0007 continues to use its dedicated status section");
+
+    assert.doesNotMatch(adr, /\.test\(section\)/,
+      "bilingual ADR claims do not count Thai characters in the heading itself");
+    assert.match(adr, /const body = section\?\.split\(/,
+      "ADR section checks extract body text after the heading");
+    assert.match(adr, /hasThaiProse\(body\)/,
+      "Thai prose is checked within each ADR section body after Markdown extraction");
+    assert.match(adr, /assert\.ok\(hasEnglishProse\(body\),/,
+      "English prose is checked within each ADR section body");
   });
 });

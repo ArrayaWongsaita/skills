@@ -271,14 +271,14 @@ describe("retro-to-remedies eval suite contract", () => {
       );
     });
 
-    it("covers the branches listed in ticket 07 (fixture subagent-implement fixes routed as own-library prompts, mattpocock Upstream feedback, globally installed own skill, no lock entry project-local, issue request opens one issue and nothing more)", async () => {
+    it("covers the branches listed in ticket 07 (fixture legacy fixes routed as own-library prompts, mattpocock Upstream feedback, globally installed own skill, no lock entry project-local, issue request opens one issue and nothing more)", async () => {
       const { evals } = await evalsJson();
       const hay = (re) => evals.some((e) => re.test(e.name) || re.test(e.expected_output));
 
-      // the fixture Run's subagent-implement fixes routed as own-library prompts for this repository
+      // the fixture Run's legacy fixes routed as own-library prompts for this repository
       assert.ok(
-        hay(/subagent-implement fixes routed as own-library prompts for this repository|subagent-implement.*own-library prompt/i),
-        "case for fixture subagent-implement fixes routed as own-library prompts",
+        hay(/(?:legacy|ticket implementer) fixes routed as own-library prompts for this repository|(?:legacy|ticket implementer).*own-library prompt/i),
+        "case for fixture legacy fixes routed as own-library prompts",
       );
 
       // a Miss caused by a mattpocock/skills skill becomes Upstream feedback
@@ -359,7 +359,5 @@ describe("retro-to-remedies eval suite contract", () => {
     });
   });
 });
-
-
 
 

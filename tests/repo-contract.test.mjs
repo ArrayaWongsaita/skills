@@ -4,7 +4,7 @@ import { access, readFile, readdir } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
 import { discoverSkills, renderIndex } from "../scripts/generate-skill-index.mjs";
-import { markdownHeaderBlock, markdownHeadings, markdownSection } from "./helpers/markdown-contract.mjs";
+import { assertAbsentFromMarkdownSections, markdownHeaderBlock, markdownHeadings, markdownSection } from "./helpers/markdown-contract.mjs";
 
 async function fileExists(path) {
   await access(path, constants.R_OK);
@@ -95,6 +95,33 @@ function paragraphOf(section, start) {
   return section.split(/\n\s*\n/).find((paragraph) => paragraph.startsWith(start)) ?? null;
 }
 
+const englishProseMarkers = new Set([
+  "a", "an", "and", "are", "as", "because", "but", "by", "for", "from", "has", "have", "in", "into", "is",
+  "it", "its", "of", "on", "or", "the", "their", "they", "this", "to", "until", "was", "were", "when", "while",
+  "with", "without", "would",
+]);
+
+function markdownProse(body) {
+  return body
+    .replace(/```[\s\S]*?```|~~~[\s\S]*?~~~/g, " ")
+    .replace(/^\s{0,3}#{1,6}(?:\s+|$).*$/gm, " ")
+    .replace(/`+[^`]*`+/g, " ");
+}
+
+function hasThaiProse(body) {
+  return /[\u0e00-\u0e7f]{8,}/.test(markdownProse(body));
+}
+
+function hasEnglishProse(body) {
+  const prose = markdownProse(body);
+  return prose.split(/[.!?]\s+/).some((sentence) => {
+    const words = sentence.match(/\b[a-z]{2,}\b/gi) ?? [];
+    const proseWords = words.filter((word) => englishProseMarkers.has(word.toLowerCase()));
+    const contentWords = words.filter((word) => !englishProseMarkers.has(word.toLowerCase()));
+    return words.length >= 8 && proseWords.length >= 2 && contentWords.length >= 4;
+  });
+}
+
 // One "- `label` ..." bullet of a file list with its wrapped lines, on one line.
 function listItem(list, label) {
   const lines = list.split("\n");
@@ -167,6 +194,84 @@ describe("personal AI skills repository contract", () => {
     const index = await readText("docs/skills/README.md");
 
     assert.equal(index, renderIndex(skills));
+  });
+
+  it("lists implement-tickets in the generated agent-skill index", async () => {
+    const skills = await discoverSkills();
+    const index = await readText("docs/skills/README.md");
+
+    assert.ok(skills.some((skill) => skill.category === "agents" && skill.name === "implement-tickets"));
+    const row = tableRow(index, "implement-tickets");
+    assert.ok(row, "the generated catalog has an implement-tickets row");
+    assert.match(row, /\[คู่มือ \/ Guide\]\(agents\/implement-tickets\.md\)/);
+  });
+
+  it("removes the retired standalone skill without publishing an alias", async () => {
+    const retiredName = ["subagent", "implement"].join("-");
+    const index = await readText("docs/skills/README.md");
+    const skills = await discoverSkills();
+
+    for (const file of [
+      `skills/agents/${retiredName}/SKILL.md`,
+      `docs/guides/${retiredName}.md`,
+      `docs/skills/agents/${retiredName}.md`,
+      `tests/${retiredName}-contract.test.mjs`,
+      `tests/${retiredName}-evals.test.mjs`,
+    ]) {
+      let exists = true;
+      try {
+        await access(file, constants.F_OK);
+      } catch (error) {
+        if (error.code === "ENOENT") exists = false;
+        else throw error;
+      }
+      assert.equal(exists, false, `${file} has been retired`);
+    }
+    assert.ok(!skills.some((skill) => skill.name === retiredName), "the retired command has no installed-skill entry");
+    assert.equal(tableRow(index, retiredName), null, "the generated catalog publishes no alias row");
+  });
+
+  it("finds no live reference to the retired command outside the bounded historical paths", async () => {
+    const retiredName = ["subagent", "implement"].join("-");
+    const historicalAdrNumbers = new Set(["0004", "0005", "0006", "0007", "0008", "0009", "0011", "0015", "0016"]);
+    const roots = ["skills", "tests", "docs"];
+    const files = (await Promise.all(roots.map(textFilesUnder))).flat();
+
+    for (const entry of await readdir(".", { withFileTypes: true })) {
+      if (!entry.isFile()) continue;
+      try {
+        files.push({ file: entry.name, text: await readFile(entry.name, "utf8") });
+      } catch {
+        // Skip binary root files.
+      }
+    }
+    try {
+      files.push(...await textFilesUnder(".scratch"));
+    } catch {
+      // Scratch data is optional and local to a checkout.
+    }
+
+    const isHistorical = (file) => {
+      const relative = file.split(path.sep).join("/");
+      const adr = relative.match(/^docs\/decisions\/(\d{4})-[^/]+\.md$/);
+      return relative.split("/").includes(".scratch")
+        || relative === "docs/retro-log.md"
+        || (adr && historicalAdrNumbers.has(adr[1]))
+        || relative.startsWith("skills/agents/retro-to-remedies/evals/fixtures/");
+    };
+    const violations = [];
+    for (const { file, text } of files) {
+      if (isHistorical(file)) continue;
+      text.split("\n").forEach((line, index) => {
+        if (line.includes(retiredName)) violations.push(`${file}:${index + 1}: ${line}`);
+      });
+    }
+
+    assert.equal(
+      violations.length,
+      0,
+      `found ${violations.length} live references; first matches:\n${violations.slice(0, 12).join("\n")}`,
+    );
   });
 
   it("renders repeated skill flags for a multi-skill category", () => {
@@ -383,7 +488,7 @@ describe("grill-to-tickets production records and guides", () => {
     const order = stop.split("\n").find((line) => /^   - พิมพ์ข้อความ handoff/.test(line));
     assert.ok(order, "the Stop step has the handoff-order bullet");
     const at = (needle) => order.indexOf(needle);
-    assert.ok(at("DAG summary") !== -1 && at("DAG summary") < at("Manifest:") && at("Manifest:") < at("`/subagent-implement`"),
+    assert.ok(at("DAG summary") !== -1 && at("DAG summary") < at("Manifest:") && at("Manifest:") < at("`/implement-tickets`"),
       "the Manifest line is between the DAG summary and the implementer command");
     assert.ok(at("recommended implementer") !== -1 && at("recommended implementer") < at("Manifest:"),
       "the Manifest line follows the recommended implementer line");
@@ -622,8 +727,8 @@ describe("grill-to-tickets production records and guides", () => {
     }
   });
 
-  it("describes Seam and Context use, the path rule, and the budget recording in the three implementer guides", async () => {
-    for (const skill of ["subagent-implement", "agy-implement", "opencode-implement"]) {
+  it("describes Seam and Context use, the path rule, and the budget recording in the backend guides", async () => {
+    for (const skill of ["agy-implement", "opencode-implement"]) {
       for (const file of [`docs/guides/${skill}.md`, `docs/skills/agents/${skill}.md`]) {
         const doc = await readTextOrNull(file);
         assert.ok(doc, `${file} exists`);
@@ -645,24 +750,30 @@ describe("grill-to-tickets production records and guides", () => {
 
     const guideWorkflow = sectionOf(guide, "### ขั้นตอนการทำงาน 4 ลำดับขั้น");
     assert.ok(guideWorkflow, "the guide has its four-step workflow section");
+    const guideStage3 = numberedMarkdownItem(guideWorkflow, 4);
+    assert.ok(guideStage3, "the guide workflow has its Stage 3 summary");
     const diagramLine = guideWorkflow.match(/^Stop: Handoff message[^\n]*$/m);
     assert.ok(diagramLine, "the guide's diagram has a Stop: Handoff message line");
     assertFirstMentionOrder(
       diagramLine[0],
-      ["/clear", "DAG summary", "/subagent-implement"],
+      ["/clear", "DAG summary", "/implement-tickets"],
       "guide diagram line",
     );
 
     const guideStop = numberedMarkdownItem(guideWorkflow, 5);
     assert.ok(guideStop, "the guide workflow has a Stage 5 Stop — Handoff step");
-    assertFirstMentionOrder(guideStop, ["/clear", "DAG summary", "/subagent-implement"], "guide handoff step");
+    assertFirstMentionOrder(guideStop, ["/clear", "DAG summary", "/implement-tickets"], "guide handoff step");
     const message = guideStop.match(/```text\n([\s\S]*?)```/);
     assert.ok(message, "the guide's handoff step shows the message");
     assertFirstMentionOrder(
       message[1],
-      ["/clear", "recommended implementer", "/subagent-implement"],
+      ["/clear", "recommended implementer", "/implement-tickets"],
       "guide handoff message",
     );
+    assert.match(message[1], /\/implement-tickets \.scratch\/<feature-slug>\//);
+    assert.match(message[1], /--with <backend>/);
+    assert.match(guideStage3, /recommendedImplementers:\s*\["implement-tickets"\]/,
+      "the guide states the manifest recommendation at every width");
 
     const page = await readTextOrNull("docs/skills/agents/grill-to-tickets.md");
     assert.ok(page, "the grill-to-tickets skill page exists");
@@ -673,9 +784,24 @@ describe("grill-to-tickets production records and guides", () => {
     assert.ok(english, "the skill page's English text describes the handoff");
     assertFirstMentionOrder(
       english,
-      ["/clear", "DAG summary", "recommended implementer", "/subagent-implement"],
+      ["/clear", "DAG summary", "recommended implementer", "/implement-tickets"],
       "skill page English handoff",
     );
+    assert.match(english, /\/implement-tickets \.scratch\/<feature-slug>\//);
+    assert.match(english, /--with <backend>/);
+    assert.match(english, /recommendedImplementers[\s\S]{0,80}\["implement-tickets"\]/,
+      "the skill page documents the manifest recommendation");
+
+    const evals = JSON.parse(await readTextOrNull("skills/agents/grill-to-tickets/evals/evals.json"));
+    for (const id of [1, 38]) {
+      const evaluation = evals.evals.find((item) => item.id === id);
+      assert.ok(evaluation, `handoff eval ${id} exists`);
+      const contract = `${evaluation.expected_output}\n${evaluation.expectations.join("\n")}`;
+      assert.match(contract, /\/implement-tickets \.scratch\//, `handoff eval ${id} names the command`);
+      assert.match(contract, /--with <backend>/, `handoff eval ${id} documents the adapter hint`);
+      assert.match(contract, /recommendedImplementers[\s\S]{0,80}implement-tickets/,
+        `handoff eval ${id} documents the manifest field`);
+    }
 
     const thaiWorkflow = sectionOf(page, "### วิธีทำงานหลัก");
     assert.ok(thaiWorkflow, "the skill page has its Thai workflow section");
@@ -685,7 +811,7 @@ describe("grill-to-tickets production records and guides", () => {
   });
 
   it("says the orchestrator builds the worker's read list into the prompt, in the guides and the skill pages", async () => {
-    for (const skill of ["subagent-implement", "agy-implement", "opencode-implement"]) {
+    for (const skill of ["agy-implement", "opencode-implement"]) {
       const guideFile = `docs/guides/${skill}.md`;
       const guide = await readTextOrNull(guideFile);
       assert.ok(guide, `${guideFile} exists`);
@@ -722,18 +848,28 @@ describe("grill-to-tickets production records and guides", () => {
     }
   });
 
-  it("records subagent-implement's usage_total as the worker's reported tokens, possibly cache-inclusive, and leaves the agy and opencode cache wording", async () => {
-    const subagent = await readTextOrNull("docs/guides/subagent-implement.md");
-    assert.ok(subagent, "the subagent-implement guide exists");
-
-    const budget = bulletLine(subagent, "การบันทึก budget:");
-    assert.ok(budget, "the subagent-implement guide has a budget bullet");
-    assert.match(budget, /usage_total/, "the budget bullet records usage_total");
-    assert.match(budget, /cache-inclusive/, "the budget bullet says the tokens are possibly cache-inclusive");
-    assert.match(budget, /dispatch/, "the budget bullet sums every dispatch");
-    assert.match(budget, /resume/, "the budget bullet sums every resume");
-    assert.match(budget, /verifier_usage_total/, "the budget bullet keeps verifier_usage_total separate");
-    assert.doesNotMatch(budget, /ไม่นับ cache read/, "the budget bullet no longer excludes cache reads");
+  it("links implement-tickets usage semantics to the glossary and leaves sibling cache wording", async () => {
+    const pages = [
+      ["docs/guides/implement-tickets.md", [
+        ["### Integration gate, status, and resume", "../glossary.md"],
+        ["### Run status, integration, and resume", "../glossary.md"],
+      ]],
+      ["docs/skills/agents/implement-tickets.md", [
+        ["### Integration gate, status, and resume", "../../glossary.md"],
+        ["### Run status, integration, and resume", "../../glossary.md"],
+      ]],
+    ];
+    for (const [file, sections] of pages) {
+      const page = await readTextOrNull(file);
+      assert.ok(page, `${file} exists`);
+      for (const [heading, glossaryPath] of sections) {
+        const status = sectionOf(page, heading);
+        assert.ok(status, `${file} has the ${heading} section`);
+        assert.match(status, /status-and-resume\.md/, `${file} links run-state details to their contract`);
+        assert.match(status, new RegExp(`usage_total[\\s\\S]*${glossaryPath.replaceAll("/", "\\/")}`), `${file} links usage semantics to the canonical glossary`);
+        assert.doesNotMatch(status, /cache-inclusive|dispatch and resume|verifier_usage_total/, `${file} does not copy usage semantics`);
+      }
+    }
 
     for (const skill of ["agy-implement", "opencode-implement"]) {
       const guide = await readTextOrNull(`docs/guides/${skill}.md`);
@@ -819,7 +955,17 @@ describe("grill-to-tickets production records and guides", () => {
     }
   });
 
-  it("says in the subagent-implement skill page that usage_total is the worker's reported tokens, possibly cache-inclusive, and leaves the agy and opencode pages alone", async () => {
+  it("links implement-tickets run state and usage definitions to their canonical references", async () => {
+    const page = await readTextOrNull("docs/skills/agents/implement-tickets.md");
+    assert.ok(page, "the implement-tickets skill page exists");
+    for (const heading of ["### Integration gate, status, and resume", "### Run status, integration, and resume"]) {
+      const status = sectionOf(page, heading);
+      assert.ok(status, `the page has ${heading}`);
+      assert.match(status, /status-and-resume\.md/, "the page links run-state behavior to its contract");
+      assert.match(status, /usage_total[\s\S]*glossary\.md/, "the page links usage semantics to the glossary");
+      assert.doesNotMatch(status, /cache-inclusive|dispatch and resume|verifier_usage_total/, "the page leaves usage semantics to canonical sources");
+    }
+
     const seamParagraphs = async (skill) => {
       const file = `docs/skills/agents/${skill}.md`;
       const page = await readTextOrNull(file);
@@ -829,16 +975,6 @@ describe("grill-to-tickets production records and guides", () => {
       assert.equal(paragraphs.length, 2, `${file} has a Thai and an English Seam, Context paragraph`);
       return { file, flat: paragraphs.map((paragraph) => paragraph.replace(/\s+/g, " ")) };
     };
-
-    const subagent = await seamParagraphs("subagent-implement");
-    for (const flat of subagent.flat) {
-      assert.match(flat, /usage_total/, `${subagent.file} records usage_total`);
-      assert.doesNotMatch(flat, /real token cost|token จริง/, `${subagent.file} no longer calls usage_total the real token cost`);
-      assert.match(flat, /cache-inclusive/, `${subagent.file} says the tokens are possibly cache-inclusive`);
-      assert.match(flat, /dispatch/, `${subagent.file} sums every dispatch`);
-      assert.match(flat, /resume/, `${subagent.file} sums every resume`);
-      assert.match(flat, /verifier_usage_total/, `${subagent.file} keeps verifier_usage_total separate`);
-    }
 
     for (const skill of ["agy-implement", "opencode-implement"]) {
       const { file, flat } = await seamParagraphs(skill);
@@ -850,7 +986,7 @@ describe("grill-to-tickets production records and guides", () => {
   });
 
   it("summarizes checker and handoff topics with canonical links, without copying their rules", async () => {
-    const mappingRule = /maximum wave width[\s\S]{0,80}\b1\b[\s\S]{0,25}?`subagent-implement`[\s\S]{0,80}\b2\b[\s\S]{0,50}?(?:all three|ทั้งสามตัว)/i;
+    const mappingRule = /maximum wave width[\s\S]{0,80}\b1\b[\s\S]{0,25}?`implement-tickets`[\s\S]{0,80}\b2\b[\s\S]{0,50}?(?:all three|ทั้งสามตัว)/i;
     const assertCheckerSummary = (where, section) => {
       assert.match(section, /checker/i, `${where} identifies the checker`);
       assert.match(section, /warnings/i, `${where} keeps the warning vocabulary`);
@@ -889,6 +1025,99 @@ describe("grill-to-tickets production records and guides", () => {
     assert.ok(ticketSummary && handoffSummary, "the English workflow keeps checker and handoff summaries");
     assertCheckerSummary("the skill page's English Stage 3", ticketSummary);
     assertHandoffSummary("the skill page's English handoff", handoffSummary);
+  });
+
+  it("records ADR 0020 as the implement-family core and supersedes the standalone statuses", async () => {
+    const doc = await readTextOrNull("docs/decisions/0020-implement-tickets-core.md");
+    assert.ok(doc, "ADR 0020 exists under docs/decisions/");
+    const header = markdownHeaderBlock(doc);
+    assert.match(header, /^# ADR 0020: Implement Tickets is the one core for the implement family$/m, "ADR 0020 has its expected header");
+    for (const heading of ["Context / บริบท", "Decision / การตัดสินใจ", "Consequences / ผลที่ตามมา", "Rejected alternatives / ทางเลือกที่ไม่เลือก"]) {
+      const section = markdownSection(doc, heading);
+      const body = section?.split(/\r?\n/).slice(1).join("\n") ?? "";
+      assert.ok(body && hasThaiProse(body), `ADR 0020 has Thai prose in ${heading}`);
+      assert.ok(hasEnglishProse(body), `ADR 0020 has English prose in ${heading}`);
+    }
+
+    const decision = markdownSection(doc, "Decision / การตัดสินใจ");
+    assert.ok(decision, "ADR 0020 has a bilingual Decision section");
+    assert.ok(/defaults\s+to native subagents[\s\S]*parallel waves/i.test(decision), "the core defaults to native workers and parallel waves");
+    assert.ok(/`implement-tickets-<backend>`[\s\S]*`--with <backend>`/.test(decision), "separate adapters are selected with --with");
+    assert.ok(/retire(?:d)? the prior standalone core[\s\S]*no alias/i.test(decision), "the prior standalone core is retired without an alias");
+    assert.ok(/`agy-implement`[\s\S]*`opencode-implement`[\s\S]*until their adapters ship/i.test(decision), "agy and opencode remain until adapters ship");
+    assert.ok(/parallel readiness[\s\S]*recorded human validation/i.test(decision), "parallel readiness depends on a recorded human run");
+    const validationRecord = markdownSection(doc, "Parallel validation record / บันทึกผล parallel validation");
+    assert.ok(validationRecord, "ADR 0020 has a parallel validation record");
+    assert.match(validationRecord, /Status: awaiting human validation/i, "the parallel-validation state is explicit");
+    assert.match(validationRecord, /status: not validated/i, "the marker stays pending until the record is complete");
+    assertAbsentFromMarkdownSections(doc, /26\.8%/, "the unverified conflict figure is not cited");
+
+    const expectedStatusLine = "- Status / สถานะ: Superseded by ADR 0020 / ถูกแทนที่โดย ADR 0020, for the implement family (was: Accepted / ยอมรับแล้ว)";
+    for (const file of [
+      "docs/decisions/0004-agy-implement-standalone.md",
+      `docs/decisions/0005-${["subagent", "implement"].join("-")}-standalone.md`,
+      "docs/decisions/0007-opencode-implement-standalone.md",
+    ]) {
+      const previous = await readTextOrNull(file);
+      assert.ok(previous, `${file} exists`);
+      const statusBlock = file.includes("0007-")
+        ? markdownSection(previous, "Status / สถานะ")
+        : markdownHeaderBlock(previous);
+      assert.ok(statusBlock, `${file} has a status metadata block`);
+      const status = statusBlock.split("\n").find((line) => line.startsWith("- Status / สถานะ:"));
+      assert.equal(status, expectedStatusLine, `${file} has the exact bilingual superseded status`);
+    }
+  });
+
+  it("rejects ADR language evidence found only in inline code or Markdown headings", () => {
+    const thaiInCode = "`ข้อความภาษาไทย`";
+    const thaiInHeading = "### ภาษาไทยที่เป็นเพียงหัวข้อ";
+    const repeatedFunctionWords = "the the the the the the the the.";
+
+    assert.equal(hasThaiProse(thaiInCode), false, "Thai in inline code is not prose evidence");
+    assert.equal(hasThaiProse(thaiInHeading), false, "Thai in a Markdown heading is not prose evidence");
+    assert.equal(hasThaiProse("ก"), false, "one Thai codepoint is too short to count as prose");
+    assert.equal(hasEnglishProse(repeatedFunctionWords), false, "repeated English function words are not prose evidence");
+    assert.equal(hasThaiProse("นี่คือข้อความภาษาไทยที่เป็นเนื้อหาจริง"), true, "Thai prose is accepted");
+    assert.equal(
+      hasEnglishProse("The adapter remains ready while workers can complete the review."),
+      true,
+      "English prose with content words is accepted",
+    );
+  });
+
+  it("defines implement-tickets vocabulary and both Worker senses in bilingual glossary rows", async () => {
+    const glossary = await readTextOrNull("docs/glossary.md");
+    assert.ok(glossary, "the glossary exists");
+
+    const terms = ["Wave", "Touch set", "Adapter", "Backend", "Envelope", "Integration gate"];
+    const rows = Object.fromEntries(terms.map((term) => [term, tableRow(glossary, term)]));
+    const meanings = {
+      Wave: /group of tickets[\s\S]*parallel waves?|run together/i,
+      "Touch set": /paths?[\s\S]*\(edit from NN\)[\s\S]*wave planning/i,
+      Adapter: /`implement-tickets-<backend>`[\s\S]*`--with/,
+      Backend: /native subagents[\s\S]*adapter/i,
+      Envelope: /`outcome`[\s\S]*`session_id`[\s\S]*`report`[\s\S]*`usage`/,
+      "Integration gate": /typecheck[\s\S]*full test suite[\s\S]*integrated/i,
+    };
+    for (const [term, row] of Object.entries(rows)) {
+      assert.ok(row, `the glossary has a row for ${term}`);
+      assert.equal(row.split("|").length, 5, `the ${term} row has the Term, ภาษาไทย, and Definition cells`);
+      assert.ok(row.split("|")[2].trim(), `the ${term} row has a Thai term`);
+      assert.match(row.split("|")[3], / \/ .+/, `the ${term} definition is bilingual`);
+      assert.match(row.split("|")[3], meanings[term], `the ${term} definition describes its implement-tickets meaning`);
+    }
+
+    const worker = tableRow(glossary, "Worker");
+    assert.ok(worker, "the glossary keeps a Worker row");
+    assert.match(worker, /engineering-workflow[\s\S]*external specialist/i, "Worker retains its engineering-workflow meaning");
+    assert.match(worker, /`implement-tickets`[\s\S]*subagent[\s\S]*one ticket/i, "Worker adds the implement-tickets subagent meaning");
+    assert.match(worker, /ใน `engineering-workflow`[\s\S]*external specialist[\s\S]*ใน `implement-tickets`[\s\S]*ticket/, "Worker distinguishes both senses in Thai too");
+
+    const usage = tableRow(glossary, "usage_total");
+    assert.ok(usage, "the usage_total row exists");
+    assert.match(usage, /`implement-tickets`/, "usage_total names implement-tickets");
+    assert.doesNotMatch(usage, new RegExp(`\x60${["subagent", "implement"].join("-")}\x60`), "usage_total no longer names the retired core");
   });
 
   it("defines the planning and implementation terms in bilingual glossary rows", async () => {
@@ -952,11 +1181,11 @@ describe("grill-to-tickets production records and guides", () => {
     assert.match(usage.english, /dispatch[\s\S]*resume/, "usage_total sums every dispatch and every resume");
     assert.match(
       usage.english,
-      /agy-implement[\s\S]*opencode-implement[\s\S]*cache reads excluded[\s\S]*subagent-implement[\s\S]*cache-inclusive/,
-      "usage_total excludes cache reads only for agy and opencode, and is possibly cache-inclusive for subagent-implement",
+      /agy-implement[\s\S]*opencode-implement[\s\S]*cache reads excluded[\s\S]*implement-tickets[\s\S]*cache-inclusive/,
+      "usage_total excludes cache reads only for agy and opencode, and is possibly cache-inclusive for implement-tickets",
     );
     assert.match(usage.thai, /dispatch[\s\S]*resume/, "the Thai usage_total definition sums every dispatch and every resume");
-    assert.match(usage.thai, /subagent-implement[\s\S]*cache-inclusive/, "the Thai usage_total definition says subagent-implement is possibly cache-inclusive");
+    assert.match(usage.thai, /implement-tickets[\s\S]*cache-inclusive/, "the Thai usage_total definition says implement-tickets is possibly cache-inclusive");
 
     // opencode-implement is in both groups: its main path excludes cache reads, its native-subagent fallback path
     // records the subagent's reported tokens as given. Each half is cut where the cache-excluding clause ends.
@@ -974,7 +1203,7 @@ describe("grill-to-tickets production records and guides", () => {
       /`opencode-implement`(?!'s main path)/,
       "usage_total does not list opencode-implement unqualified among the cache-excluding implementers",
     );
-    assert.match(english.reported, /`subagent-implement`/, "usage_total records subagent-implement's reported tokens");
+    assert.match(english.reported, /`implement-tickets`/, "usage_total records implement-tickets' reported tokens");
     assert.match(
       english.reported,
       /`opencode-implement`'s native-subagent fallback path[\s\S]*cache-inclusive/,
@@ -989,7 +1218,7 @@ describe("grill-to-tickets production records and guides", () => {
       /(?<!main path ของ )`opencode-implement`/,
       "the Thai usage_total definition does not list opencode-implement unqualified among the cache-excluding implementers",
     );
-    assert.match(thai.reported, /`subagent-implement`/, "the Thai usage_total definition records subagent-implement's reported tokens");
+    assert.match(thai.reported, /`implement-tickets`/, "the Thai usage_total definition records implement-tickets' reported tokens");
     assert.match(
       thai.reported,
       /fallback path[^`]*ของ `opencode-implement`[\s\S]*cache-inclusive/,
@@ -1000,7 +1229,7 @@ describe("grill-to-tickets production records and guides", () => {
   it("keeps the upstream format names only at the licensed and assertion sites", async () => {
     const roots = [
       "skills/agents/grill-to-tickets",
-      "skills/agents/subagent-implement",
+      "skills/agents/implement-tickets",
       "skills/agents/agy-implement",
       "skills/agents/opencode-implement",
       "tests",
@@ -1024,10 +1253,14 @@ describe("grill-to-tickets production records and guides", () => {
     const pattern = /every path in the prompt is\s+absolute|absolute\s+paths\s+everywhere/i;
     const found = [];
 
-    for (const skill of ["subagent-implement", "agy-implement", "opencode-implement"]) {
+    for (const skill of ["implement-tickets", "agy-implement", "opencode-implement"]) {
       for (const { file, text } of await textFilesUnder(path.join("skills/agents", skill))) {
-        if (file.endsWith(".md") && pattern.test(text)) {
-          found.push(file);
+        if (file.endsWith(".md")) {
+          try {
+            assertAbsentFromMarkdownSections(text, pattern, `${file} has no absolute-path wording`);
+          } catch (error) {
+            found.push(`${file}: ${error.message}`);
+          }
         }
       }
     }

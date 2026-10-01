@@ -1319,11 +1319,7 @@ describe("check-tickets", () => {
       assert.deepEqual(manifest.waves, [[1], [2, 3]]);
       assert.equal(manifest.maxWaveWidth, 2);
       assert.equal(manifest.criticalPathLength, 2);
-      assert.deepEqual(manifest.recommendedImplementers, [
-        "subagent-implement",
-        "agy-implement",
-        "opencode-implement",
-      ]);
+      assert.deepEqual(manifest.recommendedImplementers, ["implement-tickets"]);
       assert.deepEqual(
         manifest.tickets.map(({ number, title, file, stories, blockedBy, seam, budget }) => ({
           number,
@@ -1373,6 +1369,44 @@ describe("check-tickets", () => {
       assert.match(secondStdout, /result: PASS/);
       assert.deepEqual(await readFile(manifestPath), firstBytes);
     });
+  });
+
+  it("writes the same core implementer to the manifest at every wave width", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "check-tickets-recommendation-"));
+    const projects = [
+      {
+        width: 1,
+        tickets: [ticket("01", "All stories", { stories: "1, 1a, 2, 3" })],
+      },
+      { width: 2, tickets: passing() },
+      {
+        width: 3,
+        tickets: [
+          ticket("01", "Base", { stories: "1" }),
+          ticket("02", "Left", { blockedBy: "01", stories: "1a" }),
+          ticket("03", "Middle", { blockedBy: "01", stories: "2" }),
+          ticket("04", "Right", { blockedBy: "01", stories: "3" }),
+        ],
+      },
+    ];
+    try {
+      for (const { width, tickets } of projects) {
+        const dir = path.join(root, ".scratch", `width-${width}`);
+        const issuesDir = path.join(dir, "issues");
+        await mkdir(issuesDir, { recursive: true });
+        await writeFile(path.join(dir, "spec.md"), spec);
+        for (const { file, text } of tickets) await writeFile(path.join(issuesDir, file), text);
+
+        const { stdout } = await run("node", [script, dir, "--write-budget"]);
+        assert.match(stdout, /result: PASS/);
+        assert.match(stdout, /recommended implementer: implement-tickets/);
+        const manifest = JSON.parse(await readFile(path.join(dir, "manifest.json"), "utf8"));
+        assert.equal(manifest.maxWaveWidth, width);
+        assert.deepEqual(manifest.recommendedImplementers, ["implement-tickets"]);
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 
   it("rewrites the manifest after a Status-only edit without recording Status", async () => {
@@ -1747,7 +1781,7 @@ describe("check-tickets", () => {
     assert.deepEqual(checkFeature({ spec, tickets: many(15) }).warnings, []);
   });
 
-  // --- DAG summary: waves, width, critical path, recommendation ---
+  // --- DAG summary: waves, width, critical path, fixed core recommendation ---
   it("computes each ticket's wave, the maximum wave width, and the critical-path length", () => {
     const chain = [
       ticket("01", "First", { stories: "1" }),
@@ -1758,7 +1792,7 @@ describe("check-tickets", () => {
       waves: [[1], [2], [3]],
       width: 1,
       criticalPath: 3,
-      recommendation: ["subagent-implement"],
+      recommendation: ["implement-tickets"],
     });
 
     const diamond = [
@@ -1771,7 +1805,7 @@ describe("check-tickets", () => {
       waves: [[1], [2, 3], [4]],
       width: 2,
       criticalPath: 3,
-      recommendation: ["subagent-implement", "agy-implement", "opencode-implement"],
+      recommendation: ["implement-tickets"],
     });
 
     const wide = [
@@ -1784,7 +1818,7 @@ describe("check-tickets", () => {
       waves: [[1], [2, 3, 4]],
       width: 3,
       criticalPath: 2,
-      recommendation: ["agy-implement", "opencode-implement"],
+      recommendation: ["implement-tickets"],
     });
   });
 
@@ -1803,7 +1837,7 @@ describe("check-tickets", () => {
     assert.deepEqual([...positions].sort((a, b) => a - b), positions, report);
     assert.match(
       report,
-      /dag:\n  wave 0: 01\n  wave 1: 02, 03\n  maximum wave width: 2\n  critical-path length: 2\n  recommended implementer: subagent-implement, agy-implement, opencode-implement/,
+      /dag:\n  wave 0: 01\n  wave 1: 02, 03\n  maximum wave width: 2\n  critical-path length: 2\n  recommended implementer: implement-tickets/,
     );
   });
 

@@ -10,9 +10,8 @@ Carry a single idea from a relentless interview through to published, ticket-rea
 work, then stop at the handoff. This skill inline-executes `grilling` and
 `domain-modeling`, writes `spec.md` following [spec-format.md](references/spec-format.md),
 reviews the spec in a fresh context with `scrutinize`, and writes tickets following
-[ticket-format.md](references/ticket-format.md); a separate implementer run
-(`/subagent-implement`, `/agy-implement`, or `/opencode-implement`) picks the
-ticket directory up afterward.
+[ticket-format.md](references/ticket-format.md); a separate
+`/implement-tickets` run picks the ticket directory up afterward.
 
 ```
 Preflight             locate the three stage skills (stop if one is missing)
@@ -29,7 +28,7 @@ Stage 2: Design Review Gate   scrutinize (fresh reviewer) → design-review.md  
 Stage 3: Tickets      ticket-format.md            → issues/NN-<slug>.md
 Stage 3.5: Ticket review      fresh reviewer subagent (skippable) → ## Ticket review
    ▼
-Stop: handoff message (/clear, /subagent-implement <dir>)
+Stop: handoff message (/clear, /implement-tickets <dir>)
 ```
 
 ## Invocation
@@ -363,20 +362,20 @@ implementers start only from a clean working tree.
 To keep peak reasoning for implementation, reset context:
 /clear
 
-Paste the checker's final DAG summary — its waves, maximum wave width,
-critical-path length, and recommended implementer, with the skill names carrying
-no leading slash:
+Paste the checker's final DAG summary — its waves, maximum wave width, and
+critical-path length. The recommendation uses a skill name without a leading
+slash:
 
   wave 0: 01
   wave 1: 02, 03
   maximum wave width: 2
   critical-path length: 2
-  recommended implementer: subagent-implement, agy-implement, opencode-implement
+  recommended implementer: implement-tickets
 Manifest: .scratch/<feature-slug>/manifest.json
 
 Then implement the whole ticket directory in a fresh session:
-/subagent-implement .scratch/<feature-slug>/
-(or /agy-implement or /opencode-implement with the same argument)
+/implement-tickets .scratch/<feature-slug>/
+Optional adapter hint: add `--with <backend>` to the command.
 ```
 
 The manifest line appears only when the last checker run exited 0. Omit it when

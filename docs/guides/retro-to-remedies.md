@@ -53,7 +53,7 @@ $retro-to-remedies
 
 ลำดับความสำคัญในการหา Feature Slug:
 1. **Argument**: ใช้ `<feature-slug>` ที่ระบุในคำสั่งโดยตรง
-2. **Integration branch stem**: สกัดชื่อ slug จากชื่อ branch ปัจจุบัน เช่น `subagent-implement/<slug>`
+2. **Integration branch stem**: สกัดชื่อ slug จากชื่อ branch ปัจจุบัน เช่น `implement-tickets/<slug>`
 3. **Directory ใน `.scratch/`**: หา directory ใน `.scratch/*/` ที่แก้ไขล่าสุด และถามยืนยันกับผู้ใช้ก่อนทำงาน
 
 ### กฎความปลอดภัยของ Branch
@@ -151,5 +151,4 @@ Stage 1 ทำหน้าที่นำ Misses ทั้งหมดมาป�
 - **การเรียนรู้ข้าม Run (Cross-Run Learning)**:
   - ใน Stage 0 มีการถามติดตามผลของ `handed-off` Remedies (done → `applied`, still pending → `handed-off`, drop → `declined`)
   - ใน Stage 1 มีการจับคู่กับ log: ตรวจสอบ same-occurrence, ตรวจจับ recurrence (ซึ่งทำให้ `applied` กลายเป็น Failed Remedy และยกระดับมาตรการ), และเคารพการ decline โดยจะเสนอใหม่เฉพาะเมื่อมี Miss เกิดซ้ำหลังการ decline พร้อมแสดงทั้งสองเหตุการณ์
-
 

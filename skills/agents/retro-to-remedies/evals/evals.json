@@ -33,7 +33,7 @@
       "prompt": "/retro-to-remedies",
       "expected_output": "Resolves the target feature slug from the current integration branch stem when no argument is given.",
       "expectations": [
-        "Inspects current git branch subagent-implement/opencode-implement-hosted-model",
+        "Inspects current git branch implement-tickets/opencode-implement-hosted-model",
         "Extracts feature slug opencode-implement-hosted-model from the branch stem"
       ],
       "files": [
@@ -114,11 +114,11 @@
       "id": 9,
       "name": "fixture classification instructions wrong yields Skill fix",
       "prompt": "/retro-to-remedies opencode-implement-hosted-model",
-      "expected_output": "Following subagent-implement instructions as written caused worktree cut from a fixed base (harness note) and worker branch ref collision (gotcha) because the skill's instructions were wrong or outdated, classifying both as Skill fixes for subagent-implement.",
+      "expected_output": "Following the ticket implementer's instructions as written caused worktree cut from a fixed base (harness note) and worker branch ref collision (gotcha) because the skill's instructions were wrong or outdated, classifying both as Skill fixes for implement-tickets.",
       "expectations": [
         "Applies the first classification rule: following a skill's instructions as written produced the Miss because instructions were wrong or outdated -> Skill fix",
-        "Proposes Skill fix for subagent-implement with ready-to-run prompt for this repository",
-        "Cites unmerged fix/subagent-implement-worktree-base-assumption"
+        "Proposes Skill fix for implement-tickets with ready-to-run prompt for this repository",
+        "Cites unmerged fix/implement-tickets-worktree-base-assumption"
       ],
       "files": [
         "evals/fixtures/opencode-implement-hosted-model/status.md"
@@ -392,12 +392,12 @@
     },
     {
       "id": 32,
-      "name": "the fixture Run's subagent-implement fixes routed as own-library prompts for this repository",
+      "name": "the fixture Run's ticket implementer fixes routed as own-library prompts for this repository",
       "prompt": "/retro-to-remedies opencode-implement-hosted-model",
-      "expected_output": "The fixture Run's subagent-implement fixes routed as own-library prompts for this repository carrying a /grill-to-tickets prompt targeting this repository.",
+      "expected_output": "The fixture Run's ticket implementer fixes routed as own-library prompts for this repository carrying a /grill-to-tickets prompt targeting this repository.",
       "expectations": [
-        "Identifies subagent-implement as belonging to the user's own library because its SKILL.md lives under skills/",
-        "Routes subagent-implement fixes as own-library prompts for this repository in the Retro report",
+        "Identifies the legacy ticket implementer as belonging to the user's own library because the fixture shows its SKILL.md under skills/",
+        "Routes the fixture's ticket implementer fixes as own-library prompts for this repository in the Retro report",
         "Provides ready-to-run /grill-to-tickets prompt targeting this repository"
       ],
       "files": [

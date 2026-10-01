@@ -8,7 +8,7 @@
 
 ### มีไว้ทำอะไร
 
-รับ **integration branch** ที่ `implement`, `agy-implement`, หรือ `subagent-implement`
+รับ **integration branch** ที่ `implement`, `agy-implement`, หรือ `implement-tickets`
 ทิ้งไว้ — หนึ่ง commit ต่อหนึ่ง ticket, test เขียว, แต่ยังไม่มีใคร review — แล้วพาไปจนถึง
 สถานะพร้อมเปิด PR โดย agent หลัก (**orchestrator**) ปัก review point, รัน `code-review`
 สองแกนเป็น loop ที่มีขอบเขต, จับ blocker เป็น cluster แล้วลง `fix(review):` commit
@@ -23,16 +23,22 @@ npx skills add ArrayaWongsaita/skills --skill review-to-pr
 
 ### ควรใช้เมื่อไร
 
-- มี integration branch จาก `implement` / `agy-implement` / `subagent-implement` ที่
+- มี integration branch จาก `implement` / `agy-implement` / `implement-tickets` ที่
   verify แล้วแต่ยังไม่ได้ review และอยากขับ §8–9 ของ feature-flow ด้วยคำสั่งเดียว
 - อยากได้ loop `code-review` สองแกนที่มี budget สามรอบ, การจับ blocker เป็น cluster,
   system `scrutinize` แบบมีเงื่อนไข, และ suite เขียว ด้วยกติกาเดียวกับ implement siblings
 - อยากให้ fix ลงเป็น `fix(review):` commit แยก ไม่ยัดกลับเข้า ticket commit
 
+ชื่อ branch ของ `implement-tickets` คือ integration branch
+`implement-tickets/<slug>` และ worker branches `implement-tickets-work/<slug>/<NN>`
+เมื่อเรียก `/review-to-pr` โดยไม่ใส่ argument ให้ derive slug จาก integration
+branch เช่น `implement-tickets/foo` ได้ `foo`; ตัวอย่าง worker branch คือ
+`implement-tickets-work/foo/01` และ integration branch กำหนด slug
+
 ### ไม่ควรใช้เมื่อไร
 
 - ยังไม่มี integration branch ที่ verify แล้ว — รัน `/implement`, `/agy-implement`, หรือ
-  `/subagent-implement` ก่อน
+  `/implement-tickets` ก่อน
 - อยากขับทั้ง lifecycle รวมทั้ง discovery และ spec — ใช้ `/engineering-workflow`
 - อยาก review `spec.md` ก่อนแตก ticket — นั่นคือ Design Review Gate ของ
   `grill-to-tickets`
@@ -76,7 +82,7 @@ sub-command: `continue` resume พร้อม Reality reconciliation, `status` 
 - `references/review-loop.md` — การเรียก `code-review` inline สองแกน, การ normalize
   blocking / non-blocking, findings ledger, budget สามรอบ, การหยุดแบบ no-progress
 - `references/fix-dispatch.md` — clustering, กติกา dispatch-vs-inline, contract
-  worker + verifier ที่ copy จาก `subagent-implement`, `MAX_FIX_ATTEMPTS = 3`,
+  worker + verifier ที่ copy จาก `implement-tickets`, `MAX_FIX_ATTEMPTS = 3`,
   `fix(review):` commit, การจัดการ unfixable
 - `references/scrutiny-gate.md` — checklist cross-cutting / risky, การรัน
   `scrutinize` inline, การ normalize verdict, sub-loop ที่ code-review ไม่ข้าม,
@@ -92,7 +98,7 @@ sub-command: `continue` resume พร้อม Reality reconciliation, `status` 
 ### Purpose
 
 Take the **integration branch** that `implement`, `agy-implement`, or
-`subagent-implement` left — one verified commit per ticket, tests green, nobody
+`implement-tickets` left — one verified commit per ticket, tests green, nobody
 has reviewed it — and drive it to a PR-ready state. The main agent — the
 **orchestrator** — pins the review point, runs the two-axis `code-review` as a
 bounded loop, clusters the blockers and lands one `fix(review):` commit per
@@ -101,7 +107,7 @@ the full test suite green, and **stops before the PR**. Opening the PR is the ne
 command, run by hand.
 
 It is `engineering-workflow`'s feature-flow §8–9 split out standalone, the same
-way `grill-to-tickets` is §1–3 and `subagent-implement` is §7.
+way `grill-to-tickets` is §1–3 and `implement-tickets` is §7.
 
 Install with:
 
@@ -112,7 +118,7 @@ npx skills add ArrayaWongsaita/skills --skill review-to-pr
 ### Use it when
 
 - You have a verified-but-unreviewed integration branch from `implement`,
-  `agy-implement`, or `subagent-implement` and want feature-flow §8–9 as one
+  `agy-implement`, or `implement-tickets` and want feature-flow §8–9 as one
   command with the same budgets and stop rules.
 - You want the bounded two-axis `code-review` loop, blocker clustering, the
   conditional system `scrutinize`, and a green full suite run the same way every
@@ -123,7 +129,7 @@ npx skills add ArrayaWongsaita/skills --skill review-to-pr
 ### Do not use it when
 
 - There is no verified integration branch yet — run `/implement`,
-  `/agy-implement`, or `/subagent-implement` first.
+  `/agy-implement`, or `/implement-tickets` first.
 - You want the full lifecycle including discovery and specification — use
   `/engineering-workflow`.
 - You want a design review of a `spec.md` before tickets — that is
@@ -137,6 +143,11 @@ npx skills add ArrayaWongsaita/skills --skill review-to-pr
 
 Invoke `/review-to-pr` from the integration branch (or `/review-to-pr <ref>` to
 override the review point, `/review-to-pr <slug>` to name the feature directory).
+
+`implement-tickets` uses integration branches `implement-tickets/<slug>` and
+worker branches `implement-tickets-work/<slug>/<NN>`. With no argument, derive
+the feature slug from the integration branch: `implement-tickets/foo` gives
+`foo`; a worker branch example is `implement-tickets-work/foo/01`.
 
 1. **Stage 0 — Pin the review point (read-only)**: preflight a clean tree,
    resolve the review point (an explicit `<ref>`, else `git merge-base main
@@ -179,7 +190,7 @@ read-only.
   non-blocking normalization, the findings ledger, the three-cycle budget, and
   the no-progress early stop
 - `references/fix-dispatch.md` — clustering, the dispatch-vs-inline rule, the
-  worker + verifier contract copied from `subagent-implement`,
+  worker + verifier contract copied from `implement-tickets`,
   `MAX_FIX_ATTEMPTS = 3`, the `fix(review):` commit, and unfixable handling
 - `references/scrutiny-gate.md` — the cross-cutting / risky checklist, the inline
   `scrutinize` pass, verdict normalization, the never-skipped code-review in the

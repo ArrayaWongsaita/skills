@@ -49,8 +49,11 @@ Resolve the slug in order:
 
 1. **An explicit `<slug>` argument** (one that does not resolve as a git ref).
 2. **Else the integration-branch name stem** — the segment after the last `/`,
-   so `subagent-implement/wishlist-sync` → `wishlist-sync` and a flat
-   `wishlist-sync` → `wishlist-sync`.
+   so `implement-tickets/wishlist-sync` → `wishlist-sync` and a flat
+   `wishlist-sync` → `wishlist-sync`. For an `implement-tickets` run, the
+   integration branch is `implement-tickets/<slug>` and the worker branches
+   are `implement-tickets-work/<slug>/<NN>`. For example, `implement-tickets/wishlist-sync`
+   has worker branches such as `implement-tickets-work/wishlist-sync/01`.
 3. **Else the most recently modified `.scratch/*/` directory**, named back to the
    user for confirmation before it is used.
 
