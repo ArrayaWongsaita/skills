@@ -23,7 +23,7 @@ describe("Markdown contract assertion scope", () => {
 
     const pages = await testCase(
       "tests/implement-tickets-contract.test.mjs",
-      "documents the skill and bilingual Seam and Context paragraphs in both user-facing pages",
+      "links bilingual Seam and Context guidance to the planning reference in both user-facing pages",
     );
     assert.doesNotMatch(pages, /assert\.match\(\s*doc\s*,/,
       "bilingual page claims must not search the complete guide or skill page");
@@ -34,7 +34,7 @@ describe("Markdown contract assertion scope", () => {
 
     const adapter = await testCase(
       "tests/implement-tickets-contract.test.mjs",
-      "documents adapter selection, the contract, and its source-based install line",
+      "links adapter guidance to its canonical contract in Thai and English",
     );
     assert.doesNotMatch(adapter, /assert\.(?:match|doesNotMatch)\(\s*doc\s*,|\/--with[^\n]+\.test\(doc\)/,
       "adapter documentation claims must use their installation or usage sections");
@@ -44,6 +44,25 @@ describe("Markdown contract assertion scope", () => {
       "the skill-page adapter contract is checked in its Thai workflow section");
     assert.match(adapter, /markdownSection\(doc,\s*["']Purpose and use["']\)/,
       "adapter install details are checked in the English usage section");
+  });
+
+  it("scopes canonical-link and duplicated-mechanics claims to each language section", async () => {
+    const source = await testCase(
+      "tests/implement-tickets-contract.test.mjs",
+      "links bilingual user documentation to canonical mechanics without copying their rules",
+    );
+    assert.doesNotMatch(source, /assert\.(?:match|doesNotMatch|deepEqual)\(\s*doc\s*,/,
+      "canonical links and copied mechanics must not be checked against a whole page");
+    assert.match(source, /\[\["Thai", "ภาษาไทย \/ Thai"\], \["English", "English \/ ภาษาอังกฤษ"\]\]/,
+      "the regression enumerates the Thai and English language sections");
+    assert.match(source, /markdownSection\(doc,\s*heading\)/,
+      "each page claim is extracted by its owning language heading");
+    assert.match(source, /assert\.match\(section,\s*expression,/,
+      "canonical links are checked within the extracted language section");
+    assert.match(source, /copiedRules\.filter\(\(\[,\s*expression\]\)\s*=>\s*expression\.test\(section\)\)/,
+      "duplicated rules are detected within the extracted language section");
+    assert.match(source, /assert\.deepEqual\(copied,\s*\[\]/,
+      "each language section must have no copied normative mechanics");
   });
 
   it("scopes implement-tickets marker and ADR 0020 claims", async () => {

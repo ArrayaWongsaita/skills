@@ -248,7 +248,7 @@ describe("implement-tickets skill and documentation contract", () => {
     assert.match(plan, /no file outside the\s+feature directory changes until approval/i, "files outside the feature directory stay untouched before approval");
   });
 
-  it("documents the skill and bilingual Seam and Context paragraphs in both user-facing pages", async () => {
+  it("links bilingual Seam and Context guidance to the planning reference in both user-facing pages", async () => {
     for (const file of ["docs/guides/implement-tickets.md", "docs/skills/agents/implement-tickets.md"]) {
       const doc = await readTextOrNull(path.join(repoRoot, file));
       assert.ok(doc, `${file} exists`);
@@ -258,10 +258,41 @@ describe("implement-tickets skill and documentation contract", () => {
       assert.match(header, /implement-tickets/, `${file} identifies the skill in its introduction`);
       assert.ok(thaiSeamContext, `${file} has a Thai Seam and Context section`);
       assert.ok(englishSeamContext, `${file} has an English Seam and Context section`);
-      assert.match(thaiSeamContext, /\*\*Seam:\*\*[\s\S]*?\*\*Context:\*\*/, `${file} has both Thai field labels`);
-      assert.match(thaiSeamContext, /รายการอ่าน/, `${file} describes Context as a read list in Thai`);
-      assert.match(englishSeamContext, /\*\*Seam:\*\*[\s\S]*?verbatim[\s\S]*?\*\*Context:\*\*[\s\S]*?read list/i,
-        `${file} describes the English Seam and Context fields`);
+      assert.match(thaiSeamContext, /planning\.md/, `${file} links Thai Seam and Context guidance to planning`);
+      assert.match(englishSeamContext, /planning\.md/, `${file} links English Seam and Context guidance to planning`);
+    }
+  });
+
+  it("links bilingual user documentation to canonical mechanics without copying their rules", async () => {
+    const pages = ["docs/guides/implement-tickets.md", "docs/skills/agents/implement-tickets.md"];
+    const canonicalLinks = [
+      ["core invocation contract", /\]\((?:\.\.\/)+skills\/agents\/implement-tickets\/SKILL\.md\)/],
+      ["adapter contract", /\]\((?:\.\.\/)+skills\/agents\/implement-tickets\/references\/adapter-contract\.md\)/],
+      ["planning reference", /\]\((?:\.\.\/)+skills\/agents\/implement-tickets\/references\/planning\.md\)/],
+      ["parallel-validation reference", /\]\((?:\.\.\/)+skills\/agents\/implement-tickets\/references\/parallel-validation\.md\)/],
+    ];
+    const copiedRules = [
+      ["CLI option effects", /--(?:with|agent|model|concurrency|serial)\b|default (?:backend|concurrency cap)|concurrency cap (?:is|of|เท่ากับ)\s*4|ค่าเริ่มต้น(?:ใช้|เป็น).{0,40}native harness/i],
+      ["adapter search or lock fallback", /(?:\.agents\/skills|\.claude\/skills|skills-lock\.json|\.skill-lock\.json|preflight searches|preflight ค้นหา|(?:check|use|อ่าน) (?:the )?(?:project|user) lock.{0,80}(?:then|before|fallback))/i],
+      ["adapter install fallback", /npx skills add <source>|npx skills add[^`\n]*--skill implement-tickets-[\w<]|<source of implement-tickets>|(?:generated|สร้าง) install line/i],
+      ["adapter worktree ownership", /worker branch.{0,100}worktree|core.{0,100}(?:creates|owns|สร้าง).{0,100}worktree|(?:ลบ|remove|cleanup).{0,100}worktree/i],
+      ["touch-set classification or overlap", /\((?:edit|new|edit from NN)\)|touch[- ]set overlap|path(?:s)? overlap|directory prefix|(?:read-only|read only).{0,80}touch[- ]set|touch[- ]set.{0,80}(?:overlap|path|read-only|from NN|edit from)/i],
+      ["wave placement rules", /earliest eligible wave|wave เดี่ยว|first wave after|same wave|single wave|wave.{0,80}(?:blocker|overlap)|blocker.{0,80}wave|ticket.{0,60}wave.{0,60}(?:blocker|overlap)/i],
+      ["validation marker behavior", /status:\s*(?:not validated|validated)|parallel not yet validated|marker.{0,100}(?:prints|Plan|แสดง)/i],
+    ];
+
+    for (const file of pages) {
+      const doc = await readTextOrNull(path.join(repoRoot, file));
+      assert.ok(doc, `${file} exists`);
+      for (const [language, heading] of [["Thai", "ภาษาไทย / Thai"], ["English", "English / ภาษาอังกฤษ"]]) {
+        const section = markdownSection(doc, heading);
+        assert.ok(section, `${file} has its ${language} section`);
+        const copied = copiedRules.filter(([, expression]) => expression.test(section)).map(([label]) => label);
+        assert.deepEqual(copied, [], `${file} ${language} section must defer shared mechanics to canonical references`);
+        for (const [label, expression] of canonicalLinks) {
+          assert.match(section, expression, `${file} ${language} section links the ${label}`);
+        }
+      }
     }
   });
 
@@ -624,22 +655,15 @@ describe("implement-tickets adapter and preflight contract", () => {
     }
   });
 
-  it("documents adapter selection, the contract, and its source-based install line", async () => {
+  it("links adapter guidance to its canonical contract in Thai and English", async () => {
     for (const file of ["docs/guides/implement-tickets.md", "docs/skills/agents/implement-tickets.md"]) {
       const doc = await readTextOrNull(path.join(repoRoot, file));
       assert.ok(doc, `${file} exists`);
-      const thaiUse = markdownSection(doc, file.includes("docs/guides/") ? "การเรียกใช้งาน" : "วิธีทำงานหลัก");
       const thaiAdapter = markdownSection(doc, file.includes("docs/guides/") ? "ติดตั้ง" : "วิธีทำงานหลัก");
       const englishUse = markdownSection(doc, "Purpose and use");
-      assert.ok(thaiUse && thaiAdapter && englishUse, `${file} has Thai usage and adapter sections and an English usage section`);
-      assert.match(thaiUse, /--with <name>/, `${file} Thai usage section documents adapter selection`);
-      assert.match(thaiAdapter, /adapter-contract\.md/, `${file} Thai adapter section links the contract`);
-      assert.match(thaiAdapter, /npx skills add <source> --skill implement-tickets-<name>/i,
-        `${file} Thai adapter section documents the source-based install line`);
-      assert.match(englishUse, /--with <name>/, `${file} English usage section documents adapter selection`);
-      assert.match(englishUse, /adapter-contract\.md/, `${file} English usage section links the adapter contract`);
-      assert.match(englishUse, /npx skills add <source> --skill implement-tickets-<name>/i,
-        `${file} English usage section documents the source-based install line`);
+      assert.ok(thaiAdapter && englishUse, `${file} has Thai and English adapter guidance sections`);
+      assert.match(thaiAdapter, /adapter-contract\.md/, `${file} Thai guidance links the adapter contract`);
+      assert.match(englishUse, /adapter-contract\.md/, `${file} English guidance links the adapter contract`);
     }
   });
 });
