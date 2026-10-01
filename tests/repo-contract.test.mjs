@@ -4,7 +4,7 @@ import { access, readFile, readdir } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
 import { discoverSkills, renderIndex } from "../scripts/generate-skill-index.mjs";
-import { markdownHeaderBlock, markdownHeadings, markdownSection } from "./helpers/markdown-contract.mjs";
+import { assertAbsentFromMarkdownSections, markdownHeaderBlock, markdownHeadings, markdownSection } from "./helpers/markdown-contract.mjs";
 
 async function fileExists(path) {
   await access(path, constants.R_OK);
@@ -174,7 +174,9 @@ describe("personal AI skills repository contract", () => {
     const index = await readText("docs/skills/README.md");
 
     assert.ok(skills.some((skill) => skill.category === "agents" && skill.name === "implement-tickets"));
-    assert.match(index, /\| `implement-tickets` \|[^\n]*\[คู่มือ \/ Guide\]\(agents\/implement-tickets\.md\) \|/);
+    const row = tableRow(index, "implement-tickets");
+    assert.ok(row, "the generated catalog has an implement-tickets row");
+    assert.match(row, /\[คู่มือ \/ Guide\]\(agents\/implement-tickets\.md\)/);
   });
 
   it("removes the retired standalone skill without publishing an alias", async () => {
@@ -199,7 +201,7 @@ describe("personal AI skills repository contract", () => {
       assert.equal(exists, false, `${file} has been retired`);
     }
     assert.ok(!skills.some((skill) => skill.name === retiredName), "the retired command has no installed-skill entry");
-    assert.ok(!index.includes(retiredName), "the generated catalog publishes no alias");
+    assert.equal(tableRow(index, retiredName), null, "the generated catalog publishes no alias row");
   });
 
   it("finds no live reference to the retired command outside the bounded historical paths", async () => {
@@ -1001,7 +1003,8 @@ describe("grill-to-tickets production records and guides", () => {
   it("records ADR 0020 as the implement-family core and supersedes the standalone statuses", async () => {
     const doc = await readTextOrNull("docs/decisions/0020-implement-tickets-core.md");
     assert.ok(doc, "ADR 0020 exists under docs/decisions/");
-    assert.ok(/^# ADR 0020: Implement Tickets is the one core for the implement family$/m.test(doc), "ADR 0020 has its expected header");
+    const header = markdownHeaderBlock(doc);
+    assert.match(header, /^# ADR 0020: Implement Tickets is the one core for the implement family$/m, "ADR 0020 has its expected header");
     for (const heading of ["Context / บริบท", "Decision / การตัดสินใจ", "Consequences / ผลที่ตามมา", "Rejected alternatives / ทางเลือกที่ไม่เลือก"]) {
       const section = markdownSection(doc, heading);
       assert.ok(section && /[\u0e00-\u0e7f]/.test(section), `ADR 0020 has bilingual ${heading}`);
@@ -1014,8 +1017,11 @@ describe("grill-to-tickets production records and guides", () => {
     assert.ok(/retire(?:d)? the prior standalone core[\s\S]*no alias/i.test(decision), "the prior standalone core is retired without an alias");
     assert.ok(/`agy-implement`[\s\S]*`opencode-implement`[\s\S]*until their adapters ship/i.test(decision), "agy and opencode remain until adapters ship");
     assert.ok(/parallel readiness[\s\S]*recorded human validation/i.test(decision), "parallel readiness depends on a recorded human run");
-    assert.ok(/status: not validated/i.test(doc), "the current parallel-validation state is explicit");
-    assert.doesNotMatch(doc, /26\.8%/, "the unverified conflict figure is not cited");
+    const validationRecord = markdownSection(doc, "Parallel validation record / บันทึกผล parallel validation");
+    assert.ok(validationRecord, "ADR 0020 has a parallel validation record");
+    assert.match(validationRecord, /Status: awaiting human validation/i, "the parallel-validation state is explicit");
+    assert.match(validationRecord, /status: not validated/i, "the marker stays pending until the record is complete");
+    assertAbsentFromMarkdownSections(doc, /26\.8%/, "the unverified conflict figure is not cited");
 
     const expectedStatusLine = "- Status / สถานะ: Superseded by ADR 0020 / ถูกแทนที่โดย ADR 0020, for the implement family (was: Accepted / ยอมรับแล้ว)";
     for (const file of [
@@ -1207,8 +1213,12 @@ describe("grill-to-tickets production records and guides", () => {
 
     for (const skill of ["implement-tickets", "agy-implement", "opencode-implement"]) {
       for (const { file, text } of await textFilesUnder(path.join("skills/agents", skill))) {
-        if (file.endsWith(".md") && pattern.test(text)) {
-          found.push(file);
+        if (file.endsWith(".md")) {
+          try {
+            assertAbsentFromMarkdownSections(text, pattern, `${file} has no absolute-path wording`);
+          } catch (error) {
+            found.push(`${file}: ${error.message}`);
+          }
         }
       }
     }

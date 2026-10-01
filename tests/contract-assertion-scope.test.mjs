@@ -11,6 +11,150 @@ async function testCase(file, title) {
 }
 
 describe("Markdown contract assertion scope", () => {
+  it("scopes implement-tickets planning and bilingual page claims", async () => {
+    const planning = await testCase(
+      "tests/implement-tickets-contract.test.mjs",
+      "specifies every Plan field and pauses before changes outside the feature directory",
+    );
+    assert.doesNotMatch(planning, /assert\.match\(\s*planning\s*,/,
+      "planning requirements must use the Plan subsection instead of the complete reference");
+    assert.match(planning, /markdownSection\(planning,\s*["']5\. Present the Plan and pause["']\)/,
+      "Plan requirements are read from the presentation and pause subsection");
+
+    const pages = await testCase(
+      "tests/implement-tickets-contract.test.mjs",
+      "documents the skill and bilingual Seam and Context paragraphs in both user-facing pages",
+    );
+    assert.doesNotMatch(pages, /assert\.match\(\s*doc\s*,/,
+      "bilingual page claims must not search the complete guide or skill page");
+    assert.match(pages, /markdownSection\(doc,\s*["']Seam และ Context["']\)/,
+      "Thai Seam and Context claims are read from their owning section");
+    assert.match(pages, /markdownSection\(doc,\s*["']Seam and Context["']\)/,
+      "English Seam and Context claims are read from their owning section");
+
+    const adapter = await testCase(
+      "tests/implement-tickets-contract.test.mjs",
+      "documents adapter selection, the contract, and its source-based install line",
+    );
+    assert.doesNotMatch(adapter, /assert\.(?:match|doesNotMatch)\(\s*doc\s*,|\/--with[^\n]+\.test\(doc\)/,
+      "adapter documentation claims must use their installation or usage sections");
+    assert.match(adapter, /markdownSection\(doc,\s*file\.includes\(["']docs\/guides\//,
+      "the guide adapter contract is checked in its Thai usage section");
+    assert.match(adapter, /["']วิธีทำงานหลัก["']\)/,
+      "the skill-page adapter contract is checked in its Thai workflow section");
+    assert.match(adapter, /markdownSection\(doc,\s*["']Purpose and use["']\)/,
+      "adapter install details are checked in the English usage section");
+  });
+
+  it("scopes implement-tickets marker and ADR 0020 claims", async () => {
+    const marker = await testCase(
+      "tests/implement-tickets-contract.test.mjs",
+      "documents the human parallel-validation procedure and its marker",
+    );
+    assert.doesNotMatch(marker, /assert\.match\(\s*marker\s*,/,
+      "parallel-validation prose must be checked within its procedure section");
+    assert.match(marker, /markdownSection\(marker,\s*["']Procedure["']\)/,
+      "parallel-validation procedure claims use the Procedure section");
+    assert.match(marker, /markdownHeaderBlock\(marker\)/,
+      "the status marker is checked in the document header block");
+
+    const adr = await testCase(
+      "tests/repo-contract.test.mjs",
+      "records ADR 0020 as the implement-family core and supersedes the standalone statuses",
+    );
+    assert.doesNotMatch(adr, /assert\.(?:match|doesNotMatch)\(\s*doc\s*,|assert\.ok\(\s*\/[^\n;]*?\.test\(doc\)/,
+      "ADR 0020 content claims must use their owning sections");
+    assert.match(adr, /markdownSection\(doc,\s*["']Parallel validation record \/ บันทึกผล parallel validation["']\)/,
+      "the parallel-validation marker claim uses the record section");
+    assert.match(adr, /assert\.match\(validationRecord,\s*\/status: not validated/i,
+      "the exact marker value is checked within the ADR record section");
+    assert.match(adr, /markdownHeaderBlock\(doc\)/,
+      "the ADR title is checked in its header block");
+  });
+
+  it("scopes adapter routing claims to the adapter contract and invocation section", async () => {
+    const source = await testCase(
+      "tests/implement-tickets-contract.test.mjs",
+      "defines the adapter input, resume, failover, worktree lifecycle, envelope, and routing table",
+    );
+    assert.doesNotMatch(source, /assert\.match\(\s*(?:contract|skill)\s*,/,
+      "adapter routing claims must not search the complete reference or skill file");
+    for (const scope of ["input", "failover", "cleanup", "invocation"]) {
+      assert.match(source, new RegExp(`assert\\.match\\(${scope}\\s*,`),
+        `adapter routing assertions use the ${scope} section`);
+    }
+    assert.match(source, /markdownSection\(contract,\s*["']Input["']\)/,
+      "worker input behavior is checked in its contract section");
+    assert.match(source, /markdownSection\(contract,\s*["']Failover["']\)/,
+      "outcome routing is checked in its contract section");
+    assert.match(source, /markdownSection\(contract,\s*["']Worktree cleanup["']\)/,
+      "worktree lifecycle behavior is checked in its contract section");
+    assert.match(source, /markdownSection\(skill,\s*["']Invocation["']\)/,
+      "adapter invocation behavior is checked in its owning skill section");
+  });
+
+  it("scopes implement-tickets dispatch and run-state assertions to contract sections", async () => {
+    const references = await testCase(
+      "tests/implement-tickets-contract.test.mjs",
+      "keeps explicit-invocation frontmatter and the reference list aligned across the skill, guide, page, and directory",
+    );
+    assert.doesNotMatch(references, /linkedReferences\(content\)/,
+      "reference inventory is collected from parsed Markdown sections");
+    assert.match(references, /linkedReferences\(markdownSections\(content\)\)/,
+      "the reference inventory receives section slices");
+
+    const scopedCases = [
+      ["tests/implement-tickets-contract.test.mjs", "starts every worker prompt with a checkout and integration SHA assertion", "prompt"],
+      ["tests/implement-tickets-contract.test.mjs", "caps workers and verifiers together and gives pending verifiers priority", "dispatch"],
+      ["tests/implement-tickets-contract.test.mjs", "pipelines a fresh native verifier and keeps its report to raw evidence", "verification"],
+      ["tests/implement-tickets-contract.test.mjs", "runs each worker and verifier in the background with its own soft-timeout wait", "dispatch|verification"],
+      ["tests/implement-tickets-contract.test.mjs", "routes crashes, lost subagents, and harness-cap rejections through infra retries", "dispatch"],
+      ["tests/implement-tickets-contract.test.mjs", "squash-merges a fully verified wave in ticket order and gates the combined result", "gate"],
+      ["tests/implement-tickets-contract.test.mjs", "locates a gate culprit, restores the last good commit, preserves later verified tickets, and retries alone", "gate"],
+      ["tests/implement-tickets-contract.test.mjs", "blocks a ticket after three verification failures and reports held and independent paths", "state"],
+      ["tests/implement-tickets-contract.test.mjs", "defines the status header and per-ticket table, including reported usage totals", "state"],
+      ["tests/implement-tickets-contract.test.mjs", "refuses legacy state and reconciles, rewinds, replans, and resumes valid state", "state"],
+      ["tests/implement-tickets-contract.test.mjs", "keeps status and list read-only", "state"],
+      ["tests/implement-tickets-contract.test.mjs", "hands off a green integrated run without starting review or publication", "gate"],
+    ];
+    for (const [file, title, aliases] of scopedCases) {
+      const source = await testCase(file, title);
+      assert.doesNotMatch(source,
+        new RegExp(`(?:assert\\.(?:match|doesNotMatch)|requireText)\\(\\s*(?:${aliases})\\s*,`),
+        `${title} must assert against an extracted contract section`);
+      assert.match(source, /markdownSection\(/, `${title} extracts its owning Markdown section`);
+    }
+  });
+
+  it("scopes implement-tickets index entries and file-wide Markdown exclusions", async () => {
+    const indexRow = await testCase(
+      "tests/repo-contract.test.mjs",
+      "lists implement-tickets in the generated agent-skill index",
+    );
+    assert.doesNotMatch(indexRow, /assert\.match\(index\s*,/,
+      "the generated index contract must assert against the skill's table row");
+    assert.match(indexRow, /tableRow\(index,\s*["']implement-tickets["']\)/,
+      "the generated index contract locates the implement-tickets row");
+
+    const alias = await testCase(
+      "tests/repo-contract.test.mjs",
+      "removes the retired standalone skill without publishing an alias",
+    );
+    assert.doesNotMatch(alias, /index\.includes\(retiredName\)/,
+      "the catalog exclusion is scoped to skill rows");
+    assert.match(alias, /tableRow\(index,\s*retiredName\)/,
+      "the retired command is excluded from the generated skill rows");
+
+    const exclusions = await testCase(
+      "tests/repo-contract.test.mjs",
+      "has no absolute-path wording in the three implementer directories",
+    );
+    assert.match(exclusions, /assertAbsentFromMarkdownSections\(text,/,
+      "Markdown exclusions are checked within parsed sections");
+    assert.doesNotMatch(exclusions, /pattern\.test\(text\)/,
+      "the absolute-path exclusion must not scan a complete Markdown file");
+  });
+
   it("scopes implementer manifest checks to Markdown sections", async () => {
     const source = await testCase(
       "tests/grill-to-tickets-contract.test.mjs",

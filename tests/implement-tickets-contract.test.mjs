@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { markdownSection } from "./helpers/markdown-contract.mjs";
+import { markdownHeaderBlock, markdownHeadings, markdownSection } from "./helpers/markdown-contract.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const skillRoot = path.join(repoRoot, "skills/agents/implement-tickets");
@@ -95,6 +95,20 @@ async function writeLock(file, source) {
 
 function wavesAsNumbers(output) {
   return output.waves.map((wave) => wave.map(String));
+}
+
+function markdownSections(markdown) {
+  const topLevelSections = markdownHeadings(markdown)
+    .filter(({ level }) => level === 2)
+    .map(({ title }) => markdownSection(markdown, title))
+    .filter(Boolean);
+  return [markdownHeaderBlock(markdown), ...topLevelSections];
+}
+
+function linkedReferences(sections) {
+  return [...new Set(sections.flatMap((section) =>
+    [...section.matchAll(/references\/([^/\s)`]+\.md)/g)].map((match) => match[1]),
+  ))].sort();
 }
 
 describe("implement-tickets wave planner contract", () => {
@@ -208,8 +222,10 @@ describe("implement-tickets skill and documentation contract", () => {
     const skill = await readTextOrNull(path.join(skillRoot, "SKILL.md"));
     const agent = await readTextOrNull(path.join(skillRoot, "agents/openai.yaml"));
     assert.ok(skill, "the implement-tickets skill exists");
-    assert.match(skill, /^name: implement-tickets$/m);
-    assert.match(skill, /^disable-model-invocation: true$/m);
+    const header = skill.match(/^---\n([\s\S]*?)\n---\n/);
+    assert.ok(header, "the skill begins with frontmatter");
+    assert.match(header[1], /^name: implement-tickets$/m);
+    assert.match(header[1], /^disable-model-invocation: true$/m);
     assert.ok(agent, "the Codex agent metadata exists");
     assert.match(agent, /^\s*allow_implicit_invocation:\s*false\s*$/m);
   });
@@ -217,29 +233,35 @@ describe("implement-tickets skill and documentation contract", () => {
   it("specifies every Plan field and pauses before changes outside the feature directory", async () => {
     const planning = await readTextOrNull(path.join(skillRoot, "references/planning.md"));
     assert.ok(planning, "the planning procedure exists");
+    const plan = markdownSection(planning, "5. Present the Plan and pause");
+    assert.ok(plan, "the Plan presentation and approval subsection exists");
     assert.match(
-      planning,
+      plan,
       /\| Ticket \| Wave \| Blockers \| Touch set \| Seam \| Matched agent \| Retry budget \|/,
       "the Plan has a row for every ticket with all required columns",
     );
-    assert.match(planning, /backend/i);
-    assert.match(planning, /concurrency cap/i);
-    assert.match(planning, /warnings/i);
-    assert.match(planning, /parallel not yet validated/);
-    assert.match(planning, /pause for explicit approval/i);
-    assert.match(planning, /no file outside the\s+feature directory changes until approval/i);
+    assert.match(plan, /backend:\s*native harness subagents/i, "the Plan names the default backend");
+    assert.match(plan, /concurrency cap:\s*`4` by default/i, "the Plan names the default concurrency cap");
+    assert.match(plan, /all script and planning warnings/i, "the Plan includes all planning warnings");
+    assert.match(plan, /parallel not yet validated/, "the pending marker is printed in the Plan");
+    assert.match(plan, /pause for explicit approval/i, "the Plan waits for explicit approval");
+    assert.match(plan, /no file outside the\s+feature directory changes until approval/i, "files outside the feature directory stay untouched before approval");
   });
 
   it("documents the skill and bilingual Seam and Context paragraphs in both user-facing pages", async () => {
     for (const file of ["docs/guides/implement-tickets.md", "docs/skills/agents/implement-tickets.md"]) {
       const doc = await readTextOrNull(path.join(repoRoot, file));
       assert.ok(doc, `${file} exists`);
-      assert.match(doc, /^#{2,3} Seam และ Context$/m);
-      assert.match(doc, /\*\*Seam:\*\*[\s\S]*?\*\*Context:\*\*/);
-      assert.match(doc, /^#{2,3} Seam and Context$/m);
-      assert.match(doc, /\*\*Seam:\*\*[\s\S]*?verbatim[\s\S]*?\*\*Context:\*\*[\s\S]*?read list/i);
-      assert.match(doc, /รายการอ่าน/);
-      assert.match(doc, /`implement-tickets`/);
+      const header = markdownHeaderBlock(doc);
+      const thaiSeamContext = markdownSection(doc, "Seam และ Context");
+      const englishSeamContext = markdownSection(doc, "Seam and Context");
+      assert.match(header, /implement-tickets/, `${file} identifies the skill in its introduction`);
+      assert.ok(thaiSeamContext, `${file} has a Thai Seam and Context section`);
+      assert.ok(englishSeamContext, `${file} has an English Seam and Context section`);
+      assert.match(thaiSeamContext, /\*\*Seam:\*\*[\s\S]*?\*\*Context:\*\*/, `${file} has both Thai field labels`);
+      assert.match(thaiSeamContext, /รายการอ่าน/, `${file} describes Context as a read list in Thai`);
+      assert.match(englishSeamContext, /\*\*Seam:\*\*[\s\S]*?verbatim[\s\S]*?\*\*Context:\*\*[\s\S]*?read list/i,
+        `${file} describes the English Seam and Context fields`);
     }
   });
 
@@ -257,15 +279,11 @@ describe("implement-tickets skill and documentation contract", () => {
     const directoryReferences = (await readdir(path.join(skillRoot, "references")))
       .filter((file) => file.endsWith(".md"))
       .sort();
-    const linkedReferences = (content) => [...new Set(
-      [...content.matchAll(/references\/([^/\s)`]+\.md)/g)].map((match) => match[1]),
-    )].sort();
-
     for (const [label, content] of [["SKILL.md", skill], ["guide", guide], ["skill page", page]]) {
       assert.deepEqual(
-        linkedReferences(content),
+        linkedReferences(markdownSections(content)),
         directoryReferences,
-        `${label} lists exactly the reference Markdown files in the skill directory`,
+        `${label} links exactly the reference Markdown files across its sections`,
       );
     }
   });
@@ -273,20 +291,25 @@ describe("implement-tickets skill and documentation contract", () => {
   it("documents the human parallel-validation procedure and its marker", async () => {
     const marker = await readTextOrNull(path.join(skillRoot, "references/parallel-validation.md"));
     assert.ok(marker, "the parallel-validation reference exists");
-    assert.match(marker, /^status: (?:not validated|validated \d{4}-\d{2}-\d{2})$/m);
-    assert.match(marker, /scratch repository/i);
-    assert.match(marker, /two independent tickets/i);
-    assert.match(marker, /\/implement-tickets/);
-    assert.match(marker, /two-wide wave/i);
-    assert.match(marker, /background workers/i);
-    assert.match(marker, /TaskStop/);
-    assert.match(marker, /permission prompts[\s\S]*main session/i);
-    assert.match(marker, /docs\/decisions\/0020-implement-tickets-core\.md/);
-    assert.match(marker, /status: validated YYYY-MM-DD/);
+    const markerHeader = markdownHeaderBlock(marker);
+    const procedure = markdownSection(marker, "Procedure");
+    assert.match(markerHeader, /^status: (?:not validated|validated \d{4}-\d{2}-\d{2})$/m);
+    assert.ok(procedure, "the validation procedure section exists");
+    assert.match(procedure, /scratch repository/i);
+    assert.match(procedure, /two independent tickets/i);
+    assert.match(procedure, /\/implement-tickets/);
+    assert.match(procedure, /two-wide wave/i);
+    assert.match(procedure, /background workers/i);
+    assert.match(procedure, /TaskStop/);
+    assert.match(procedure, /permission prompts[\s\S]*main session/i);
+    assert.match(procedure, /docs\/decisions\/0020-implement-tickets-core\.md/);
+    assert.match(procedure, /status: validated YYYY-MM-DD/);
 
     const adr = await readTextOrNull(path.join(repoRoot, "docs/decisions/0020-implement-tickets-core.md"));
     assert.ok(adr, "ADR 0020 exists");
-    assert.match(adr, /Parallel validation record[\s\S]*awaiting/i);
+    const record = markdownSection(adr, "Parallel validation record / บันทึกผล parallel validation");
+    assert.ok(record, "ADR 0020 has a parallel validation record section");
+    assert.match(record, /Status: awaiting human validation/i);
   });
 });
 
@@ -302,38 +325,46 @@ describe("implement-tickets worker dispatch and verification contract", () => {
   it("starts every worker prompt with a checkout and integration SHA assertion", async () => {
     const prompt = await readTextOrNull(promptPath);
     assert.ok(prompt, "the worker prompt scaffold exists");
-    const firstShellBlock = prompt.match(/```bash\s*([\s\S]*?)```/i);
+    const sync = markdownSection(prompt, "First command — sync to the integration tip");
+    assert.ok(sync, "the worker's first-command section exists");
+    const firstShellBlock = sync.match(/```bash\s*([\s\S]*?)```/i);
     assert.ok(firstShellBlock, "the prompt includes its sync command block");
     const firstCommand = firstShellBlock[1].trimStart().split(/\r?\n/, 1)[0];
     assert.match(firstCommand, /^git checkout -B /, "checkout is the worker's first shell command");
-    const checkout = prompt.match(/git checkout -B\s+"?<worker-branch>"?\s+"?<integration-sha>"?/);
-    const checkoutIndex = checkout?.index ?? -1;
-    assert.notEqual(checkoutIndex, -1, "the first worker command checks out the worker branch at the integration SHA");
-    requireText(prompt, /test\s+"\$\(git rev-parse HEAD\)"\s*=\s*"<integration-sha>"/, "the sync command asserts the integration SHA");
-    requireText(prompt, /mismatch[\s\S]*return `failed_infra`/i, "a sync mismatch is returned as failed_infra");
-    const taskBodyIndex = prompt.indexOf("<the ticket's \"What to build\" paragraph");
-    assert.ok(taskBodyIndex > checkoutIndex, "the sync step precedes ticket instructions");
-    requireText(prompt, /every worker prompt[\s\S]*including ticket 1/i, "the first ticket also receives the sync step");
+    assert.match(sync, /git checkout -B\s+"?<worker-branch>"?\s+"?<integration-sha>"?/,
+      "the first worker command checks out the worker branch at the integration SHA");
+    requireText(sync, /test\s+"\$\(git rev-parse HEAD\)"\s*=\s*"<integration-sha>"/, "the sync command asserts the integration SHA");
+    requireText(sync, /mismatch[\s\S]*return `failed_infra`/i, "a sync mismatch is returned as failed_infra");
+    const headings = markdownHeadings(prompt).map(({ title }) => title);
+    assert.ok(
+      headings.indexOf("First command — sync to the integration tip") < headings.indexOf("What to build"),
+      "the sync step precedes ticket instructions",
+    );
+    requireText(sync, /every worker prompt[\s\S]*including ticket 1/i, "the first ticket also receives the sync step");
   });
 
   it("caps workers and verifiers together and gives pending verifiers priority", async () => {
     const dispatch = await readTextOrNull(dispatchPath);
     assert.ok(dispatch, "the dispatch contract exists");
-    requireText(dispatch, /default(?:s)? (?:in-flight )?cap (?:is|of) 4/i, "the shared cap defaults to four");
-    requireText(dispatch, /--concurrency N/, "the cap has a concurrency override");
-    requireText(dispatch, /workers and verifiers together|workers plus verifiers/i, "workers and verifiers use the same cap");
-    requireText(dispatch, /verifiers?\s+(?:are\s+)?(?:started|dispatched|take)\s+before\s+(?:starting\s+|dispatching\s+)?new workers/i, "verifiers have priority over new workers");
+    const cap = markdownSection(dispatch, "Shared concurrency cap");
+    assert.ok(cap, "the shared concurrency cap section exists");
+    requireText(cap, /default(?:s)? (?:in-flight )?cap (?:is|of) 4/i, "the shared cap defaults to four");
+    requireText(cap, /--concurrency N/, "the cap has a concurrency override");
+    requireText(cap, /workers and verifiers together|workers plus verifiers/i, "workers and verifiers use the same cap");
+    requireText(cap, /verifiers?\s+(?:are\s+)?(?:started|dispatched|take)\s+before\s+(?:starting\s+|dispatching\s+)?new workers/i, "verifiers have priority over new workers");
   });
 
   it("pipelines a fresh native verifier and keeps its report to raw evidence", async () => {
     const verification = await readTextOrNull(verificationPath);
     assert.ok(verification, "the verification contract exists");
-    requireText(verification, /as soon as (?:a )?worker\s+returns[\s\S]*?without waiting for the rest of the wave/i, "verification starts as each worker returns");
-    requireText(verification, /fresh (?:native )?subagent[\s\S]*never\s+the orchestrator/i, "the verifier is a separate native subagent");
-    requireText(verification, /subagent_type:\s*Explore/, "the first verifier is Explore");
-    requireText(verification, /too shallow to judge[\s\S]*general-purpose/i, "shallow evidence triggers a general-purpose verifier");
-    requireText(verification, /read-only/, "the fallback verifier is read-only");
-    requireText(verification, /raw evidence[\s\S]*no verdict/i, "the verifier returns evidence without a verdict");
+    const contract = markdownSection(verification, "Worker verification contract");
+    assert.ok(contract, "the worker verification contract section exists");
+    requireText(contract, /as soon as (?:a )?worker\s+returns[\s\S]*?without waiting for the rest of the wave/i, "verification starts as each worker returns");
+    requireText(contract, /fresh (?:native )?subagent[\s\S]*never\s+the orchestrator/i, "the verifier is a separate native subagent");
+    requireText(contract, /subagent_type:\s*Explore/, "the first verifier is Explore");
+    requireText(contract, /too shallow to judge[\s\S]*general-purpose/i, "shallow evidence triggers a general-purpose verifier");
+    requireText(contract, /read-only/, "the fallback verifier is read-only");
+    requireText(contract, /raw evidence[\s\S]*no verdict/i, "the verifier returns evidence without a verdict");
   });
 
   it("runs each worker and verifier in the background with its own soft-timeout wait", async () => {
@@ -341,23 +372,28 @@ describe("implement-tickets worker dispatch and verification contract", () => {
     const verification = await readTextOrNull(verificationPath);
     assert.ok(dispatch, "the dispatch contract exists");
     assert.ok(verification, "the verification contract exists");
-    const combined = `${dispatch}\n${verification}`;
-    requireText(combined, /workers and verifiers[\s\S]*?background/i, "workers and verifiers run in the background");
-    requireText(combined, /one background wait per dispatch/i, "each child dispatch arms one background wait");
-    requireText(combined, /worker[^\n]*2700 seconds/i, "workers have a 2700-second timeout");
-    requireText(combined, /verifier[^\n]*900 seconds/i, "verifiers have a 900-second timeout");
-    requireText(combined, /wait (?:ends|completes) first[\s\S]*TaskStop/i, "an early wait stops its subagent");
-    requireText(combined, /timeout[\s\S]*failed_infra[\s\S]*does not count (?:as|against) (?:a\s+ticket\s+)?attempt/i, "timeouts are infra failures outside the attempt count");
+    const dispatchTimeouts = markdownSection(dispatch, "Background dispatch and timeouts");
+    const verificationContract = markdownSection(verification, "Worker verification contract");
+    assert.ok(dispatchTimeouts && verificationContract, "both dispatch and verification contract sections exist");
+    requireText(dispatchTimeouts, /Workers and verifiers are dispatched in the background/i, "workers and verifiers run in the background");
+    requireText(dispatchTimeouts, /one background wait per dispatch/i, "each child dispatch arms one background wait");
+    requireText(dispatchTimeouts, /Worker wait: 2700 seconds/i, "workers have a 2700-second timeout");
+    requireText(verificationContract, /Verifiers run in the background[\s\S]*900 seconds/i, "verifiers have a 900-second timeout");
+    requireText(dispatchTimeouts, /background wait ends first[\s\S]*TaskStop/i, "an early wait stops its subagent");
+    requireText(dispatchTimeouts, /timeout records `failed_infra` and does not count as a\s+ticket attempt/i, "timeouts are infra failures outside the attempt count");
   });
 
   it("routes crashes, lost subagents, and harness-cap rejections through infra retries", async () => {
     const dispatch = await readTextOrNull(dispatchPath);
     assert.ok(dispatch, "the dispatch contract exists");
-    requireText(dispatch, /crash(?:es|ed)? or lost subagents?[\s\S]*failed_infra/i, "crashed or lost subagents are infra failures");
-    requireText(dispatch, /Concurrent subagent limit reached/, "harness capacity rejections are recognized");
-    requireText(dispatch, /wait for a free slot[\s\S]*retry/i, "capacity rejections wait and retry");
-    requireText(dispatch, /do(?:es)? not count against (?:the )?two infra retries/i, "capacity waits do not use an infra retry");
-    requireText(dispatch, /after two infra retries[\s\S]*BLOCKED \(TICKET_PROVIDER_FAILED\)/i, "two infra retries end in the provider-failed status");
+    const cap = markdownSection(dispatch, "Shared concurrency cap");
+    const timeouts = markdownSection(dispatch, "Background dispatch and timeouts");
+    assert.ok(cap && timeouts, "the dispatch contract has cap and timeout sections");
+    requireText(timeouts, /child crash or lost subagent[\s\S]*failed_infra/i, "crashed or lost subagents are infra failures");
+    requireText(cap, /Concurrent subagent limit reached/, "harness capacity rejections are recognized");
+    requireText(cap, /wait for a free slot and retry/i, "capacity rejections wait and retry");
+    requireText(cap, /does not count against the two\s+infrastructure retries/i, "capacity waits do not use an infra retry");
+    requireText(timeouts, /After two infra retries[\s\S]*BLOCKED \(TICKET_PROVIDER_FAILED\)/i, "two infra retries end in the provider-failed status");
   });
 
   it("points execution mechanics to canonical contracts in scoped skill and guide sections", async () => {
@@ -518,24 +554,30 @@ describe("implement-tickets adapter and preflight contract", () => {
     assert.ok(schemaText, "the envelope schema exists");
     assert.ok(skill, "the core skill exists");
 
+    const contractHeadings = markdownHeadings(contract).map(({ title }) => title);
     for (const heading of ["Input", "Resume", "Failover", "Worktree cleanup"]) {
-      assert.match(contract, new RegExp(`^## ${heading}(?:$|\\s)`, "m"), `the adapter contract documents ${heading.toLowerCase()}`);
+      assert.ok(contractHeadings.includes(heading), `the adapter contract documents ${heading.toLowerCase()}`);
     }
+    const input = markdownSection(contract, "Input");
+    const failover = markdownSection(contract, "Failover");
+    const cleanup = markdownSection(contract, "Worktree cleanup");
+    const invocation = markdownSection(skill, "Invocation");
+    assert.ok(input && failover && cleanup && invocation, "the adapter and invocation sections exist");
     const schema = JSON.parse(schemaText);
     assert.deepEqual(schema.properties.outcome.enum, ["completed", "failed_infra", "failed_other"]);
     assert.deepEqual(schema.required, ["outcome", "session_id", "report", "usage"]);
-    assert.match(contract, /\| `completed` \|[^\n]*verification/i);
-    assert.match(contract, /\| `failed_infra` \|[^\n]*not counted[^\n]*two[^\n]*BLOCKED \(TICKET_PROVIDER_FAILED\)/i);
-    assert.match(contract, /\| `failed_other` \|[^\n]*one counted attempt/i);
-    assert.match(contract, /core creates[\s\S]*?worker branch[\s\S]*?worktree/i);
-    assert.match(contract, /passes[\s\S]*?worktree path/i);
-    assert.match(contract, /removes?[\s\S]*?after integration/i);
-    assert.match(contract, /native[\s\S]*?harness-managed isolation/i);
-    assert.match(skill, /`--with <backend>`[\s\S]*adapter/i);
-    assert.match(skill, /selected adapter\s+name is the Plan's backend/i);
-    assert.match(skill, /creates?[\s\S]*?worker branch[\s\S]*?worktree/i);
-    assert.match(skill, /passes[\s\S]*?path[\s\S]*?adapter/i);
-    assert.match(skill, /removes?[\s\S]*?after integration/i);
+    assert.match(failover, /\| `completed` \|[^\n]*verification/i);
+    assert.match(failover, /\| `failed_infra` \|[^\n]*not counted[^\n]*two[^\n]*BLOCKED \(TICKET_PROVIDER_FAILED\)/i);
+    assert.match(failover, /\| `failed_other` \|[^\n]*one counted attempt/i);
+    assert.match(input, /core creates[\s\S]*?worker\s+branch[\s\S]*?worktree/i);
+    assert.match(input, /passes its path to the adapter/i);
+    assert.match(cleanup, /removes?[\s\S]*?after integration/i);
+    assert.match(cleanup, /native[\s\S]*?harness-managed isolation/i);
+    assert.match(invocation, /`--with <backend>`[\s\S]*adapter/i);
+    assert.match(invocation, /selected adapter\s+name is the Plan's backend/i);
+    assert.match(invocation, /creates?[\s\S]*?worker branch[\s\S]*?worktree/i);
+    assert.match(invocation, /passes[\s\S]*?path[\s\S]*?adapter/i);
+    assert.match(invocation, /removes?[\s\S]*?after integration/i);
   });
 
   it("validates every scripted fixture envelope through preflight and rejects a malformed envelope", async () => {
@@ -586,12 +628,18 @@ describe("implement-tickets adapter and preflight contract", () => {
     for (const file of ["docs/guides/implement-tickets.md", "docs/skills/agents/implement-tickets.md"]) {
       const doc = await readTextOrNull(path.join(repoRoot, file));
       assert.ok(doc, `${file} exists`);
-      assert.ok(/--with <name>/.test(doc), `${file} documents adapter selection`);
-      assert.ok(/adapter-contract\.md/.test(doc), `${file} links the adapter contract`);
-      assert.ok(
-        /npx skills add <source> --skill implement-tickets-<name>/i.test(doc),
-        `${file} documents the source-based install line`,
-      );
+      const thaiUse = markdownSection(doc, file.includes("docs/guides/") ? "การเรียกใช้งาน" : "วิธีทำงานหลัก");
+      const thaiAdapter = markdownSection(doc, file.includes("docs/guides/") ? "ติดตั้ง" : "วิธีทำงานหลัก");
+      const englishUse = markdownSection(doc, "Purpose and use");
+      assert.ok(thaiUse && thaiAdapter && englishUse, `${file} has Thai usage and adapter sections and an English usage section`);
+      assert.match(thaiUse, /--with <name>/, `${file} Thai usage section documents adapter selection`);
+      assert.match(thaiAdapter, /adapter-contract\.md/, `${file} Thai adapter section links the contract`);
+      assert.match(thaiAdapter, /npx skills add <source> --skill implement-tickets-<name>/i,
+        `${file} Thai adapter section documents the source-based install line`);
+      assert.match(englishUse, /--with <name>/, `${file} English usage section documents adapter selection`);
+      assert.match(englishUse, /adapter-contract\.md/, `${file} English usage section links the adapter contract`);
+      assert.match(englishUse, /npx skills add <source> --skill implement-tickets-<name>/i,
+        `${file} English usage section documents the source-based install line`);
     }
   });
 });
@@ -607,8 +655,10 @@ describe("implement-tickets integration gate and run-state contract", () => {
   it("squash-merges a fully verified wave in ticket order and gates the combined result", async () => {
     const gate = await readTextOrNull(gatePath);
     assert.ok(gate, "the integration gate procedure exists");
+    const waveGate = markdownSection(gate, "Wave integration gate");
+    assert.ok(waveGate, "the wave integration gate section exists");
     requireText(
-      gate,
+      waveGate,
       /after every ticket in (?:the )?wave is verified[\s\S]*?squash-merge[\s\S]*?ticket(?:-number)?\s+order[\s\S]*?one commit per ticket[\s\S]*?full typecheck[\s\S]*?(?:full )?(?:test )?suite/i,
       "a verified wave is merged in order and checked as one result",
     );
@@ -617,66 +667,78 @@ describe("implement-tickets integration gate and run-state contract", () => {
   it("locates a gate culprit, restores the last good commit, preserves later verified tickets, and retries alone", async () => {
     const gate = await readTextOrNull(gatePath);
     assert.ok(gate, "the integration gate procedure exists");
-    requireText(gate, /gate fails[\s\S]*?re-merge[\s\S]*?ticket(?:-number)? order/i, "a failed gate is replayed in order");
-    requireText(gate, /after each merge[\s\S]*?typecheck[\s\S]*?suite/i, "each replayed merge runs both checks");
-    requireText(gate, /git checkout -B <integration-branch> <sha>/, "recovery checks out the last good commit onto the integration branch");
-    requireText(gate, /hard reset/i, "the recovery rule excludes hard reset");
-    requireText(gate, /already-verified later tickets[\s\S]*?without re-verifying/i, "later verified tickets are retained without another verifier run");
-    requireText(gate, /gate once more/i, "the rebuilt wave is gated once more");
-    requireText(gate, /re-dispatch(?:es)? the culprit alone as a serial attempt[\s\S]*?count(?:ing|s) one attempt/i, "only the culprit is retried and that retry counts once");
+    const recovery = markdownSection(gate, "Find and isolate a failing merge");
+    assert.ok(recovery, "the failing-merge recovery section exists");
+    requireText(recovery, /gate fails[\s\S]*?re-merge[\s\S]*?ticket(?:-number)? order/i, "a failed gate is replayed in order");
+    requireText(recovery, /after each merge[\s\S]*?typecheck[\s\S]*?suite/i, "each replayed merge runs both checks");
+    requireText(recovery, /git checkout -B <integration-branch> <sha>/, "recovery checks out the last good commit onto the integration branch");
+    requireText(recovery, /hard reset/i, "the recovery rule excludes hard reset");
+    requireText(recovery, /already-verified later tickets[\s\S]*?without re-verifying/i, "later verified tickets are retained without another verifier run");
+    requireText(recovery, /gate once more/i, "the rebuilt wave is gated once more");
+    requireText(recovery, /re-dispatch(?:es)? the culprit alone as a serial attempt[\s\S]*?count(?:ing|s) one attempt/i, "only the culprit is retried and that retry counts once");
   });
 
   it("blocks a ticket after three verification failures and reports held and independent paths", async () => {
     const state = await readTextOrNull(statePath);
     assert.ok(state, "the run-state and resume procedure exists");
-    requireText(state, /three failed verification attempts[\s\S]*?BLOCKED \(TICKET_VERIFICATION_FAILED\)/i, "three verification failures block the ticket");
-    requireText(state, /dependants?[\s\S]*?(?:held|not started)[\s\S]*?next frontier/i, "only dependants are held at the next frontier");
-    requireText(state, /independent tickets[\s\S]*?available partial path/i, "independent tickets are reported as an available partial path");
-    requireText(state, /halt report[\s\S]*?blocked tickets[\s\S]*?held tickets[\s\S]*?resume command/i, "the halt report names blocked tickets, held tickets, and the resume command");
-    requireText(state, /\/implement-tickets continue <feature-slug>/, "the halt report gives the implement-tickets continue command");
+    const failure = markdownSection(state, "Verification failure and partial path");
+    assert.ok(failure, "the verification-failure section exists");
+    requireText(failure, /three failed verification attempts[\s\S]*?BLOCKED \(TICKET_VERIFICATION_FAILED\)/i, "three verification failures block the ticket");
+    requireText(failure, /dependants?[\s\S]*?(?:held|not started)[\s\S]*?next frontier/i, "only dependants are held at the next frontier");
+    requireText(failure, /independent tickets[\s\S]*?available partial path/i, "independent tickets are reported as an available partial path");
+    requireText(failure, /halt report[\s\S]*?blocked tickets[\s\S]*?held tickets[\s\S]*?resume command/i, "the halt report names blocked tickets, held tickets, and the resume command");
+    requireText(failure, /\/implement-tickets continue <feature-slug>/, "the halt report gives the implement-tickets continue command");
   });
 
   it("defines the status header and per-ticket table, including reported usage totals", async () => {
     const state = await readTextOrNull(statePath);
     assert.ok(state, "the run-state and resume procedure exists");
-    requireText(state, /^skill: implement-tickets/m, "status.md starts with the skill identity");
-    const template = state.match(/```markdown\s*([\s\S]*?)```/)?.[1];
+    const runState = markdownSection(state, "Run status, failure, and resume");
+    assert.ok(runState, "the run-state format section exists");
+    requireText(runState, /^skill: implement-tickets/m, "status.md starts with the skill identity");
+    const template = runState.match(/```markdown\s*([\s\S]*?)```/)?.[1];
     assert.ok(template, "the run-state reference includes a status.md template");
     assert.equal(template.split(/\r?\n/, 1)[0], "skill: implement-tickets", "the template's first line is the skill identity");
     requireText(
-      state,
+      runState,
       /\| Ticket \| Wave \| Backend \| Touch set \| Status \| Session ID \| Attempts \| Branch \| Commit \| Budget estimate \| Usage total \| Verifier usage total \|/i,
       "the ticket table contains all required state and usage columns",
     );
-    requireText(state, /usage_total[\s\S]*every dispatch and resume[\s\S]*delivering path/i, "worker usage is summed across dispatches and resumes on the delivering path");
-    requireText(state, /possibly cache-inclusive/i, "reported usage is marked as possibly cache-inclusive");
-    requireText(state, /`?unknown`? when none (?:is|was) reported/i, "missing usage is recorded as unknown");
-    requireText(state, /verifier_usage_total[\s\S]*verifier\s+dispatch/i, "verifier usage is tracked separately");
+    requireText(runState, /usage_total[\s\S]*every dispatch and resume[\s\S]*delivering path/i, "worker usage is summed across dispatches and resumes on the delivering path");
+    requireText(runState, /possibly cache-inclusive/i, "reported usage is marked as possibly cache-inclusive");
+    requireText(runState, /`?unknown`? when none (?:is|was) reported/i, "missing usage is recorded as unknown");
+    requireText(runState, /verifier_usage_total[\s\S]*verifier\s+dispatch/i, "verifier usage is tracked separately");
   });
 
   it("refuses legacy state and reconciles, rewinds, replans, and resumes valid state", async () => {
     const state = await readTextOrNull(statePath);
     assert.ok(state, "the run-state and resume procedure exists");
-    requireText(state, /continue[\s\S]*status\.md\s+without the first line[\s\S]*refus/i, "continue refuses a status file without the identity line");
-    requireText(state, /recover the old skill from git history or start over/i, "legacy-state refusal gives the recovery choices");
-    requireText(state, /continue[\s\S]*reconcile[\s\S]*git/i, "continue reconciles recorded state against git");
-    requireText(state, /drift[\s\S]*git checkout -B <integration-branch> <sha>/, "continue rewinds drift through a branch checkout");
-    requireText(state, /re-present the Plan[\s\S]*resume from (?:the )?(?:earliest eligible )?frontier/i, "continue presents the reconciled Plan and resumes at the frontier");
+    const continueSection = markdownSection(state, "Continue and reconcile");
+    assert.ok(continueSection, "the continue and reconcile section exists");
+    requireText(continueSection, /status\.md\s+without the first line[\s\S]*refus/i, "continue refuses a status file without the identity line");
+    requireText(continueSection, /recover the old skill from git history or start over/i, "legacy-state refusal gives the recovery choices");
+    requireText(continueSection, /reconcile each recorded integration branch[\s\S]*against Git/i, "continue reconciles recorded state against git");
+    requireText(continueSection, /drift[\s\S]*git checkout -B <integration-branch> <sha>/, "continue rewinds drift through a branch checkout");
+    requireText(continueSection, /re-present the Plan[\s\S]*resume from (?:the )?(?:earliest eligible )?frontier/i, "continue presents the reconciled Plan and resumes at the frontier");
   });
 
   it("keeps status and list read-only", async () => {
     const state = await readTextOrNull(statePath);
     assert.ok(state, "the run-state and resume procedure exists");
-    requireText(state, /status \[slug\][\s\S]*list[\s\S]*read-only[\s\S]*change nothing/i, "status and list only report saved state");
+    const inspection = markdownSection(state, "Read-only inspection");
+    assert.ok(inspection, "the read-only inspection section exists");
+    requireText(inspection, /status \[slug\][\s\S]*list[\s\S]*read-only[\s\S]*change nothing/i, "status and list only report saved state");
   });
 
   it("hands off a green integrated run without starting review or publication", async () => {
     const gate = await readTextOrNull(gatePath);
     assert.ok(gate, "the integration gate procedure exists");
-    requireText(gate, /every ticket is integrated[\s\S]*last suite is green[\s\S]*handoff/i, "a successful run prints a handoff after its final gate");
-    requireText(gate, /implement-tickets\/<(?:feature-)?slug>/, "the handoff names the integration branch");
-    requireText(gate, /review commands/i, "the handoff names review commands");
-    requireText(gate, /do not run review, push, or (?:open|create) a pull\s+request/i, "the run stops before review and publication");
+    const handoff = markdownSection(gate, "Successful handoff");
+    assert.ok(handoff, "the successful handoff section exists");
+    requireText(handoff, /every ticket is integrated[\s\S]*last suite is green[\s\S]*handoff/i, "a successful run prints a handoff after its final gate");
+    requireText(handoff, /implement-tickets\/<(?:feature-)?slug>/, "the handoff names the integration branch");
+    requireText(handoff, /review commands/i, "the handoff names review commands");
+    requireText(handoff, /do not run review, push, or (?:open|create) a pull\s+request/i, "the run stops before review and publication");
   });
 
   it("documents the gate, status file, and resume command on both user-facing pages", async () => {
