@@ -1234,6 +1234,67 @@ describe("check-tickets", () => {
     assert.ok(!resSkipped.errors.some((e) => /differs from the measurement/.test(e)), resSkipped.errors.join("\n"));
   });
 
+  describe("optional Risk field", () => {
+    // Insert a Risk line directly after the named field line, leaving the
+    // Budget text the helper measured without it untouched.
+    const withRisk = (t, line, { after = "**Budget:**" } = {}) => {
+      const lines = t.text.split("\n");
+      const at = lines.findIndex((l) => l.startsWith(after));
+      lines.splice(at + 1, 0, line);
+      return { ...t, text: lines.join("\n") };
+    };
+    const first = (t) => [t, ...passing().slice(1)];
+    const riskErrors = (tickets) => checkFeature({ spec, tickets }).errors.filter((e) => /Risk/.test(e));
+    const base = passing()[0];
+
+    it("passes a ticket with no Risk field exactly as before", () => {
+      assert.deepEqual(checkFeature({ spec, tickets: passing() }).errors, []);
+    });
+
+    it("accepts low and high with an em dash reason directly after Budget", () => {
+      assert.deepEqual(checkFeature({ spec, tickets: first(withRisk(base, "**Risk:** low")) }).errors, []);
+      assert.deepEqual(
+        checkFeature({ spec, tickets: first(withRisk(base, "**Risk:** high — changes a shared interface")) }).errors,
+        [],
+      );
+    });
+
+    it("reports a malformed Risk value", () => {
+      for (const bad of [
+        "**Risk:** high",
+        "**Risk:** high — ",
+        "**Risk:** High — shared interface",
+        "**Risk:** LOW",
+        "**Risk:** high - shared interface",
+        "**Risk:** medium",
+        "**Risk:** low — because",
+        "**Risk:**",
+      ]) {
+        const errors = riskErrors(first(withRisk(base, bad)));
+        assert.ok(
+          errors.some((e) => /01-export-members\.md: \*\*Risk:\*\* is malformed/.test(e)),
+          `${bad}: ${errors.join("\n")}`,
+        );
+      }
+    });
+
+    it("reports a Risk line that is not directly after Budget, or is repeated", () => {
+      const afterStatus = withRisk(base, "**Risk:** low", { after: "**Status:**" });
+      assert.ok(
+        riskErrors(first(afterStatus)).some((e) => /\*\*Risk:\*\* must come directly after \*\*Budget:\*\*/.test(e)),
+      );
+      const twice = withRisk(withRisk(base, "**Risk:** low"), "**Risk:** low");
+      assert.ok(riskErrors(first(twice)).some((e) => /\*\*Risk:\*\* is repeated/.test(e)));
+    });
+
+    it("leaves the measured Budget unchanged when a Risk line is added by hand", () => {
+      const reasoned = withRisk(base, "**Risk:** high — " + "x".repeat(40000));
+      const res = checkFeature({ spec, tickets: first(reasoned) });
+      assert.ok(!res.errors.some((e) => /differs from the measurement/.test(e)), res.errors.join("\n"));
+      assert.equal(res.budgets[0].line, checkFeature({ spec, tickets: passing() }).budgets[0].line);
+    });
+  });
+
   // --- --write-budget and the report's budget table ---
   it("--write-budget, in any argument position, rewrites every Budget line and then reports", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "check-tickets-budget-"));
