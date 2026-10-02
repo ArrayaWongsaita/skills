@@ -39,6 +39,11 @@ Before every delegation, apply the eligibility checklist in
 self-contained, it fits the budget, and its outcome is verifiable by a diff
 or a test run.
 
+Size the subtask against the planning budget before dispatch, and split an
+oversized one into chunks that each fit: the footprint formula, the budget
+numbers, the split rule, and the overflow symptoms to check on a result are
+in [budget-and-chunking.md](references/budget-and-chunking.md).
+
 Keep on the host anything touching secrets, `.env` or credential files,
 tickets marked `Risk: high`, or code the user has marked as staying local;
 keep design, architecture, security-sensitive edits, and debugging that needs

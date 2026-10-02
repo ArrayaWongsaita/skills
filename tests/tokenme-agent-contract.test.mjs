@@ -13,6 +13,10 @@ const canonicalDir = "skills/agents/tokenme-agent";
 const skillFile = path.resolve(canonicalDir, "SKILL.md");
 const agentConfigFile = path.resolve(canonicalDir, "agents/openai.yaml");
 const policyFile = path.resolve(canonicalDir, "references/delegation-policy.md");
+const budgetGuideFile = path.resolve(
+  canonicalDir,
+  "references/budget-and-chunking.md",
+);
 
 async function fileExists(filePath) {
   await access(filePath, constants.R_OK);
@@ -345,6 +349,189 @@ describe("tokenme-agent delegation policy contract", () => {
       markdown,
       /\bNever\b|\bDo not\b|\bDon't\b/i,
       "the skill steers positively",
+    );
+  });
+});
+
+describe("tokenme-agent budget and chunking contract", () => {
+  it("ships the guide and resolves the skill's link to it from What to delegate", async () => {
+    await fileExists(budgetGuideFile);
+    const markdown = await readFile(skillFile, "utf8");
+    const whatToDelegate = markdownSection(markdown, "What to delegate");
+    assert.ok(whatToDelegate, "the What to delegate section exists");
+    const links = sectionLinks(whatToDelegate);
+    const guideLink = links.find((link) =>
+      link.endsWith("references/budget-and-chunking.md"),
+    );
+    assert.ok(
+      guideLink,
+      "the What to delegate section links to references/budget-and-chunking.md",
+    );
+    await fileExists(path.resolve(canonicalDir, guideLink));
+  });
+
+  it("sizes every delegation against the 60k planning budget with the 90k ceiling, not the 128k window", async () => {
+    const guide = await readFile(budgetGuideFile, "utf8");
+    const budget = flatMarkdownSection(guide, "The planning budget");
+    assert.match(
+      budget,
+      /planning budget of 60k tokens/,
+      "the planning budget is 60k tokens",
+    );
+    assert.match(
+      budget,
+      /footprint plus the run's fixed overhead/,
+      "the budget counts the task's footprint plus the run's fixed overhead",
+    );
+    assert.match(
+      budget,
+      /ceiling is 90k tokens/,
+      "the ceiling is 90k tokens",
+    );
+    assert.match(
+      budget,
+      /128k window is not the planning number/,
+      "the model's 128k window is named as not the planning number",
+    );
+  });
+
+  it("gives the footprint formula, the two overhead figures, and a worked example", async () => {
+    const guide = await readFile(budgetGuideFile, "utf8");
+    const formula = flatMarkdownSection(guide, "The footprint formula");
+    assert.match(
+      formula,
+      /footprint = file bytes \/ 4 \* 1\.5/,
+      "the formula is file bytes divided by 4, times 1.5",
+    );
+    assert.match(
+      formula,
+      /divided by 4/,
+      "the prose states the division by 4",
+    );
+    assert.match(
+      formula,
+      /times 1\.5/,
+      "the prose states the multiplication by 1.5",
+    );
+    assert.match(
+      formula,
+      /the fixed overhead is added on top/,
+      "the footprint excludes the fixed overhead, which is added separately",
+    );
+    assert.match(
+      formula,
+      /about 1k for a bare run/,
+      "a bare run adds about 1k of fixed overhead",
+    );
+    assert.match(
+      formula,
+      /about 28k for a run that is not bare/,
+      "a run that is not bare adds about 28k of fixed overhead",
+    );
+    assert.match(
+      formula,
+      /three files totalling 120 KB/,
+      "the worked example uses three files totalling 120 KB",
+    );
+    assert.match(
+      formula,
+      /about 45k of footprint/,
+      "120 KB comes to about 45k of footprint",
+    );
+    assert.match(
+      formula,
+      /plus about 1k of bare overhead/,
+      "the bare example adds about 1k of overhead",
+    );
+    assert.match(
+      formula,
+      /it fits/,
+      "the 120 KB example fits the budget",
+    );
+    assert.match(
+      formula,
+      /about 400 KB/,
+      "the second example points at about 400 KB",
+    );
+    assert.match(
+      formula,
+      /about 150k/,
+      "400 KB comes to about 150k",
+    );
+    assert.match(
+      formula,
+      /does not fit/,
+      "the 400 KB example does not fit the budget",
+    );
+  });
+
+  it("splits an oversized job into independent chunks that run as separate delegate runs", async () => {
+    const guide = await readFile(budgetGuideFile, "utf8");
+    const splitting = flatMarkdownSection(guide, "Splitting an oversized job");
+    assert.match(
+      splitting,
+      /refactor spanning forty files/,
+      "a refactor spanning forty files is the oversized example",
+    );
+    assert.match(
+      splitting,
+      /per-file or per-directory chunks/,
+      "the split is into per-file or per-directory chunks",
+    );
+    assert.match(
+      splitting,
+      /each chunk runs as a separate delegate run/,
+      "each chunk runs as its own delegate run",
+    );
+    assert.match(
+      splitting,
+      /none depends on another chunk's output/,
+      "the chunks do not depend on each other's output",
+    );
+  });
+
+  it("names the three overflow symptoms and treats a run showing one as failed", async () => {
+    const guide = await readFile(budgetGuideFile, "utf8");
+    const symptoms = flatMarkdownSection(guide, "Overflow symptoms");
+    assert.match(
+      symptoms,
+      /Truncated edits/,
+      "truncated edits are a named symptom",
+    );
+    assert.match(
+      symptoms,
+      /omits files it was told to touch/,
+      "a result that omits files it was told to touch is a named symptom",
+    );
+    assert.match(
+      symptoms,
+      /terminal reason other than `completed`/,
+      "a terminal reason other than completed is a named symptom",
+    );
+    assert.match(
+      symptoms,
+      /is treated as failed/,
+      "a run showing one symptom is treated as failed",
+    );
+    assert.match(
+      symptoms,
+      /re-split the task into smaller chunks/,
+      "the failed run's task is re-split smaller",
+    );
+  });
+
+  it("answers oversized work with a split and leaves compaction out of the plan", async () => {
+    const guide = await readFile(budgetGuideFile, "utf8");
+    const compaction = flatMarkdownSection(guide, "Compaction");
+    assert.match(
+      compaction,
+      /Compaction is never relied on/,
+      "compaction is never relied on",
+    );
+    assert.match(
+      compaction,
+      /split is what brings an oversized task back inside the budget/,
+      "the split, not compaction, brings an oversized task back inside the budget",
     );
   });
 });
