@@ -3,9 +3,9 @@
   "evals": [
     {
       "id": 1,
-      "name": "planning pauses for approval before any source mutation",
-      "prompt": "/implement-tickets .scratch/approval-demo/issues/ with a valid ticket set. Present the Plan and wait.",
-      "expected_output": "The orchestrator presents the Plan, pauses for explicit approval, and confirms no file outside the feature directory changes before approval.",
+      "name": "strict planning pauses for approval before any source mutation",
+      "prompt": "/implement-tickets .scratch/approval-demo/issues/ --strict with a valid ticket set. Present the Plan and wait.",
+      "expected_output": "The orchestrator presents the Plan, pauses for explicit approval because the run is strict, and confirms no file outside the feature directory changes before approval.",
       "expectations": [
         "Reads the ticket set and required parent context before planning",
         "Does not dispatch, write status, or mutate source before explicit approval"
@@ -205,7 +205,7 @@
       "id": 20,
       "name": "--strict pauses for Plan approval and names Strictness",
       "prompt": "/implement-tickets .scratch/demo/issues/ --strict",
-      "expected_output": "The Plan names Strictness: strict on its own line next to the run mode, then pauses for approval. No worker is dispatched and no run state is written until the person approves. Until the default is flipped a run with no flag behaves the same way.",
+      "expected_output": "The Plan names Strictness: strict on its own line next to the run mode, then pauses for approval. No worker is dispatched and no run state is written until the person approves.",
       "expectations": [
         "Accepts --strict once per run, independent of --parallel, --serial, --concurrency, --with, --agent, and --model",
         "Prints a Strictness: line next to Run mode and does not treat a strictness change as a change of waves",
@@ -219,7 +219,7 @@
       "id": 21,
       "name": "verifier runs for strict runs and risky tickets only",
       "prompt": "/implement-tickets .scratch/demo/issues/ --strict. A worker returns a completed report for a Risk: low ticket. Decide whether to verify.",
-      "expected_output": "A strict run dispatches a fresh verifier for every ticket, including Risk: low. Without --strict once the default has been flipped, a ticket with no Risk: high, no risk signal, and complete evidence is judged by the orchestrator from its evidence and integrated with no verifier; Risk: high, a counted retry, measured extras, an unknown touch set, incomplete evidence, or a rerun after a real merge conflict each give a fresh verifier.",
+      "expected_output": "A strict run dispatches a fresh verifier for every ticket, including Risk: low. Without --strict, in default strictness, a ticket with no Risk: high, no risk signal, and complete evidence is judged by the orchestrator from its evidence and integrated with no verifier; Risk: high, a counted retry, measured extras, an unknown touch set, incomplete evidence, or a rerun after a real merge conflict each give a fresh verifier.",
       "expectations": [
         "Dispatches a fresh verifier in a strict run even for a Risk: low ticket",
         "Skips the verifier in default strictness only when there is no Risk: high, no risk signal, and complete evidence",
@@ -240,6 +240,19 @@
         "Keeps a recorded strict run strict when continue is run without --strict",
         "Reads a record with no Strictness: line as strict and a row with no Verifier column as Verifier: ran",
         "Lists tickets that skipped the verifier by number in the final handoff"
+      ],
+      "files": []
+    },
+    {
+      "id": 23,
+      "name": "a run with no flag is in default strictness and starts without a pause",
+      "prompt": "/implement-tickets .scratch/demo/issues/ with a valid ticket set and no flag.",
+      "expected_output": "The Plan names Strictness: default on its own line next to the run mode, is printed, and the run starts without waiting for approval. Only risky tickets get a fresh verifier.",
+      "expectations": [
+        "Prints the Plan and dispatches the first wave without an approval pause",
+        "Names Strictness: default next to the run mode",
+        "Writes the run record when the run starts",
+        "Still stops on a dependency cycle or failed preflight before dispatch"
       ],
       "files": []
     }

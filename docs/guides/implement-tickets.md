@@ -8,7 +8,7 @@
 ### implement-tickets คืออะไร?
 
 `implement-tickets` ช่วยนำชุด ticket ที่ publish แล้วไปสู่แผนงาน การ implement
-และการตรวจสอบก่อนรวมงาน โดยมีจุดส่งต่อให้ผู้ใช้ทบทวนก่อนเริ่ม execute
+และการตรวจสอบก่อนรวมงาน โดยมีจุดหยุดให้ผู้ใช้ทบทวนก่อนเริ่ม execute เมื่อใช้ `--strict`
 
 ### การเรียกใช้งาน
 
@@ -33,8 +33,8 @@ npx skills add ArrayaWongsaita/skills --skill implement-tickets
 ### ขั้นตอนหลัก
 
 1. **Plan:** อ่าน ticket และเตรียมแผนสำหรับชุดงาน
-2. **Pause:** ให้ผู้ใช้ทบทวนและอนุมัติแผน
-3. **Execute:** ทำงานและตรวจผลก่อนรวมงาน
+2. **Pause:** ให้ผู้ใช้ทบทวนและอนุมัติแผนเมื่อรันแบบ `--strict` (ค่าเริ่มต้นไม่หยุดรอ)
+3. **Execute:** ทำงาน และตรวจผลด้วย verifier ทุก ticket ใน strict run หรือเฉพาะ ticket ที่เสี่ยงในค่าเริ่มต้น ก่อนรวมงาน
 4. **Handoff:** ส่งต่อ integration branch และ review commands แล้วหยุดก่อน review, push หรือเปิด PR
 
 ### Integration gate, status, and resume
@@ -49,7 +49,7 @@ npx skills add ArrayaWongsaita/skills --skill implement-tickets
 
 ### Dispatch, verifier และ timeout
 
-หลังอนุมัติ ให้อ้างอิง [dispatch contract](../../skills/agents/implement-tickets/references/dispatch-contract.md),
+เมื่อเริ่ม execute (หลังอนุมัติใน strict run) ให้อ้างอิง [dispatch contract](../../skills/agents/implement-tickets/references/dispatch-contract.md),
 [worker prompt scaffold](../../skills/agents/implement-tickets/references/prompt-scaffold.md)
 และ [verification contract](../../skills/agents/implement-tickets/references/verification.md).
 
@@ -72,10 +72,10 @@ marker ของ parallel execution อยู่ใน
 ใช้ `--strict` (ตั้งครั้งเดียวต่อการรัน และไม่ขึ้นกับ option อื่น) เพื่อให้หยุดรอการอนุมัติ Plan
 ก่อน dispatch worker หรือเขียน run state Plan ระบุ strictness ไว้ในบรรทัด `Strictness:` ถัดจาก
 `Run mode:` และการเปลี่ยน strictness ไม่ถือเป็นการเปลี่ยน wave
-จนกว่าจะเปลี่ยนค่าเริ่มต้น การรันที่ไม่มี flag ยังเป็น strict ส่วนพฤติกรรมของ default strictness ใช้เมื่อไม่มี `--strict`
+การรันที่ไม่มี flag อยู่ใน default strictness: พิมพ์ Plan แล้วเริ่มทำงานโดยไม่หยุดรออนุมัติ และใช้ verifier เฉพาะ ticket ที่เสี่ยง
 run record เก็บ strictness และคอลัมน์ Risk กับ Verifier ของแต่ละ ticket (`Verifier: skipped` คือ ticket ที่ข้าม verifier)
 `continue` resume ตาม strictness ที่บันทึกไว้ ส่วน `continue --strict` เปลี่ยนเป็น strict และขออนุมัติ Plan ใหม่ และ handoff ระบุเลข ticket ที่ข้าม verifier
-หลังเปลี่ยนค่าเริ่มต้นแล้ว Planning error หยุดการรันทั้งสองค่า และ strict ไม่เพิ่มการถาม extras,
+Planning error หยุดการรันทั้งสองค่า และ strict ไม่เพิ่มการถาม extras,
 warning pause หรือลด retry budget
 และ [ADR 0021](../decisions/0021-touch-set-drift-without-reapproval.md)
 
@@ -132,7 +132,7 @@ for saved runs. See the shared glossary entry for
 
 ### Dispatch and verification
 
-After approval, follow the [dispatch contract](../../skills/agents/implement-tickets/references/dispatch-contract.md),
+Once execution starts (after approval in a strict run), follow the [dispatch contract](../../skills/agents/implement-tickets/references/dispatch-contract.md),
 [worker prompt scaffold](../../skills/agents/implement-tickets/references/prompt-scaffold.md),
 and [verification contract](../../skills/agents/implement-tickets/references/verification.md).
 
@@ -153,8 +153,8 @@ parallel mode. The validation marker is described in the
 Pass `--strict` (set once per run, independent of the other options) to pause for Plan
 approval before any worker is dispatched or any run state is written. The Plan names
 the strictness on a `Strictness:` line next to `Run mode:`, and a change of strictness
-is not a change of waves. Until the default is flipped a run with no flag stays strict;
-default-strictness behavior applies without `--strict` once the default has been flipped.
+is not a change of waves. A run with no flag is in default strictness: it prints the Plan,
+starts without waiting for approval, and verifies only risky tickets.
 The run record stores the strictness and each ticket's Risk and Verifier columns
 (`Verifier: skipped` marks a ticket judged on evidence alone). `continue` resumes in
 the recorded strictness, `continue --strict` makes the run strict and asks for

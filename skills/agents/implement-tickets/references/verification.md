@@ -1,6 +1,8 @@
 # Worker verification contract
 
-The verifier is a fresh native subagent for each returned worker. It is never
+The verifier is a fresh native subagent for each returned worker that
+[risk-based verification](#risk-based-verification) sends to one: every worker
+in a strict run, and risky tickets otherwise. It is never
 the orchestrator and never the worker session. Dispatch it as soon as a worker
 returns, without waiting for the rest of the wave. A verifier has the ticket's
 acceptance criteria, the worker report, its changed test-file list, the
@@ -68,8 +70,7 @@ usual.
 
 Whether a returned worker gets a fresh verifier depends on strictness. The
 decision is made after the touch-set extras are measured and before a verifier
-would be dispatched. Default-strictness behavior applies without `--strict`
-once the default has been flipped; until then a run with no flag stays strict.
+would be dispatched. A run without `--strict` is in default strictness.
 
 - A strict run verifies every ticket, including one marked `Risk: low`, with a
   fresh verifier before it is integrated.

@@ -2,8 +2,9 @@
 
 Planning is read-only. Resolve the feature argument, load its ticket files and
 planning context, validate the ticket set, calculate waves, and present a Plan.
-Pause for explicit approval before dispatching or changing any file outside the
-feature directory.
+A strict run pauses for explicit approval before dispatching or changing any file
+outside the feature directory; a run with no flag, in default strictness, prints
+the Plan and starts without a pause.
 
 ## 1. Resolve and read the feature
 
@@ -107,9 +108,8 @@ Also state:
   waves;
 - strictness on a `Strictness:` line next to the run mode: `strict` with
   `--strict`. A change of strictness is not a change of waves and does not
-  change them. Until the default is flipped a run with no flag is strict.
-  Default-strictness behavior applies without `--strict` once the default has
-  been flipped;
+  change them. A run with no flag is in default strictness: it prints the Plan
+  and starts without waiting for approval;
 - concurrency cap, in parallel mode only: `4` by default or the supplied
   `--concurrency N`. In serial mode there is nothing to cap, so the Plan shows
   no concurrency cap; the shared worker-and-verifier cap of four stays enforced
@@ -125,11 +125,11 @@ Also state:
   a narrower infrastructure retry.
 
 A strict run presents the Plan and dispatches no worker and writes no run
-state until the person approves. Until the default is flipped a run with no
-flag pauses the same way. Planning errors and a failed preflight stop the run
+state until the person approves. A run with no flag is in default strictness:
+it prints the Plan and starts without a pause. Planning errors and a failed preflight stop the run
 before any dispatch in both strictness values.
 
-Pause for explicit approval after presenting the Plan. The approval covers the
+In a strict run, pause for explicit approval after presenting the Plan. The approval covers the
 run mode, waves, blockers, ticket set, budget, backend, and concurrency. A
 change to any of them asks for approval before continuing. Accepted extras do
 not change the Plan structure and need no new approval. No file outside the
