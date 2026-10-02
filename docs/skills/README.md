@@ -25,6 +25,7 @@ npx skills add ArrayaWongsaita/skills --all
 | `opencode-implement` | Turn a directory of grill-to-tickets tickets into working code on a resolved, pinned hosted opencode model by planning execution waves, dispatching one headless opencode run worker per ticket in parallel within each wave up to a concurrency cap, forcing test-first implementation, verifying every result, automatically routing to a native-subagent fallback for any ticket the resolved model cannot deliver, integrating one commit per ticket onto a branch, and stopping before review. | [คู่มือ / Guide](agents/opencode-implement.md) |
 | `retro-to-remedies` | Review a finished Run's primary sources to classify misses into environment remedies, commit applied text remedies, record outcomes in the Retro Log, and hand off code remedies before pr-to-dev. | [คู่มือ / Guide](agents/retro-to-remedies.md) |
 | `review-to-pr` | Pick up a verified-but-unreviewed integration branch where implement, agy-implement, or implement-tickets stopped and drive it to a PR-ready state — pin a review point, run a bounded two-axis code-review loop, cluster the blockers and land each as one fix(review) commit, run a conditional system scrutinize gate, get the full suite green, then hand off the PR command without opening the PR. | [คู่มือ / Guide](agents/review-to-pr.md) |
+| `tokenme-agent` | Delegate mechanical, self-contained subtasks — a rename across small files, boilerplate, mechanical formatting, lint-and-report, log summarising — to a cheap headless tokenme run so host context and quota stay available for work that needs judgment. Load it when you recognise a mechanical, self-contained subtask in your own plan, or when the task text says "use tokenme", "delegate this", or "do this cheaply". Keep on the host anything touching secrets, credentials or `.env` files, high-risk tickets, code the user marked as staying local, design and architecture choices, and tasks that need this chat's earlier context. | [คู่มือ / Guide](agents/tokenme-agent.md) |
 
 ### Install this category / ติดตั้งทั้งหมวด
 
@@ -39,7 +40,8 @@ npx skills add ArrayaWongsaita/skills \
   --skill implement-tickets \
   --skill opencode-implement \
   --skill retro-to-remedies \
-  --skill review-to-pr
+  --skill review-to-pr \
+  --skill tokenme-agent
 ```
 
 ## git / หมวด git

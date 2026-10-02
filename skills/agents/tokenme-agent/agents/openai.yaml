@@ -1,0 +1,6 @@
+interface:
+  display_name: "Tokenme Agent"
+  short_description: "Delegate mechanical subtasks to a cheap headless tokenme run"
+  default_prompt: "Use $tokenme-agent to delegate this mechanical, self-contained subtask to a cheap tokenme run: [task description]."
+policy:
+  allow_implicit_invocation: true
