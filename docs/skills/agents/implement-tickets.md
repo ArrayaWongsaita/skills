@@ -78,6 +78,8 @@ review, push หรือเปิด PR
 ก่อน dispatch worker หรือเขียน run state Plan ระบุ strictness ไว้ในบรรทัด `Strictness:` ถัดจาก
 `Run mode:` และการเปลี่ยน strictness ไม่ถือเป็นการเปลี่ยน wave
 จนกว่าจะเปลี่ยนค่าเริ่มต้น การรันที่ไม่มี flag ยังเป็น strict ส่วนพฤติกรรมของ default strictness ใช้เมื่อไม่มี `--strict`
+run record เก็บ strictness และคอลัมน์ Risk กับ Verifier ของแต่ละ ticket (`Verifier: skipped` คือ ticket ที่ข้าม verifier)
+`continue` resume ตาม strictness ที่บันทึกไว้ ส่วน `continue --strict` เปลี่ยนเป็น strict และขออนุมัติ Plan ใหม่ และ handoff ระบุเลข ticket ที่ข้าม verifier
 หลังเปลี่ยนค่าเริ่มต้นแล้ว Planning error หยุดการรันทั้งสองค่า และ strict ไม่เพิ่มการถาม extras,
 warning pause หรือลด retry budget
 และ [ADR 0021](../../decisions/0021-touch-set-drift-without-reapproval.md)
@@ -158,6 +160,10 @@ approval before any worker is dispatched or any run state is written. The Plan n
 the strictness on a `Strictness:` line next to `Run mode:`, and a change of strictness
 is not a change of waves. Until the default is flipped a run with no flag stays strict;
 default-strictness behavior applies without `--strict` once the default has been flipped.
+The run record stores the strictness and each ticket's Risk and Verifier columns
+(`Verifier: skipped` marks a ticket judged on evidence alone). `continue` resumes in
+the recorded strictness, `continue --strict` makes the run strict and asks for
+approval again, and the handoff lists the tickets that skipped the verifier.
 Planning errors stop the run in both strictness values, and strict adds no extras
 approval, warning pause, or smaller retry budget.
 

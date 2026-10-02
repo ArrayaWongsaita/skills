@@ -1,6 +1,6 @@
 # Run status, failure, and resume
 
-Each approved run is recorded in `.scratch/<feature-slug>/status.md`. This
+Each run is recorded in `.scratch/<feature-slug>/status.md`. This
 single Markdown file is the run record. Its first line is exactly
 `skill: implement-tickets`:
 
@@ -9,20 +9,36 @@ skill: implement-tickets
 # Run status: <feature-slug>
 
 Run mode: serial
+Strictness: strict
 Integration branch: `implement-tickets/<feature-slug>`
 Integration commit: `<current-sha>`
 Usage is reported as given and is possibly cache-inclusive.
 
-| Ticket | Wave | Backend | Touch set | Extras | Status | Session ID | Attempts | Branch | Commit | Budget estimate | Usage total | Verifier usage total |
-| --- | --- | --- | --- | --- | --- | --- | ---: | --- | --- | ---: | ---: | ---: |
-| 01 | 1 | native | `src/main.mjs` | `none` | integrated | `<session-id>` | 1 | `implement-tickets-work/<feature-slug>/01` | `<sha>` | `<Budget line or none>` | `<reported total or unknown>` | `<reported total or unknown>` |
+| Ticket | Wave | Backend | Touch set | Extras | Status | Session ID | Attempts | Branch | Commit | Budget estimate | Usage total | Verifier usage total | Risk | Verifier |
+| --- | --- | --- | --- | --- | --- | --- | ---: | --- | --- | ---: | ---: | ---: | --- | --- |
+| 01 | 1 | native | `src/main.mjs` | `none` | integrated | `<session-id>` | 1 | `implement-tickets-work/<feature-slug>/01` | `<sha>` | `<Budget line or none>` | `<reported total or unknown>` | `<reported total or unknown>` | `low` | `ran` |
 ```
 
 Keep one row per ticket in dependency order. Record its wave, selected backend,
 touch set, accepted extras, current status, latest session ID, ticket attempts, worker branch,
 integrated commit, and `budget_estimate` from the ticket's Budget line verbatim
 (`none` if absent). Record the run mode (`Run mode: serial` or `Run mode: parallel`), the
-integration branch, and the current integration commit above the table. The Extras column sits after the Touch set column and lists the ticket's
+integration branch, and the current integration commit above the table.
+Record the run's strictness on a `Strictness:` line next to `Run mode:`
+(`Strictness: strict` or `Strictness: default`). A record with no `Strictness:`
+line was written before strictness existed and is read as strict, with every
+integrated ticket counted as verified.
+
+The Risk and Verifier columns come after the existing columns. Risk holds the
+ticket's risk decision: `high`, `low`, or the signal that raised it. Verifier
+holds `ran` or `skipped`. A ticket whose verifier is skipped is recorded as
+`verified` with `Verifier: skipped` once the orchestrator has judged its
+evidence, never as `verifying`, so it follows the same wave-wait, hold, merge,
+and `continue` paths as a verified ticket. A row with no Verifier column is
+read as `Verifier: ran`. A default-strictness run (without `--strict` once the
+default has been flipped) writes its run record when the run starts, rather
+than after an approval, so an interrupted run can be inspected with `status`;
+a strict run writes it after approval. The Extras column sits after the Touch set column and lists the ticket's
 accepted extra files (`none` when there are none). Write a ticket's extras to
 the run state when they are accepted, not at the end of the wave, so a crash
 loses nothing. A clean-merge overlap (paths shared by two tickets that merged
@@ -124,7 +140,8 @@ the attempts end in the existing blocked state.
 ## Read-only inspection
 
 `/implement-tickets status [slug]` reads the selected `status.md` and reports
-its ticket rows, current integration reference, and run state.
+its ticket rows, current integration reference, and run state. `status` shows
+the run's strictness and each ticket's verifier outcome (`ran` or `skipped`).
 `/implement-tickets list` reads discovered `.scratch/*/status.md` files and
 prints one summary per run. Both commands are read-only: they only read state
 and change nothing. They do not reconcile refs, rewrite status, or start agents.
@@ -151,15 +168,25 @@ For a valid status file:
    line predates the mode and counts as parallel when any wave holds more than
    one ticket, otherwise as serial. A mode change needs approval because it
    changes the waves.
-5. Re-present the Plan using reconciled Git state, current blockers, and
-   eligible tickets. When `continue` re-presents the Plan, rerun the manifest
-   check against the current spec and ticket files. If `spec.md` was edited
-   between sessions, include the spec-hash warning in the Plan. Wait for
-   approval before dispatching, unless only accepted
+5. Read the strictness from the `Strictness:` line; `continue` resumes in the
+   recorded strictness. Re-present the Plan using reconciled Git state, current
+   blockers, and eligible tickets. When `continue` re-presents the Plan, rerun
+   the manifest check against the current spec and ticket files. If `spec.md`
+   was edited between sessions, include the spec-hash warning in the Plan.
+   A strict run waits for approval before dispatching, unless only accepted
    extras happened: then reconcile Git and resume without a new approval, and
-   re-ask only unanswered parked questions. A change to the run mode, waves,
-   blockers, ticket set, budget, backend, or concurrency, or an edit the
-   person requests, still needs approval.
+   re-ask only unanswered parked questions. In default strictness (without
+   `--strict` once the default has been flipped) `continue` asks for no
+   approval unless the Plan changed, and accepted extras alone still need
+   none. A change to the run mode, waves, blockers, ticket set, budget,
+   backend, or concurrency, a spec-hash change, or an edit the person
+   requests, still needs approval in both strictness values.
+   `continue --strict` records the run as strict, re-presents the Plan, and
+   dispatches nothing until the person approves. A ticket recorded with
+   `Verifier: skipped` that is not yet integrated gets a fresh verifier before
+   its merge; an integrated one is not re-verified and stays listed in the
+   handoff. `continue` without `--strict` on a run recorded as strict stays
+   strict: a run only gets stricter.
    `continue` re-asks any unanswered parked question; that is a question about
    extras, not a Plan approval. It derives held and deferred state from the
    parked rows, the notes line, and Git, so no extra status token is added.

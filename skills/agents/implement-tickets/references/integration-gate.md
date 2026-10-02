@@ -119,4 +119,9 @@ from the complete list:
 | 02 | `docs/research/topic.md` |
 ```
 
+List the tickets that skipped the fresh verifier, by number, in the handoff
+(for example `Skipped the verifier: 02, 04`), so review knows what was judged on
+worker evidence alone. An already integrated ticket recorded with
+`Verifier: skipped` stays listed. Print `none` when every ticket was verified.
+
 Stop after printing the handoff. Do not run review, push, or open a pull request.
