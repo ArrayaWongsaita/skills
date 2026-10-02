@@ -105,6 +105,11 @@ Also state:
 - run mode: serial by default, or parallel with `--parallel` or
   `--concurrency N`; a change of mode needs approval because it changes the
   waves;
+- strictness on a `Strictness:` line next to the run mode: `strict` with
+  `--strict`. A change of strictness is not a change of waves and does not
+  change them. Until the default is flipped a run with no flag is strict.
+  Default-strictness behavior applies without `--strict` once the default has
+  been flipped;
 - concurrency cap, in parallel mode only: `4` by default or the supplied
   `--concurrency N`. In serial mode there is nothing to cap, so the Plan shows
   no concurrency cap; the shared worker-and-verifier cap of four stays enforced
@@ -118,6 +123,11 @@ Also state:
   mode and the marker says `status: not validated`;
 - retry budget: three ticket attempts, unless the run contract later defines
   a narrower infrastructure retry.
+
+A strict run presents the Plan and dispatches no worker and writes no run
+state until the person approves. Until the default is flipped a run with no
+flag pauses the same way. Planning errors and a failed preflight stop the run
+before any dispatch in both strictness values.
 
 Pause for explicit approval after presenting the Plan. The approval covers the
 run mode, waves, blockers, ticket set, budget, backend, and concurrency. A

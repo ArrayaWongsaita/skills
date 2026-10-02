@@ -1852,3 +1852,65 @@ describe("implement-tickets touch-set drift decision record and docs", () => {
     }
   });
 });
+
+describe("implement-tickets --strict flag and Plan strictness", () => {
+  const read = async (rel) => (await readTextOrNull(path.join(skillRoot, rel)))?.replace(/\s*\n\s*/g, " ");
+
+  it("lists --strict as set once per run and independent of the other options", async () => {
+    const skill = await read("SKILL.md");
+    const entry = skill.match(/- `--strict`.*?(?= - `|\. Before presenting|$)/)?.[0];
+    assert.ok(entry, "--strict is listed among the options");
+    assert.match(entry, /once per run/i);
+    for (const opt of ["--parallel", "--serial", "--concurrency", "--with", "--agent", "--model"]) {
+      assert.ok(entry.includes(opt), `${opt} named as independent`);
+    }
+    assert.match(entry, /independent/i);
+  });
+
+  it("makes a strict run present the Plan and dispatch and write nothing until approval", async () => {
+    const skill = await read("SKILL.md");
+    const planning = await read("references/planning.md");
+    for (const text of [skill, planning]) {
+      assert.match(text, /strict run[\s\S]{0,200}(?:no worker|dispatch)[\s\S]{0,200}(?:run state|run-state)/i);
+    }
+  });
+
+  it("names Strictness on its own line next to Run mode and keeps it out of the waves", async () => {
+    const planning = await read("references/planning.md");
+    assert.match(planning, /`Strictness:` line[\s\S]{0,120}run mode/i);
+    assert.match(planning, /change of strictness[\s\S]{0,120}(?:not|never)[\s\S]{0,60}waves/i);
+  });
+
+  it("states default strictness as applying only once the default has been flipped", async () => {
+    const skill = await read("SKILL.md");
+    const planning = await read("references/planning.md");
+    for (const text of [skill, planning]) {
+      assert.match(text, /without `--strict` once the default has been flipped/);
+      assert.match(text, /until the default is flipped[\s\S]{0,160}(?:no flag|without a flag)[\s\S]{0,120}(?:pauses?|strict)/i);
+    }
+  });
+
+  it("stops on planning errors and failed preflight in both strictness values", async () => {
+    const skill = await read("SKILL.md");
+    assert.match(skill, /both strictness values/i);
+    assert.match(skill, /(?:planning error|cycle|unresolved blocker)[\s\S]{0,300}both strictness values|both strictness values[\s\S]{0,300}(?:planning error|cycle|preflight)/i);
+  });
+
+  it("adds nothing to extras, warnings, or retry in strict mode", async () => {
+    const skill = await read("SKILL.md");
+    assert.match(skill, /strict adds nothing[\s\S]{0,200}extras[\s\S]{0,80}warning[\s\S]{0,80}retry/i);
+  });
+
+  it("describes --strict in the English and Thai docs and in the evals", async () => {
+    for (const file of ["docs/guides/implement-tickets.md", "docs/skills/agents/implement-tickets.md"]) {
+      const doc = await readTextOrNull(path.join(repoRoot, file));
+      const matches = doc.match(/--strict/g) ?? [];
+      assert.ok(matches.length >= 2, `${file} describes --strict in Thai and English`);
+      assert.match(doc, /Strictness:/);
+    }
+    const evals = JSON.parse(await read("evals/evals.json"));
+    const text = JSON.stringify(evals);
+    assert.match(text, /--strict/);
+    assert.match(text, /Strictness:/);
+  });
+});
