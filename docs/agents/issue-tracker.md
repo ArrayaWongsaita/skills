@@ -29,3 +29,11 @@ Used by `/wayfinder`. The **map** is a file with one **child** file per ticket.
 - **Frontier**: scan `.scratch/<effort>/issues/` for files that are open, unblocked, and unclaimed; first by number wins.
 - **Claim**: set `Status: claimed` and save before any work.
 - **Resolve**: append the answer under an `## Answer` heading, set `Status: resolved`, then append a context pointer (gist + link) to the map's Decisions-so-far in `map.md`.
+
+## Skill feedback
+
+Feedback on a skill from real use goes to GitHub issues on this repository, using the `Skill feedback` template (`.github/ISSUE_TEMPLATE/skill-feedback.md`), and not to `.scratch/`. These issues are a separate channel: no skill reads them as a tracker, and feature tickets stay local markdown as above.
+
+- Labels: `skill-feedback`, plus `skill:<name>` for the skill concerned (for example `skill:implement-tickets`).
+- Evidence is a summary or trimmed `status.md` rows; strip project names, paths, and private code.
+- Change a skill when similar issues recur (two or three) or one issue shows real damage, such as work merged to the wrong branch. Close each issue with the commit or ADR that answers it.
