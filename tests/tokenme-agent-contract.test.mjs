@@ -6,6 +6,8 @@ import path from "node:path";
 import {
   assertAbsentFromMarkdownSections,
   flatMarkdownSection,
+  markdownHeaderBlock,
+  markdownHeadings,
   markdownSection,
 } from "./helpers/markdown-contract.mjs";
 
@@ -1431,5 +1433,399 @@ describe("tokenme-agent prompt scaffold contract", () => {
       links.some((link) => link.endsWith("dispatch-contract.md")),
       "the rules section links to the deny list in dispatch-contract.md",
     );
+  });
+});
+
+describe("tokenme-agent repo wiring contract", () => {
+  const skillPageFile = path.resolve("docs/skills/agents/tokenme-agent.md");
+  const guideFile = path.resolve("docs/guides/tokenme-agent.md");
+  const indexFile = path.resolve("docs/skills/README.md");
+  const glossaryFile = path.resolve("docs/glossary.md");
+  const adr24File = path.resolve(
+    "docs/decisions/0024-tokenme-agent-model-invocable-with-guards.md",
+  );
+  const adr25File = path.resolve(
+    "docs/decisions/0025-tokenme-agent-bare-by-default-and-90k-budget.md",
+  );
+
+  // The glossary table row whose Term cell is `term`, backticks aside.
+  function tableRow(markdown, term) {
+    return (
+      markdown
+        .split("\n")
+        .find(
+          (line) =>
+            line.startsWith("|") &&
+            line.split("|")[1].trim().replace(/`/g, "") === term,
+        ) ?? null
+    );
+  }
+
+  it("ships the sibling layout parts: references, evals and the agent config", async () => {
+    for (const part of [
+      "SKILL.md",
+      "references/delegation-policy.md",
+      "references/budget-and-chunking.md",
+      "references/dispatch-contract.md",
+      "references/prompt-scaffold.md",
+      "evals/evals.json",
+      "evals/trigger-evals.json",
+      "agents/openai.yaml",
+    ]) {
+      await fileExists(path.resolve(canonicalDir, part));
+    }
+  });
+
+  it("lists tokenme-agent in the generated skill index linking to its skill page", async () => {
+    const index = await readFile(indexFile, "utf8");
+    const row = tableRow(index, "tokenme-agent");
+    assert.ok(row, "the generated index has a tokenme-agent row");
+    assert.match(
+      row,
+      /\[คู่มือ \/ Guide\]\(agents\/tokenme-agent\.md\)/,
+      "the tokenme-agent row links to its bilingual skill page",
+    );
+  });
+
+  it("publishes a bilingual skill page with an install line in both languages", async () => {
+    await fileExists(skillPageFile);
+    const page = await readFile(skillPageFile, "utf8");
+    const thai = markdownSection(page, "ภาษาไทย / Thai");
+    assert.ok(thai, "the skill page has a Thai section");
+    const english = markdownSection(page, "English / ภาษาอังกฤษ");
+    assert.ok(english, "the skill page has an English section");
+    for (const section of [thai, english]) {
+      assert.match(
+        section,
+        /npx skills add ArrayaWongsaita\/skills --skill tokenme-agent/,
+        "the section carries the install line",
+      );
+    }
+    assert.match(
+      markdownHeaderBlock(page),
+      /skills\/agents\/tokenme-agent\/SKILL\.md/,
+      "the page header links to the skill's SKILL.md",
+    );
+  });
+
+  it("tells the maintainer the repository validation gate is separate from the node test suite and is run before merging", async () => {
+    const page = await readFile(skillPageFile, "utf8");
+    const thai = flatMarkdownSection(page, "สำหรับผู้ดูแล (Maintainer notes)");
+    assert.match(
+      thai,
+      /`npm run validate`/,
+      "the Thai maintainer notes name npm run validate",
+    );
+    assert.match(
+      thai,
+      /แยกจาก node test suite/,
+      "the Thai maintainer notes separate the gate from the node test suite",
+    );
+    assert.match(
+      thai,
+      /ก่อน merge/,
+      "the Thai maintainer notes run the gate before merging",
+    );
+
+    const english = flatMarkdownSection(page, "For maintainers");
+    assert.match(
+      english,
+      /`npm run validate`/,
+      "the English maintainer notes name npm run validate",
+    );
+    assert.match(
+      english,
+      /separate from the node test suite/,
+      "the English maintainer notes separate the gate from the node test suite",
+    );
+    assert.match(
+      english,
+      /run before merging/,
+      "the English maintainer notes run the gate before merging",
+    );
+  });
+
+  it("publishes the Thai long-form guide with the install line", async () => {
+    await fileExists(guideFile);
+    const guide = await readFile(guideFile, "utf8");
+    assert.match(
+      markdownHeaderBlock(guide),
+      /skills\/agents\/tokenme-agent\/SKILL\.md/,
+      "the guide header links to the skill's SKILL.md",
+    );
+    const install = flatMarkdownSection(
+      guide,
+      "2. การพึ่งพา Skill อื่น (Dependencies) และการติดตั้ง",
+    );
+    assert.match(
+      install,
+      /npx skills add ArrayaWongsaita\/skills --skill tokenme-agent/,
+      "the guide's installation section carries the install line",
+    );
+    const topSections = markdownHeadings(guide).filter(
+      (heading) => heading.level === 2,
+    );
+    assert.ok(
+      topSections.length >= 5,
+      "the guide is long-form, with at least five numbered sections",
+    );
+  });
+
+  it("records ADR 0024: the skill is model-invocable, guarded by rules in the skill", async () => {
+    await fileExists(adr24File);
+    const adr = await readFile(adr24File, "utf8");
+    assert.match(
+      markdownHeaderBlock(adr),
+      /^# ADR 0024: /m,
+      "the file's title names ADR 0024",
+    );
+    assert.match(
+      markdownHeaderBlock(adr),
+      /^- Status \/ สถานะ: Accepted \/ ยอมรับแล้ว$/m,
+      "the status header marks the decision accepted",
+    );
+    for (const section of [
+      "Context / บริบท",
+      "Decision / การตัดสินใจ",
+      "Rejected alternatives / ทางเลือกที่ปฏิเสธ",
+      "Consequences / ผลที่ตามมา",
+    ]) {
+      assert.ok(
+        markdownSection(adr, section),
+        `ADR 0024 has a ${section} section`,
+      );
+    }
+
+    const context = flatMarkdownSection(adr, "Context / บริบท");
+    assert.match(
+      context,
+      /`agy-agent`/,
+      "the context names agy-agent among the explicit-only siblings",
+    );
+    assert.match(
+      context,
+      /`opencode-implement`/,
+      "the context names opencode-implement among the explicit-only siblings",
+    );
+    assert.match(
+      context,
+      /`disable-model-invocation: true`/,
+      "the context states the siblings' explicit-only frontmatter",
+    );
+    assert.match(
+      context,
+      /`implement-tickets`/,
+      "the context names the orchestrator the skill stays decoupled from",
+    );
+
+    const decision = flatMarkdownSection(adr, "Decision / การตัดสินใจ");
+    assert.match(
+      decision,
+      /ships model-invocable/,
+      "the decision ships the skill model-invocable",
+    );
+    assert.match(
+      decision,
+      /no `disable-model-invocation`/,
+      "the decision carries no disable-model-invocation frontmatter",
+    );
+    assert.match(
+      decision,
+      /allow_implicit_invocation: true/,
+      "the decision allows implicit invocation in the agent config",
+    );
+    assert.match(
+      decision,
+      /keep-local rules/,
+      "the decision's guards include the keep-local rules",
+    );
+    assert.match(
+      decision,
+      /eligibility checklist/,
+      "the decision's guards include the eligibility checklist",
+    );
+    assert.match(
+      decision,
+      /host verification/,
+      "the decision's guards include host verification",
+    );
+    assert.match(
+      decision,
+      /no-recursion rule/,
+      "the decision's guards include the no-recursion rule",
+    );
+
+    const rejected = flatMarkdownSection(
+      adr,
+      "Rejected alternatives / ทางเลือกที่ปฏิเสธ",
+    );
+    assert.match(
+      rejected,
+      /Explicit-only invocation like the siblings/,
+      "the rejected alternative is the siblings' explicit-only invocation",
+    );
+
+    const consequences = flatMarkdownSection(adr, "Consequences / ผลที่ตามมา");
+    assert.match(
+      consequences,
+      /without a per-call request/,
+      "the consequences name the gateway exposure the guards answer",
+    );
+  });
+
+  it("records ADR 0025: bare by default and planned against the 90k ceiling with the measured numbers", async () => {
+    await fileExists(adr25File);
+    const adr = await readFile(adr25File, "utf8");
+    assert.match(
+      markdownHeaderBlock(adr),
+      /^# ADR 0025: /m,
+      "the file's title names ADR 0025",
+    );
+    assert.match(
+      markdownHeaderBlock(adr),
+      /^- Status \/ สถานะ: Accepted \/ ยอมรับแล้ว$/m,
+      "the status header marks the decision accepted",
+    );
+    for (const section of [
+      "Context / บริบท",
+      "Decision / การตัดสินใจ",
+      "Rejected alternatives / ทางเลือกที่ปฏิเสธ",
+      "Consequences / ผลที่ตามมา",
+    ]) {
+      assert.ok(
+        markdownSection(adr, section),
+        `ADR 0025 has a ${section} section`,
+      );
+    }
+
+    const context = flatMarkdownSection(adr, "Context / บริบท");
+    assert.match(
+      context,
+      /2026-10-02/,
+      "the context dates the measurement",
+    );
+    assert.match(
+      context,
+      /28,237/,
+      "the context records the measured overhead of a run that is not bare",
+    );
+    assert.match(
+      context,
+      /1,142/,
+      "the context records the measured overhead of a bare run",
+    );
+    assert.match(
+      context,
+      /90,000/,
+      "the context records the 90k compaction setting",
+    );
+    assert.match(
+      context,
+      /128,000/,
+      "the context records the 128k context cap",
+    );
+    assert.match(
+      context,
+      /no host in the loop/,
+      "the context names why compaction cannot be relied on",
+    );
+
+    const decision = flatMarkdownSection(adr, "Decision / การตัดสินใจ");
+    assert.match(
+      decision,
+      /bare by default/,
+      "the decision makes bare the default",
+    );
+    assert.match(
+      decision,
+      /60k-token planning budget/,
+      "the decision sets the 60k planning budget",
+    );
+    assert.match(
+      decision,
+      /90k as the ceiling/,
+      "the decision sets the 90k ceiling",
+    );
+    assert.match(
+      decision,
+      /file bytes ÷ 4 × 1\.5/,
+      "the decision names the footprint formula",
+    );
+    assert.match(
+      decision,
+      /about 1k bare, about 28k not bare/,
+      "the decision carries both overhead figures",
+    );
+    assert.match(
+      decision,
+      /per-file or per-directory chunks/,
+      "the decision splits oversized work into per-file or per-directory chunks",
+    );
+
+    const rejected = flatMarkdownSection(
+      adr,
+      "Rejected alternatives / ทางเลือกที่ปฏิเสธ",
+    );
+    assert.match(
+      rejected,
+      /Planning against the 128k window/,
+      "planning against the 128k window is rejected",
+    );
+    assert.match(
+      rejected,
+      /Relying on compaction/,
+      "relying on compaction is rejected",
+    );
+    assert.match(
+      rejected,
+      /Non-bare by default/,
+      "non-bare by default is rejected",
+    );
+
+    const consequences = flatMarkdownSection(adr, "Consequences / ผลที่ตามมา");
+    assert.match(
+      consequences,
+      /about 1k tokens of overhead instead of about 28k/,
+      "the consequences carry the measured saving",
+    );
+  });
+
+  it("defines the eight tokenme terms in bilingual glossary rows", async () => {
+    await fileExists(glossaryFile);
+    const glossary = await readFile(glossaryFile, "utf8");
+    const meanings = {
+      "delegate run": /headless `claude-tokenme -p`[\s\S]*self-contained task/,
+      "claude-tokenme": /`claude --settings [\s\S]*settings file/,
+      footprint: /÷ 4[\s\S]*× 1\.5[\s\S]*fixed overhead/,
+      "planning budget": /60k tokens[\s\S]*128k window is not the planning number/,
+      ceiling: /90k[\s\S]*compacts[\s\S]*trustworthy/,
+      "bare run": /`--bare`[\s\S]*about 1k[\s\S]*about 28k[\s\S]*travels in the prompt/,
+      envelope: /`is_error`[\s\S]*`terminal_reason`/,
+      host: /authority on correctness[\s\S]*verifies every delegate run/,
+    };
+    for (const [term, meaning] of Object.entries(meanings)) {
+      const row = tableRow(glossary, term);
+      assert.ok(row, `the glossary has a row for ${term}`);
+      assert.equal(
+        row.split("|").length,
+        5,
+        `the ${term} row has the Term, Thai, and Definition cells`,
+      );
+      assert.match(
+        row.split("|")[2],
+        /[\u0E00-\u0E7F]/,
+        `the ${term} row has a Thai cell`,
+      );
+      const definition = row.split("|")[3];
+      assert.ok(
+        definition.includes(" / "),
+        `the ${term} definition has an English half and a Thai half`,
+      );
+      assert.match(
+        definition,
+        meaning,
+        `the ${term} definition describes its tokenme meaning`,
+      );
+    }
   });
 });
