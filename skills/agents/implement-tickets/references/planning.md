@@ -1,134 +1,55 @@
 # Stage 0 — Planning procedure
 
-Planning is read-only. Resolve the feature argument, load its ticket files and
-planning context, validate the ticket set, calculate waves, and present a Plan.
-A strict run pauses for explicit approval before dispatching or changing any file
-outside the feature directory.
+Planning is read-only: resolve the feature, read its tickets, validate them,
+and print a Plan. The run starts right after the Plan is printed.
 
 ## 1. Resolve and read the feature
 
 - An explicit feature directory or `issues/` directory wins.
 - A bare slug resolves to `.scratch/<slug>/`.
-- Pass the resolved `issues/` directory to `scripts/waves.mjs`.
 - Read every numbered ticket, the parent `spec.md` sections it cites, the
   feature `CONTEXT.md` and ADRs, and the repository decisions relevant to the
   ticket set.
 
-Do not create prompts, reports, status files, branches, worktrees, or commits
-during planning. Wave computation uses ticket files only. The script also reads
-the optional parallel-validation marker and the feature's `manifest.json` for
-advisory warnings; manifest contents never determine waves.
+Prompts, status files, branches, worktrees, and commits all wait for the first
+dispatch.
 
-## 2. Parse and validate tickets
-
-For each `NN-<slug>.md`, record its number, title, `Blocked by`, `Seam`, and
-`Context` fields. Resolve blockers by ticket number or exact ticket title.
-Blockers must exist and have lower numbers; a missing blocker, forward blocker,
-cycle, malformed ticket, or inconsistent numbering halts planning with the
-specific ticket and reference named.
-
-The ticket checker uses middle-dot-separated Context items. Only `(edit)`,
-`(new)`, and `(edit from NN)` paths form the touch set. Plain and `(from NN)`
-items and `spec §` references are read-only. Normalize declared paths and sort
-them before reporting. A glob or an empty declared change set is unknown and
-raises a warning.
-
-## 3. Compute waves
-
-The run mode is serial by default. `--parallel` opts in to parallel mode, and
-`--concurrency N` implies it. Pass `--serial` to the script unless parallel mode
-is selected, so the script and its checker contract stay unchanged.
-
-Run:
+## 2. Validate
 
 ```bash
-node skills/agents/implement-tickets/scripts/waves.mjs <feature>/issues \
-  [--serial] [--concurrency N] [--marker <file>]
+node skills/agents/implement-tickets/scripts/plan.mjs <feature>/issues
 ```
 
-The script places tickets in ascending ticket order. A ticket's wave is after
-every blocker's wave and is the earliest eligible wave without a touch-set
-overlap. Paths overlap when they are equal or one is a directory prefix of the
-other. The directory-prefix rule is defensive: the checker rejects directory
-Context paths, so the contract fixture labels that overlap case unreachable
-from checker-valid ticket sets.
+The script returns JSON: per ticket the number, title, `blockers`, `touchSet`,
+`seam`, `risk`, and `warnings`, plus the combined `warnings`.
 
-A ticket with an unknown touch set receives an otherwise empty wave, and no
-later ticket joins that wave. Later tickets still obey blocker waves and touch
-overlap. `--serial` assigns each ticket its own wave in ticket order; it is the
-default mode.
-`--concurrency N` is echoed in the JSON output and does not change the waves;
-the orchestrator enforces the cap across workers and verifiers.
+Blockers must exist and have lower numbers, so ascending ticket number is the
+run order. A missing blocker, forward blocker, cycle, malformed ticket, or
+inconsistent numbering halts planning with the ticket and reference named.
 
-The output is JSON with `waves`, per-ticket `wave`, `blockers`, `touchSet`,
-`budget`, and `warnings`, the `concurrency` value, `parallelValidated`, and a
-`manifest` field shaped as `{statuses, warnings}`. Manifest warnings are also
-included in the top-level `warnings` list, alongside ticket warnings, so the
-Plan can present every planning warning. The marker is
-`references/parallel-validation.md` by default and can be replaced with
-`--marker <file>` for a fixture. A line `status: not validated` makes
-`parallelValidated` false. A line `status: validated <date>` makes it true.
+Only `(edit)`, `(new)`, and `(edit from NN)` Context paths form the touch set.
+A glob or an empty change set is an unknown touch set and raises a warning.
 
-## 4. Select the seam and match the agent
+## 3. Seam and agent
 
-Use each ticket's `**Seam:**` line verbatim when present. If it is absent, use
-the parent spec's Testing Decisions to select the narrowest public test seam
-that exercises the ticket's acceptance criteria, and record that seam. A
-criterion with no isolated test seam returns to planning for decomposition.
+Use each ticket's `**Seam:**` line verbatim. Without one, select the narrowest
+public test seam from the parent spec's Testing Decisions that exercises the
+acceptance criteria; a criterion with no isolated seam returns to planning for
+decomposition.
 
-Use an explicitly requested `--agent` pin for native workers. Otherwise match
-an available implementation-shaped agent by its name or description, falling
-back to `general-purpose`. The verifier is a fresh read-only agent, not the
-orchestrator. Record the matched worker agent for each ticket.
+Workers use `general-purpose` unless an available implementation-shaped agent
+fits the ticket by name or description. The verifier is a fresh read-only
+agent.
 
-## 5. Present the Plan and pause
+## 4. Print the Plan
 
-Present one row for every ticket, in ticket order:
+One row per ticket, in ticket order:
 
-| Ticket | Wave | Blockers | Budget | Touch set | Seam | Matched agent | Retry budget | Risk |
-| --- | ---: | --- | --- | --- | --- | --- | ---: | --- |
+| Ticket | Blockers | Touch set | Seam | Agent | Risk |
+| --- | --- | --- | --- | --- | --- |
 
-The Budget column shows the text after each ticket file's own Budget field
-label, or `none` when that field is absent. It is information only and applies
-no limit or triage.
+`Risk` is the script's `high` or `low`. A malformed or repeated Risk value reads
+as `high` and carries the script's warning.
 
-The Risk column shows each ticket's declared risk as the wave script reports it
-in its `risk` value: `high` or `low`. A ticket whose Risk field is absent (a missing field) is
-shown as `low`. A malformed or repeated Risk value reads as `high`, and the script adds a warning for
-it that the Plan carries. The declared risk changes no wave, blocker, or touch
-set.
-
-Also state:
-
-- backend: native harness subagents by default, or the selected `--with`
-  adapter;
-- run mode: serial by default, or parallel with `--parallel` or
-  `--concurrency N`; a change of mode needs approval because it changes the
-  waves;
-- strictness on a `Strictness:` line next to the run mode: `strict` with
-  `--strict`. A change of strictness is not a change of waves;
-- concurrency cap, in parallel mode only: `4` by default or the supplied
-  `--concurrency N`. In serial mode there is nothing to cap, so the Plan shows
-  no concurrency cap; the shared worker-and-verifier cap of four stays enforced
-  silently;
-- all script and planning warnings, including unknown touch sets;
-- manifest warnings join the other planning warnings in the Plan. Include the
-  spec-hash warning and its cure as reported: “Spec changed since the tickets
-  were checked; re-run the ticket checker with `--write-budget` to refresh the
-  manifest.”;
-- the standalone line `parallel not yet validated` when the run is in parallel
-  mode and the marker says `status: not validated`;
-- retry budget: three ticket attempts, unless the run contract later defines
-  a narrower infrastructure retry.
-
-A strict run presents the Plan and dispatches no worker and writes no run
-state until the person approves. A run with no flag is in default strictness:
-it prints the Plan and starts without a pause. Planning errors and a failed preflight stop the run
-before any dispatch in both strictness values.
-
-In a strict run, pause for explicit approval after presenting the Plan. The approval covers the
-run mode, waves, blockers, ticket set, budget, backend, and concurrency. A
-change to any of them asks for approval before continuing. Accepted extras do
-not change the Plan structure and need no new approval. No file outside the
-feature directory changes until approval. On a requested adjustment, update the
-Plan and ask for approval again; do not start execution based on silence.
+Also print every warning and the attempt budget from
+[attempts](verification.md#attempts).

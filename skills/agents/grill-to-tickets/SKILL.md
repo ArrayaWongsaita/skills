@@ -377,7 +377,6 @@ Manifest: .scratch/<feature-slug>/manifest.json
 
 Then implement the whole ticket directory in a fresh session:
 /implement-tickets .scratch/<feature-slug>/
-Optional adapter hint: add `--with <backend>` to the command.
 ```
 
 The manifest line appears only when the last checker run exited 0. Omit it when

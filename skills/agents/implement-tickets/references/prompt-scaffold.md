@@ -26,8 +26,8 @@ test "$(git rev-parse HEAD)" = "<integration-sha>" || { echo "failed_infra: HEAD
 
 The first command checks out the worker branch at the integration SHA. The
 second asserts that `HEAD` equals that exact SHA. If checkout fails or the
-assertion finds a mismatch, stop and return `failed_infra`; do not spend a
-ticket attempt or continue with implementation.
+assertion finds a mismatch, stop and return `failed_infra`; the ticket keeps its attempt and
+implementation waits for a fresh worker.
 
 ## What to build
 
@@ -66,7 +66,8 @@ has no typecheck command, report that instead of inventing one.
 - Reuse installed dependencies. If a new dependency is needed, stop and report
   it without installing.
 - Read only the listed files or files clearly required by them.
-- Commit the work on the worker branch. Do not push or open a pull request.
+- Commit the work on the worker branch and leave it local: the orchestrator
+  integrates it.
 - If a required design decision is missing, stop and report it.
 
 ## Return

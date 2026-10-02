@@ -3,226 +3,58 @@
   "evals": [
     {
       "id": 1,
-      "name": "strict planning pauses for approval before any source mutation",
-      "prompt": "/implement-tickets .scratch/approval-demo/issues/ --strict with a valid ticket set. Present the Plan and wait.",
-      "expected_output": "The orchestrator presents the Plan, pauses for explicit approval because the run is strict, and confirms no file outside the feature directory changes before approval.",
+      "name": "plan prints and the run starts without a pause",
+      "prompt": "/implement-tickets .scratch/demo/issues/ with a valid ticket set and no flag.",
+      "expected_output": "Preflight confirms a clean Git working tree, plan.mjs validates the tickets, and the Plan lists every ticket with blockers, touch set, seam, matched agent, and risk. The run starts right after the Plan is printed, with no approval pause.",
       "expectations": [
-        "Reads the ticket set and required parent context before planning",
-        "Does not dispatch, write status, or mutate source before explicit approval"
+        "Prints the Plan with one row per ticket and the retry budget",
+        "Starts dispatching after the Plan with no approval pause",
+        "Stops before any dispatch on a dirty working tree or a planning error"
       ],
       "files": []
     },
     {
       "id": 2,
-      "name": "ticket Seam and Context become the worker test boundary and read list",
-      "prompt": "/implement-tickets .scratch/context-demo/issues/ after Plan approval. Ticket 01 has a Seam and Context field.",
-      "expected_output": "Copies the ticket Seam verbatim into the worker prompt and turns Context into the worker's read list.",
+      "name": "tickets run serially in ascending number",
+      "prompt": "/implement-tickets .scratch/serial-demo/issues/ contains four independent tickets.",
+      "expected_output": "The orchestrator runs one ticket at a time in ascending number: worker, optional verifier, squash-merge, gate, then the next ticket.",
       "expectations": [
-        "Does not paraphrase the Seam",
-        "Uses Context as a read list and touch-set input"
+        "Dispatches one worker at a time in ascending ticket number",
+        "Starts the next ticket only after the previous gate is green",
+        "Offers no parallel, concurrency, or backend option"
       ],
       "files": []
     },
     {
       "id": 3,
-      "name": "fresh verifier reproduces red and checks acceptance coverage",
-      "prompt": "/implement-tickets .scratch/verify-demo/issues/ after Plan approval. Worker 01 returns green with a new test and a report.",
-      "expected_output": "A fresh verifier reproduces red on the test change at the pre-ticket integration SHA, reruns green with the worker commit, and returns evidence covering every acceptance criterion.",
+      "name": "ticket Seam and Context become the worker test boundary and read list",
+      "prompt": "/implement-tickets .scratch/context-demo/issues/. Ticket 01 has a Seam and Context field.",
+      "expected_output": "The worker prompt carries the ticket Seam verbatim as the test boundary and the Context paths as the Read, Change, and Create lists.",
       "expectations": [
-        "Verifier is a separate fresh subagent, not the orchestrator",
-        "Checks that the new tests fail before the implementation and verifies acceptance coverage"
+        "Uses the ticket Seam verbatim as the test seam",
+        "Splits Context into read, change, and create paths in the worker prompt"
       ],
       "files": []
     },
     {
       "id": 4,
-      "name": "blocked dependency branch preserves independent tickets",
-      "prompt": "/implement-tickets .scratch/partial-demo/issues/ after approval. Ticket 01 becomes BLOCKED (TICKET_VERIFICATION_FAILED) and ticket 03 depends on it; ticket 02 is independent.",
-      "expected_output": "Ticket 01 is BLOCKED, its dependants are held, and the independent ticket 02 continues to the verified partial path.",
+      "name": "first worker command syncs and asserts the integration SHA",
+      "prompt": "/implement-tickets .scratch/sync-demo/issues/. The worker worktree was checked out at the wrong commit.",
+      "expected_output": "The first worker command checks out the worker branch at the integration SHA and asserts HEAD equals it; a mismatch returns failed_infra and counts no ticket attempt.",
       "expectations": [
-        "Does not start a dependant whose blocker is blocked, and halts at the next frontier for this verification-failure block (the touch-set-approval parking exception does not apply)",
-        "Preserves independent work and reports the resume path"
+        "Runs the sync as the first command, including for ticket 1",
+        "Returns failed_infra on a checkout failure or HEAD mismatch",
+        "Counts no ticket attempt"
       ],
       "files": []
     },
     {
       "id": 5,
-      "name": "status and list remain read-only",
-      "prompt": "/implement-tickets status demo and then /implement-tickets list. The run has a dirty feature tree.",
-      "expected_output": "Status and list are read-only: they report saved run state and do not change files, dispatch work, or reconcile Git.",
+      "name": "verifier runs only for risky tickets",
+      "prompt": "/implement-tickets .scratch/demo/issues/. A worker returns a completed report for a Risk: low ticket with complete evidence and no extras. Decide whether to verify.",
+      "expected_output": "A ticket with no Risk: high, no risk signal, and complete evidence is judged by the orchestrator from the worker evidence and integrated with no verifier. Risk: high, a counted retry, measured extras, an unknown touch set, or incomplete evidence each give a fresh verifier.",
       "expectations": [
-        "Does not dispatch, edit files, or run resume reconciliation from status or list"
-      ],
-      "files": []
-    },
-    {
-      "id": 6,
-      "name": "handoff stops before review and publication",
-      "prompt": "/implement-tickets .scratch/handoff-demo/issues/ has passed the final integration gate.",
-      "expected_output": "The handoff reports the integration branch and review commands, then stops before review, push, or pull request creation.",
-      "expectations": [
-        "Does not begin review or publish the branch",
-        "Provides the integration branch and next review commands"
-      ],
-      "files": []
-    },
-    {
-      "id": 7,
-      "name": "independent tickets share a deterministic wave",
-      "prompt": "/implement-tickets --parallel .scratch/wave-demo/issues/ has three independent tickets with disjoint touch sets.",
-      "expected_output": "With --parallel, independent tickets with disjoint known touch sets enter the same wave, subject to the concurrency cap.",
-      "expectations": [
-        "Preserves ticket-number order in wave reporting"
-      ],
-      "files": []
-    },
-    {
-      "id": 8,
-      "name": "overlapping touch sets move to successive waves",
-      "prompt": "/implement-tickets --parallel .scratch/overlap-demo/issues/ has two otherwise independent tickets that both edit the same file.",
-      "expected_output": "With --parallel, the overlapping touch sets are serialized into successive waves so both workers do not edit the same known path at once.",
-      "expectations": [
-        "Names the overlap reason in the Plan"
-      ],
-      "files": []
-    },
-    {
-      "id": 9,
-      "name": "serial mode is the default and creates one ticket per wave",
-      "prompt": "/implement-tickets .scratch/serial-demo/issues/ without a mode flag contains four independent tickets.",
-      "expected_output": "Without a mode flag the run is serial, and --serial is accepted as an alias of this default, so the Plan places one ticket per wave regardless of independent touch sets; --parallel opts in to waves.",
-      "expectations": [
-        "States the run mode in the Plan and shows no concurrency cap in serial mode",
-        "Explains that --concurrency N implies parallel mode and that combining --serial with --parallel or --concurrency is rejected before the Plan"
-      ],
-      "files": []
-    },
-    {
-      "id": 10,
-      "name": "concurrency cap counts workers and verifiers together",
-      "prompt": "/implement-tickets --concurrency 3 .scratch/cap-demo/issues/ has a worker return while three subagents are active.",
-      "expected_output": "The concurrency cap of three counts workers and verifiers together; a pending verifier is started before a new worker.",
-      "expectations": [
-        "Does not exceed the combined active worker and verifier cap"
-      ],
-      "files": []
-    },
-    {
-      "id": 11,
-      "name": "first worker command syncs and asserts the integration SHA",
-      "prompt": "/implement-tickets .scratch/sync-demo/issues/ after approval. The worker worktree was checked out at the wrong commit.",
-      "expected_output": "The first command checks out the worker branch at the integration SHA and asserts HEAD equals that SHA; a mismatch returns failed_infra without counting an attempt.",
-      "expectations": [
-        "Includes the sync step in every worker prompt, including the first ticket"
-      ],
-      "files": []
-    },
-    {
-      "id": 12,
-      "name": "fresh native Explore verifier returns raw evidence without a verdict",
-      "prompt": "/implement-tickets .scratch/verifier-demo/issues/ after a worker returns with a shallow report.",
-      "expected_output": "A fresh native Explore verifier starts immediately; if its report is too shallow to judge, a fresh read-only general-purpose verifier returns raw evidence and no verdict.",
-      "expectations": [
-        "Verifier is never the orchestrator",
-        "Verifier reports observations and command output rather than passing or failing the ticket"
-      ],
-      "files": []
-    },
-    {
-      "id": 13,
-      "name": "timeouts crashes and lost subagents are infra retries outside ticket attempts",
-      "prompt": "/implement-tickets .scratch/infra-demo/issues/ after approval. A worker wait ends before its dispatch returns, then the replacement subagent crashes.",
-      "expected_output": "Timeout, crash, or lost subagent is recorded as failed_infra. Infra retries occur without counting an attempt; after two infra retries the ticket becomes BLOCKED (TICKET_PROVIDER_FAILED).",
-      "expectations": [
-        "Arms one background wait for each worker and verifier dispatch",
-        "Stops a subagent when the wait ends first"
-      ],
-      "files": []
-    },
-    {
-      "id": 14,
-      "name": "adapter selection reports the lock source and install line",
-      "prompt": "/implement-tickets --with codex .scratch/adapter-demo/issues/ has a lock entry from the user lock.",
-      "expected_output": "The --with adapter is resolved before planning, and missing-adapter guidance names the lock source and prints its source-derived install line.",
-      "expectations": [
-        "Passes the raw model value to the selected adapter"
-      ],
-      "files": []
-    },
-    {
-      "id": 15,
-      "name": "missing adapter stops before planning",
-      "prompt": "/implement-tickets --with absent .scratch/adapter-missing/issues/ has no matching installed adapter.",
-      "expected_output": "The missing adapter is reported before planning, with an install line derived from the project lock first and user lock second.",
-      "expectations": [
-        "Does not present a Plan or create run state for an unavailable adapter"
-      ],
-      "files": []
-    },
-    {
-      "id": 16,
-      "name": "adapter envelope outcomes preserve their required order",
-      "prompt": "/implement-tickets --with codex .scratch/envelope-demo/issues/ receives one result for each adapter outcome.",
-      "expected_output": "The adapter envelope handles failed_infra first, failed_other second, and completed last, with each outcome carrying the required evidence fields.",
-      "expectations": [
-        "Treats infrastructure failure without spending a ticket attempt"
-      ],
-      "files": []
-    },
-    {
-      "id": 17,
-      "name": "integration gate runs after verified tickets in ticket order",
-      "prompt": "/implement-tickets .scratch/gate-demo/issues/ has a fully verified wave with tickets 01 and 02.",
-      "expected_output": "The integration gate squash-merges tickets in ticket order, then runs the full typecheck and full suite on the integration branch before opening the next wave.",
-      "expectations": [
-        "A gate failure prevents dispatch of the next wave"
-      ],
-      "files": []
-    },
-    {
-      "id": 18,
-      "name": "first failing merge keeps the last good commit and retries the culprit serially",
-      "prompt": "/implement-tickets .scratch/recovery-demo/issues/ has a failed gate after replaying ticket commits.",
-      "expected_output": "The orchestrator isolates the first failing merge, returns the integration branch to the last good commit, keeps later verified tickets without re-verifying them, and runs the culprit in a serial attempt.",
-      "expectations": [
-        "Records the culprit and recovery sequence in status"
-      ],
-      "files": []
-    },
-    {
-      "id": 19,
-      "name": "spec-hash warning appears in the produced Plan after the spec changes",
-      "prompt": "/implement-tickets .scratch/stale-manifest/issues/ The ticket checker wrote manifest.json, then spec.md changed. Present the Plan.",
-      "expected_output": "The produced Plan shows the spec-hash warning: Spec changed since the tickets were checked; re-run the ticket checker with --write-budget to refresh the manifest. Planning continues to the approval pause.",
-      "expectations": [
-        "Reports the spec-hash mismatch in the produced Plan",
-        "Names --write-budget as the cure after spec.md changes since the tickets were checked",
-        "Keeps the manifest warning advisory so planning reaches the approval pause"
-      ],
-      "files": []
-    },
-    {
-      "id": 20,
-      "name": "--strict pauses for Plan approval and names Strictness",
-      "prompt": "/implement-tickets .scratch/demo/issues/ --strict",
-      "expected_output": "The Plan names Strictness: strict on its own line next to the run mode, then pauses for approval. No worker is dispatched and no run state is written until the person approves.",
-      "expectations": [
-        "Accepts --strict once per run, independent of --parallel, --serial, --concurrency, --with, --agent, and --model",
-        "Prints a Strictness: line next to Run mode and does not treat a strictness change as a change of waves",
-        "Dispatches no worker and writes no run state before approval",
-        "Stops on a dependency cycle or failed preflight before dispatch in both strictness values",
-        "Accepts an extra file with no deny-list, cap, or sibling-conflict problem without asking and adds no warning pause or smaller retry budget"
-      ],
-      "files": []
-    },
-    {
-      "id": 21,
-      "name": "verifier runs for strict runs and risky tickets only",
-      "prompt": "/implement-tickets .scratch/demo/issues/ --strict. A worker returns a completed report for a Risk: low ticket. Decide whether to verify.",
-      "expected_output": "A strict run dispatches a fresh verifier for every ticket, including Risk: low. Without --strict, in default strictness, a ticket with no Risk: high, no risk signal, and complete evidence is judged by the orchestrator from its evidence and integrated with no verifier; Risk: high, a counted retry, measured extras, an unknown touch set, incomplete evidence, or a rerun after a real merge conflict each give a fresh verifier.",
-      "expectations": [
-        "Dispatches a fresh verifier in a strict run even for a Risk: low ticket",
-        "Skips the verifier in default strictness only when there is no Risk: high, no risk signal, and complete evidence",
+        "Skips the verifier only when there is no Risk: high, no risk signal, and complete evidence",
         "Treats a Risk: low or missing field as never lowering a risk signal",
         "Counts no attempt for incomplete evidence and dispatches a fresh verifier",
         "Decides after extras are measured and before a verifier would be dispatched"
@@ -230,29 +62,98 @@
       "files": []
     },
     {
-      "id": 22,
-      "name": "status and continue record and honor strictness",
-      "prompt": "/implement-tickets continue demo --strict. The run is recorded as default strictness with ticket 02 Verifier: skipped and not yet integrated.",
-      "expected_output": "continue --strict records the run as strict, re-presents the Plan, and dispatches nothing until the person approves; ticket 02 gets a fresh verifier before its merge. continue without --strict on a strict run stays strict. status shows the strictness and each ticket's Verifier outcome, and the handoff lists tickets that skipped the verifier by number.",
+      "id": 6,
+      "name": "fresh native Explore verifier reproduces red and returns raw evidence without a verdict",
+      "prompt": "/implement-tickets .scratch/verifier-demo/issues/. A risky ticket's worker returns with a shallow report.",
+      "expected_output": "A fresh native Explore verifier reproduces red in a scratch checkout, runs the ticket tests, typecheck, and full suite on the worker branch, checks acceptance coverage, and returns raw evidence with no verdict. The orchestrator judges.",
       "expectations": [
-        "Records the run as strict and re-presents the Plan before any dispatch",
-        "Dispatches a fresh verifier before the merge of a not-yet-integrated Verifier: skipped ticket and does not re-verify an integrated one",
-        "Keeps a recorded strict run strict when continue is run without --strict",
-        "Reads a record with no Strictness: line as strict and a row with no Verifier column as Verifier: ran",
-        "Lists tickets that skipped the verifier by number in the final handoff"
+        "Dispatches a fresh Explore verifier, not the orchestrator or the worker",
+        "Reproduces red at the pre-ticket SHA with only the worker's test files",
+        "Returns raw evidence and no verdict",
+        "Falls back to a fresh general-purpose read-only verifier when the report is too shallow"
       ],
       "files": []
     },
     {
-      "id": 23,
-      "name": "a run with no flag is in default strictness and starts without a pause",
-      "prompt": "/implement-tickets .scratch/demo/issues/ with a valid ticket set and no flag.",
-      "expected_output": "The Plan names Strictness: default on its own line next to the run mode, is printed, and the run starts without waiting for approval. Only risky tickets get a fresh verifier.",
+      "id": 7,
+      "name": "crashes and lost subagents are infra retries outside ticket attempts",
+      "prompt": "/implement-tickets .scratch/infra-demo/issues/. A worker is lost before it returns, then the replacement subagent returns.",
+      "expected_output": "A crash, missing report, or lost subagent is failed_infra and is retried with a fresh child without counting an attempt; after two infra retries the ticket is BLOCKED (TICKET_PROVIDER_FAILED).",
       "expectations": [
-        "Prints the Plan and dispatches the first wave without an approval pause",
-        "Names Strictness: default next to the run mode",
-        "Writes the run record when the run starts",
-        "Still stops on a dependency cycle or failed preflight before dispatch"
+        "Records failed_infra and retries without counting an attempt",
+        "Blocks the ticket with TICKET_PROVIDER_FAILED after two infra retries"
+      ],
+      "files": []
+    },
+    {
+      "id": 8,
+      "name": "extras that the criteria do not explain are rejected",
+      "prompt": "/implement-tickets .scratch/extras-demo/issues/. A worker for ticket 02 also changed package-lock.json, which the ticket never mentions.",
+      "expected_output": "The orchestrator measures extras from the branch diff, rejects an extra the acceptance criteria do not explain, discards the branch and redispatches at the cost of one attempt; an explained extra is accepted, recorded, and makes the ticket risky.",
+      "expectations": [
+        "Measures extras from the git diff, not the worker's list",
+        "Rejects an unexplained extra at the cost of one attempt",
+        "Accepts an explained extra, records it, and verifies the ticket"
+      ],
+      "files": []
+    },
+    {
+      "id": 9,
+      "name": "integration gate squash-merges one commit per ticket and runs the full checks",
+      "prompt": "/implement-tickets .scratch/gate-demo/issues/. Ticket 01 passed verification.",
+      "expected_output": "The orchestrator squash-merges the ticket as one commit on the integration branch, then runs the full typecheck and the full test suite before the next ticket.",
+      "expectations": [
+        "Creates exactly one commit per ticket",
+        "Runs full typecheck and full test suite after the merge",
+        "Starts the next ticket only after a green gate"
+      ],
+      "files": []
+    },
+    {
+      "id": 10,
+      "name": "a failing gate rewinds and retries the ticket",
+      "prompt": "/implement-tickets .scratch/recovery-demo/issues/. The gate fails after ticket 02 is merged.",
+      "expected_output": "Ticket 02 is the culprit: the integration branch moves back to the last good commit with git checkout -B, and ticket 02 is redispatched with the failing output at the cost of one attempt.",
+      "expectations": [
+        "Rewinds with git checkout -B, not a hard reset",
+        "Redispatches the ticket with the failing output as one attempt",
+        "Records the failing check and last good commit in status.md"
+      ],
+      "files": []
+    },
+    {
+      "id": 11,
+      "name": "blocked ticket holds dependants and independent tickets continue",
+      "prompt": "/implement-tickets .scratch/partial-demo/issues/. Ticket 01 becomes BLOCKED (TICKET_VERIFICATION_FAILED) after three attempts and ticket 03 depends on it.",
+      "expected_output": "Ticket 03 and every transitive dependant are held; independent tickets continue; the report names each blocked and held ticket and the continue command.",
+      "expectations": [
+        "Holds every transitive dependant of the blocked ticket",
+        "Keeps running independent tickets",
+        "Names the blocked tickets, held tickets, and /implement-tickets continue <slug>"
+      ],
+      "files": []
+    },
+    {
+      "id": 12,
+      "name": "continue reconciles Git and restarts unfinished tickets",
+      "prompt": "/implement-tickets continue demo. status.md shows ticket 02 verifying and the integration branch one commit behind the recorded commit.",
+      "expected_output": "continue refuses a status.md without the first line skill: implement-tickets, reconciles recorded commits against Git, rewinds to the last good ticket commit, re-prints the Plan, and restarts ticket 02 from a fresh worker.",
+      "expectations": [
+        "Reconciles recorded commits against Git and rewinds with git checkout -B on drift",
+        "Restarts a verifying or dispatched ticket from a fresh worker",
+        "Does not re-verify an integrated ticket"
+      ],
+      "files": []
+    },
+    {
+      "id": 13,
+      "name": "handoff stops before review and publication",
+      "prompt": "/implement-tickets .scratch/handoff-demo/issues/ has passed the final integration gate.",
+      "expected_output": "The handoff reports the integration branch, review commands, accepted extras, and the tickets that skipped the verifier, then stops before review, push, or pull request creation.",
+      "expectations": [
+        "Does not begin review or publish the branch",
+        "Provides the integration branch and next review commands",
+        "Lists accepted extras and tickets that skipped the verifier"
       ],
       "files": []
     }
