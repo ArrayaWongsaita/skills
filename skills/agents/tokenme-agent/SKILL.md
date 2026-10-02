@@ -64,6 +64,10 @@ context. The full keep-local rules and the exclusion list live in
    templates — absolute paths, the conventions written in, and the rules
    the prompt itself carries — are in
    [prompt-scaffold.md](references/prompt-scaffold.md).
-3. **Verify** the outcome yourself before reporting done; treat the delegated
-   run's report as a claim to check, and report with your own verification
-   behind it.
+3. **Verify** the outcome yourself before reporting done: read the result
+   gate in [dispatch-contract.md](references/dispatch-contract.md) — the
+   envelope fields and exit code that decide success, the before-and-after
+   baseline comparison of the tree, and the test, build or lint check you
+   run where the task has one — and its failure policy for what happens
+   when a run fails. Treat the delegated run's report as a claim to check,
+   and report with your own verification behind it.

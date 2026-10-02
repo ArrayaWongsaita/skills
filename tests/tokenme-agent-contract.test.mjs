@@ -815,6 +815,289 @@ describe("tokenme-agent dispatch contract", () => {
   });
 });
 
+describe("tokenme-agent result gate, verification and failure policy contract", () => {
+  const dispatchFile = path.resolve(
+    canonicalDir,
+    "references/dispatch-contract.md",
+  );
+
+  async function dispatchSection(title) {
+    const dispatch = await readFile(dispatchFile, "utf8");
+    return flatMarkdownSection(dispatch, title);
+  }
+
+  it("counts a run as successful only on a clean envelope plus a zero exit code, and fails it with stderr otherwise", async () => {
+    const gate = await dispatchSection("The result gate");
+    assert.match(
+      gate,
+      /--output-format json/,
+      "the gate names the flag whose result object it reads",
+    );
+    assert.match(
+      gate,
+      /A run counts as successful only when/,
+      "the gate states its conjunctive success rule",
+    );
+    const noError = gate.search(/`is_error` false/);
+    const successSubtype = gate.search(/`subtype` reports success/);
+    const completed = gate.search(/`terminal_reason` is `completed`/);
+    const exitZero = gate.search(/exit code is zero/);
+    assert.notEqual(noError, -1, "gate condition one is a false is_error");
+    assert.notEqual(
+      successSubtype,
+      -1,
+      "gate condition two is a success subtype",
+    );
+    assert.notEqual(
+      completed,
+      -1,
+      "gate condition three is a completed terminal reason",
+    );
+    assert.notEqual(exitZero, -1, "gate condition four is a zero exit code");
+    assert.ok(
+      noError < successSubtype &&
+        successSubtype < completed &&
+        completed < exitZero,
+      "the four gate conditions appear in order",
+    );
+    assert.match(
+      gate,
+      /`is_error` true/,
+      "an error envelope is the named failure case",
+    );
+    assert.match(
+      gate,
+      /reports stderr/,
+      "a failed run's stderr is reported",
+    );
+    assert.match(
+      gate,
+      /treats the run as failed/,
+      "an envelope that fails the gate fails the run",
+    );
+    const links = sectionLinks(gate);
+    assert.ok(
+      links.some((link) => link.endsWith("budget-and-chunking.md")),
+      "the completed check points at the overflow symptoms in budget-and-chunking.md",
+    );
+    assert.doesNotMatch(
+      gate,
+      /Truncated edits/,
+      "the gate references the overflow symptom list instead of restating it",
+    );
+  });
+
+  it("records the pre-dispatch baseline and compares it after the run", async () => {
+    const baseline = await dispatchSection("The baseline comparison");
+    assert.match(
+      baseline,
+      /git rev-parse HEAD/,
+      "the host records HEAD before dispatch",
+    );
+    assert.match(
+      baseline,
+      /git status --porcelain --untracked-files=all/,
+      "the host records the full porcelain status list with every untracked file",
+    );
+    assert.match(
+      baseline,
+      /untracked files one by one/,
+      "the status list names untracked files one by one",
+    );
+    assert.match(
+      baseline,
+      /content hash of every file the prompt names/,
+      "the host hashes every file the prompt names",
+    );
+    assert.match(
+      baseline,
+      /expanded by the host to its files/,
+      "a named directory is expanded by the host to its files",
+    );
+    assert.match(
+      baseline,
+      /counts as named/,
+      "a file created under a named directory counts as named",
+    );
+    assert.match(
+      baseline,
+      /modified or untracked/,
+      "the host hashes every file already modified or untracked",
+    );
+    assert.match(
+      baseline,
+      /hashed individually/,
+      "each recorded file is hashed individually",
+    );
+    assert.match(
+      baseline,
+      /compares/,
+      "after the run the host records the same three and compares",
+    );
+  });
+
+  it("rejects a run when a file outside the named set changed or HEAD moved, and names what the comparison cannot see", async () => {
+    const baseline = await dispatchSection("The baseline comparison");
+    assert.match(
+      baseline,
+      /a new untracked file appears in the status list/,
+      "a new untracked file is caught by the comparison",
+    );
+    assert.match(
+      baseline,
+      /a commit the run made moves HEAD/,
+      "a commit the run made is caught by the comparison",
+    );
+    assert.match(
+      baseline,
+      /an edit to a file that was already dirty/,
+      "an edit to an already-dirty file is caught by the comparison",
+    );
+    assert.match(
+      baseline,
+      /is rejected when a file outside the named set changed or HEAD moved/,
+      "the run is rejected on an out-of-set change or a moved HEAD",
+    );
+    assert.match(
+      baseline,
+      /disjoint file sets/,
+      "parallel runs are attributed by their disjoint file sets",
+    );
+    assert.match(
+      baseline,
+      /ignores the other runs' file sets/,
+      "each run's comparison ignores the other runs' file sets",
+    );
+    assert.match(
+      baseline,
+      /gitignored files/,
+      "the comparison cannot see gitignored files",
+    );
+    assert.match(
+      baseline,
+      /`\.env`/,
+      "gitignored files are exemplified by `.env`",
+    );
+    assert.match(
+      baseline,
+      /ref changes that leave HEAD in place/,
+      "the comparison cannot see ref changes that leave HEAD in place",
+    );
+    for (const refForm of [
+      "git branch -f",
+      "git tag",
+      "git update-ref",
+      "git --git-dir",
+    ]) {
+      assert.ok(
+        baseline.includes(`\`${refForm}\``),
+        `the blind-spot list names ${refForm}`,
+      );
+    }
+    assert.match(
+      baseline,
+      /cleaned up or committed first/,
+      "unaccounted host work is cleaned up or committed before dispatch",
+    );
+  });
+
+  it("runs the test, build or lint check itself and reads the run's summary as a claim, not proof", async () => {
+    const verification = await dispatchSection("The host's own verification");
+    assert.match(
+      verification,
+      /test, build or lint check/,
+      "the host runs a test, build or lint check",
+    );
+    assert.match(
+      verification,
+      /where the task has one/,
+      "the check runs where the task has one",
+    );
+    assert.match(
+      verification,
+      /is a claim to check, not proof/,
+      "the run's own summary is a claim to check, not proof",
+    );
+  });
+
+  it("retries a failed run once with a narrower chunk and then does the task itself", async () => {
+    const failures = await dispatchSection("When a run fails");
+    assert.match(
+      failures,
+      /retried once/,
+      "a failed run is retried once",
+    );
+    assert.match(
+      failures,
+      /narrower chunk/,
+      "the retry takes a narrower chunk",
+    );
+    assert.match(
+      failures,
+      /the host does the task itself/,
+      "after the failed retry the host does the task itself",
+    );
+    assert.match(
+      failures,
+      /does not loop/,
+      "the host does not loop a failing delegation",
+    );
+  });
+
+  it("stops at a gateway or authentication failure, reports stderr and does the task itself without a retry", async () => {
+    const failures = await dispatchSection("When a run fails");
+    assert.match(
+      failures,
+      /gateway or authentication failure/,
+      "a gateway or authentication failure is the named case",
+    );
+    assert.match(
+      failures,
+      /stops delegation at once/,
+      "the failure stops delegation at once",
+    );
+    assert.match(
+      failures,
+      /without a retry/,
+      "the gateway stop takes no retry",
+    );
+    assert.match(
+      failures,
+      /reports stderr/,
+      "the gateway failure's stderr is reported",
+    );
+    assert.ok(
+      (failures.match(/does the task itself/g) ?? []).length >= 2,
+      "both the failed retry and the gateway failure end with the host doing the task itself",
+    );
+  });
+
+  it("points the Workflow's verify step at the result gate, the baseline and the failure policy", async () => {
+    const markdown = await readFile(skillFile, "utf8");
+    const workflow = flatMarkdownSection(markdown, "Workflow");
+    assert.match(
+      workflow,
+      /\*\*Verify\*\* the outcome yourself/,
+      "the Workflow keeps verification with the host",
+    );
+    assert.match(
+      workflow,
+      /result gate/,
+      "the verify step names the result gate",
+    );
+    assert.match(
+      workflow,
+      /baseline comparison/,
+      "the verify step names the baseline comparison",
+    );
+    assert.match(
+      workflow,
+      /failure policy/,
+      "the verify step names the failure policy",
+    );
+  });
+});
+
 describe("tokenme-agent prompt scaffold contract", () => {
   const scaffoldFile = path.resolve(
     canonicalDir,
