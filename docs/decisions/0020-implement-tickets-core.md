@@ -5,6 +5,7 @@
 - Supersedes / แทนที่: ADR 0004, ADR 0005, and ADR 0007 for the implement family
 - Narrowed by / ถูกจำกัดโดย: ADR 0021 narrows decision 1 (Plan approval no longer covers touch-set extras) / ADR 0021 จำกัดข้อ 1 (การอนุมัติ Plan ไม่ครอบคลุม touch-set extras)
 - Narrowed by / ถูกจำกัดโดย: ADR 0022 narrows decision 1 (the approval pause) and the per-ticket verifier to strict runs / ADR 0022 จำกัดข้อ 1 (การหยุดรออนุมัติ) และ verifier ทุก ticket ให้เป็นของ strict run เท่านั้น
+- Superseded in part by / ถูกแทนที่บางส่วนโดย: ADR 0023 (decisions 2 and 4: adapters and the parallel validation gate) / ADR 0023 (ข้อ 2 และ 4: adapter และ gate การ validate parallel)
 
 ## Context / บริบท
 

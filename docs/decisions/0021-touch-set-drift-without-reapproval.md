@@ -3,6 +3,7 @@
 - Status / สถานะ: Accepted / ยอมรับแล้ว
 - Date / วันที่: 2026-10-02
 - Narrows / จำกัดขอบเขต: ADR 0020 decision 1 (Plan approval gate)
+- Superseded by / ถูกแทนที่โดย: ADR 0023 / ADR 0023
 
 ## Context / บริบท
 

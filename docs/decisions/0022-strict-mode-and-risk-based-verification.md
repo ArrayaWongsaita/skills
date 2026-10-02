@@ -4,6 +4,7 @@
 - Date / วันที่: 2026-10-02
 - Narrows / จำกัดขอบเขต: ADR 0020 decision 1 (Plan approval gate) and its per-ticket verifier: the approval pause and the verifier for every ticket now belong to strict runs only / ข้อ 1 ของ ADR 0020 (gate การอนุมัติ Plan) และ verifier ของทุก ticket: การหยุดรออนุมัติและ verifier ทุก ticket เป็นของ strict run เท่านั้น
 - Overrides / แทนที่บางส่วน: ADR 0021's rejected-alternative argument that a strict flag is a "second mode to test and document"; ADR 0021's decisions are kept unchanged / เหตุผลของ ADR 0021 ที่ปฏิเสธ strict flag เพราะเป็น "โหมดที่สองที่ต้องทดสอบและเขียนเอกสาร" โดยการตัดสินใจทั้งหมดของ ADR 0021 ยังคงอยู่
+- Superseded in part by / ถูกแทนที่บางส่วนโดย: ADR 0023 (decision 1, `--strict`) / ADR 0023 (ข้อ 1, `--strict`)
 
 ## Context / บริบท
 
