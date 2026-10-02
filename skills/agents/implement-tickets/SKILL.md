@@ -89,9 +89,10 @@ the marker is not validated it prints the standalone line
 `parallel not yet validated`. In serial mode it shows no concurrency cap and
 omits that line.
 
-Pause for explicit approval. The approval covers the run mode, waves,
-blockers, ticket set, budget, backend, and concurrency. No file outside the feature directory changes
-until approval. Do not dispatch workers or write run state before approval.
+Pause for explicit approval. What the approval covers is listed in
+[references/planning.md](references/planning.md#5-present-the-plan-and-pause).
+No file outside the feature directory changes until approval. Do not dispatch
+workers or write run state before approval.
 
 ## Stage 1 — Execute approved waves
 
@@ -117,9 +118,9 @@ branch and review commands. Stop before review, push, or a pull request.
   deny-list, is within the cap, and conflicts with no sibling ticket is
   accepted without asking, and the ticket integrates. An unknown touch set is
   a warning and receives an exclusive wave.
-- Plan approval covers the run mode, waves, blockers, ticket set, budget,
-  backend, and concurrency. A change to any of them asks for approval before
-  continuing; accepted extras alone never do.
+- A change to anything the Plan approval covers (see
+  [references/planning.md](references/planning.md#5-present-the-plan-and-pause))
+  asks for approval before continuing; accepted extras alone never do.
 - Keep the Plan read-only until the user explicitly approves it.
 - The orchestrator writes no implementation code except a mechanical merge
   conflict resolution. That allowance stays for conflicts outside drift; for a

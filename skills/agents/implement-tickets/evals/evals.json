@@ -37,10 +37,10 @@
     {
       "id": 4,
       "name": "blocked dependency branch preserves independent tickets",
-      "prompt": "/implement-tickets .scratch/partial-demo/issues/ after approval. Ticket 01 becomes BLOCKED and ticket 03 depends on it; ticket 02 is independent.",
+      "prompt": "/implement-tickets .scratch/partial-demo/issues/ after approval. Ticket 01 becomes BLOCKED (TICKET_VERIFICATION_FAILED) and ticket 03 depends on it; ticket 02 is independent.",
       "expected_output": "Ticket 01 is BLOCKED, its dependants are held, and the independent ticket 02 continues to the verified partial path.",
       "expectations": [
-        "Does not start a dependant whose blocker is blocked",
+        "Does not start a dependant whose blocker is blocked, and halts at the next frontier for this verification-failure block (the touch-set-approval parking exception does not apply)",
         "Preserves independent work and reports the resume path"
       ],
       "files": []

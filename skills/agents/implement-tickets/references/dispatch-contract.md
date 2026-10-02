@@ -91,6 +91,13 @@ Subtract the declared touch set; what remains is the ticket's extras.
 - A ticket with an unknown touch set has no extras, because it has no declared
   baseline.
 
+## Extras into a later-wave ticket's files
+
+An extra into a file that a later-wave ticket declares as its own edit is
+accepted with a warning, not parked. That later ticket is dispatched from a
+base that already contains the change. A same-wave sibling is the real-conflict
+case in the [integration gate](integration-gate.md#conflict-deferral-and-drain-rounds).
+
 ## Deny-list and cap hits
 
 A deny-list extra, or a ticket over the cap, parks the ticket before
@@ -111,7 +118,10 @@ The deny-list is a fixed default plus the ticket's own read-only Context items:
 
 The cap: a ticket with more than five distinct extra files, counted as the union
 across all its dispatches, parks the same way. Extras dropped by a rejection no
-longer count.
+longer count. A redispatch after a rejection that parks again costs another
+attempt; attempt counting is defined in
+[status-and-resume.md](status-and-resume.md#rejection) and
+[integration-gate.md](integration-gate.md#conflict-deferral-and-drain-rounds).
 
 A ticket with an unknown touch set has no extras and no cap, but the deny-list
 still applies to it.

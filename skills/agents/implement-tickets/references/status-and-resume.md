@@ -28,7 +28,8 @@ the run state when they are accepted, not at the end of the wave, so a crash
 loses nothing. A clean-merge overlap (paths shared by two tickets that merged
 cleanly with a green gate) is recorded as a note in the Extras cell of the row
 of both tickets. Status progresses through pending, dispatched,
-verifying, verified, integrated, or `BLOCKED` with its reason.
+verifying, verified, integrated, `BLOCKED (TOUCH_SET_APPROVAL)` for a parked
+ticket, or `BLOCKED` with its reason.
 
 `usage_total` is the sum of the usage reported by every dispatch and resume on
 the delivering path for the ticket. Add each invocation's reported usage as
@@ -91,10 +92,17 @@ line under the run-state table, keyed by ticket number:
 
 ```markdown
 Notes: 04 question: `<extras and reason>`; answer: `<approve|reject|pending>`; release pre-pass: `<sha>`
+Notes: 07 question: `<extras and reason>`; answer: `<approve|reject|pending>`; release pre-pass: `none`
 ```
 
-Record the answer when it arrives and read it at every frontier. Clear it once
-the frontier has acted on it, so a crash in between loses nothing.
+Each parked ticket has its own `Notes:` line, so several tickets can be parked at
+once. The release pre-pass sha is `none` until the release pass starts; the
+orchestrator writes the pre-pass commit there before the pass merges anything, and
+it stays until the pass's gate passes. Record the answer when it arrives and read
+it at every frontier. Clear a ticket's line, not the other tickets' lines, once
+its frontier has acted on it: on release, after the gate passes, or on rejection,
+when the fresh dispatch starts. A redispatch that parks again writes a new
+question. A crash in between loses nothing.
 
 ### Approval
 
