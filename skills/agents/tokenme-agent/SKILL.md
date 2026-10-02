@@ -1,0 +1,80 @@
+---
+name: tokenme-agent
+description: Delegate mechanical, self-contained subtasks — a rename across small files, boilerplate, mechanical formatting, lint-and-report, log summarising — to a cheap headless tokenme run so host context and quota stay available for work that needs judgment. Load it when you recognise a mechanical, self-contained subtask in your own plan, or when the task text says "use tokenme", "delegate this", or "do this cheaply". Keep on the host anything touching secrets, credentials or `.env` files, high-risk tickets, code the user marked as staying local, design and architecture choices, and tasks that need this chat's earlier context.
+---
+
+# tokenme-agent
+
+Delegate a mechanical, self-contained subtask to a cheap headless tokenme run
+instead of spending host context and quota on it. The host keeps the judgment
+and the verification; the delegated run does the repetitive work.
+
+## Invocation
+
+Three entry points load this skill:
+
+- Model invocation — the skill loads on its own when you recognise a
+  mechanical, self-contained subtask in your current work. A rename across
+  small files is the canonical example: recognise one and delegate it through
+  the workflow below instead of doing it yourself.
+- Phrasing inside any task text — when the task text says "use tokenme",
+  "delegate this", or "do this cheaply" for one of its subtasks, treat the
+  phrase as naming this skill for that subtask and consider delegating that
+  subtask, even though the user typed no command.
+- Direct invocation by name:
+  - Universal / slash command: `/tokenme-agent <task description>`
+  - Codex command: `$tokenme-agent <task description>`
+
+## What to delegate
+
+A subtask qualifies when it is mechanical (the steps are already decided) and
+self-contained (it needs nothing from this conversation):
+
+- A rename across small files, mechanical formatting, boilerplate generation.
+- Batch edits with a checkable acceptance criterion.
+- Read-only crunching with a fixed output, such as summarising a large log.
+
+Before every delegation, apply the eligibility checklist in
+[delegation-policy.md](references/delegation-policy.md): the subtask is
+self-contained, it fits the budget, and its outcome is verifiable by a diff
+or a test run.
+
+Size the subtask against the planning budget before dispatch, and split an
+oversized one into chunks that each fit: the footprint formula, the budget
+numbers, the split rule, and the overflow symptoms to check on a result are
+in [budget-and-chunking.md](references/budget-and-chunking.md).
+
+Keep on the host anything touching secrets, `.env` or credential files,
+tickets marked `Risk: high`, or code the user has marked as staying local;
+keep design, architecture, security-sensitive edits, and debugging that needs
+judgment there too, plus any task that depends on this chat's earlier
+context. The full keep-local rules and the exclusion list live in
+[delegation-policy.md](references/delegation-policy.md).
+
+## Workflow
+
+1. **Recognise** the subtask — from your own plan, or from "use tokenme",
+   "delegate this", or "do this cheaply" phrasing in the task text — and
+   check it against the keep-local rules and the eligibility checklist in
+   [delegation-policy.md](references/delegation-policy.md).
+2. **Delegate** the subtask to a headless tokenme run through a
+   self-contained prompt. The preflight, both command forms, the flags, the
+   tool scoping, and the one-time harness allow rules are in
+   [dispatch-contract.md](references/dispatch-contract.md), and the prompt
+   templates — absolute paths, the conventions written in, and the rules
+   the prompt itself carries — are in
+   [prompt-scaffold.md](references/prompt-scaffold.md). Independent
+   subtasks whose file sets are disjoint run in parallel under the
+   parallel-runs rule in the same contract — one result and error file per
+   run, each run verified against its own file set — and overlapping sets
+   run one after the other. Delegation stays one level deep: a delegate
+   run does the work itself — the deny list in the contract blocks
+   another `claude` or `claude-tokenme` run — and only the host
+   delegates.
+3. **Verify** the outcome yourself before reporting done: read the result
+   gate in [dispatch-contract.md](references/dispatch-contract.md) — the
+   envelope fields and exit code that decide success, the before-and-after
+   baseline comparison of the tree, and the test, build or lint check you
+   run where the task has one — and its failure policy for what happens
+   when a run fails. Treat the delegated run's report as a claim to check,
+   and report with your own verification behind it.
