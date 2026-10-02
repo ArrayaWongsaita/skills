@@ -1987,3 +1987,60 @@ describe("implement-tickets risk-based verification", () => {
     assert.doesNotMatch(adapter, /Send the worker report to a fresh verifier\. Integrate only after verification\./);
   });
 });
+
+describe("implement-tickets status and resume record strictness", () => {
+  const flat = async (rel) => (await readTextOrNull(path.join(skillRoot, rel)))?.replace(/\s*\n\s*/g, " ");
+
+  it("records Strictness and adds Risk and Verifier columns after the existing columns", async () => {
+    const text = await readTextOrNull(statePath);
+    assert.match(text, /^Strictness: strict$/m);
+    const header = text.split("\n").find((line) => line.startsWith("| Ticket |"));
+    assert.match(header, /\| Verifier usage total \| Risk \| Verifier \|$/);
+  });
+
+  it("records a skipped verifier as verified, never verifying", async () => {
+    const s = await flat("references/status-and-resume.md");
+    assert.match(s, /`verified` with `Verifier: skipped`[\s\S]{0,200}never (?:as )?`verifying`/i);
+    assert.match(s, /same wave-wait, hold, merge, and `continue` paths/i);
+  });
+
+  it("reads old records as strict with Verifier ran", async () => {
+    const s = await flat("references/status-and-resume.md");
+    assert.match(s, /no `Strictness:` line[\s\S]{0,160}strict/i);
+    assert.match(s, /no Verifier column[\s\S]{0,80}`Verifier: ran`/i);
+  });
+
+  it("writes the default-strictness record when the run starts", async () => {
+    const s = await flat("references/status-and-resume.md");
+    assert.match(s, /default[- ]strictness[\s\S]{0,200}when the run starts[\s\S]{0,120}(?:rather than|not) after (?:an )?approval/i);
+    assert.match(s, /without `--strict` once the default has been flipped/);
+  });
+
+  it("resumes in the recorded strictness and handles continue --strict", async () => {
+    const s = await flat("references/status-and-resume.md");
+    assert.match(s, /`continue` resumes in the recorded strictness/i);
+    assert.match(s, /default strictness[\s\S]{0,200}no approval unless the Plan changed/i);
+    assert.match(s, /`continue --strict`[\s\S]{0,200}records? the run as strict[\s\S]{0,200}re-presents the Plan[\s\S]{0,160}approv/i);
+    assert.match(s, /`Verifier: skipped`[\s\S]{0,200}not yet integrated[\s\S]{0,120}fresh verifier before (?:its|the) merge/i);
+    assert.match(s, /integrated one is not re-verified/i);
+    assert.match(s, /`continue` without `--strict`[\s\S]{0,120}recorded as strict[\s\S]{0,60}stays strict/i);
+  });
+
+  it("lists tickets that skipped the verifier in the handoff and shows verifier outcome in status", async () => {
+    const gate = await flat("references/integration-gate.md");
+    assert.match(gate, /skipped the (?:fresh )?verifier, by number, in the handoff/i);
+    const s = await flat("references/status-and-resume.md");
+    assert.match(s, /`status`[\s\S]{0,200}strictness[\s\S]{0,120}verifier outcome/i);
+  });
+
+  it("is described in the docs and evals", async () => {
+    for (const file of ["docs/guides/implement-tickets.md", "docs/skills/agents/implement-tickets.md"]) {
+      const doc = await readTextOrNull(path.join(repoRoot, file));
+      assert.match(doc, /Verifier: skipped/, file);
+      assert.match(doc, /continue --strict/, file);
+    }
+    const evals = await readTextOrNull(path.join(skillRoot, "evals/evals.json"));
+    assert.match(evals, /continue --strict/);
+    assert.match(evals, /Verifier: skipped/);
+  });
+});

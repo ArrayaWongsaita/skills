@@ -228,6 +228,20 @@
         "Decides after extras are measured and before a verifier would be dispatched"
       ],
       "files": []
+    },
+    {
+      "id": 22,
+      "name": "status and continue record and honor strictness",
+      "prompt": "/implement-tickets continue demo --strict. The run is recorded as default strictness with ticket 02 Verifier: skipped and not yet integrated.",
+      "expected_output": "continue --strict records the run as strict, re-presents the Plan, and dispatches nothing until the person approves; ticket 02 gets a fresh verifier before its merge. continue without --strict on a strict run stays strict. status shows the strictness and each ticket's Verifier outcome, and the handoff lists tickets that skipped the verifier by number.",
+      "expectations": [
+        "Records the run as strict and re-presents the Plan before any dispatch",
+        "Dispatches a fresh verifier before the merge of a not-yet-integrated Verifier: skipped ticket and does not re-verify an integrated one",
+        "Keeps a recorded strict run strict when continue is run without --strict",
+        "Reads a record with no Strictness: line as strict and a row with no Verifier column as Verifier: ran",
+        "Lists tickets that skipped the verifier by number in the final handoff"
+      ],
+      "files": []
     }
   ]
 }
