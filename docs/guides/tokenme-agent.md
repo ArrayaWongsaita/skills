@@ -71,12 +71,12 @@ skill นี้เป็น model-invocable — agent จะหยิบไป�
      --no-session-persistence \
      --disable-slash-commands \
      --allowed-tools "Read Glob Grep Edit Write Bash" \
-     --disallowed-tools "Bash(git commit:*) Bash(git push:*) Bash(git reset:*) Bash(git checkout:*) Bash(git clean:*) Bash(git stash:*) Bash(git rebase:*) Bash(git merge:*) Bash(git pull:*) Bash(git restore:*) Bash(git switch:*) Bash(git cherry-pick:*) Bash(git revert:*) Bash(git am:*) Bash(git -C:*) Bash(git -c:*) Bash(claude:*) Bash(claude-tokenme:*)" \
+     --disallowed-tools "<deny list — see dispatch-contract.md>" \
      > /tmp/tokenme-runs/<task-id>.json \
      2> /tmp/tokenme-runs/<task-id>.err
    ```
 
-   งานอ่านอย่างเดียว (สรุป log, ค้นหา) ใช้ `--allowed-tools "Read Glob Grep"` แทน เพื่อจำกัด run ให้อ่านได้อย่างเดียว ส่วน `--disallowed-tools` ใช้ชุดเดียวกันทุก run — deny list เป็น prefix rules ที่กัน git เปลี่ยน history และกันการเริ่ม `claude`/`claude-tokenme` ซ้อนกัน และ host verification เป็น backstop ของรูเล็กรูใหญ่ที่เหลือ
+   งานอ่านอย่างเดียว (สรุป log, ค้นหา) ใช้ `--allowed-tools "Read Glob Grep"` แทน เพื่อจำกัด run ให้อ่านได้อย่างเดียว ส่วน `--disallowed-tools` ใช้ชุดเดียวกันทุก run — deny list เป็น prefix rules ที่กัน git เปลี่ยน history และกันการเริ่ม `claude`/`claude-tokenme` ซ้อนกัน และ host verification เป็น backstop ของรูเล็กรูใหญ่ที่เหลือ รายการเต็มที่ใช้จริงอยู่ใน [dispatch-contract.md](../../skills/agents/tokenme-agent/references/dispatch-contract.md) ซึ่งเป็น canonical เสมอ — guide นี้จงใจไม่ copy รายการไว้ เพื่อไม่ให้เพี้ยนเมื่อ deny list ถูกแก้ใน contract
 
 3. **ตรวจสถานะผ่าน result gate:** อ่าน exit code ก่อน (ต้องเป็นศูนย์) แล้ว parse envelope จาก result file — ต้องได้ `is_error` false, `subtype` success และ `terminal_reason` completed ค่าใดขาดข้อใด run นั้นล้มเหลว ให้อ่าน error file แล้วรายงาน stderr อาการ overflow (edit ที่ถูกตัดจบกลางคัน, ผลลัพธ์ที่ขาดไฟล์ที่สั่งไว้, terminal reason อื่นที่ไม่ใช่ completed) ถูกจับที่จุดเดียวกันนี้ แล้วแบ่ง chunk เล็กลงใหม่
 4. **เทียบ baseline และรัน check เอง:** ก่อน dispatch host บันทึก HEAD, ผล `git status --porcelain --untracked-files=all` และ content hash ของทุกไฟล์ที่ prompt ระบุ (directory ที่ระบุถูกขยายเป็นรายไฟล์) หลังรันบันทึกซ้ำแล้วเทียบ — ไฟล์นอกชุดที่ระบุเปลี่ยน หรือ HEAD ขยับ run ถูกปฏิเสธ จบด้วยการรัน test/build/lint ที่งานมี สรุปผลของ run เป็น claim ไม่ใช่หลักฐาน

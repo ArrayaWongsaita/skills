@@ -24,6 +24,18 @@ async function fileExists(filePath) {
   await access(filePath, constants.R_OK);
 }
 
+// The dispatch contract sliced per section — one reader shared by the
+// describe blocks that assert against it.
+const dispatchFile = path.resolve(
+  canonicalDir,
+  "references/dispatch-contract.md",
+);
+
+async function dispatchSection(title) {
+  const dispatch = await readFile(dispatchFile, "utf8");
+  return flatMarkdownSection(dispatch, title);
+}
+
 // Every file under the skill's own directory, at any depth, so the
 // no-model-identifier scan keeps covering the evals JSON when it lands.
 async function listFilesRecursive(directory) {
@@ -552,10 +564,6 @@ describe("tokenme-agent budget and chunking contract", () => {
 });
 
 describe("tokenme-agent dispatch contract", () => {
-  const dispatchFile = path.resolve(
-    canonicalDir,
-    "references/dispatch-contract.md",
-  );
   const skillDir = path.resolve(canonicalDir);
 
   // The history-changing git shell prefixes and global flags the deny list
@@ -578,11 +586,6 @@ describe("tokenme-agent dispatch contract", () => {
     "-C",
     "-c",
   ];
-
-  async function dispatchSection(title) {
-    const dispatch = await readFile(dispatchFile, "utf8");
-    return flatMarkdownSection(dispatch, title);
-  }
 
   it("ships the dispatch contract and resolves the skill's link to it from the Workflow", async () => {
     const markdown = await readFile(skillFile, "utf8");
@@ -818,16 +821,6 @@ describe("tokenme-agent dispatch contract", () => {
 });
 
 describe("tokenme-agent result gate, verification and failure policy contract", () => {
-  const dispatchFile = path.resolve(
-    canonicalDir,
-    "references/dispatch-contract.md",
-  );
-
-  async function dispatchSection(title) {
-    const dispatch = await readFile(dispatchFile, "utf8");
-    return flatMarkdownSection(dispatch, title);
-  }
-
   it("counts a run as successful only on a clean envelope plus a zero exit code, and fails it with stderr otherwise", async () => {
     const gate = await dispatchSection("The result gate");
     assert.match(
@@ -1101,16 +1094,6 @@ describe("tokenme-agent result gate, verification and failure policy contract", 
 });
 
 describe("tokenme-agent parallel runs contract", () => {
-  const dispatchFile = path.resolve(
-    canonicalDir,
-    "references/dispatch-contract.md",
-  );
-
-  async function dispatchSection(title) {
-    const dispatch = await readFile(dispatchFile, "utf8");
-    return flatMarkdownSection(dispatch, title);
-  }
-
   it("runs two tasks that edit different directories in the background, each with its own result and error file", async () => {
     const parallel = await dispatchSection("Parallel runs");
     assert.match(

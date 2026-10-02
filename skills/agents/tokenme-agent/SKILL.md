@@ -67,7 +67,10 @@ context. The full keep-local rules and the exclusion list live in
    subtasks whose file sets are disjoint run in parallel under the
    parallel-runs rule in the same contract — one result and error file per
    run, each run verified against its own file set — and overlapping sets
-   run one after the other.
+   run one after the other. Delegation stays one level deep: a delegate
+   run does the work itself — the deny list in the contract blocks
+   another `claude` or `claude-tokenme` run — and only the host
+   delegates.
 3. **Verify** the outcome yourself before reporting done: read the result
    gate in [dispatch-contract.md](references/dispatch-contract.md) — the
    envelope fields and exit code that decide success, the before-and-after

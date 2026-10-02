@@ -75,7 +75,7 @@ claude-tokenme -p "$(cat /tmp/tokenme-prompts/<task-id>.md)" \
 | `--no-session-persistence` | The run leaves no session on disk and cannot be resumed |
 | `--disable-slash-commands` | A literal `/command` token in the prompt stays literal |
 | `--allowed-tools` | The tool set for the task kind, below — and the restriction itself: a headless run has no permission prompt to ask at, so a tool outside the list is denied |
-| `--disallowed-tools` | The mechanical deny list, below; a denied pattern wins over the allow list |
+| `--disallowed-tools` | The mechanical deny list, below; a denied pattern wins over the allow list. A run whose tool set names no shell — the bare read-only run — is the one shape that drops the flag |
 | `> /tmp/tokenme-runs/<task-id>.json` and `2> /tmp/tokenme-runs/<task-id>.err` | stdout to the result file, stderr to a separate error file |
 
 The two redirections stay separate. stdout carries the JSON result and
