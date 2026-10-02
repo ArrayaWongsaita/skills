@@ -67,7 +67,8 @@ Existing runs can be inspected or resumed with:
 - `/implement-tickets status [slug]` to read one run's `status.md`;
 - `/implement-tickets list` to list saved runs; or
 - `/implement-tickets continue [slug]` to reconcile a run with Git, re-present
-  its Plan, and resume from the frontier in the recorded run mode.
+  its Plan, and resume from the frontier in the recorded run mode. When only
+  extras were accepted, it resumes without a new approval.
 
 `status` and `list` are read-only. A valid run record starts with
 `skill: implement-tickets`; see
@@ -88,7 +89,8 @@ the marker is not validated it prints the standalone line
 `parallel not yet validated`. In serial mode it shows no concurrency cap and
 omits that line.
 
-Pause for explicit approval. No file outside the feature directory changes
+Pause for explicit approval. The approval covers the run mode, waves,
+blockers, ticket set, budget, backend, and concurrency. No file outside the feature directory changes
 until approval. Do not dispatch workers or write run state before approval.
 
 ## Stage 1 — Execute approved waves
@@ -110,8 +112,14 @@ branch and review commands. Stop before review, push, or a pull request.
 
 - Treat malformed tickets, unresolved blockers, cycles, and invalid numbering
   as planning errors. Do not dispatch from an invalid ticket set.
-- Keep a worker inside its declared touch set. An unknown touch set is a
-  warning and receives an exclusive wave.
+- The declared touch set is a planning baseline, not an approval boundary.
+  Extras are measured and accepted: an extra file that is not on the
+  deny-list, is within the cap, and conflicts with no sibling ticket is
+  accepted without asking, and the ticket integrates. An unknown touch set is
+  a warning and receives an exclusive wave.
+- Plan approval covers the run mode, waves, blockers, ticket set, budget,
+  backend, and concurrency. A change to any of them asks for approval before
+  continuing; accepted extras alone never do.
 - Keep the Plan read-only until the user explicitly approves it.
 - The orchestrator writes no implementation code except a mechanical merge
   conflict resolution.

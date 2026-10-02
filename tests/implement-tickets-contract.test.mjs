@@ -946,6 +946,25 @@ describe("implement-tickets integration gate and run-state contract", () => {
     requireText(continueSection, /read(?:s)? (?:each ticket's )?(?:accepted )?extras back from the (?:Extras column|run state)/i, "continue reads extras back");
   });
 
+  it("accepts extras without asking and scopes Plan approval to the plan structure", async () => {
+    const skill = await readTextOrNull(path.join(skillRoot, "SKILL.md"));
+    const planning = await readTextOrNull(path.join(skillRoot, "references/planning.md"));
+    const state = await readTextOrNull(statePath);
+    const gate = await readTextOrNull(gatePath);
+    assert.ok(skill && planning && state && gate, "skill, planning, state and gate files exist");
+    requireText(skill, /extra\s+file[\s\S]{0,200}not\s+on\s+the\s+deny-list[\s\S]{0,200}within\s+the\s+cap[\s\S]{0,200}no\s+sibling\s+ticket[\s\S]{0,200}accepted\s+without\s+asking/i, "a plain extra is accepted without asking");
+    const constraints = markdownSection(skill, "Constraints");
+    assert.doesNotMatch(constraints, /Keep\s+a\s+worker\s+inside\s+its\s+declared\s+touch\s+set/i, "the old touch-set constraint is gone");
+    requireText(constraints, /declared\s+(?:touch\s+)?set\s+is\s+a\s+planning\s+baseline[\s\S]*extras\s+are\s+measured\s+and\s+accepted/i, "the declared set is a baseline and extras are accepted");
+    for (const text of [skill, planning]) {
+      requireText(text, /approval\s+covers\s+the\s+run\s+mode,\s+waves,\s+blockers,\s+ticket\s+set,\s+budget,\s+backend,\s+and\s+concurrency/i, "approval covers the plan structure");
+      requireText(text, /change\s+to\s+any\s+of\s+them[\s\S]{0,60}ask(?:s)?\s+for\s+approval/i, "a structural change asks for approval");
+    }
+    requireText(planning, /requested\s+(?:adjustment|edit)[\s\S]{0,120}ask(?:s)?\s+for\s+approval\s+again[\s\S]{0,80}silence/i, "a requested edit asks again and silence never starts");
+    const cont = markdownSection(state, "Continue and reconcile");
+    requireText(cont, /only\s+(?:accepted\s+)?extras[\s\S]{0,160}without\s+a\s+new\s+approval/i, "continue with only extras resumes without approval");
+  });
+
   it("summarizes extras at each wave end and in the final handoff table", async () => {
     const gate = await readTextOrNull(gatePath);
     assert.ok(gate, "the integration gate procedure exists");

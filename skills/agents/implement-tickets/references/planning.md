@@ -101,6 +101,9 @@ Also state:
 - retry budget: three ticket attempts, unless the run contract later defines
   a narrower infrastructure retry.
 
-Pause for explicit approval after presenting the Plan. No file outside the
-feature directory changes until approval. On requested adjustments, update the
+Pause for explicit approval after presenting the Plan. The approval covers the
+run mode, waves, blockers, ticket set, budget, backend, and concurrency. A
+change to any of them asks for approval before continuing. Accepted extras do
+not change the Plan structure and need no new approval. No file outside the
+feature directory changes until approval. On a requested adjustment, update the
 Plan and ask for approval again; do not start execution based on silence.
