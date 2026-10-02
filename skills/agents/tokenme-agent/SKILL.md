@@ -63,7 +63,11 @@ context. The full keep-local rules and the exclusion list live in
    [dispatch-contract.md](references/dispatch-contract.md), and the prompt
    templates — absolute paths, the conventions written in, and the rules
    the prompt itself carries — are in
-   [prompt-scaffold.md](references/prompt-scaffold.md).
+   [prompt-scaffold.md](references/prompt-scaffold.md). Independent
+   subtasks whose file sets are disjoint run in parallel under the
+   parallel-runs rule in the same contract — one result and error file per
+   run, each run verified against its own file set — and overlapping sets
+   run one after the other.
 3. **Verify** the outcome yourself before reporting done: read the result
    gate in [dispatch-contract.md](references/dispatch-contract.md) — the
    envelope fields and exit code that decide success, the before-and-after

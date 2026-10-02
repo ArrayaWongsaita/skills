@@ -2,10 +2,11 @@
 
 How the host launches one delegate run: the preflight, the command forms, the
 flags every run carries, the tool scoping that goes with each task kind, and
-the checks that decide afterwards whether the run succeeded. What may be
-delegated at all is decided first, in
-[delegation-policy.md](delegation-policy.md); how large a run may be is
-checked against [budget-and-chunking.md](budget-and-chunking.md).
+the checks that decide afterwards whether the run succeeded — plus the rule
+that lets independent runs go in parallel. What may be delegated at all is
+decided first, in [delegation-policy.md](delegation-policy.md); how large a
+run may be is checked against
+[budget-and-chunking.md](budget-and-chunking.md).
 
 ## Preflight
 
@@ -204,6 +205,63 @@ HEAD in place — `git branch -f`, `git tag`, `git update-ref`,
 the backstop, and it needs a tree the host can read: a tree carrying
 uncommitted host work the host cannot account for is cleaned up or committed
 first, so the baseline records the run's changes alone.
+
+## Parallel runs
+
+Two independent delegations run at the same time only when their file sets
+are disjoint. A task's file set is the files its prompt names, expanded the
+way the baseline comparison expands them — a named directory contributes
+its files, and a file created under a named directory counts as named. The
+host writes each task's set down before launching and compares the sets:
+one file named by two prompts, or named by one prompt and sitting under
+another task's named directory, is an overlap.
+
+An overlap is answered before any launch: the host splits the shared file
+into one task's set alone, or serialises — the second run launches only
+after the first has passed its gate and its comparison. The split that
+makes the sets disjoint is the same split an oversized job needs, sized by
+[budget-and-chunking.md](budget-and-chunking.md).
+
+The worked case is two tasks that edit different directories: their sets
+are disjoint, so the host records one baseline for both, writes both prompt
+files, and launches each run as a background shell job with its own result
+file and its own error file:
+
+```bash
+claude-tokenme -p "$(cat /tmp/tokenme-prompts/<task-a-id>.md)" \
+  --bare \
+  --output-format json \
+  --no-session-persistence \
+  --disable-slash-commands \
+  --allowed-tools "<tool set for task A>" \
+  --disallowed-tools "<deny list>" \
+  > /tmp/tokenme-runs/<task-a-id>.json \
+  2> /tmp/tokenme-runs/<task-a-id>.err &
+
+claude-tokenme -p "$(cat /tmp/tokenme-prompts/<task-b-id>.md)" \
+  --bare \
+  --output-format json \
+  --no-session-persistence \
+  --disable-slash-commands \
+  --allowed-tools "<tool set for task B>" \
+  --disallowed-tools "<deny list>" \
+  > /tmp/tokenme-runs/<task-b-id>.json \
+  2> /tmp/tokenme-runs/<task-b-id>.err &
+
+wait
+```
+
+Every flag is the single run's — the command form, the tool scoping and the
+deny list are unchanged — and each command ends with `&`, which hands the
+run to the shell as a background job; the two redirections stay separate,
+as for any run. The shell's `wait` holds the host until both jobs have
+finished. After the wait, each run is judged on its own: the gate reads its
+envelope and its exit code from its own result and error file, and the
+comparison attributes every change to the run whose file set holds the
+changed file. Task A's comparison ignores the other run's file set — a
+change inside task B's set is not a rejection of task A — while a change
+outside every run's set still rejects. A parallel run that fails is
+retried alone, under the rules in When a run fails.
 
 ## The host's own verification
 

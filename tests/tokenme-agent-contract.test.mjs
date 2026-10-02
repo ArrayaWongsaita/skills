@@ -1098,6 +1098,151 @@ describe("tokenme-agent result gate, verification and failure policy contract", 
   });
 });
 
+describe("tokenme-agent parallel runs contract", () => {
+  const dispatchFile = path.resolve(
+    canonicalDir,
+    "references/dispatch-contract.md",
+  );
+
+  async function dispatchSection(title) {
+    const dispatch = await readFile(dispatchFile, "utf8");
+    return flatMarkdownSection(dispatch, title);
+  }
+
+  it("runs two tasks that edit different directories in the background, each with its own result and error file", async () => {
+    const parallel = await dispatchSection("Parallel runs");
+    assert.match(
+      parallel,
+      /two tasks that edit different directories/,
+      "the two-directory example is the worked case",
+    );
+    assert.match(
+      parallel,
+      /its own result file and its own error file/,
+      "the prose states the per-run result and error files",
+    );
+    const launches = parallel.match(
+      /2> \/tmp\/tokenme-runs\/<task-[a-z-]+>\.err &/g,
+    );
+    assert.ok(
+      (launches ?? []).length >= 2,
+      "each of the two runs is launched as a background shell job",
+    );
+    for (const taskId of ["<task-a-id>", "<task-b-id>"]) {
+      assert.match(
+        parallel,
+        new RegExp(`> /tmp/tokenme-runs/${taskId}\\.json`),
+        `${taskId}'s stdout goes to its own result file`,
+      );
+      assert.match(
+        parallel,
+        new RegExp(`2> /tmp/tokenme-runs/${taskId}\\.err &`),
+        `${taskId}'s stderr goes to its own error file and the run ends in the background`,
+      );
+    }
+    assert.match(
+      parallel,
+      /`wait` holds the host/,
+      "the host waits for the background jobs before verifying them",
+    );
+  });
+
+  it("runs delegations together only on disjoint file sets and splits or serialises an overlap", async () => {
+    const parallel = await dispatchSection("Parallel runs");
+    assert.match(
+      parallel,
+      /run at the same time only when their file sets are disjoint/,
+      "the disjointness rule gates parallel runs",
+    );
+    assert.match(
+      parallel,
+      /one file named by two prompts/,
+      "a file named by two prompts is the named overlap",
+    );
+    assert.match(
+      parallel,
+      /splits the shared file into one task's set alone, or serialises/,
+      "an overlap is answered by a split or by serialising",
+    );
+    assert.match(
+      parallel,
+      /the second run launches only after the first has passed its gate and its comparison/,
+      "a serialised overlap runs the runs one after the other",
+    );
+    const links = sectionLinks(parallel);
+    assert.ok(
+      links.some((link) => link.endsWith("budget-and-chunking.md")),
+      "the split answer points at the chunking guide",
+    );
+  });
+
+  it("verifies each run against its own file set and ignores the other runs' file sets", async () => {
+    const parallel = await dispatchSection("Parallel runs");
+    assert.match(
+      parallel,
+      /each run is judged on its own/,
+      "after the wait each run is judged on its own",
+    );
+    assert.match(
+      parallel,
+      /from its own result and error file/,
+      "the gate reads each run's envelope and exit code from its own files",
+    );
+    assert.match(
+      parallel,
+      /ignores the other run's file set/,
+      "a run's comparison ignores the other runs' file sets",
+    );
+    assert.match(
+      parallel,
+      /a change outside every run's set still rejects/,
+      "a change outside every run's set still rejects",
+    );
+
+    const baseline = await dispatchSection("The baseline comparison");
+    assert.match(
+      baseline,
+      /disjoint file sets/,
+      "the baseline comparison attributes parallel runs by their disjoint file sets",
+    );
+    assert.match(
+      baseline,
+      /ignores the other runs' file sets/,
+      "the baseline comparison keeps each run's check to its own set",
+    );
+  });
+
+  it("carries the parallel rule in the Workflow's delegation step", async () => {
+    const markdown = await readFile(skillFile, "utf8");
+    const workflow = flatMarkdownSection(markdown, "Workflow");
+    assert.match(
+      workflow,
+      /run in parallel/,
+      "the Workflow names running independent delegations in parallel",
+    );
+    assert.match(
+      workflow,
+      /file sets are disjoint/,
+      "the Workflow's parallel rule requires disjoint file sets",
+    );
+    assert.match(
+      workflow,
+      /one result and error file per run/,
+      "the Workflow names the per-run logs",
+    );
+    assert.match(
+      workflow,
+      /each run verified against its own file set/,
+      "the Workflow names the per-run verification",
+    );
+    assert.match(
+      workflow,
+      /run one after the other/,
+      "the Workflow sends overlapping sets one after the other",
+    );
+  });
+});
+
 describe("tokenme-agent prompt scaffold contract", () => {
   const scaffoldFile = path.resolve(
     canonicalDir,
