@@ -379,10 +379,15 @@ describe("grill-to-tickets composite skill contract", () => {
   });
 
   it("proposes Risk: high by rule at the ticket quiz and writes only confirmed highs", async () => {
-    const stage3 = (await readFile(skillFiles[0], "utf8")).replace(/\s+/g, " ");
-    const format = (await readFile(path.resolve(canonicalDir, "references/ticket-format.md"), "utf8")).replace(/\s+/g, " ");
+    const flatSection = (markdown, title) => {
+      const section = markdownSection(markdown, title);
+      assert.ok(section, `${title} section exists`);
+      return section.replace(/\s+/g, " ");
+    };
+    const stage3 = flatSection(await readFile(skillFiles[0], "utf8"), "Stage 3 — Tickets");
+    const format = flatSection(await readFile(path.resolve(canonicalDir, "references/ticket-format.md"), "utf8"), "4. Quiz the user");
     const review = (await readFile(path.resolve(canonicalDir, "references/ticket-review.md"), "utf8")).replace(/\s+/g, " ");
-    for (const [name, text] of [["SKILL.md", stage3], ["ticket-format.md", format]]) {
+    for (const [name, text] of [["SKILL.md Stage 3", stage3], ["ticket-format.md quiz", format]]) {
       assert.match(text, /propos\w* `Risk: high`[^.]*reason/i, `${name}: the quiz proposes Risk: high with a reason`);
       assert.match(text, /blocks? three or more tickets/i, `${name}: blocks three or more tickets`);
       assert.match(text, /shared public interface or contract/i, `${name}: shared public interface or contract`);
@@ -392,7 +397,7 @@ describe("grill-to-tickets composite skill contract", () => {
       assert.match(text, /only a confirmed high is written/i, `${name}: only a confirmed high is written`);
       assert.match(text, /without a Risk field/i, `${name}: other tickets are written without a Risk field`);
     }
-    assert.match(review, /Risk/, "ticket-review.md mentions the Risk proposal at the quiz");
+    assert.match(review, /proposes no `Risk` value[^.]*\. The `Risk: high` proposal belongs to the main thread at the quiz/, "ticket-review.md leaves the Risk proposal to the main thread at the quiz");
   });
 
   it("runs the ticket checker before the quiz and traces every ticket to its stories", async () => {

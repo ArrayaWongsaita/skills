@@ -96,11 +96,16 @@ Risk signals, each of which makes the ticket risky:
 A `Risk: low` field, or a missing field, never lowers a risk signal.
 
 Evidence is incomplete when the Red output, Green output, or Test → criterion
-table is missing, empty, or lacks a command or exit code, when the red run
+table is missing, empty, or lacks a command or exit code, when the Green output
+lacks the typecheck result or `none configured`, when the red run
 failed for a compile or import error, or when the green or typecheck run did
 not pass. Incomplete evidence counts no attempt; it only gives the ticket a
 fresh verifier, in either strictness. When that verifier's evidence fails the
 ticket, the existing counted-failure path applies unchanged.
+
+A worker report or adapter that predates these evidence sections keeps working:
+missing sections are incomplete evidence, so the ticket counts no attempt and
+gets a fresh verifier.
 
 A deny-list or cap hit still parks the ticket before this decision, and its
 branch is verified on approval, as described below.

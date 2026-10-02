@@ -55,8 +55,8 @@ ticket attempt or continue with implementation.
 2. **Green:** make the smallest implementation that makes the tests pass.
 3. **Refactor:** tidy only the changes you made and keep the tests passing.
 
-Run the ticket tests and the project's configured typecheck. Do not run the
-full test suite; the integration gate runs it after each squash-merge. If the repository
+Run the ticket tests and the project's configured typecheck. The full test
+suite is left to the integration gate, which runs it after each squash-merge. If the repository
 has no typecheck command, report that instead of inventing one.
 
 ## Constraints

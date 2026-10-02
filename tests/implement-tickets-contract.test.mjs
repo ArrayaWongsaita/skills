@@ -36,6 +36,36 @@ async function readTextOrNull(file) {
   }
 }
 
+const flatten = (text) => text?.replace(/\s*\n\s*/g, " ");
+
+// Whole file with line breaks flattened; scope assertions with flatSection.
+async function readFlat(rel) {
+  return flatten(await readTextOrNull(path.join(skillRoot, rel)));
+}
+
+// One named section of a skill file, flattened.
+async function flatSection(rel, title) {
+  const section = markdownSection((await readTextOrNull(path.join(skillRoot, rel))) ?? "", title);
+  assert.ok(section, `${rel} has a "${title}" section`);
+  return flatten(section);
+}
+
+// The Thai and English run-mode sections of the two implement-tickets docs.
+const docRunModeSections = ["โหมดการรันและ extras", "Run modes and extras"];
+
+function docSection(markdown, title, file) {
+  const section = markdownSection(markdown, title);
+  assert.ok(section, `${file} has a "${title}" section`);
+  return flatten(section);
+}
+
+async function evalById(id) {
+  const { evals } = JSON.parse(await readTextOrNull(path.join(skillRoot, "evals/evals.json")));
+  const entry = evals.find((e) => e.id === id);
+  assert.ok(entry, `eval ${id} exists`);
+  return JSON.stringify(entry);
+}
+
 async function readDrainSection() {
   const gate = await readTextOrNull(gatePath);
   const drainSection = markdownSection(gate ?? "", "Conflict deferral and drain rounds");
@@ -751,6 +781,24 @@ describe("implement-tickets wave planner contract", () => {
     }
   });
 
+  it("reads a Risk value with trailing whitespace without a warning, as the ticket checker does", async () => {
+    const padded = (number, risk) =>
+      ticket(number, { context: `(edit) src/${number}.mjs`, risk }).replace(/^(\*\*Risk:\*\*.*)$/m, "$1 \t ");
+    const { root, issues } = await fixture({
+      "01": padded("01", "high — shared interface"),
+      "02": padded("02", "low"),
+    });
+    try {
+      const output = await runWaves(issues);
+      const byNumber = Object.fromEntries(output.tickets.map((t) => [t.number, t]));
+      assert.equal(byNumber["01"].risk, "high");
+      assert.equal(byNumber["02"].risk, "low");
+      assert.deepEqual([...byNumber["01"].warnings, ...byNumber["02"].warnings], []);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("gives unknown touch sets their own wave, prevents later tickets joining, and reports a warning", async () => {
     const { root, issues } = await fixture({
       "01": ticket("01", { context: "(edit) src/shared.mjs" }),
@@ -1164,7 +1212,9 @@ describe("implement-tickets worker dispatch and verification contract", () => {
     requireText(table, /each new test[\s\S]*acceptance criterion/i, "the table maps tests to criteria");
     assert.doesNotMatch(ret, /\*\*Evidence/i, "no new Evidence section");
     assert.doesNotMatch(ret, /\b(first|last|at most|up to)\s+\d+\s+lines\b/i, "no line bound on output");
-    requireText(prompt, /full (test )?suite[\s\S]*integration gate/i, "the full suite is left to the integration gate");
+    const method = markdownSection(prompt, "Method — red, green, refactor");
+    assert.ok(method, "the Method section exists");
+    requireText(method, /full test\s+suite is left to the integration gate/i, "the full suite is left to the integration gate");
   });
 
   it("caps workers and verifiers together and gives pending verifiers priority", async () => {
@@ -1855,10 +1905,10 @@ describe("implement-tickets touch-set drift decision record and docs", () => {
 });
 
 describe("implement-tickets --strict flag and Plan strictness", () => {
-  const read = async (rel) => (await readTextOrNull(path.join(skillRoot, rel)))?.replace(/\s*\n\s*/g, " ");
+  const skillConstraints = async () => flatSection("SKILL.md", "Constraints");
 
   it("lists --strict as set once per run and independent of the other options", async () => {
-    const skill = await read("SKILL.md");
+    const skill = await readFlat("SKILL.md");
     const entry = skill.match(/- `--strict`.*?(?= - `|\. Before presenting|$)/)?.[0];
     assert.ok(entry, "--strict is listed among the options");
     assert.match(entry, /once per run/i);
@@ -1869,63 +1919,67 @@ describe("implement-tickets --strict flag and Plan strictness", () => {
   });
 
   it("makes a strict run present the Plan and dispatch and write nothing until approval", async () => {
-    const skill = await read("SKILL.md");
-    const planning = await read("references/planning.md");
+    const skill = await flatSection("SKILL.md", "Stage 0 — Plan, then pause");
+    const planning = await flatSection("references/planning.md", "5. Present the Plan and pause");
     for (const text of [skill, planning]) {
       assert.match(text, /strict run[\s\S]{0,200}(?:no worker|dispatch)[\s\S]{0,200}(?:run state|run-state)/i);
     }
   });
 
   it("names Strictness on its own line next to Run mode and keeps it out of the waves", async () => {
-    const planning = await read("references/planning.md");
+    const planning = await flatSection("references/planning.md", "5. Present the Plan and pause");
     assert.match(planning, /`Strictness:` line[\s\S]{0,120}run mode/i);
     assert.match(planning, /change of strictness[\s\S]{0,120}(?:not|never)[\s\S]{0,60}waves/i);
   });
 
-  it("puts a run with no flag in default strictness: the Plan prints and the run starts without a pause", async () => {
-    const skill = await read("SKILL.md");
-    const planning = await read("references/planning.md");
+  it("puts a run with no flag in default strictness: the Plan prints, the run starts without a pause, and only risky tickets are verified", async () => {
+    const skill = await flatSection("SKILL.md", "Stage 0 — Plan, then pause");
+    const planning = await flatSection("references/planning.md", "5. Present the Plan and pause");
+    const verification = await flatSection("references/verification.md", "Risk-based verification");
     for (const text of [skill, planning]) {
-      const flat = text.replace(/\s*\n\s*/g, " ");
-      assert.match(flat, /a run with no flag is in default strictness/i);
-      assert.match(flat, /no flag[\s\S]{0,200}prints the Plan and starts without (?:a pause|waiting for approval)/i);
+      assert.match(text, /a run with no flag is in default strictness/i);
+      assert.match(text, /no flag[\s\S]{0,200}prints the Plan and starts without (?:a pause|waiting for approval)/i);
     }
+    assert.match(verification, /default strictness[\s\S]{0,80}ticket is verified only when it is risky/i);
   });
 
   it("leaves no conditional wording about a default that has yet to be flipped", async () => {
+    // A negative guard, applied to each markdown section rather than a whole file.
+    const flipped = /default (?:has been|is) flipped|until (?:then|the default)[^.]{0,40}stays? strict|once the default/i;
     const files = ["SKILL.md", "agents/openai.yaml", "evals/evals.json", ...(await readdir(path.join(skillRoot, "references"))).map((f) => `references/${f}`)];
     for (const rel of files) {
-      const text = await read(rel);
-      assert.doesNotMatch(text, /default (?:has been|is) flipped|until (?:then|the default)[^.]{0,40}stays? strict|once the default/i, `${rel} has no flip conditional`);
+      const raw = await readTextOrNull(path.join(skillRoot, rel));
+      const parts = rel.endsWith(".md") ? markdownSections(raw) : [raw];
+      for (const part of parts) assert.doesNotMatch(part, flipped, `${rel} has no flip conditional`);
     }
     for (const doc of ["docs/guides/implement-tickets.md", "docs/skills/agents/implement-tickets.md"]) {
-      const text = await readFile(path.join(repoRoot, doc), "utf8");
-      assert.doesNotMatch(text, /default (?:has been|is) flipped|once the default/i, `${doc} has no flip conditional`);
+      for (const part of markdownSections(await readFile(path.join(repoRoot, doc), "utf8"))) {
+        assert.doesNotMatch(part, flipped, `${doc} has no flip conditional`);
+      }
     }
   });
 
   it("stops on planning errors and failed preflight in both strictness values", async () => {
-    const skill = await read("SKILL.md");
-    assert.match(skill, /both strictness values/i);
-    assert.match(skill, /(?:planning error|cycle|unresolved blocker)[\s\S]{0,300}both strictness values|both strictness values[\s\S]{0,300}(?:planning error|cycle|preflight)/i);
+    const constraints = await skillConstraints();
+    assert.match(constraints, /(?:planning error|cycle|unresolved blocker)[\s\S]{0,300}both strictness values/i);
   });
 
   it("adds nothing to extras, warnings, or retry in strict mode", async () => {
-    const skill = await read("SKILL.md");
-    assert.match(skill, /strict adds nothing[\s\S]{0,200}extras[\s\S]{0,80}warning[\s\S]{0,80}retry/i);
+    const constraints = await skillConstraints();
+    assert.match(constraints, /strict adds nothing[\s\S]{0,200}extras[\s\S]{0,80}warning[\s\S]{0,80}retry/i);
   });
 
-  it("describes --strict in the English and Thai docs and in the evals", async () => {
+  it("describes --strict in the English and Thai docs and in eval 20", async () => {
     for (const file of ["docs/guides/implement-tickets.md", "docs/skills/agents/implement-tickets.md"]) {
-      const doc = await readTextOrNull(path.join(repoRoot, file));
-      const matches = doc.match(/--strict/g) ?? [];
-      assert.ok(matches.length >= 2, `${file} describes --strict in Thai and English`);
-      assert.match(doc, /Strictness:/);
+      for (const title of docRunModeSections) {
+        const section = docSection(await readFile(path.join(repoRoot, file), "utf8"), title, file);
+        assert.match(section, /`--strict`/, `${file} ${title} describes --strict`);
+        assert.match(section, /`Strictness:`/, `${file} ${title} names Strictness:`);
+      }
     }
-    const evals = JSON.parse(await read("evals/evals.json"));
-    const text = JSON.stringify(evals);
-    assert.match(text, /--strict/);
-    assert.match(text, /Strictness:/);
+    const eval20 = await evalById(20);
+    assert.match(eval20, /--strict/);
+    assert.match(eval20, /Strictness:/);
   });
 });
 
@@ -1956,13 +2010,7 @@ describe("implement-tickets strict mode decision record", () => {
 });
 
 describe("implement-tickets risk-based verification", () => {
-  const read = async (rel) => (await readTextOrNull(path.join(skillRoot, rel)))?.replace(/\s*\n\s*/g, " ");
-  const section = async () => {
-    const text = await read("references/verification.md");
-    const start = text.indexOf("## Risk-based verification");
-    assert.ok(start >= 0, "verification.md has a Risk-based verification section");
-    return text.slice(start);
-  };
+  const section = () => flatSection("references/verification.md", "Risk-based verification");
 
   it("verifies every ticket in a strict run, including Risk: low", async () => {
     const s = await section();
@@ -2002,6 +2050,16 @@ describe("implement-tickets risk-based verification", () => {
     }
   });
 
+  it("treats a Green output missing the typecheck result or `none configured` as incomplete evidence", async () => {
+    const s = await section();
+    assert.match(s, /Evidence is incomplete when[\s\S]*Green output\s+lacks the typecheck result or `none configured`/i);
+  });
+
+  it("keeps reports and adapters that predate the evidence sections working", async () => {
+    const s = await section();
+    assert.match(s, /predates these evidence sections keeps working[\s\S]{0,80}missing sections are incomplete evidence[\s\S]{0,80}counts no attempt[\s\S]{0,40}fresh verifier/i);
+  });
+
   it("decides after extras are measured and before dispatch, keeping the counted-failure path", async () => {
     const s = await section();
     assert.match(s, /after[\s\S]{0,40}extras[\s\S]{0,40}measured[\s\S]{0,80}before[\s\S]{0,60}verifier/i);
@@ -2020,44 +2078,50 @@ describe("implement-tickets risk-based verification", () => {
 
   it("points dispatch, gate, and adapter text at the rule", async () => {
     for (const file of ["references/dispatch-contract.md", "references/integration-gate.md", "references/adapter-contract.md"]) {
-      const text = await read(file);
+      const text = await readFlat(file);
       assert.match(text, /verification\.md#risk-based-verification/, `${file} links the rule`);
     }
-    const adapter = await read("references/adapter-contract.md");
+    const adapter = await readFlat("references/adapter-contract.md");
     assert.doesNotMatch(adapter, /Send the worker report to a fresh verifier\. Integrate only after verification\./);
   });
 });
 
 describe("implement-tickets status and resume record strictness", () => {
-  const flat = async (rel) => (await readTextOrNull(path.join(skillRoot, rel)))?.replace(/\s*\n\s*/g, " ");
+  const record = async () => markdownHeaderBlock(await readTextOrNull(statePath)).replace(/\s*\n\s*/g, " ");
+  const continueSection = () => flatSection("references/status-and-resume.md", "Continue and reconcile");
 
   it("records Strictness and adds Risk and Verifier columns after the existing columns", async () => {
-    const text = await readTextOrNull(statePath);
+    const text = markdownHeaderBlock(await readTextOrNull(statePath));
     assert.match(text, /^Strictness: strict$/m);
     const header = text.split("\n").find((line) => line.startsWith("| Ticket |"));
     assert.match(header, /\| Verifier usage total \| Risk \| Verifier \|$/);
   });
 
   it("records a skipped verifier as verified, never verifying", async () => {
-    const s = await flat("references/status-and-resume.md");
+    const s = await record();
     assert.match(s, /`verified` with `Verifier: skipped`[\s\S]{0,200}never (?:as )?`verifying`/i);
     assert.match(s, /same wave-wait, hold, merge, and `continue` paths/i);
   });
 
   it("reads old records as strict with Verifier ran", async () => {
-    const s = await flat("references/status-and-resume.md");
+    const s = await record();
     assert.match(s, /no `Strictness:` line[\s\S]{0,160}strict/i);
     assert.match(s, /no Verifier column[\s\S]{0,80}`Verifier: ran`/i);
   });
 
+  it("reads a row with no Risk column as legacy alongside the missing Verifier column", async () => {
+    const s = await record();
+    assert.match(s, /no Verifier column, or no Risk column, is read as legacy[\s\S]{0,120}`Verifier: ran`/i);
+  });
+
   it("writes the default-strictness record when the run starts", async () => {
-    const s = await flat("references/status-and-resume.md");
+    const s = await record();
     assert.match(s, /default[- ]strictness[\s\S]{0,200}when the run starts[\s\S]{0,120}(?:rather than|not) after (?:an )?approval/i);
     assert.match(s, /without `--strict`[\s\S]{0,120}writes its run record when the run starts/i);
   });
 
   it("resumes in the recorded strictness and handles continue --strict", async () => {
-    const s = await flat("references/status-and-resume.md");
+    const s = await continueSection();
     assert.match(s, /`continue` resumes in the recorded strictness/i);
     assert.match(s, /default strictness[\s\S]{0,200}no approval unless the Plan changed/i);
     assert.match(s, /`continue --strict`[\s\S]{0,200}records? the run as strict[\s\S]{0,200}re-presents the Plan[\s\S]{0,160}approv/i);
@@ -2067,20 +2131,22 @@ describe("implement-tickets status and resume record strictness", () => {
   });
 
   it("lists tickets that skipped the verifier in the handoff and shows verifier outcome in status", async () => {
-    const gate = await flat("references/integration-gate.md");
+    const gate = await flatSection("references/integration-gate.md", "Successful handoff");
     assert.match(gate, /skipped the (?:fresh )?verifier, by number, in the handoff/i);
-    const s = await flat("references/status-and-resume.md");
-    assert.match(s, /`status`[\s\S]{0,200}strictness[\s\S]{0,120}verifier outcome/i);
+    const inspection = await flatSection("references/status-and-resume.md", "Read-only inspection");
+    assert.match(inspection, /`status`[\s\S]{0,200}strictness[\s\S]{0,120}verifier outcome/i);
   });
 
-  it("is described in the docs and evals", async () => {
+  it("is described in the docs and eval 22", async () => {
     for (const file of ["docs/guides/implement-tickets.md", "docs/skills/agents/implement-tickets.md"]) {
-      const doc = await readTextOrNull(path.join(repoRoot, file));
-      assert.match(doc, /Verifier: skipped/, file);
-      assert.match(doc, /continue --strict/, file);
+      for (const title of docRunModeSections) {
+        const section = docSection(await readFile(path.join(repoRoot, file), "utf8"), title, file);
+        assert.match(section, /Verifier: skipped/, `${file} ${title}`);
+        assert.match(section, /continue --strict/, `${file} ${title}`);
+      }
     }
-    const evals = await readTextOrNull(path.join(skillRoot, "evals/evals.json"));
-    assert.match(evals, /continue --strict/);
-    assert.match(evals, /Verifier: skipped/);
+    const eval22 = await evalById(22);
+    assert.match(eval22, /continue --strict/);
+    assert.match(eval22, /Verifier: skipped/);
   });
 });

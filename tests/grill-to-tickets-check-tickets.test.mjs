@@ -1259,6 +1259,11 @@ describe("check-tickets", () => {
       );
     });
 
+    it("ignores trailing whitespace on a Risk value", () => {
+      assert.deepEqual(riskErrors(first(withRisk(base, "**Risk:** low \t "))), []);
+      assert.deepEqual(riskErrors(first(withRisk(base, "**Risk:** high — shared interface  "))), []);
+    });
+
     it("reports a malformed Risk value", () => {
       for (const bad of [
         "**Risk:** high",
