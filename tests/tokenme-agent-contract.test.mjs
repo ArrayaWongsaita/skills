@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { readFile, access } from "node:fs/promises";
+import { readFile, readdir, access } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
 import {
@@ -20,6 +20,19 @@ const budgetGuideFile = path.resolve(
 
 async function fileExists(filePath) {
   await access(filePath, constants.R_OK);
+}
+
+// Every file under the skill's own directory, at any depth, so the
+// no-model-identifier scan keeps covering the evals JSON when it lands.
+async function listFilesRecursive(directory) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const files = await Promise.all(
+    entries.map((entry) => {
+      const child = path.resolve(directory, entry.name);
+      return entry.isDirectory() ? listFilesRecursive(child) : child;
+    }),
+  );
+  return files.flat();
 }
 
 // Frontmatter lines only, so a phrase moving into the body fails the
@@ -532,6 +545,272 @@ describe("tokenme-agent budget and chunking contract", () => {
       compaction,
       /split is what brings an oversized task back inside the budget/,
       "the split, not compaction, brings an oversized task back inside the budget",
+    );
+  });
+});
+
+describe("tokenme-agent dispatch contract", () => {
+  const dispatchFile = path.resolve(
+    canonicalDir,
+    "references/dispatch-contract.md",
+  );
+  const skillDir = path.resolve(canonicalDir);
+
+  // The history-changing git shell prefixes and global flags the deny list
+  // blocks, in the order the contract lists them.
+  const gitDenyPrefixes = [
+    "commit",
+    "push",
+    "reset",
+    "checkout",
+    "clean",
+    "stash",
+    "rebase",
+    "merge",
+    "pull",
+    "restore",
+    "switch",
+    "cherry-pick",
+    "revert",
+    "am",
+    "-C",
+    "-c",
+  ];
+
+  async function dispatchSection(title) {
+    const dispatch = await readFile(dispatchFile, "utf8");
+    return flatMarkdownSection(dispatch, title);
+  }
+
+  it("ships the dispatch contract and resolves the skill's link to it from the Workflow", async () => {
+    const markdown = await readFile(skillFile, "utf8");
+    const workflow = markdownSection(markdown, "Workflow");
+    assert.ok(workflow, "the Workflow section exists");
+    const links = sectionLinks(workflow);
+    const dispatchLink = links.find((link) =>
+      link.endsWith("references/dispatch-contract.md"),
+    );
+    assert.ok(
+      dispatchLink,
+      "the Workflow section links to references/dispatch-contract.md",
+    );
+    await fileExists(path.resolve(canonicalDir, dispatchLink));
+  });
+
+  it("dispatches bare by default and documents the opt-out that adds about 28k to the budget check", async () => {
+    const command = await dispatchSection("The dispatch command");
+    assert.match(
+      command,
+      /--bare/,
+      "the dispatch command carries the bare flag",
+    );
+    const bare = await dispatchSection("Bare by default");
+    assert.match(
+      bare,
+      /`--bare` is the default for every delegate run/,
+      "bare is the default for every delegate run",
+    );
+    assert.match(
+      bare,
+      /truly depends on project instructions/,
+      "the opt-out is for a task that truly depends on project instructions",
+    );
+    assert.match(
+      bare,
+      /adds about 28k tokens of overhead to the budget check/,
+      "dropping bare adds about 28k tokens of overhead to the budget check",
+    );
+  });
+
+  it("reads the prompt from a prompt file instead of inlining it in the shell command", async () => {
+    const command = await dispatchSection("The dispatch command");
+    assert.match(
+      command,
+      /-p "\$\(cat \/tmp\/tokenme-prompts\/<task-id>\.md\)"/,
+      "the prompt is passed by reading the prompt file",
+    );
+    assert.match(
+      command,
+      /read from the prompt file/,
+      "the prose states the prompt is read from the prompt file",
+    );
+  });
+
+  it("sends JSON to a result file on stdout and warnings to a separate error file on stderr", async () => {
+    const command = await dispatchSection("The dispatch command");
+    assert.match(
+      command,
+      /--output-format json/,
+      "the run uses the JSON output format",
+    );
+    assert.match(
+      command,
+      /> \/tmp\/tokenme-runs\/<task-id>\.json/,
+      "stdout is redirected to the result file",
+    );
+    assert.match(
+      command,
+      /2> \/tmp\/tokenme-runs\/<task-id>\.err/,
+      "stderr is redirected to a separate error file",
+    );
+    const dispatch = await readFile(dispatchFile, "utf8");
+    assertAbsentFromMarkdownSections(
+      dispatch,
+      /2>&1|&>/,
+      "no merged stdout and stderr redirection appears in the dispatch contract",
+    );
+  });
+
+  it("keeps one-shot runs out of session storage and out of slash-command expansion", async () => {
+    const command = await dispatchSection("The dispatch command");
+    assert.match(
+      command,
+      /--no-session-persistence/,
+      "one-shot runs carry the no-session-persistence flag",
+    );
+    assert.match(
+      command,
+      /--disable-slash-commands/,
+      "one-shot runs carry the disable-slash-commands flag",
+    );
+  });
+
+  it("restricts a read-only task such as summarising a log to the read tools", async () => {
+    const scoping = await dispatchSection("Tool scoping by task kind");
+    assert.match(
+      scoping,
+      /summarising a log/,
+      "a read-only task such as summarising a log is the named case",
+    );
+    assert.match(
+      scoping,
+      /--allowed-tools "Read Glob Grep"/,
+      "the read-only scoping restricts the tool set to read, glob and grep",
+    );
+    assert.match(
+      scoping,
+      /cannot edit a file or run a shell command/,
+      "the read-only scoping leaves the run no edit and no shell",
+    );
+  });
+
+  it("allows the edit, write and shell tools explicitly for a task that edits files and runs a formatter", async () => {
+    const scoping = await dispatchSection("Tool scoping by task kind");
+    assert.match(
+      scoping,
+      /formatting pass/,
+      "a task that edits files and runs a formatter is the named case",
+    );
+    assert.match(
+      scoping,
+      /--allowed-tools "Read Glob Grep Edit Write Bash"/,
+      "the edit scoping names edit, write and shell explicitly",
+    );
+    assert.match(
+      scoping,
+      /does not stall on a permission prompt/,
+      "the explicit allow list keeps an unattended run off a permission prompt",
+    );
+  });
+
+  it("denies the history-changing git prefixes and starting another claude or claude-tokenme run", async () => {
+    const denyList = await dispatchSection("The deny list");
+    assert.match(
+      denyList,
+      /--disallowed-tools/,
+      "the deny list rides on the disallowed-tools flag",
+    );
+    for (const prefix of gitDenyPrefixes) {
+      assert.ok(
+        denyList.includes(`Bash(git ${prefix}:*)`),
+        `the deny list blocks git ${prefix}`,
+      );
+    }
+    assert.ok(
+      denyList.includes("Bash(claude:*)") &&
+        denyList.includes("Bash(claude-tokenme:*)"),
+      "the deny list blocks starting another claude or claude-tokenme run",
+    );
+  });
+
+  it("carries the deny list onto a non-bare run and names prefix rules with host verification as the backstop", async () => {
+    const denyList = await dispatchSection("The deny list");
+    assert.match(
+      denyList,
+      /not bare carries the same deny list/,
+      "a run that is not bare carries the same deny list",
+    );
+    assert.match(
+      denyList,
+      /prefix rules/,
+      "the deny patterns are prefix rules",
+    );
+    assert.match(
+      denyList,
+      /Host verification is the backstop/,
+      "host verification backs the deny list up",
+    );
+  });
+
+  it("takes the model from the tokenme settings file and names no model identifier in any skill file", async () => {
+    const preflight = await dispatchSection("Preflight");
+    assert.match(
+      preflight,
+      /The model is whatever the tokenme settings file configures/,
+      "the model comes from the user's tokenme settings file",
+    );
+    const files = await listFilesRecursive(skillDir);
+    assert.ok(
+      files.some((file) => file.endsWith("SKILL.md")),
+      "the scan reaches the skill's own files",
+    );
+    assert.ok(
+      files.some((file) => file.endsWith("openai.yaml")),
+      "the scan reaches the agent config",
+    );
+    for (const file of files) {
+      const text = await readFile(file, "utf8");
+      assert.equal(
+        text.match(/qwen[\s-]?\d/i),
+        null,
+        `${path.relative(skillDir, file)} names a model identifier`,
+      );
+    }
+  });
+
+  it("preflights the tokenme command and falls back to the expanded claude --settings form", async () => {
+    const preflight = await dispatchSection("Preflight");
+    assert.match(
+      preflight,
+      /command -v claude-tokenme/,
+      "the preflight checks that claude-tokenme exists",
+    );
+    assert.match(
+      preflight,
+      /claude --settings/,
+      "the preflight accepts the expanded claude --settings form",
+    );
+    assert.match(
+      preflight,
+      /aliases do not expand/,
+      "the expanded form is for shells where aliases do not expand",
+    );
+    assert.match(
+      preflight,
+      /stop and give the user the one-time setup/,
+      "the preflight stops with setup instructions when neither form exists",
+    );
+  });
+
+  it("shows one-time harness allow rules for both command forms", async () => {
+    const setup = await dispatchSection("One-time harness setup");
+    assert.ok(
+      setup.includes("Bash(claude-tokenme:*)"),
+      "the allow rules cover the alias form",
+    );
+    assert.ok(
+      setup.includes("Bash(claude --settings:*)"),
+      "the allow rules cover the expanded form",
     );
   });
 });

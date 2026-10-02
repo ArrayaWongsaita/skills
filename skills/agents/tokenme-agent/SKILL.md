@@ -58,7 +58,9 @@ context. The full keep-local rules and the exclusion list live in
    check it against the keep-local rules and the eligibility checklist in
    [delegation-policy.md](references/delegation-policy.md).
 2. **Delegate** the subtask to a headless tokenme run through a
-   self-contained prompt.
+   self-contained prompt. The preflight, both command forms, the flags, the
+   tool scoping, and the one-time harness allow rules are in
+   [dispatch-contract.md](references/dispatch-contract.md).
 3. **Verify** the outcome yourself before reporting done; treat the delegated
    run's report as a claim to check, and report with your own verification
    behind it.
