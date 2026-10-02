@@ -378,6 +378,23 @@ describe("grill-to-tickets composite skill contract", () => {
     }
   });
 
+  it("proposes Risk: high by rule at the ticket quiz and writes only confirmed highs", async () => {
+    const stage3 = (await readFile(skillFiles[0], "utf8")).replace(/\s+/g, " ");
+    const format = (await readFile(path.resolve(canonicalDir, "references/ticket-format.md"), "utf8")).replace(/\s+/g, " ");
+    const review = (await readFile(path.resolve(canonicalDir, "references/ticket-review.md"), "utf8")).replace(/\s+/g, " ");
+    for (const [name, text] of [["SKILL.md", stage3], ["ticket-format.md", format]]) {
+      assert.match(text, /propos\w* `Risk: high`[^.]*reason/i, `${name}: the quiz proposes Risk: high with a reason`);
+      assert.match(text, /blocks? three or more tickets/i, `${name}: blocks three or more tickets`);
+      assert.match(text, /shared public interface or contract/i, `${name}: shared public interface or contract`);
+      assert.match(text, /migration, auth, security, payment, or concurrency/i, `${name}: sensitive code areas`);
+      assert.match(text, /external or irreversible side effect/i, `${name}: external or irreversible side effect`);
+      assert.match(text, /confirms? or rejects? each proposed/i, `${name}: the person confirms or rejects each proposal`);
+      assert.match(text, /only a confirmed high is written/i, `${name}: only a confirmed high is written`);
+      assert.match(text, /without a Risk field/i, `${name}: other tickets are written without a Risk field`);
+    }
+    assert.match(review, /Risk/, "ticket-review.md mentions the Risk proposal at the quiz");
+  });
+
   it("runs the ticket checker before the quiz and traces every ticket to its stories", async () => {
     for (const file of skillFiles) {
       const content = await readFile(file, "utf8");

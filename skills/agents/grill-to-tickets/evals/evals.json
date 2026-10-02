@@ -515,6 +515,16 @@
         "Keep review: 1/3 rounds and ask only for confirmation; do not repeat the review question or refill spent rounds."
       ],
       "files": []
+    },
+    {
+      "id": 49,
+      "name": "ticket quiz proposes Risk: high and the person confirms it",
+      "prompt": "$grill-to-tickets At the ticket quiz, ticket 01 blocks tickets 02, 03, and 04, and ticket 05 changes the auth middleware. I confirm the proposal for 01 and reject the one for 05.",
+      "expected_output": "Propose Risk: high with a reason for 01 (blocks three or more tickets) and 05 (auth code). Write Risk: high with its reason only to 01 after the person confirms; 05 and every other ticket are written without a Risk field.",
+      "expectations": [
+        "Propose Risk: high with a reason for 01 (blocks three or more tickets) and 05 (auth code). Write Risk: high with its reason only to 01 after the person confirms; 05 and every other ticket are written without a Risk field."
+      ],
+      "files": []
     }
   ]
 }

@@ -74,6 +74,8 @@ Present the proposed breakdown as a numbered list. For each ticket, show:
 
 The quiz also shows the checker's story-coverage table, budget table, DAG summary (with the recommended implementer), and every warning. Log each warning under `## Ticket warnings` in `decisions.md` as acknowledged or fixed, and re-run the checker with `--write-budget` after each change.
 
+For each ticket that matches the risk rule, propose `Risk: high` with its reason: it blocks three or more tickets; it changes a shared public interface or contract another ticket uses; it touches migration, auth, security, payment, or concurrency code; or it has an external or irreversible side effect. The person confirms or rejects each proposed high. Only a confirmed high is written to its ticket file as `**Risk:** high — <reason>`; every other ticket is written without a Risk field.
+
 For each `ASK`, the person decides whether to fix or acknowledge the question.
 The main thread waits until the person has seen and decided on the question
 before applying a fix, and fixes a ticket only when the person chooses fix.

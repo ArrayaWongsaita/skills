@@ -30,3 +30,5 @@ return is treated as `ASK` with the question `the reviewer returned no verdict`.
 
 The review reads for ambiguity only and sets no limit. This is the ambiguity-only form of the
 readiness dry-run that ADR 0014 deferred. The reviewer edits nothing.
+
+The reviewer proposes no `Risk` value. The `Risk: high` proposal belongs to the main thread at the quiz, after the review, and the person confirms or rejects it there.
