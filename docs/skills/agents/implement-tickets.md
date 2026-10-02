@@ -3,13 +3,13 @@
 ## ภาษาไทย / Thai
 
 `implement-tickets` นำชุด ticket ที่ publish แล้วผ่านการวางแผน การ implement
-การตรวจสอบ และการรวมงาน โดยให้ผู้ใช้ทบทวนแผนก่อนเริ่ม execute
+การตรวจสอบ และการรวมงาน โดยพิมพ์ Plan ก่อนเริ่ม และให้ผู้ใช้ทบทวนก่อน execute เมื่อใช้ `--strict`
 
 ### ใช้เมื่อไร
 
 - มีชุด ticket ที่ต้องการวางแผนและทำงานเป็นลำดับ
-- ต้องการให้มีการตรวจผลก่อนรวมงาน
-- ต้องการทบทวนแผนก่อนเริ่ม implement
+- ต้องการให้มีการตรวจผลก่อนรวมงาน (ทุก ticket ใน strict run หรือเฉพาะ ticket ที่เสี่ยง)
+- ต้องการทบทวนแผนก่อนเริ่ม implement (ใช้ `--strict`)
 
 ### การเรียกใช้งาน
 
@@ -31,8 +31,8 @@ npx skills add ArrayaWongsaita/skills --skill implement-tickets
 ### วิธีทำงานหลัก
 
 1. อ่าน ticket และเตรียมแผน
-2. หยุดให้ผู้ใช้ทบทวนและอนุมัติแผน
-3. หลังอนุมัติ ให้ worker ทำงานและ verifier ตรวจผลก่อน integration
+2. ถ้าใช้ `--strict` ให้หยุดให้ผู้ใช้ทบทวนและอนุมัติแผน (ค่าเริ่มต้นพิมพ์ Plan แล้วเริ่มเลย)
+3. worker ทำงาน และ verifier ตรวจผลก่อน integration ทุก ticket ใน strict run หรือเฉพาะ ticket ที่เสี่ยงในค่าเริ่มต้น
 4. ส่งต่อ integration branch และ review commands แล้วหยุดก่อน review, push หรือเปิด PR
 
 การค้นหา adapter, lock fallback, แนวทางติดตั้ง และ worktree ownership อ้างอิง
@@ -48,7 +48,7 @@ marker ของ parallel execution อยู่ใน
 
 ### Dispatch, verifier และ timeout
 
-หลัง approval ให้ทำตาม [dispatch contract](../../../skills/agents/implement-tickets/references/dispatch-contract.md),
+เมื่อเริ่ม execute (หลัง approval ใน strict run) ให้ทำตาม [dispatch contract](../../../skills/agents/implement-tickets/references/dispatch-contract.md),
 [worker prompt scaffold](../../../skills/agents/implement-tickets/references/prompt-scaffold.md)
 และ [verification contract](../../../skills/agents/implement-tickets/references/verification.md).
 
@@ -77,10 +77,10 @@ review, push หรือเปิด PR
 ใช้ `--strict` (ตั้งครั้งเดียวต่อการรัน และไม่ขึ้นกับ option อื่น) เพื่อให้หยุดรอการอนุมัติ Plan
 ก่อน dispatch worker หรือเขียน run state Plan ระบุ strictness ไว้ในบรรทัด `Strictness:` ถัดจาก
 `Run mode:` และการเปลี่ยน strictness ไม่ถือเป็นการเปลี่ยน wave
-จนกว่าจะเปลี่ยนค่าเริ่มต้น การรันที่ไม่มี flag ยังเป็น strict ส่วนพฤติกรรมของ default strictness ใช้เมื่อไม่มี `--strict`
+การรันที่ไม่มี flag อยู่ใน default strictness: พิมพ์ Plan แล้วเริ่มทำงานโดยไม่หยุดรออนุมัติ และใช้ verifier เฉพาะ ticket ที่เสี่ยง
 run record เก็บ strictness และคอลัมน์ Risk กับ Verifier ของแต่ละ ticket (`Verifier: skipped` คือ ticket ที่ข้าม verifier)
 `continue` resume ตาม strictness ที่บันทึกไว้ ส่วน `continue --strict` เปลี่ยนเป็น strict และขออนุมัติ Plan ใหม่ และ handoff ระบุเลข ticket ที่ข้าม verifier
-หลังเปลี่ยนค่าเริ่มต้นแล้ว Planning error หยุดการรันทั้งสองค่า และ strict ไม่เพิ่มการถาม extras,
+Planning error หยุดการรันทั้งสองค่า และ strict ไม่เพิ่มการถาม extras,
 warning pause หรือลด retry budget
 และ [ADR 0021](../../decisions/0021-touch-set-drift-without-reapproval.md)
 
@@ -128,13 +128,13 @@ explains how to clear the spec-hash warning.
 ### Main workflow
 
 1. Read the tickets and prepare a plan.
-2. Pause for the user to review and approve the plan.
-3. After approval, workers implement and a verifier checks the results before integration.
+2. With `--strict`, pause for the user to review and approve the plan; by default the plan is printed and the run starts.
+3. Workers implement, and a verifier checks the results before integration for every ticket in a strict run or for risky tickets only by default.
 4. Hand off the integration branch and review commands, then stop before review, push, or a pull request.
 
 ### Dispatch and verification
 
-After approval, follow the [dispatch contract](../../../skills/agents/implement-tickets/references/dispatch-contract.md),
+Once execution starts (after approval in a strict run), follow the [dispatch contract](../../../skills/agents/implement-tickets/references/dispatch-contract.md),
 [worker prompt scaffold](../../../skills/agents/implement-tickets/references/prompt-scaffold.md),
 and [verification contract](../../../skills/agents/implement-tickets/references/verification.md).
 
@@ -158,8 +158,8 @@ parallel mode. The validation marker is described in the
 Pass `--strict` (set once per run, independent of the other options) to pause for Plan
 approval before any worker is dispatched or any run state is written. The Plan names
 the strictness on a `Strictness:` line next to `Run mode:`, and a change of strictness
-is not a change of waves. Until the default is flipped a run with no flag stays strict;
-default-strictness behavior applies without `--strict` once the default has been flipped.
+is not a change of waves. A run with no flag is in default strictness: it prints the Plan,
+starts without waiting for approval, and verifies only risky tickets.
 The run record stores the strictness and each ticket's Risk and Verifier columns
 (`Verifier: skipped` marks a ticket judged on evidence alone). `continue` resumes in
 the recorded strictness, `continue --strict` makes the run strict and asks for

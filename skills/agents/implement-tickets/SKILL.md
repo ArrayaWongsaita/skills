@@ -1,6 +1,6 @@
 ---
 name: implement-tickets
-description: Plan and implement a grill-to-tickets feature directory with native subagents, deterministic dependency and touch-set waves, explicit approval before execution, verification, and a handoff before review.
+description: Plan and implement a grill-to-tickets feature directory with native subagents, deterministic dependency and touch-set waves, an approval pause in strict runs, risk-based verification, and a handoff before review.
 disable-model-invocation: true
 ---
 
@@ -10,8 +10,9 @@ Turn a published `.scratch/<feature-slug>/issues/` ticket set into working
 code. The orchestrator reads and plans the whole set, then dispatches one
 worker per ticket to build test-first. The default backend is native harness
 subagents; each ticket runs in a deterministic wave after its blockers and
-touch-set conflicts are handled. A fresh verifier checks each worker's
-evidence, and the orchestrator integrates verified work behind a gate.
+touch-set conflicts are handled. A fresh verifier checks the evidence of every
+ticket in a strict run and of risky tickets otherwise; the orchestrator judges
+the rest from their evidence and integrates verified work behind a gate.
 
 ## Invocation
 
@@ -40,9 +41,9 @@ Options are set once for the run:
 - `--strict` makes the run strict. It is set once per run and is independent
   of `--parallel`, `--serial`, `--concurrency`, `--with`, `--agent`, and
   `--model`. A strict run presents the Plan and waits for approval, as
-  described in Stage 0. Default-strictness behavior applies without `--strict`
-  once the default has been flipped; until the default is flipped a run with
-  no flag stays strict and pauses for approval exactly as a strict run does.
+  described in Stage 0. A run with no flag is in default strictness: it prints
+  the Plan and starts without waiting for approval, and verifies only risky
+  tickets.
 
 Pass `--serial` to `scripts/waves.mjs` unless parallel mode is selected.
 
@@ -102,15 +103,15 @@ The Plan also names the run's strictness on its own `Strictness:` line next to
 the run mode (`Strictness: strict`). A change of strictness is not a change of
 waves.
 
-Pause for explicit approval. A strict run presents the Plan and dispatches no
-worker and writes no run state until the person approves. Until the default
-is flipped a run with no flag pauses the same way; the default-strictness
-behavior applies without `--strict` once the default has been flipped. What the approval covers is listed in
+Pause for explicit approval in a strict run. A strict run presents the Plan and
+dispatches no worker and writes no run state until the person approves. A run
+with no flag is in default strictness: it prints the Plan and starts without a
+pause. What the approval covers is listed in
 [references/planning.md](references/planning.md#5-present-the-plan-and-pause).
-No file outside the feature directory changes until approval. Do not dispatch
-workers or write run state before approval.
+No file outside the feature directory changes until approval of a strict run.
+Do not dispatch workers or write run state before that approval.
 Every manifest state is advisory: it cannot stop the run, it is not recorded in
-the run status file, and the approval pause is always reached.
+the run status file, and a strict run always reaches the approval pause.
 
 ## Stage 1 — Execute approved waves
 
@@ -144,7 +145,7 @@ branch and review commands. Stop before review, push, or a pull request.
 - A change to anything the Plan approval covers (see
   [references/planning.md](references/planning.md#5-present-the-plan-and-pause))
   asks for approval before continuing; accepted extras alone never do.
-- Keep the Plan read-only until the user explicitly approves it.
+- Keep the Plan of a strict run read-only until the user explicitly approves it.
 - The orchestrator writes no implementation code except a mechanical merge
   conflict resolution. That allowance stays for conflicts outside drift; for a
   drift conflict, deferral takes precedence and the ticket goes to a drain round

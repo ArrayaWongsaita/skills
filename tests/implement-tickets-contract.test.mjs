@@ -886,7 +886,8 @@ describe("implement-tickets skill and documentation contract", () => {
     assert.match(plan, /concurrency cap[^`]{0,80}`4` by default/i, "the Plan names the default concurrency cap in parallel mode");
     assert.match(plan, /all script and planning warnings/i, "the Plan includes all planning warnings");
     assert.match(plan, /parallel not yet validated/, "the pending marker is printed in the Plan");
-    assert.match(plan, /pause for explicit approval/i, "the Plan waits for explicit approval");
+    assert.match(plan, /strict run presents the Plan[\s\S]{0,160}until the person approves/i, "a strict Plan waits for explicit approval");
+    assert.match(plan, /pause for explicit approval/i, "the strict pause names explicit approval");
     assert.match(plan, /no file outside the\s+feature directory changes until approval/i, "files outside the feature directory stay untouched before approval");
   });
 
@@ -950,7 +951,7 @@ describe("implement-tickets skill and documentation contract", () => {
     assert.match(continueRun, /manifest\s+check/i, "continue reruns the manifest check");
     assert.match(continueRun, /spec\.md/i, "the resume check names the spec file");
     assert.match(continueRun, /edited\s+between sessions[\s\S]*spec-hash warning/i, "continue surfaces a spec edit made between sessions");
-    assert.match(stage0, /every manifest state[\s\S]*cannot stop the run[\s\S]*not recorded in\s+the run status file[\s\S]*approval pause is always reached/i, "manifest state is advisory and does not affect run state or the approval pause");
+    assert.match(stage0, /every manifest state[\s\S]*cannot stop the run[\s\S]*not recorded in\s+the run status file[\s\S]*strict run always reaches the approval pause/i, "manifest state is advisory and does not affect run state or the strict approval pause");
     assert.match(stage0, /wave planning comes from ticket files\s+and never from the manifest/i, "waves are computed from ticket files only");
   });
 
@@ -1881,12 +1882,25 @@ describe("implement-tickets --strict flag and Plan strictness", () => {
     assert.match(planning, /change of strictness[\s\S]{0,120}(?:not|never)[\s\S]{0,60}waves/i);
   });
 
-  it("states default strictness as applying only once the default has been flipped", async () => {
+  it("puts a run with no flag in default strictness: the Plan prints and the run starts without a pause", async () => {
     const skill = await read("SKILL.md");
     const planning = await read("references/planning.md");
     for (const text of [skill, planning]) {
-      assert.match(text, /without `--strict` once the default has been flipped/);
-      assert.match(text, /until the default is flipped[\s\S]{0,160}(?:no flag|without a flag)[\s\S]{0,120}(?:pauses?|strict)/i);
+      const flat = text.replace(/\s*\n\s*/g, " ");
+      assert.match(flat, /a run with no flag is in default strictness/i);
+      assert.match(flat, /no flag[\s\S]{0,200}prints the Plan and starts without (?:a pause|waiting for approval)/i);
+    }
+  });
+
+  it("leaves no conditional wording about a default that has yet to be flipped", async () => {
+    const files = ["SKILL.md", "agents/openai.yaml", "evals/evals.json", ...(await readdir(path.join(skillRoot, "references"))).map((f) => `references/${f}`)];
+    for (const rel of files) {
+      const text = await read(rel);
+      assert.doesNotMatch(text, /default (?:has been|is) flipped|until (?:then|the default)[^.]{0,40}stays? strict|once the default/i, `${rel} has no flip conditional`);
+    }
+    for (const doc of ["docs/guides/implement-tickets.md", "docs/skills/agents/implement-tickets.md"]) {
+      const text = await readFile(path.join(repoRoot, doc), "utf8");
+      assert.doesNotMatch(text, /default (?:has been|is) flipped|once the default/i, `${doc} has no flip conditional`);
     }
   });
 
@@ -1912,6 +1926,32 @@ describe("implement-tickets --strict flag and Plan strictness", () => {
     const text = JSON.stringify(evals);
     assert.match(text, /--strict/);
     assert.match(text, /Strictness:/);
+  });
+});
+
+describe("implement-tickets strict mode decision record", () => {
+  const adrPath = path.join(repoRoot, "docs/decisions/0022-strict-mode-and-risk-based-verification.md");
+
+  it("files a bilingual record that narrows ADR 0020 and overrides ADR 0021's second-mode argument", async () => {
+    const adr = await readTextOrNull(adrPath);
+    assert.ok(adr, "ADR 0022 exists");
+    assert.match(adr, /^# ADR 0022: Strict mode and risk-based verification/m);
+    assert.match(adr, /Narrows \/ [^\n]*: ADR 0020[^\n]*(?:approval)[^\n]*(?:verifier)/i);
+    assert.match(adr, /Overrides \/ [^\n]*: ADR 0021[^\n]*second mode[^\n]*kept/i);
+    const decision = markdownSection(adr, "Decision / การตัดสินใจ");
+    assert.ok(decision, "has a Decision section");
+    assert.match(decision, /`--strict` pauses for Plan approval and verifies every ticket/);
+    assert.match(decision, /no flag[\s\S]{0,160}prints the Plan and starts/i);
+    assert.match(decision, /Risk: high/);
+    assert.match(decision, /[฀-๿]/, "has Thai text");
+    assert.ok(markdownSection(adr, "Rejected alternatives / ทางเลือกที่ปฏิเสธ"), "has rejected alternatives");
+    assert.ok(markdownSection(adr, "Consequences / ผลที่ตามมา"), "has consequences");
+  });
+
+  it("names ADR 0022 in the header of the core decision record", async () => {
+    const adr = await readTextOrNull(path.join(repoRoot, "docs/decisions/0020-implement-tickets-core.md"));
+    assert.match(adr, /Narrowed by \/ [^\n]*ADR 0022/);
+    assert.match(adr, /Narrowed by \/ [^\n]*ADR 0021/);
   });
 });
 
@@ -1973,9 +2013,9 @@ describe("implement-tickets risk-based verification", () => {
     assert.match(s, /deny-list or cap hit[\s\S]{0,200}parks[\s\S]{0,200}verified on approval/i);
   });
 
-  it("words default strictness as applying only once the default has been flipped", async () => {
+  it("words risk-based verification as the default-strictness rule", async () => {
     const s = await section();
-    assert.match(s, /without `--strict` once the default has been flipped/);
+    assert.match(s, /without `--strict`[\s\S]{0,80}default strictness/i);
   });
 
   it("points dispatch, gate, and adapter text at the rule", async () => {
@@ -2013,7 +2053,7 @@ describe("implement-tickets status and resume record strictness", () => {
   it("writes the default-strictness record when the run starts", async () => {
     const s = await flat("references/status-and-resume.md");
     assert.match(s, /default[- ]strictness[\s\S]{0,200}when the run starts[\s\S]{0,120}(?:rather than|not) after (?:an )?approval/i);
-    assert.match(s, /without `--strict` once the default has been flipped/);
+    assert.match(s, /without `--strict`[\s\S]{0,120}writes its run record when the run starts/i);
   });
 
   it("resumes in the recorded strictness and handles continue --strict", async () => {

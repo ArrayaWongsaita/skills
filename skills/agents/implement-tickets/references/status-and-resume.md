@@ -35,8 +35,7 @@ holds `ran` or `skipped`. A ticket whose verifier is skipped is recorded as
 `verified` with `Verifier: skipped` once the orchestrator has judged its
 evidence, never as `verifying`, so it follows the same wave-wait, hold, merge,
 and `continue` paths as a verified ticket. A row with no Verifier column is
-read as `Verifier: ran`. A default-strictness run (without `--strict` once the
-default has been flipped) writes its run record when the run starts, rather
+read as `Verifier: ran`. A default-strictness run (without `--strict`) writes its run record when the run starts, rather
 than after an approval, so an interrupted run can be inspected with `status`;
 a strict run writes it after approval. The Extras column sits after the Touch set column and lists the ticket's
 accepted extra files (`none` when there are none). Write a ticket's extras to
@@ -176,7 +175,7 @@ For a valid status file:
    A strict run waits for approval before dispatching, unless only accepted
    extras happened: then reconcile Git and resume without a new approval, and
    re-ask only unanswered parked questions. In default strictness (without
-   `--strict` once the default has been flipped) `continue` asks for no
+   `--strict`) `continue` asks for no
    approval unless the Plan changed, and accepted extras alone still need
    none. A change to the run mode, waves, blockers, ticket set, budget,
    backend, or concurrency, a spec-hash change, or an edit the person
