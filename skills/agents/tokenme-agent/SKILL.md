@@ -34,16 +34,24 @@ self-contained (it needs nothing from this conversation):
 - Batch edits with a checkable acceptance criterion.
 - Read-only crunching with a fixed output, such as summarising a large log.
 
+Before every delegation, apply the eligibility checklist in
+[delegation-policy.md](references/delegation-policy.md): the subtask is
+self-contained, it fits the budget, and its outcome is verifiable by a diff
+or a test run.
+
 Keep on the host anything touching secrets, `.env` or credential files,
 tickets marked `Risk: high`, or code the user has marked as staying local;
-keep design, architecture, and debugging that needs judgment there too, plus
-any task that depends on this chat's earlier context.
+keep design, architecture, security-sensitive edits, and debugging that needs
+judgment there too, plus any task that depends on this chat's earlier
+context. The full keep-local rules and the exclusion list live in
+[delegation-policy.md](references/delegation-policy.md).
 
 ## Workflow
 
 1. **Recognise** the subtask — from your own plan, or from "use tokenme",
    "delegate this", or "do this cheaply" phrasing in the task text — and
-   check it against What to delegate.
+   check it against the keep-local rules and the eligibility checklist in
+   [delegation-policy.md](references/delegation-policy.md).
 2. **Delegate** the subtask to a headless tokenme run through a
    self-contained prompt.
 3. **Verify** the outcome yourself before reporting done; treat the delegated
