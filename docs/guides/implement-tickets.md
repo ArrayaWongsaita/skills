@@ -68,6 +68,13 @@ marker ของ parallel execution อยู่ใน
 ไฟล์ที่ worker แตะนอก touch set (extras) ยอมรับอัตโนมัติและรายงานให้ทราบ
 ยกเว้นชน deny-list, เกิน cap หรือ conflict จริง ดู
 [planning reference](../../skills/agents/implement-tickets/references/planning.md)
+
+ใช้ `--strict` (ตั้งครั้งเดียวต่อการรัน และไม่ขึ้นกับ option อื่น) เพื่อให้หยุดรอการอนุมัติ Plan
+ก่อน dispatch worker หรือเขียน run state Plan ระบุ strictness ไว้ในบรรทัด `Strictness:` ถัดจาก
+`Run mode:` และการเปลี่ยน strictness ไม่ถือเป็นการเปลี่ยน wave
+จนกว่าจะเปลี่ยนค่าเริ่มต้น การรันที่ไม่มี flag ยังเป็น strict ส่วนพฤติกรรมของ default strictness ใช้เมื่อไม่มี `--strict`
+หลังเปลี่ยนค่าเริ่มต้นแล้ว Planning error หยุดการรันทั้งสองค่า และ strict ไม่เพิ่มการถาม extras,
+warning pause หรือลด retry budget
 และ [ADR 0021](../decisions/0021-touch-set-drift-without-reapproval.md)
 
 ตัวอ่าน manifest เปรียบเทียบ spec และชุด ticket. Plan แสดงคำเตือน spec-hash และคำเตือน ticket-set
@@ -140,6 +147,15 @@ See the planning reference for the ticket's Seam and Context fields.
 Serial mode (one ticket per wave) is the default. Pass `--parallel` to opt in to
 parallel mode. The validation marker is described in the
 [parallel-validation reference](../../skills/agents/implement-tickets/references/parallel-validation.md).
+
+Pass `--strict` (set once per run, independent of the other options) to pause for Plan
+approval before any worker is dispatched or any run state is written. The Plan names
+the strictness on a `Strictness:` line next to `Run mode:`, and a change of strictness
+is not a change of waves. Until the default is flipped a run with no flag stays strict;
+default-strictness behavior applies without `--strict` once the default has been flipped.
+Planning errors stop the run in both strictness values, and strict adds no extras
+approval, warning pause, or smaller retry budget.
+
 Files a worker touches beyond its touch set (extras) are accepted automatically
 and reported, unless they hit the deny-list, the per-ticket cap, or a real
 conflict. See the

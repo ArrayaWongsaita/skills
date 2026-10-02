@@ -37,6 +37,12 @@ Options are set once for the run:
   and implies `--parallel`; the cap is `4` by default.
 - `--serial` is an alias of the default serial mode. Combining `--serial` with
   `--parallel` or `--concurrency` is rejected before the Plan is presented.
+- `--strict` makes the run strict. It is set once per run and is independent
+  of `--parallel`, `--serial`, `--concurrency`, `--with`, `--agent`, and
+  `--model`. A strict run presents the Plan and waits for approval, as
+  described in Stage 0. Default-strictness behavior applies without `--strict`
+  once the default has been flipped; until the default is flipped a run with
+  no flag stays strict and pauses for approval exactly as a strict run does.
 
 Pass `--serial` to `scripts/waves.mjs` unless parallel mode is selected.
 
@@ -92,7 +98,14 @@ the marker is not validated it prints the standalone line
 `parallel not yet validated`. In serial mode it shows no concurrency cap and
 omits that line.
 
-Pause for explicit approval. What the approval covers is listed in
+The Plan also names the run's strictness on its own `Strictness:` line next to
+the run mode (`Strictness: strict`). A change of strictness is not a change of
+waves.
+
+Pause for explicit approval. A strict run presents the Plan and dispatches no
+worker and writes no run state until the person approves. Until the default
+is flipped a run with no flag pauses the same way; the default-strictness
+behavior applies without `--strict` once the default has been flipped. What the approval covers is listed in
 [references/planning.md](references/planning.md#5-present-the-plan-and-pause).
 No file outside the feature directory changes until approval. Do not dispatch
 workers or write run state before approval.
@@ -117,7 +130,12 @@ branch and review commands. Stop before review, push, or a pull request.
 ## Constraints
 
 - Treat malformed tickets, unresolved blockers, cycles, and invalid numbering
-  as planning errors. Do not dispatch from an invalid ticket set.
+  as planning errors. Do not dispatch from an invalid ticket set. Planning
+  errors and a failed preflight stop the run before any dispatch in both
+  strictness values.
+- Strict adds nothing to extras, warnings, or retry: a strict run accepts an
+  extra file with no deny-list, cap, or sibling-conflict problem without
+  asking, adds no warning pause, and keeps the same retry budget.
 - The declared touch set is a planning baseline, not an approval boundary.
   Extras are measured and accepted: an extra file that is not on the
   deny-list, is within the cap, and conflicts with no sibling ticket is

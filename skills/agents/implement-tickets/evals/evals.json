@@ -200,6 +200,20 @@
         "Keeps the manifest warning advisory so planning reaches the approval pause"
       ],
       "files": []
+    },
+    {
+      "id": 20,
+      "name": "--strict pauses for Plan approval and names Strictness",
+      "prompt": "/implement-tickets .scratch/demo/issues/ --strict",
+      "expected_output": "The Plan names Strictness: strict on its own line next to the run mode, then pauses for approval. No worker is dispatched and no run state is written until the person approves. Until the default is flipped a run with no flag behaves the same way.",
+      "expectations": [
+        "Accepts --strict once per run, independent of --parallel, --serial, --concurrency, --with, --agent, and --model",
+        "Prints a Strictness: line next to Run mode and does not treat a strictness change as a change of waves",
+        "Dispatches no worker and writes no run state before approval",
+        "Stops on a dependency cycle or failed preflight before dispatch in both strictness values",
+        "Accepts an extra file with no deny-list, cap, or sibling-conflict problem without asking and adds no warning pause or smaller retry budget"
+      ],
+      "files": []
     }
   ]
 }
