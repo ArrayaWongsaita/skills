@@ -589,6 +589,32 @@ describe("implement-tickets worker dispatch and verification contract", () => {
     requireText(glossary, /\| Touch-set approval block \|/, "the glossary defines touch-set approval block");
   });
 
+  it("holds only what a parked ticket must and releases it after an answer", async () => {
+    const state = await readTextOrNull(path.join(skillRoot, "references/status-and-resume.md"));
+    const gate = await readTextOrNull(path.join(skillRoot, "references/integration-gate.md"));
+    const verification = await readTextOrNull(path.join(skillRoot, "references/verification.md"));
+    const glossary = await readTextOrNull(path.join(repoRoot, "docs/glossary.md"));
+    assert.ok(state && gate && verification && glossary, "state, gate, verification and glossary files exist");
+    const hold = markdownSection(state, "Hold set and release");
+    assert.ok(hold, "the run-state contract has a hold set and release section");
+    requireText(hold, /hold set[\s\S]{0,300}overlaps[\s\S]{0,120}effective\s+touch\s+set[\s\S]{0,200}transitive\s+dependants/i, "the hold set is overlap plus transitive dependants");
+    requireText(hold, /unknown\s+touch\s+set[\s\S]{0,80}holds\s+all\s+later\s+tickets/i, "an unknown touch set holds all later tickets");
+    requireText(hold, /outside the hold set keep running[\s\S]{0,80}later waves[\s\S]{0,200}gate runs without any held ticket/i, "independent tickets keep running and the gate skips held tickets");
+    requireText(hold, /in flight or verified finishes[\s\S]{0,120}not merged until release[\s\S]{0,300}original wave and ticket order/i, "held tickets finish but merge after release in original order");
+    requireText(state, /exception to the halt rule[\s\S]{0,200}stops only when every unintegrated ticket is\s+held or blocked/i, "the block is an exception to the halt rule");
+    requireText(hold, /notes\s+line[\s\S]{0,120}keyed by ticket number[\s\S]{0,300}Record the answer when it arrives[\s\S]{0,120}every frontier[\s\S]{0,120}clear/i, "the question and answer live in a notes line");
+    requireText(hold, /shown at the end of the wave[\s\S]{0,120}does not wait/i, "the question is shown at the end of the wave");
+    requireText(hold, /fresh verifier[\s\S]{0,200}release\s+pass[\s\S]{0,200}pre-pass commit[\s\S]{0,200}hold is\s+released after it passes/i, "approval verifies, merges in a release pass, and releases after the gate");
+    requireText(hold, /rejection[\s\S]{0,60}extras are dropped[\s\S]{0,200}latest integration commit[\s\S]{0,200}declared files[\s\S]{0,200}costs one attempt[\s\S]{0,120}hold stays until the\s+ticket integrates/i, "rejection redispatches at one attempt and keeps the hold");
+    requireText(hold, /ends\s+blocked[\s\S]{0,80}overlap\s+lift[\s\S]{0,80}dependants\s+stay\s+held/i, "a blocked parked ticket lifts overlap-only holds");
+    requireText(state, /every unanswered parked question[\s\S]{0,160}including one for\s+another blocked ticket/i, "every halt report lists unanswered parked questions");
+    requireText(state, /continue[\s\S]{0,40}re-asks any unanswered parked question[\s\S]{0,200}derives held and deferred state from the\s+parked rows, the notes line, and Git/i, "continue re-asks and derives held state");
+    requireText(gate, /release pass[\s\S]{0,60}mini-wave[\s\S]{0,200}own pre-pass commit[\s\S]{0,60}gate base/i, "the release pass is a mini-wave with its own gate base");
+    requireText(gate, /gate runs without any\s+held ticket/i, "the integration gate runs without held tickets");
+    requireText(verification, /approves[\s\S]{0,200}fresh verifier[\s\S]{0,200}release\s+pass/i, "an approved parked branch is re-verified");
+    requireText(glossary, /\| Hold set \|/, "the glossary defines hold set");
+  });
+
   it("points execution mechanics to canonical contracts in scoped skill and guide sections", async () => {
     const skill = await readTextOrNull(path.join(skillRoot, "SKILL.md"));
     const guide = await readTextOrNull(path.join(repoRoot, "docs/guides/implement-tickets.md"));

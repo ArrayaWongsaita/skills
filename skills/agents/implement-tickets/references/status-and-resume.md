@@ -47,16 +47,70 @@ available partial path and do not start them until
 the person resumes the run.
 
 A deny-list or cap hit marks the ticket `BLOCKED (TOUCH_SET_APPROVAL)` and
-keeps its work on the worker branch; it is parked rather than a failure, and the
-partial-path halt rules above do not apply to it. See the dispatch contract's
-"Deny-list and cap hits" section.
+keeps its work on the worker branch; it is parked rather than a failure. This
+block is an exception to the halt rule for other blocks above: the run does not
+stop at the next frontier, and it stops only when every unintegrated ticket is
+held or blocked. See the dispatch contract's "Deny-list and cap hits" section
+and "Hold set and release" below.
 
 The halt report names blocked tickets and their reasons:
 
 - each blocked ticket, status token, and failure reason;
 - held tickets and their blocking dependencies;
-- independent tickets available as a partial path; and
+- independent tickets available as a partial path;
+- every unanswered parked question, in every halt report, including one for
+  another blocked ticket; when every remaining ticket is held, the report
+  names those questions and the resume command; and
 - the resume command: `/implement-tickets continue <feature-slug>`.
+
+## Hold set and release
+
+A parked ticket holds only what it must. The hold set is the parked ticket,
+every ticket in its wave or a later one whose declared or effective touch set
+overlaps the parked ticket's effective touch set, and all their transitive
+dependants. A parked ticket with an unknown touch set holds all later tickets.
+
+- Tickets outside the hold set keep running, including tickets in later waves;
+  wave N is integrated before wave N+1 starts for those tickets, and the wave
+  gate runs without any held ticket.
+- A held ticket already in flight or verified finishes and is verified, but is
+  not merged until release. Held tickets that were never dispatched resume in
+  their original wave and ticket order after release, on the post-release base,
+  before the next unstarted frontier.
+- A held ticket that is also deferred for a conflict stays held; its drain round
+  runs after the release.
+- The hold stays until the parked ticket integrates. If the parked ticket ends
+  blocked after its attempts, the holds that exist only because of overlap lift
+  and its dependants stay held.
+
+### Question, answer, and notes line
+
+The question is shown at the end of the wave where the ticket was parked, and
+the run does not wait for the answer. It is stored with its answer in a notes
+line under the run-state table, keyed by ticket number:
+
+```markdown
+Notes: 04 question: `<extras and reason>`; answer: `<approve|reject|pending>`; release pre-pass: `<sha>`
+```
+
+Record the answer when it arrives and read it at every frontier. Clear it once
+the frontier has acted on it, so a crash in between loses nothing.
+
+### Approval
+
+On approval a fresh verifier checks the branch, as in the verification
+contract's "Approved parked branch" section. The ticket then merges in a release
+pass, a mini-wave described in the integration gate; its own pre-pass commit is
+recorded in the notes line as the gate base. The gate runs, and the hold is
+released after it passes.
+
+### Rejection
+
+On rejection the extras are dropped and the ticket gets a fresh dispatch from the
+latest integration commit, told to stay inside its declared files and avoid the
+denied paths. Each such dispatch costs one attempt, and the hold stays until the
+ticket integrates; a redispatch that parks again costs another attempt, until
+the attempts end in the existing blocked state.
 
 ## Read-only inspection
 
@@ -94,6 +148,9 @@ For a valid status file:
    re-ask only unanswered parked questions. A change to the run mode, waves,
    blockers, ticket set, budget, backend, or concurrency, or an edit the
    person requests, still needs approval.
+   `continue` re-asks any unanswered parked question; that is a question about
+   extras, not a Plan approval. It derives held and deferred state from the
+   parked rows, the notes line, and Git, so no extra status token is added.
 6. Resume from the earliest eligible frontier. Keep blocked tickets and their
    dependants held; an explicit continue may proceed with the independent
    partial path.

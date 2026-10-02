@@ -9,6 +9,21 @@ After all tickets in the wave have been merged, run the project's full
 typecheck and the full test suite on the integration branch. A green result completes the
 wave gate. Do not begin the next wave before the gate passes.
 
+Held tickets, those in the hold set of a parked `BLOCKED (TOUCH_SET_APPROVAL)`
+ticket, are not merged and do not delay the gate: the wave gate runs without any
+held ticket. See [status-and-resume.md](status-and-resume.md#hold-set-and-release).
+
+## Release pass
+
+After an approved parked ticket is verified, merge it in a release pass. The
+release pass is a mini-wave holding the released ticket and any verified held
+tickets, merged in ticket order. Record its own pre-pass commit as the gate base
+and use it, not the wave's pre-wave commit, for culprit isolation. Run the gate
+after the pass, then release the hold. A merge conflict in the pass defers the
+ticket to a drain round inside the pass at no attempt cost, and the approved
+extras stay accepted. Held tickets never dispatched then resume in their
+original wave and ticket order.
+
 ## Find and isolate a failing merge
 
 If the gate fails:

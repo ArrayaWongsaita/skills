@@ -55,3 +55,11 @@ dispatched, as defined in
 [dispatch-contract.md](dispatch-contract.md#measuring-touch-set-extras). The
 verifier receives that measured list with the worker report and treats the
 worker's own list as advisory.
+
+## Approved parked branch
+
+When the person approves a ticket parked as `BLOCKED (TOUCH_SET_APPROVAL)`, its
+branch was never verified. Dispatch a fresh verifier on that branch, with the
+approved extras in the measured list, before the ticket merges in a release
+pass. A rejected ticket gets a fresh worker dispatch instead and is verified as
+usual.
