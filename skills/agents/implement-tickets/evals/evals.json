@@ -214,6 +214,20 @@
         "Accepts an extra file with no deny-list, cap, or sibling-conflict problem without asking and adds no warning pause or smaller retry budget"
       ],
       "files": []
+    },
+    {
+      "id": 21,
+      "name": "verifier runs for strict runs and risky tickets only",
+      "prompt": "/implement-tickets .scratch/demo/issues/ --strict. A worker returns a completed report for a Risk: low ticket. Decide whether to verify.",
+      "expected_output": "A strict run dispatches a fresh verifier for every ticket, including Risk: low. Without --strict once the default has been flipped, a ticket with no Risk: high, no risk signal, and complete evidence is judged by the orchestrator from its evidence and integrated with no verifier; Risk: high, a counted retry, measured extras, an unknown touch set, incomplete evidence, or a rerun after a real merge conflict each give a fresh verifier.",
+      "expectations": [
+        "Dispatches a fresh verifier in a strict run even for a Risk: low ticket",
+        "Skips the verifier in default strictness only when there is no Risk: high, no risk signal, and complete evidence",
+        "Treats a Risk: low or missing field as never lowering a risk signal",
+        "Counts no attempt for incomplete evidence and dispatches a fresh verifier",
+        "Decides after extras are measured and before a verifier would be dispatched"
+      ],
+      "files": []
     }
   ]
 }

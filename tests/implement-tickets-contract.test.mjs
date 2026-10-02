@@ -1914,3 +1914,76 @@ describe("implement-tickets --strict flag and Plan strictness", () => {
     assert.match(text, /Strictness:/);
   });
 });
+
+describe("implement-tickets risk-based verification", () => {
+  const read = async (rel) => (await readTextOrNull(path.join(skillRoot, rel)))?.replace(/\s*\n\s*/g, " ");
+  const section = async () => {
+    const text = await read("references/verification.md");
+    const start = text.indexOf("## Risk-based verification");
+    assert.ok(start >= 0, "verification.md has a Risk-based verification section");
+    return text.slice(start);
+  };
+
+  it("verifies every ticket in a strict run, including Risk: low", async () => {
+    const s = await section();
+    assert.match(s, /strict run[\s\S]{0,200}every ticket[\s\S]{0,120}`Risk: low`[\s\S]{0,160}fresh verifier/i);
+  });
+
+  it("lets the orchestrator judge a non-risky default-strictness ticket from its evidence", async () => {
+    const s = await section();
+    assert.match(s, /default strictness[\s\S]{0,300}no `Risk: high`[\s\S]{0,200}no risk signal[\s\S]{0,200}complete evidence/i);
+    for (const part of ["Red output", "Green output", "Test → criterion table", "Files changed", "measured extras"]) {
+      assert.ok(s.includes(part), `${part} is judged`);
+    }
+    assert.match(s, /no verifier (?:is )?dispatched/i);
+  });
+
+  it("verifies a Risk: high ticket in default strictness", async () => {
+    const s = await section();
+    assert.match(s, /`Risk: high`[\s\S]{0,200}fresh verifier/i);
+  });
+
+  it("lists every risk signal", async () => {
+    const s = await section();
+    for (const re of [/counted retry/i, /measured touch-set extras/i, /unknown touch set/i, /incomplete evidence/i, /rerun[\s\S]{0,80}real merge conflict/i]) {
+      assert.match(s, re);
+    }
+  });
+
+  it("never lets a Risk: low or missing field lower a signal", async () => {
+    const s = await section();
+    assert.match(s, /`Risk: low`[\s\S]{0,80}missing[\s\S]{0,80}never lowers/i);
+  });
+
+  it("defines incomplete evidence and counts no attempt for it", async () => {
+    const s = await section();
+    for (const re of [/missing, empty/i, /command or exit code/i, /compile or import error/i, /did not pass/i, /counts no attempt/i]) {
+      assert.match(s, re);
+    }
+  });
+
+  it("decides after extras are measured and before dispatch, keeping the counted-failure path", async () => {
+    const s = await section();
+    assert.match(s, /after[\s\S]{0,40}extras[\s\S]{0,40}measured[\s\S]{0,80}before[\s\S]{0,60}verifier/i);
+    assert.match(s, /fails the ticket[\s\S]{0,120}counted-failure path/i);
+  });
+
+  it("keeps parked deny-list and cap hits verified on approval", async () => {
+    const s = await section();
+    assert.match(s, /deny-list or cap hit[\s\S]{0,200}parks[\s\S]{0,200}verified on approval/i);
+  });
+
+  it("words default strictness as applying only once the default has been flipped", async () => {
+    const s = await section();
+    assert.match(s, /without `--strict` once the default has been flipped/);
+  });
+
+  it("points dispatch, gate, and adapter text at the rule", async () => {
+    for (const file of ["references/dispatch-contract.md", "references/integration-gate.md", "references/adapter-contract.md"]) {
+      const text = await read(file);
+      assert.match(text, /verification\.md#risk-based-verification/, `${file} links the rule`);
+    }
+    const adapter = await read("references/adapter-contract.md");
+    assert.doesNotMatch(adapter, /Send the worker report to a fresh verifier\. Integrate only after verification\./);
+  });
+});

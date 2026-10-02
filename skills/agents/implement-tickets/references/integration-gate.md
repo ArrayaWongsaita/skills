@@ -1,6 +1,8 @@
 # Wave integration gate
 
-After every ticket in the wave is verified, squash-merge the verified worker
+After every ticket in the wave is verified (or, in default strictness, judged
+not risky under [risk-based verification](verification.md#risk-based-verification)),
+squash-merge the verified worker
 branches onto `implement-tickets/<slug>` in ascending ticket-number
 order, creating exactly one commit per ticket. Update the ticket's status and
 recorded commit after each successful merge.
@@ -36,7 +38,9 @@ tickets in the pass keep merging after a deferral. The next wave does not start
 until the wave is integrated, drain rounds included.
 
 - A deferred ticket gets a fresh dispatch from the latest integration commit,
-  with the same prompt plus a note of its known extras, and is verified again.
+  with the same prompt plus a note of its known extras. Its rerun is risky under
+  [risk-based verification](verification.md#risk-based-verification), so it is
+  verified again in either strictness.
 - Deferred tickets run one per drain round, serially, in ticket order. Each round
   runs its ticket alone on a base that already holds every merged sibling, so it
   cannot conflict with them, and no overlap grouping is needed.
