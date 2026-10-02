@@ -1144,6 +1144,28 @@ describe("implement-tickets worker dispatch and verification contract", () => {
     requireText(sync, /every worker prompt[\s\S]*including ticket 1/i, "the first ticket also receives the sync step");
   });
 
+  it("requires complete red and green evidence in the existing worker report sections", async () => {
+    const prompt = await readTextOrNull(promptPath);
+    assert.ok(prompt, "the worker prompt scaffold exists");
+    const ret = markdownSection(prompt, "Return");
+    assert.ok(ret, "the Return section exists");
+    const red = ret.match(/\*\*Red output:\*\*([\s\S]*?)(?=\n- \*\*|$)/)?.[1];
+    const green = ret.match(/\*\*Green output:\*\*([\s\S]*?)(?=\n- \*\*|$)/)?.[1];
+    const table = ret.match(/\*\*Test → criterion table:\*\*([\s\S]*?)(?=\n- \*\*|$)/)?.[1];
+    assert.ok(red && green && table, "Red output, Green output, and the table stay in the return");
+    requireText(red, /command/i, "Red output states the red command");
+    requireText(red, /exit code/i, "Red output states the exit code");
+    requireText(red, /verbatim/i, "Red output is verbatim");
+    requireText(green, /command/i, "Green output states the green command");
+    requireText(green, /exit code/i, "Green output states the exit code");
+    requireText(green, /verbatim/i, "Green output is verbatim");
+    requireText(green, /typecheck[\s\S]*`none configured`/i, "Green output keeps the typecheck result or none configured");
+    requireText(table, /each new test[\s\S]*acceptance criterion/i, "the table maps tests to criteria");
+    assert.doesNotMatch(ret, /\*\*Evidence/i, "no new Evidence section");
+    assert.doesNotMatch(ret, /\b(first|last|at most|up to)\s+\d+\s+lines\b/i, "no line bound on output");
+    requireText(prompt, /full (test )?suite[\s\S]*integration gate/i, "the full suite is left to the integration gate");
+  });
+
   it("caps workers and verifiers together and gives pending verifiers priority", async () => {
     const dispatch = await readTextOrNull(dispatchPath);
     assert.ok(dispatch, "the dispatch contract exists");
