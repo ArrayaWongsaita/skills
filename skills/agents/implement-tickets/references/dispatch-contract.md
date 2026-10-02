@@ -90,3 +90,31 @@ Subtract the declared touch set; what remains is the ticket's extras.
   orchestrator's measurement.
 - A ticket with an unknown touch set has no extras, because it has no declared
   baseline.
+
+## Deny-list and cap hits
+
+A deny-list extra, or a ticket over the cap, parks the ticket before
+verification with the status token `BLOCKED (TOUCH_SET_APPROVAL)`. The check
+runs on the measured extras from the branch diff, so a parked branch is not yet
+verified. The ticket's work is kept on its worker branch.
+
+The deny-list is a fixed default plus the ticket's own read-only Context items:
+
+- Lockfile names `package-lock.json`, `pnpm-lock.yaml`, `yarn.lock`, and
+  `bun.lockb`, and environment files `.env*`, match at any directory depth.
+- The directory-style entries `.github/workflows/` and `docs/decisions/`, and
+  the file `.gitlab-ci.yml`, match as a prefix from the repository root.
+- The ticket's read-only Context items (plain and "from NN" items) match by
+  exact path, but only those that no ticket edits. An extra that any ticket in
+  the set declares as its own edit is not a deny-list case, even when this
+  ticket lists it as a read; the real-conflict rule handles it.
+
+The cap: a ticket with more than five distinct extra files, counted as the union
+across all its dispatches, parks the same way. Extras dropped by a rejection no
+longer count.
+
+A ticket with an unknown touch set has no extras and no cap, but the deny-list
+still applies to it.
+
+A parked ticket's work is kept on its worker branch. For adapter backends the
+worktree is kept too; see the adapter contract.

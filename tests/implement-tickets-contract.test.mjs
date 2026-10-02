@@ -563,6 +563,32 @@ describe("implement-tickets worker dispatch and verification contract", () => {
     requireText(verification, /touch-set extras[\s\S]*before (?:the verifier|verification)/i, "verification reads the extras measured beforehand");
   });
 
+  it("parks a ticket on a deny-list or cap hit and keeps its work", async () => {
+    const dispatch = await readTextOrNull(dispatchPath);
+    const state = await readTextOrNull(path.join(skillRoot, "references/status-and-resume.md"));
+    const adapter = await readTextOrNull(path.join(skillRoot, "references/adapter-contract.md"));
+    const glossary = await readTextOrNull(path.join(repoRoot, "docs/glossary.md"));
+    assert.ok(dispatch && state && adapter && glossary, "dispatch, state, adapter and glossary files exist");
+    const park = markdownSection(dispatch, "Deny-list and cap hits");
+    assert.ok(park, "the dispatch contract has a deny-list and cap section");
+    requireText(park, /deny-list[\s\S]{0,200}before\s+verification[\s\S]{0,200}BLOCKED \(TOUCH_SET_APPROVAL\)/i, "a deny-list extra parks the ticket before verification");
+    for (const name of ["package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lockb", ".github/workflows/", ".gitlab-ci.yml", ".env*", "docs/decisions/"]) {
+      assert.ok(park.includes(name), `the deny-list names ${name}`);
+    }
+    requireText(park, /read-only Context items?[\s\S]{0,80}no ticket edits/i, "read-only Context items that no ticket edits are denied");
+    requireText(park, /lockfile names?[\s\S]{0,80}environment files[\s\S]{0,60}any directory depth/i, "names and environment files match at any depth");
+    requireText(park, /(?:directory|prefix)[\s\S]{0,60}from the repository root/i, "directory entries match from the repository root");
+    requireText(park, /read-only[\s\S]{0,60}exact path/i, "read-only items match by exact path");
+    requireText(park, /any\s+ticket\s+in\s+the\s+set\s+declares\s+as\s+its\s+own\s+edit[\s\S]{0,120}not a deny-list case/i, "an extra another ticket edits is not a deny-list case");
+    requireText(park, /more\s+than\s+five\s+distinct\s+extra\s+files[\s\S]{0,120}all\s+its\s+dispatches[\s\S]{0,160}dropped[\s\S]{0,60}no\s+longer\s+count/i, "the cap is five distinct files across dispatches and dropped extras do not count");
+    requireText(park, /unknown\s+touch\s+set[\s\S]{0,120}no\s+cap[\s\S]{0,80}deny-list\s+still\s+applies/i, "an unknown touch set has no cap but keeps the deny-list");
+    requireText(park, /work\s+is\s+kept[\s\S]{0,60}worker\s+branch/i, "the parked work is kept on the worker branch");
+    requireText(state, /BLOCKED \(TOUCH_SET_APPROVAL\)/, "the status list names the touch-set approval token");
+    requireText(adapter, /parked[\s\S]{0,120}exempt[\s\S]{0,80}sweep/i, "parked adapter worktrees are exempt from the sweep");
+    requireText(glossary, /\| Deny-list \|/, "the glossary defines deny-list");
+    requireText(glossary, /\| Touch-set approval block \|/, "the glossary defines touch-set approval block");
+  });
+
   it("points execution mechanics to canonical contracts in scoped skill and guide sections", async () => {
     const skill = await readTextOrNull(path.join(skillRoot, "SKILL.md"));
     const guide = await readTextOrNull(path.join(repoRoot, "docs/guides/implement-tickets.md"));

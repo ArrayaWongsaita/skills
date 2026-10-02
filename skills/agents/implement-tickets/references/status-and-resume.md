@@ -46,6 +46,11 @@ rest of the wave and integrated commits. Report independent tickets as an
 available partial path and do not start them until
 the person resumes the run.
 
+A deny-list or cap hit marks the ticket `BLOCKED (TOUCH_SET_APPROVAL)` and
+keeps its work on the worker branch; it is parked rather than a failure, and the
+partial-path halt rules above do not apply to it. See the dispatch contract's
+"Deny-list and cap hits" section.
+
 The halt report names blocked tickets and their reasons:
 
 - each blocked ticket, status token, and failure reason;
