@@ -46,7 +46,7 @@ For each ticket in order, until every ticket is integrated:
    [verification contract](references/verification.md).
 3. Squash-merge and run the gate with the
    [integration gate](references/integration-gate.md).
-4. Record the ticket in `status.md` per
+4. Record the ticket in `status.md`, and any problem in `report.md`, per
    [status and resume](references/status-and-resume.md).
 
 A ticket that exhausts its attempts is `BLOCKED`; it and its dependants wait for

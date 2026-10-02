@@ -31,7 +31,7 @@ npx skills add ArrayaWongsaita/skills --skill implement-tickets
 3. **Integrate:** squash-merge และรัน gate ตาม [integration gate](../../../skills/agents/implement-tickets/references/integration-gate.md)
 4. **Handoff:** ส่งต่อ integration branch และ review commands แล้วหยุดก่อน review, push หรือเปิด PR
 
-run state และ `continue` อยู่ใน [status and resume](../../../skills/agents/implement-tickets/references/status-and-resume.md)
+run state, `continue` และ `report.md` (บันทึกปัญหาระหว่าง run เพื่อนำไปปรับปรุง skill) อยู่ใน [status and resume](../../../skills/agents/implement-tickets/references/status-and-resume.md)
 extras คือไฟล์ที่ worker แตะนอก touch set: ถ้าเกณฑ์ยอมรับอธิบายไม่ได้ จะถูกปฏิเสธ นอกนั้นรับไว้ ทำให้ ticket เสี่ยง และแสดงใน handoff
 
 ### Seam และ Context
@@ -71,7 +71,7 @@ npx skills add ArrayaWongsaita/skills --skill implement-tickets
 3. **Integrate:** squash-merge and run the gate per the [integration gate](../../../skills/agents/implement-tickets/references/integration-gate.md).
 4. **Handoff:** print the integration branch and review commands, then stop before review, push, or a pull request.
 
-The run record and `continue` are in [status and resume](../../../skills/agents/implement-tickets/references/status-and-resume.md).
+The run record, `continue`, and `report.md` (problems noted during the run, for improving the skill) are in [status and resume](../../../skills/agents/implement-tickets/references/status-and-resume.md).
 Extras are files a worker changed beyond its touch set: one the acceptance
 criteria do not explain is rejected; otherwise it is accepted, makes the ticket
 risky, and is listed in the handoff.

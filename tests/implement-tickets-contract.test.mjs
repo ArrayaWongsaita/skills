@@ -273,6 +273,7 @@ describe("implement-tickets minimal serial core", () => {
     assert.match(gate, /\/review-to-pr <slug>/);
     assert.match(gate, /Accepted extra files/);
     assert.match(gate, /Skipped the verifier: 02, 04/);
+    assert.match(gate, /Run report: none/);
     assert.match(gate, /Review, push, and the pull request stay with the person/i);
   });
 
@@ -285,6 +286,8 @@ describe("implement-tickets minimal serial core", () => {
     assert.match(state, /\/implement-tickets continue <feature-slug>/);
     assert.match(state, /Refuse a `status\.md` whose first line is not `skill: implement-tickets`/);
     assert.match(state, /integration-gate\.md#failing-gate/);
+    assert.match(state, /`\.scratch\/<feature-slug>\/report\.md`[\s\S]*Append one entry/);
+    assert.match(state, /A clean run writes no report/);
   });
 });
 

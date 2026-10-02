@@ -24,6 +24,29 @@ for a declared `Risk: high`, or the name of the
 are accepted. Attempts counts ticket attempts only; infrastructure failures
 count none.
 
+## Run report
+
+`.scratch/<feature-slug>/report.md` collects what went wrong so the skill can be
+improved from real runs. Append one entry at the moment of each of these:
+
+- a ticket becomes `BLOCKED`, or a gate fails
+- a verifier rejects a ticket, or the orchestrator rejects extras
+- an infrastructure failure repeats
+- the written procedure was unclear, missing, or contradictory and the
+  orchestrator had to improvise
+
+```markdown
+## <NN or run> — <short title>
+
+- Step: <planning | dispatch | measuring | verification | gate | continue>
+- Happened: <what the agent did>
+- Expected: <what the skill text led it to expect>
+- Evidence: <status.md rows, command output, or the agent's message, trimmed>
+```
+
+A clean run writes no report. The person reads `report.md` after the run and
+decides what to send to the skill repository.
+
 ## Blocked tickets
 
 A ticket blocked after its [attempts](verification.md#attempts) holds its transitive dependants. Finish

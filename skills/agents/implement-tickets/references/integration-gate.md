@@ -43,7 +43,8 @@ complete list:
 
 List by number the tickets that skipped the verifier (for example
 `Skipped the verifier: 02, 04`), or print `none`. List any blocked tickets with
-their reasons.
+their reasons. Name `report.md` when it has entries, or print
+`Run report: none`.
 
 Stop after printing the handoff. Review, push, and the pull request stay with
 the person.
