@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile, access, readdir } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
-import { assertAbsentFromMarkdownSections, assertSkillMarkdownSectionsDoNotMatch, markdownHeaderBlock, markdownHeadings, markdownSection } from "./helpers/markdown-contract.mjs";
+import { assertAbsentFromMarkdownSections, assertSkillMarkdownSectionsDoNotMatch, flatMarkdownSection, markdownHeaderBlock, markdownHeadings, markdownSection } from "./helpers/markdown-contract.mjs";
 
 async function fileExists(filePath) {
   await access(filePath, constants.R_OK);
@@ -379,11 +379,7 @@ describe("grill-to-tickets composite skill contract", () => {
   });
 
   it("proposes Risk: high by rule at the ticket quiz and writes only confirmed highs", async () => {
-    const flatSection = (markdown, title) => {
-      const section = markdownSection(markdown, title);
-      assert.ok(section, `${title} section exists`);
-      return section.replace(/\s+/g, " ");
-    };
+    const flatSection = flatMarkdownSection;
     const stage3 = flatSection(await readFile(skillFiles[0], "utf8"), "Stage 3 — Tickets");
     const format = flatSection(await readFile(path.resolve(canonicalDir, "references/ticket-format.md"), "utf8"), "4. Quiz the user");
     const review = (await readFile(path.resolve(canonicalDir, "references/ticket-review.md"), "utf8")).replace(/\s+/g, " ");

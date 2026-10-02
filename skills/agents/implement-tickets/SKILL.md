@@ -41,9 +41,7 @@ Options are set once for the run:
 - `--strict` makes the run strict. It is set once per run and is independent
   of `--parallel`, `--serial`, `--concurrency`, `--with`, `--agent`, and
   `--model`. A strict run presents the Plan and waits for approval, as
-  described in Stage 0. A run with no flag is in default strictness: it prints
-  the Plan and starts without waiting for approval, and verifies only risky
-  tickets.
+  described in Stage 0; a run with no flag is in default strictness.
 
 Pass `--serial` to `scripts/waves.mjs` unless parallel mode is selected.
 
@@ -74,8 +72,10 @@ Existing runs can be inspected or resumed with:
 - `/implement-tickets status [slug]` to read one run's `status.md`;
 - `/implement-tickets list` to list saved runs; or
 - `/implement-tickets continue [slug]` to reconcile a run with Git, re-present
-  its Plan, and resume from the frontier in the recorded run mode. When only
-  extras were accepted, it resumes without a new approval.
+  its Plan, and resume from the frontier in the recorded run mode and
+  strictness. `continue --strict` records the run as strict, and a strict run
+  never drops back to default through `continue`; see
+  [references/status-and-resume.md](references/status-and-resume.md).
 
 `status` and `list` are read-only. A valid run record starts with
 `skill: implement-tickets`; see
@@ -113,9 +113,9 @@ Do not dispatch workers or write run state before that approval.
 Every manifest state is advisory: it cannot stop the run, it is not recorded in
 the run status file, and a strict run always reaches the approval pause.
 
-## Stage 1 — Execute approved waves
+## Stage 1 — Execute the waves
 
-After approval, execute the approved waves using the
+Once the Plan is approved (strict) or printed (default), execute its waves using the
 [dispatch contract](references/dispatch-contract.md),
 [worker prompt scaffold](references/prompt-scaffold.md),
 [verification contract](references/verification.md),

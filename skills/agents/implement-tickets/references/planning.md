@@ -3,8 +3,7 @@
 Planning is read-only. Resolve the feature argument, load its ticket files and
 planning context, validate the ticket set, calculate waves, and present a Plan.
 A strict run pauses for explicit approval before dispatching or changing any file
-outside the feature directory; a run with no flag, in default strictness, prints
-the Plan and starts without a pause.
+outside the feature directory.
 
 ## 1. Resolve and read the feature
 
@@ -95,7 +94,7 @@ no limit or triage.
 
 The Risk column shows each ticket's declared risk as the wave script reports it
 in its `risk` value: `high` or `low`. A ticket whose Risk field is absent (a missing field) is
-shown as `low`. A malformed Risk value reads as `high`, and the script adds a warning for
+shown as `low`. A malformed or repeated Risk value reads as `high`, and the script adds a warning for
 it that the Plan carries. The declared risk changes no wave, blocker, or touch
 set.
 
@@ -107,9 +106,7 @@ Also state:
   `--concurrency N`; a change of mode needs approval because it changes the
   waves;
 - strictness on a `Strictness:` line next to the run mode: `strict` with
-  `--strict`. A change of strictness is not a change of waves and does not
-  change them. A run with no flag is in default strictness: it prints the Plan
-  and starts without waiting for approval;
+  `--strict`. A change of strictness is not a change of waves;
 - concurrency cap, in parallel mode only: `4` by default or the supplied
   `--concurrency N`. In serial mode there is nothing to cap, so the Plan shows
   no concurrency cap; the shared worker-and-verifier cap of four stays enforced

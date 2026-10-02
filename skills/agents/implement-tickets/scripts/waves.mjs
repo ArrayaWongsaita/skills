@@ -18,9 +18,10 @@ function fieldValue(text, name) {
 }
 
 // A missing Risk field is low; `low` and `high — <reason>` are read as written;
-// anything else is treated as high with a warning. fieldValue already trims the
-// value, as check-tickets.mjs does.
-function parseRisk(numberText, riskText) {
+// anything else, including a repeated Risk line, is treated as high with a
+// warning. fieldValue already trims the value, as check-tickets.mjs does.
+function parseRisk(numberText, riskText, riskLineCount) {
+  if (riskLineCount > 1) return { level: "high", warning: `Ticket ${numberText} repeats the Risk field and is treated as high.` };
   if (riskText === undefined) return { level: "low", warning: null };
   if (riskText === "low") return { level: "low", warning: null };
   if (/^high — \S.*$/.test(riskText)) return { level: "high", warning: null };
@@ -45,7 +46,7 @@ function parseTicket(file, text) {
     throw new Error(`issues/${numberText}: **Context:** is missing or empty`);
   }
 
-  const { level: risk, warning: riskWarning } = parseRisk(numberText, fieldValue(text, "Risk"));
+  const { level: risk, warning: riskWarning } = parseRisk(numberText, fieldValue(text, "Risk"), (text.match(/^\*\*Risk:\*\*/gm) ?? []).length);
 
   return {
     file,

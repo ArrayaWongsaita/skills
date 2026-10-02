@@ -75,8 +75,7 @@ review, push หรือเปิด PR
 [planning reference](../../../skills/agents/implement-tickets/references/planning.md)
 
 ใช้ `--strict` (ตั้งครั้งเดียวต่อการรัน และไม่ขึ้นกับ option อื่น) เพื่อให้หยุดรอการอนุมัติ Plan
-ก่อน dispatch worker Plan ระบุ strictness ในบรรทัด `Strictness:` ถัดจาก `Run mode:`
-การรันที่ไม่มี flag อยู่ใน default strictness: พิมพ์ Plan แล้วเริ่มทำงานโดยไม่หยุดรออนุมัติ และใช้ verifier เฉพาะ ticket ที่เสี่ยง
+ก่อน dispatch worker บรรทัด `Strictness:` ใน Plan และพฤติกรรมของการรันที่ไม่มี flag (default strictness) ดู [SKILL.md](../../../skills/agents/implement-tickets/SKILL.md) และ [planning reference](../../../skills/agents/implement-tickets/references/planning.md)
 กติกา risk signal ดู [verification reference](../../../skills/agents/implement-tickets/references/verification.md#risk-based-verification)
 ส่วน `Verifier: skipped`, `continue` และ `continue --strict` ดู [status-and-resume reference](../../../skills/agents/implement-tickets/references/status-and-resume.md)
 และ [ADR 0021](../../decisions/0021-touch-set-drift-without-reapproval.md)
@@ -153,9 +152,8 @@ parallel mode. The validation marker is described in the
 [parallel-validation reference](../../../skills/agents/implement-tickets/references/parallel-validation.md).
 
 Pass `--strict` (set once per run, independent of the other options) to pause for Plan
-approval before any worker is dispatched. The Plan names the strictness on a `Strictness:`
-line next to `Run mode:`. A run with no flag is in default strictness: it prints the Plan,
-starts without waiting for approval, and verifies only risky tickets.
+approval before any worker is dispatched. What a run with no flag does, and the `Strictness:` line in
+the Plan, are defined in the [planning reference](../../../skills/agents/implement-tickets/references/planning.md).
 The risk signals are defined in the [verification reference](../../../skills/agents/implement-tickets/references/verification.md#risk-based-verification);
 `Verifier: skipped`, `continue`, and `continue --strict` are defined in the
 [status-and-resume reference](../../../skills/agents/implement-tickets/references/status-and-resume.md).

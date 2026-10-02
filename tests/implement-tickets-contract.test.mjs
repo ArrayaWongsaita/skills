@@ -59,8 +59,10 @@ function docSection(markdown, title, file) {
   return flatten(section);
 }
 
+let evalsCache;
 async function evalById(id) {
-  const { evals } = JSON.parse(await readTextOrNull(path.join(skillRoot, "evals/evals.json")));
+  evalsCache ??= JSON.parse(await readTextOrNull(path.join(skillRoot, "evals/evals.json"))).evals;
+  const evals = evalsCache;
   const entry = evals.find((e) => e.id === id);
   assert.ok(entry, `eval ${id} exists`);
   return JSON.stringify(entry);
@@ -781,6 +783,18 @@ describe("implement-tickets wave planner contract", () => {
     }
   });
 
+  it("treats a ticket that repeats the Risk field as high with a warning, as the ticket checker rejects it", async () => {
+    const repeated = ticket("01", { context: "(edit) src/one.mjs", risk: "low" }).replace(/^(\*\*Risk:\*\*.*)$/m, "$1\n**Risk:** low");
+    const { root, issues } = await fixture({ "01": repeated });
+    try {
+      const output = await runWaves(issues);
+      assert.equal(output.tickets[0].risk, "high");
+      assert.match(output.tickets[0].warnings.join(" "), /repeats the Risk field/i);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("reads a Risk value with trailing whitespace without a warning, as the ticket checker does", async () => {
     const padded = (number, risk) =>
       ticket(number, { context: `(edit) src/${number}.mjs`, risk }).replace(/^(\*\*Risk:\*\*.*)$/m, "$1 \t ");
@@ -927,8 +941,13 @@ describe("implement-tickets skill and documentation contract", () => {
     );
     assert.match(
       plan,
-      /\| Retry budget \| Risk \|[\s\S]*Risk column[\s\S]*declared[\s\S]*Risk field[\s\S]*missing field[\s\S]*`low`/i,
-      "every Plan row shows the declared risk, with a missing field shown as low",
+      /\| Retry budget \| Risk \|/,
+      "every Plan row has a Risk column after the retry budget",
+    );
+    assert.match(
+      plan,
+      /Risk column shows each ticket's declared risk[\s\S]{0,200}missing field[\s\S]{0,40}`low`/i,
+      "the Risk column shows the declared risk, with a missing field shown as low",
     );
     assert.match(plan, /backend:\s*native harness subagents/i, "the Plan names the default backend");
     assert.match(plan, /concurrency cap[^`]{0,80}`4` by default/i, "the Plan names the default concurrency cap in parallel mode");
@@ -1202,12 +1221,8 @@ describe("implement-tickets worker dispatch and verification contract", () => {
     const green = ret.match(/\*\*Green output:\*\*([\s\S]*?)(?=\n- \*\*|$)/)?.[1];
     const table = ret.match(/\*\*Test → criterion table:\*\*([\s\S]*?)(?=\n- \*\*|$)/)?.[1];
     assert.ok(red && green && table, "Red output, Green output, and the table stay in the return");
-    requireText(red, /command/i, "Red output states the red command");
-    requireText(red, /exit code/i, "Red output states the exit code");
-    requireText(red, /verbatim/i, "Red output is verbatim");
-    requireText(green, /command/i, "Green output states the green command");
-    requireText(green, /exit code/i, "Green output states the exit code");
-    requireText(green, /verbatim/i, "Green output is verbatim");
+    requireText(red, /the red command you ran, its exit code, and the failing\s+test run[\s\S]*verbatim and unabridged/i, "Red output states the command, exit code, and failing run verbatim");
+    requireText(green, /the green command you ran, its exit code, and the passing\s+test run[\s\S]*verbatim and unabridged/i, "Green output states the command, exit code, and passing run verbatim");
     requireText(green, /typecheck[\s\S]*`none configured`/i, "Green output keeps the typecheck result or none configured");
     requireText(table, /each new test[\s\S]*acceptance criterion/i, "the table maps tests to criteria");
     assert.doesNotMatch(ret, /\*\*Evidence/i, "no new Evidence section");
@@ -1360,7 +1375,7 @@ describe("implement-tickets worker dispatch and verification contract", () => {
     const page = await readTextOrNull(path.join(repoRoot, "docs/skills/agents/implement-tickets.md"));
     assert.ok(skill && guide && page, "the skill and both user-facing pages exist");
 
-    const skillStage1 = markdownSection(skill, "Stage 1 — Execute approved waves");
+    const skillStage1 = markdownSection(skill, "Stage 1 — Execute the waves");
     assert.ok(skillStage1, "the skill's approved execution section exists");
     for (const reference of ["dispatch-contract", "prompt-scaffold", "verification", "integration-gate", "status-and-resume"]) {
       assert.match(skillStage1, new RegExp(`references/${reference}\\.md`), `the skill Stage 1 links ${reference}`);
@@ -1908,7 +1923,7 @@ describe("implement-tickets --strict flag and Plan strictness", () => {
   const skillConstraints = async () => flatSection("SKILL.md", "Constraints");
 
   it("lists --strict as set once per run and independent of the other options", async () => {
-    const skill = await readFlat("SKILL.md");
+    const skill = await flatSection("SKILL.md", "Invocation");
     const entry = skill.match(/- `--strict`.*?(?= - `|\. Before presenting|$)/)?.[0];
     assert.ok(entry, "--strict is listed among the options");
     assert.match(entry, /once per run/i);
@@ -1977,9 +1992,9 @@ describe("implement-tickets --strict flag and Plan strictness", () => {
         assert.match(section, /`Strictness:`/, `${file} ${title} names Strictness:`);
       }
     }
-    const eval20 = await evalById(20);
-    assert.match(eval20, /--strict/);
-    assert.match(eval20, /Strictness:/);
+    const eval20 = JSON.parse(await evalById(20));
+    assert.match(eval20.prompt, /--strict/);
+    assert.match(eval20.expected_output + eval20.expectations.join(" "), /`?Strictness:`?/);
   });
 });
 

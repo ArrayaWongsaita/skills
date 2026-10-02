@@ -70,6 +70,11 @@ three-attempt ticket verification budget. Capacity waits for
 `Concurrent subagent limit reached` do not count against the two infra retries
 and do not increment this retry count.
 
+A counted retry and the rerun of a ticket deferred to a drain round are risk
+signals under
+[risk-based verification](verification.md#risk-based-verification): the
+ticket is verified in either strictness.
+
 ## Measuring touch-set extras
 
 The orchestrator computes extras right after a worker returns and before
