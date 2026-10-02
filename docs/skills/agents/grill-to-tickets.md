@@ -42,6 +42,7 @@ npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 3. **Stage 2 — Design Review Gate**: ส่ง `scrutinize` มาตรวจ spec; ดู [สัญญา Design Review Gate](../../../skills/agents/grill-to-tickets/references/design-review-gate.md) สำหรับ routing, resume และทางออกของ gate
 4. **Stage 3 — Tickets** (Ticket review / Stage 3.5): แตก spec เป็น vertical tickets ใน `.scratch/<feature-slug>/issues/`; tickets ใช้ Stories, Seam, Context และ Budget ตาม `ticket-format.md`; checker สรุป coverage, budget, DAG และ warnings และสร้าง manifest ที่ `.scratch/<feature-slug>/manifest.json` ตาม [สัญญา grill-to-tickets หลัก](../../../skills/agents/grill-to-tickets/SKILL.md)
    - **Ticket review (Stage 3.5)** ทำหลัง checker PASS และก่อน quiz; ดู [สัญญาหลัก](../../../skills/agents/grill-to-tickets/SKILL.md) และ [brief สำหรับผู้รีวิว ticket](../../../skills/agents/grill-to-tickets/references/ticket-review.md)
+   - **เสนอ `Risk: high` ที่ quiz:** skill เสนอ `Risk: high` พร้อมเหตุผลให้ ticket ที่ block ตั้งแต่สาม ticket ขึ้นไป, เปลี่ยน public interface หรือ contract ที่ ticket อื่นใช้ร่วมกัน, แตะโค้ด migration, auth, security, payment หรือ concurrency, หรือมี side effect ภายนอกหรือย้อนกลับไม่ได้; ผู้ใช้ยืนยันหรือปฏิเสธทีละ ticket และเฉพาะ high ที่ยืนยันแล้วเท่านั้นที่ถูกเขียนลงไฟล์ ticket ส่วน ticket อื่นเขียนโดยไม่มีฟิลด์ Risk
 5. **Stop**: `.scratch/` เป็นไฟล์ local ที่ git-ignore; handoff ส่ง `/clear`, DAG summary ที่มีบรรทัด `recommended implementer: implement-tickets`, `Manifest: .scratch/<feature-slug>/manifest.json` เมื่อมี และ `/implement-tickets .scratch/<feature-slug>/` พร้อม hint บรรทัดเดียวว่าเพิ่ม `--with <backend>` ได้; manifest ระบุ `recommendedImplementers: ["implement-tickets"]` ทุก wave width พร้อมรายการ parked questions ที่รับเป็นสมมติฐาน (ดู [สัญญาคำถามที่พักไว้](../../../skills/agents/grill-to-tickets/references/parked-questions.md))
 
 สรุป Stage 0 ใช้คำศัพท์ `hard` / `easy`, `parked` และ `resolved: assumed`; glossary อธิบายศัพท์กลาง ส่วนกติกาและ state transitions อยู่ใน [สัญญา grill-to-tickets หลัก](../../../skills/agents/grill-to-tickets/SKILL.md), [Decision Log](../../../skills/agents/grill-to-tickets/references/decision-log.md), [สัญญาคำถามที่พักไว้](../../../skills/agents/grill-to-tickets/references/parked-questions.md), [สัญญา Blind-spot pass](../../../skills/agents/grill-to-tickets/references/blind-spot-pass.md), [สัญญา Design Review Gate](../../../skills/agents/grill-to-tickets/references/design-review-gate.md) และ [ตาราง rationalization](../../../skills/agents/grill-to-tickets/references/rationalizations.md)
@@ -155,6 +156,13 @@ manifest lives at `.scratch/<feature-slug>/manifest.json`. See the
 [canonical grill-to-tickets contract](../../../skills/agents/grill-to-tickets/SKILL.md)
 for checker and manifest rules. Stage 3.5 Ticket review runs after checker
 PASS and before the quiz; see the [ticket-review brief](../../../skills/agents/grill-to-tickets/references/ticket-review.md).
+
+At the ticket quiz the skill proposes `Risk: high`, with a reason, for a ticket
+that blocks three or more tickets, changes a shared public interface or contract
+another ticket uses, touches migration, auth, security, payment, or concurrency
+code, or has an external or irreversible side effect. The person confirms or
+rejects each proposed high. Only a confirmed high is written to its ticket file;
+every other ticket is written without a Risk field.
 
 Then the skill prints a handoff in this order: `/clear`, the DAG summary with
 `recommended implementer: implement-tickets`, a `Manifest: .scratch/<feature-slug>/manifest.json` line when available, and the implementer command
