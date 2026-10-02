@@ -85,12 +85,18 @@ orchestrator. Record the matched worker agent for each ticket.
 
 Present one row for every ticket, in ticket order:
 
-| Ticket | Wave | Blockers | Budget | Touch set | Seam | Matched agent | Retry budget |
-| --- | ---: | --- | --- | --- | --- | --- | ---: |
+| Ticket | Wave | Blockers | Budget | Touch set | Seam | Matched agent | Retry budget | Risk |
+| --- | ---: | --- | --- | --- | --- | --- | ---: | --- |
 
 The Budget column shows the text after each ticket file's own Budget field
 label, or `none` when that field is absent. It is information only and applies
 no limit or triage.
+
+The Risk column shows each ticket's declared risk as the wave script reports it
+in its `risk` value: `high` or `low`. A ticket whose Risk field is absent (a missing field) is
+shown as `low`. A malformed Risk value reads as `high`, and the script adds a warning for
+it that the Plan carries. The declared risk changes no wave, blocker, or touch
+set.
 
 Also state:
 

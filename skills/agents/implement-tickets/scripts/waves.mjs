@@ -35,6 +35,10 @@ function parseTicket(file, text) {
     throw new Error(`issues/${numberText}: **Context:** is missing or empty`);
   }
 
+  const riskText = fieldValue(text, "Risk");
+  const wellFormedRisk = riskText === undefined || /^(low|high — \S.*)$/.test(riskText);
+  const risk = riskText === undefined ? "low" : wellFormedRisk ? riskText.slice(0, 4) === "high" ? "high" : "low" : "high";
+
   return {
     file,
     number,
@@ -44,8 +48,11 @@ function parseTicket(file, text) {
     contextText,
     seam: fieldValue(text, "Seam") ?? "",
     budget: fieldValue(text, "Budget") ?? "none",
+    risk,
     touchSet: null,
-    warnings: [],
+    warnings: wellFormedRisk
+      ? []
+      : [`Ticket ${numberText} has a malformed Risk value "${riskText}" and is treated as high.`],
   };
 }
 
@@ -391,13 +398,14 @@ export async function planWaves({ directory, serial = false, concurrency = DEFAU
     parallelValidationStatus: validation.status,
     manifest,
     waves,
-    tickets: tickets.map(({ numberText, title, blockers, wave, touchSet, budget, warnings: ticketWarnings }) => ({
+    tickets: tickets.map(({ numberText, title, blockers, wave, touchSet, budget, risk, warnings: ticketWarnings }) => ({
       number: numberText,
       title,
       wave,
       blockers,
       touchSet,
       budget,
+      risk,
       warnings: ticketWarnings,
     })),
     warnings,
