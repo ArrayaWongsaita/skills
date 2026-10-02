@@ -48,7 +48,7 @@ async function glossaryRow(term) {
   return (glossary?.split(/\r?\n/) ?? []).find((line) => line.startsWith(`| ${term} |`));
 }
 
-function ticket(number, { blockers = [], context = "", seam = "the core contract test", title = `Ticket ${number}` } = {}) {
+function ticket(number, { blockers = [], context = "", seam = "the core contract test", title = `Ticket ${number}`, risk } = {}) {
   return [
     `# ${number}: ${title}`,
     "",
@@ -58,6 +58,7 @@ function ticket(number, { blockers = [], context = "", seam = "the core contract
     `**Seam:** ${seam}`,
     `**Context:** ${context}`,
     "**Budget:** read ~1k tokens · 1 criteria · 1 modules",
+    ...(risk === undefined ? [] : [`**Risk:** ${risk}`]),
     "**Status:** ready-for-agent",
     "",
     "- [ ] Fixture criterion.",
@@ -713,6 +714,43 @@ describe("implement-tickets wave planner contract", () => {
     }
   });
 
+  it("reports each ticket's declared risk without changing waves, blockers, or touch sets", async () => {
+    const tickets = {
+      "01": ticket("01", { context: "(edit) src/one.mjs", risk: "high — shared interface" }),
+      "02": ticket("02", { context: "(edit) src/two.mjs", risk: "low", blockers: ["01"] }),
+      "03": ticket("03", { context: "(edit) src/three.mjs", blockers: ["01"] }),
+      "04": ticket("04", { context: "(edit) src/four.mjs", risk: "medium" }),
+    };
+    const plain = {
+      "01": ticket("01", { context: "(edit) src/one.mjs" }),
+      "02": ticket("02", { context: "(edit) src/two.mjs", blockers: ["01"] }),
+      "03": ticket("03", { context: "(edit) src/three.mjs", blockers: ["01"] }),
+      "04": ticket("04", { context: "(edit) src/four.mjs" }),
+    };
+    const { root, issues } = await fixture(tickets);
+    const control = await fixture(plain);
+    try {
+      const output = await runWaves(issues);
+      const risks = Object.fromEntries(output.tickets.map((item) => [item.number, item.risk]));
+      assert.deepEqual(risks, { "01": "high", "02": "low", "03": "low", "04": "high" });
+      const malformed = output.tickets.find((item) => item.number === "04");
+      assert.match(malformed.warnings.join(" "), /risk/i);
+      assert.ok(output.warnings.some((warning) => /04/.test(warning) && /risk/i.test(warning)));
+      for (const number of ["01", "02", "03"]) {
+        const item = output.tickets.find((entry) => entry.number === number);
+        assert.ok(!item.warnings.some((warning) => /risk/i.test(warning)), `ticket ${number} has no risk warning`);
+      }
+      const planningFacts = ({ waves, tickets: items }) => ({
+        waves,
+        tickets: items.map(({ number, wave, blockers, touchSet }) => ({ number, wave, blockers, touchSet })),
+      });
+      assert.deepEqual(planningFacts(output), planningFacts(await runWaves(control.issues)));
+    } finally {
+      await rm(root, { recursive: true, force: true });
+      await rm(control.root, { recursive: true, force: true });
+    }
+  });
+
   it("gives unknown touch sets their own wave, prevents later tickets joining, and reports a warning", async () => {
     const { root, issues } = await fixture({
       "01": ticket("01", { context: "(edit) src/shared.mjs" }),
@@ -838,6 +876,11 @@ describe("implement-tickets skill and documentation contract", () => {
       plan,
       /Budget column[\s\S]*ticket file's own Budget field[\s\S]*information only[\s\S]*no limit[\s\S]*triage/i,
       "the Budget column uses the ticket's own field and has no limit or triage effect",
+    );
+    assert.match(
+      plan,
+      /\| Retry budget \| Risk \|[\s\S]*Risk column[\s\S]*declared[\s\S]*Risk field[\s\S]*missing field[\s\S]*`low`/i,
+      "every Plan row shows the declared risk, with a missing field shown as low",
     );
     assert.match(plan, /backend:\s*native harness subagents/i, "the Plan names the default backend");
     assert.match(plan, /concurrency cap[^`]{0,80}`4` by default/i, "the Plan names the default concurrency cap in parallel mode");
