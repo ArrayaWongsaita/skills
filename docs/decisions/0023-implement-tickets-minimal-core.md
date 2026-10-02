@@ -97,13 +97,14 @@ conflict ด้วย drain round และ ticket ที่พักไว้ �
   lists them for review.
 - Runs recorded under the old format are refused by `continue`; recover them
   from git history or start over.
-- `grill-to-tickets` handoff text and `review-to-pr` copy of the worker and
-  verifier contract no longer mention `--with`, parallel waves, or strict.
+- `grill-to-tickets` handoff text no longer mentions `--with`; the `review-to-pr`
+  copy of the worker and verifier contract never named the removed options and
+  stays as is.
 
 - skill และ references เหลือเส้นทางเดียวที่ต้องอ่านและทดสอบ run แรกของ ticket
   ที่เป็นอิสระต่อกันช้ากว่า parallel ที่ใช้ได้จริง
 - extras ที่แตะ lockfile, CI workflow หรือ ADR ไม่ถูกกฎบล็อกอีก แต่ทำให้ ticket เสี่ยง
   จึงมี verifier ใหม่ตรวจ และ handoff แสดงรายการให้ตรวจตอน review
 - run ที่บันทึกด้วยรูปแบบเดิมถูก `continue` ปฏิเสธ ให้กู้จาก git history หรือเริ่มใหม่
-- ข้อความ handoff ของ `grill-to-tickets` และสำเนา contract worker/verifier ใน
-  `review-to-pr` ไม่พูดถึง `--with`, parallel wave หรือ strict อีก
+- ข้อความ handoff ของ `grill-to-tickets` ไม่พูดถึง `--with` อีก ส่วนสำเนา contract
+  worker/verifier ใน `review-to-pr` ไม่เคยอ้างถึง option ที่ถูกลบ จึงคงไว้ตามเดิม
