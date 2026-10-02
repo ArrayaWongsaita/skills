@@ -34,8 +34,8 @@ ticket's risk decision: `high`, `low`, or the signal that raised it. Verifier
 holds `ran` or `skipped`. A ticket whose verifier is skipped is recorded as
 `verified` with `Verifier: skipped` once the orchestrator has judged its
 evidence, never as `verifying`, so it follows the same wave-wait, hold, merge,
-and `continue` paths as a verified ticket. A row with no Verifier column is
-read as `Verifier: ran`. A default-strictness run (without `--strict`) writes its run record when the run starts, rather
+and `continue` paths as a verified ticket. A row with no Verifier column, or no Risk column, is
+read as legacy: `Verifier: ran`, and risk low by declaration or unknown. A default-strictness run (without `--strict`) writes its run record when the run starts, rather
 than after an approval, so an interrupted run can be inspected with `status`;
 a strict run writes it after approval. The Extras column sits after the Touch set column and lists the ticket's
 accepted extra files (`none` when there are none). Write a ticket's extras to

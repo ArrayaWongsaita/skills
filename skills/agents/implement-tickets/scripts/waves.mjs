@@ -17,6 +17,16 @@ function fieldValue(text, name) {
   return text.match(new RegExp(`^\\*\\*${escaped}:\\*\\*[ \\t]*([^\\r\\n]*?)[ \\t]*$`, "m"))?.[1];
 }
 
+// A missing Risk field is low; `low` and `high — <reason>` are read as written;
+// anything else is treated as high with a warning. fieldValue already trims the
+// value, as check-tickets.mjs does.
+function parseRisk(numberText, riskText) {
+  if (riskText === undefined) return { level: "low", warning: null };
+  if (riskText === "low") return { level: "low", warning: null };
+  if (/^high — \S.*$/.test(riskText)) return { level: "high", warning: null };
+  return { level: "high", warning: `Ticket ${numberText} has a malformed Risk value "${riskText}" and is treated as high.` };
+}
+
 function parseTicket(file, text) {
   const filename = file.match(TICKET_FILE);
   const heading = text.match(/^#\s+(\d+):\s*(.+?)\s*$/m);
@@ -35,9 +45,7 @@ function parseTicket(file, text) {
     throw new Error(`issues/${numberText}: **Context:** is missing or empty`);
   }
 
-  const riskText = fieldValue(text, "Risk");
-  const wellFormedRisk = riskText === undefined || /^(low|high — \S.*)$/.test(riskText);
-  const risk = riskText === undefined ? "low" : wellFormedRisk ? riskText.slice(0, 4) === "high" ? "high" : "low" : "high";
+  const { level: risk, warning: riskWarning } = parseRisk(numberText, fieldValue(text, "Risk"));
 
   return {
     file,
@@ -50,9 +58,7 @@ function parseTicket(file, text) {
     budget: fieldValue(text, "Budget") ?? "none",
     risk,
     touchSet: null,
-    warnings: wellFormedRisk
-      ? []
-      : [`Ticket ${numberText} has a malformed Risk value "${riskText}" and is treated as high.`],
+    warnings: riskWarning ? [riskWarning] : [],
   };
 }
 

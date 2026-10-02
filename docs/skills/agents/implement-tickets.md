@@ -75,13 +75,10 @@ review, push หรือเปิด PR
 [planning reference](../../../skills/agents/implement-tickets/references/planning.md)
 
 ใช้ `--strict` (ตั้งครั้งเดียวต่อการรัน และไม่ขึ้นกับ option อื่น) เพื่อให้หยุดรอการอนุมัติ Plan
-ก่อน dispatch worker หรือเขียน run state Plan ระบุ strictness ไว้ในบรรทัด `Strictness:` ถัดจาก
-`Run mode:` และการเปลี่ยน strictness ไม่ถือเป็นการเปลี่ยน wave
+ก่อน dispatch worker Plan ระบุ strictness ในบรรทัด `Strictness:` ถัดจาก `Run mode:`
 การรันที่ไม่มี flag อยู่ใน default strictness: พิมพ์ Plan แล้วเริ่มทำงานโดยไม่หยุดรออนุมัติ และใช้ verifier เฉพาะ ticket ที่เสี่ยง
-run record เก็บ strictness และคอลัมน์ Risk กับ Verifier ของแต่ละ ticket (`Verifier: skipped` คือ ticket ที่ข้าม verifier)
-`continue` resume ตาม strictness ที่บันทึกไว้ ส่วน `continue --strict` เปลี่ยนเป็น strict และขออนุมัติ Plan ใหม่ และ handoff ระบุเลข ticket ที่ข้าม verifier
-Planning error หยุดการรันทั้งสองค่า และ strict ไม่เพิ่มการถาม extras,
-warning pause หรือลด retry budget
+กติกา risk signal ดู [verification reference](../../../skills/agents/implement-tickets/references/verification.md#risk-based-verification)
+ส่วน `Verifier: skipped`, `continue` และ `continue --strict` ดู [status-and-resume reference](../../../skills/agents/implement-tickets/references/status-and-resume.md)
 และ [ADR 0021](../../decisions/0021-touch-set-drift-without-reapproval.md)
 
 ### Seam และ Context
@@ -156,16 +153,12 @@ parallel mode. The validation marker is described in the
 [parallel-validation reference](../../../skills/agents/implement-tickets/references/parallel-validation.md).
 
 Pass `--strict` (set once per run, independent of the other options) to pause for Plan
-approval before any worker is dispatched or any run state is written. The Plan names
-the strictness on a `Strictness:` line next to `Run mode:`, and a change of strictness
-is not a change of waves. A run with no flag is in default strictness: it prints the Plan,
+approval before any worker is dispatched. The Plan names the strictness on a `Strictness:`
+line next to `Run mode:`. A run with no flag is in default strictness: it prints the Plan,
 starts without waiting for approval, and verifies only risky tickets.
-The run record stores the strictness and each ticket's Risk and Verifier columns
-(`Verifier: skipped` marks a ticket judged on evidence alone). `continue` resumes in
-the recorded strictness, `continue --strict` makes the run strict and asks for
-approval again, and the handoff lists the tickets that skipped the verifier.
-Planning errors stop the run in both strictness values, and strict adds no extras
-approval, warning pause, or smaller retry budget.
+The risk signals are defined in the [verification reference](../../../skills/agents/implement-tickets/references/verification.md#risk-based-verification);
+`Verifier: skipped`, `continue`, and `continue --strict` are defined in the
+[status-and-resume reference](../../../skills/agents/implement-tickets/references/status-and-resume.md).
 
 Files a worker touches beyond its touch set (extras) are accepted automatically
 and reported, unless they hit the deny-list, the per-ticket cap, or a real
