@@ -537,6 +537,32 @@ describe("implement-tickets worker dispatch and verification contract", () => {
     requireText(timeouts, /After two infra retries[\s\S]*BLOCKED \(TICKET_PROVIDER_FAILED\)/i, "two infra retries end in the provider-failed status");
   });
 
+  it("has the worker report touch-set extras with a reason and allows required extra files", async () => {
+    const prompt = await readTextOrNull(promptPath);
+    assert.ok(prompt, "the worker prompt scaffold exists");
+    const constraints = markdownSection(prompt, "Constraints");
+    const ret = markdownSection(prompt, "Return");
+    assert.ok(constraints && ret, "the prompt has constraint and return sections");
+    requireText(constraints, /extra files? (?:are|is) allowed\s+when\s+required[\s\S]*report/i, "required extra files are allowed and must be reported");
+    assert.doesNotMatch(constraints, /Touch only the files assigned/i, "the worker is no longer limited to assigned files");
+    requireText(ret, /\*\*Touch-set extras:\*\*[\s\S]*every file outside (?:its|the) declared touch set[\s\S]*reason/i, "the return lists each extra with a reason");
+  });
+
+  it("measures extras from the worker branch diff before verification", async () => {
+    const dispatch = await readTextOrNull(dispatchPath);
+    const verification = await readTextOrNull(verificationPath);
+    assert.ok(dispatch && verification, "the dispatch and verification contracts exist");
+    const extras = markdownSection(dispatch, "Measuring touch-set extras");
+    assert.ok(extras, "the dispatch contract has a measuring section");
+    requireText(extras, /right\s+after\s+a\s+worker\s+returns[\s\S]*before\s+verification/i, "extras are computed before verification");
+    requireText(extras, /git diff --name-only --no-renames <pre-ticket-integration-sha> <worker-branch>/, "extras come from the branch diff against the pre-ticket integration commit");
+    requireText(extras, /rename or deletion[\s\S]*old and new paths/i, "a rename or deletion counts as old and new paths");
+    requireText(extras, /omits? a changed file[\s\S]*still\s+(?:an\s+)?extras?/i, "a file missing from the report is still an extra");
+    requireText(extras, /advisory[\s\S]*never replaces/i, "the worker's list is advisory");
+    requireText(extras, /unknown touch set has no extras/i, "an unknown touch set has no extras");
+    requireText(verification, /touch-set extras[\s\S]*before (?:the verifier|verification)/i, "verification reads the extras measured beforehand");
+  });
+
   it("points execution mechanics to canonical contracts in scoped skill and guide sections", async () => {
     const skill = await readTextOrNull(path.join(skillRoot, "SKILL.md"));
     const guide = await readTextOrNull(path.join(repoRoot, "docs/guides/implement-tickets.md"));

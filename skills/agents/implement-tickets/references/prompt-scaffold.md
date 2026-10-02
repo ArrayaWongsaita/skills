@@ -60,7 +60,8 @@ has no typecheck command, report that instead of inventing one.
 
 ## Constraints
 
-- Touch only the files assigned to this ticket or clearly required by them.
+- Work in the files assigned to this ticket. Extra files are allowed when
+  required, and you must report each one under Touch-set extras.
 - Reuse installed dependencies. If a new dependency is needed, stop and report
   it without installing.
 - Read only the listed files or files clearly required by them.
@@ -78,3 +79,6 @@ End your report with exactly these sections:
   implementation files.
 - **Test → criterion table:** each new test mapped to the acceptance criterion
   it covers.
+- **Touch-set extras:** every file outside its declared touch set (the
+  `Change` and `Create` paths above) that you changed, each with the reason it
+  was required. Write `none` when there are no extras.

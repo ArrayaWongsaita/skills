@@ -47,3 +47,11 @@ wait. If the wait ends first, stop the verifier with `TaskStop` and record
 subagent is the same infrastructure failure and is retried under the ticket's
 infrastructure retry limit in
 [dispatch-contract.md](dispatch-contract.md).
+
+## Touch-set extras before verification
+
+The orchestrator measures the touch-set extras before the verifier is
+dispatched, as defined in
+[dispatch-contract.md](dispatch-contract.md#measuring-touch-set-extras). The
+verifier receives that measured list with the worker report and treats the
+worker's own list as advisory.

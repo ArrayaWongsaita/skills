@@ -69,3 +69,24 @@ Infrastructure failures never use the
 three-attempt ticket verification budget. Capacity waits for
 `Concurrent subagent limit reached` do not count against the two infra retries
 and do not increment this retry count.
+
+## Measuring touch-set extras
+
+The orchestrator computes extras right after a worker returns and before
+verification, so later steps act on a trusted list. An extra is a changed file
+outside the ticket's declared touch set. Take the changed files from the worker
+branch itself:
+
+```
+git diff --name-only --no-renames <pre-ticket-integration-sha> <worker-branch>
+```
+
+`--no-renames` makes a rename or deletion count as its old and new paths.
+Subtract the declared touch set; what remains is the ticket's extras.
+
+- When the worker omits a changed file from its report, that file is still an
+  extra.
+- The worker's own Touch-set extras list is advisory and never replaces the
+  orchestrator's measurement.
+- A ticket with an unknown touch set has no extras, because it has no declared
+  baseline.
