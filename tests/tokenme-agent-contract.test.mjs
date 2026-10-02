@@ -814,3 +814,194 @@ describe("tokenme-agent dispatch contract", () => {
     );
   });
 });
+
+describe("tokenme-agent prompt scaffold contract", () => {
+  const scaffoldFile = path.resolve(
+    canonicalDir,
+    "references/prompt-scaffold.md",
+  );
+
+  async function scaffoldSection(title) {
+    const scaffold = await readFile(scaffoldFile, "utf8");
+    return flatMarkdownSection(scaffold, title);
+  }
+
+  it("ships the prompt scaffold and resolves the skill's link to it from the Workflow", async () => {
+    await fileExists(scaffoldFile);
+    const markdown = await readFile(skillFile, "utf8");
+    const workflow = markdownSection(markdown, "Workflow");
+    assert.ok(workflow, "the Workflow section exists");
+    const links = sectionLinks(workflow);
+    const scaffoldLink = links.find((link) =>
+      link.endsWith("references/prompt-scaffold.md"),
+    );
+    assert.ok(
+      scaffoldLink,
+      "the Workflow section links to references/prompt-scaffold.md",
+    );
+    await fileExists(path.resolve(canonicalDir, scaffoldLink));
+  });
+
+  it("requires absolute paths, named inputs and outputs, checkable acceptance criteria, and no references to earlier turns in every prompt", async () => {
+    const carries = await scaffoldSection("What every prompt carries");
+    assert.match(
+      carries,
+      /one shot with no conversation context/,
+      "the requirements are grounded in the run having no conversation context",
+    );
+    assert.match(
+      carries,
+      /carries everything the run needs/,
+      "the prompt is self-contained",
+    );
+    assert.match(
+      carries,
+      /\*\*Absolute paths\*\*/,
+      "absolute paths are a named requirement",
+    );
+    assert.match(
+      carries,
+      /every path the prompt mentions is absolute/,
+      "each path the prompt mentions is absolute",
+    );
+    assert.match(
+      carries,
+      /\*\*Named inputs and outputs\*\*/,
+      "named inputs and outputs are a named requirement",
+    );
+    assert.match(
+      carries,
+      /\*\*Checkable acceptance criteria\*\*/,
+      "checkable acceptance criteria are a named requirement",
+    );
+    assert.match(
+      carries,
+      /the host can check it after the run/,
+      "each criterion is something the host checks after the run",
+    );
+    assert.match(
+      carries,
+      /\*\*No references to earlier turns\*\*/,
+      "the no-earlier-turns rule is a named requirement",
+    );
+    assert.match(
+      carries,
+      /repeats whatever the run needs in full/,
+      "the prompt repeats what the run needs instead of pointing at this chat",
+    );
+  });
+
+  it("writes each convention the task needs into the prompt text because a bare run reads no project instructions", async () => {
+    const conventions = await scaffoldSection(
+      "Conventions travel in the prompt",
+    );
+    assert.match(
+      conventions,
+      /reads no project instructions/,
+      "a bare run reads no project instructions",
+    );
+    assert.match(
+      conventions,
+      /no CLAUDE\.md, no hooks, no skills/,
+      "the project instructions a bare run misses are named",
+    );
+    assert.match(
+      conventions,
+      /naming convention/,
+      "a task that must follow a naming convention is the named case",
+    );
+    assert.match(
+      conventions,
+      /writes each convention out in full/,
+      "the host writes each convention into the prompt text",
+    );
+    assert.match(
+      conventions,
+      /name every new test file `<module>\.test\.mjs`/,
+      "the example writes the naming convention itself into the prompt text",
+    );
+    assert.match(
+      conventions,
+      /not "follow the project's naming rules"/,
+      "the convention appears in the prompt text instead of a pointer to the project rule",
+    );
+  });
+
+  it("carries a template for a read-only task and one for an edit task", async () => {
+    const scaffold = await readFile(scaffoldFile, "utf8");
+    const readOnly = markdownSection(scaffold, "Template: read-only task");
+    assert.ok(readOnly, "the read-only template exists");
+    assert.match(
+      readOnly,
+      /read-only tool scoping/,
+      "the read-only template pairs with the read-only tool scoping",
+    );
+    assert.match(
+      readOnly,
+      /# Objective/,
+      "the read-only template opens with an objective field",
+    );
+    assert.match(
+      readOnly,
+      /# Acceptance criteria/,
+      "the read-only template carries acceptance criteria",
+    );
+    assert.match(
+      readOnly,
+      /unchanged/,
+      "the read-only criteria keep the named inputs unchanged",
+    );
+
+    const edit = markdownSection(scaffold, "Template: edit task");
+    assert.ok(edit, "the edit template exists");
+    assert.match(
+      edit,
+      /edit-and-verify tool scoping/,
+      "the edit template pairs with the edit-and-verify tool scoping",
+    );
+    assert.match(
+      edit,
+      /# Objective/,
+      "the edit template opens with an objective field",
+    );
+    assert.match(
+      edit,
+      /# Conventions/,
+      "the edit template carries a conventions field for the host to fill",
+    );
+    assert.match(
+      edit,
+      /# Acceptance criteria/,
+      "the edit template carries acceptance criteria",
+    );
+  });
+
+  it("carries the history and no-nested-run rules in the prompt's own words", async () => {
+    const rules = await scaffoldSection("Rules the prompt carries");
+    assert.match(
+      rules,
+      /deny list/,
+      "the prompt-side rules mirror the dispatch contract's mechanical deny list",
+    );
+    assert.match(rules, /`git commit`/, "the prompt forbids git commit");
+    assert.match(rules, /`git push`/, "the prompt forbids git push");
+    assert.match(rules, /`git reset`/, "the prompt forbids git reset");
+    assert.match(
+      rules,
+      /forbidden/,
+      "the history-changing commands are stated as forbidden",
+    );
+    assert.match(
+      rules,
+      /Do the work yourself: start no other `claude` or `claude-tokenme` run/,
+      "the run does the work itself without starting another delegate run",
+    );
+    const scaffold = await readFile(scaffoldFile, "utf8");
+    const rulesSection = markdownSection(scaffold, "Rules the prompt carries");
+    const links = sectionLinks(rulesSection);
+    assert.ok(
+      links.some((link) => link.endsWith("dispatch-contract.md")),
+      "the rules section links to the deny list in dispatch-contract.md",
+    );
+  });
+});

@@ -60,7 +60,10 @@ context. The full keep-local rules and the exclusion list live in
 2. **Delegate** the subtask to a headless tokenme run through a
    self-contained prompt. The preflight, both command forms, the flags, the
    tool scoping, and the one-time harness allow rules are in
-   [dispatch-contract.md](references/dispatch-contract.md).
+   [dispatch-contract.md](references/dispatch-contract.md), and the prompt
+   templates — absolute paths, the conventions written in, and the rules
+   the prompt itself carries — are in
+   [prompt-scaffold.md](references/prompt-scaffold.md).
 3. **Verify** the outcome yourself before reporting done; treat the delegated
    run's report as a claim to check, and report with your own verification
    behind it.
