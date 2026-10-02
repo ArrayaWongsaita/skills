@@ -31,6 +31,13 @@ If the gate fails:
 Record the failing check, culprit, last good commit, replayed ticket commits,
 and gate result in `status.md` so `continue` can reconcile the run.
 
+## Wave summary
+
+At the end of each wave, print a summary listing every ticket that has extras
+together with those files. A clean-merge overlap, where tickets changed the same
+paths, merged cleanly, and passed a green gate, is recorded as a note in this
+summary and in the run-state row of both tickets; it does not defer anything.
+
 ## Successful handoff
 
 When every ticket is integrated and the last suite is green, print a handoff
@@ -40,6 +47,15 @@ naming `implement-tickets/<slug>` and review commands, for example:
 git log --oneline <base>..implement-tickets/<slug>
 git diff --stat <base>...implement-tickets/<slug>
 /review-to-pr <slug>
+```
+
+Include a table of tickets and their accepted extra files, so review starts
+from the complete list:
+
+```text
+| Ticket | Accepted extra files |
+| --- | --- |
+| 02 | `docs/research/topic.md` |
 ```
 
 Stop after printing the handoff. Do not run review, push, or open a pull request.

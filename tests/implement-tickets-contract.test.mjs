@@ -914,7 +914,7 @@ describe("implement-tickets integration gate and run-state contract", () => {
     assert.equal(template.split(/\r?\n/, 1)[0], "skill: implement-tickets", "the template's first line is the skill identity");
     requireText(
       runState,
-      /\| Ticket \| Wave \| Backend \| Touch set \| Status \| Session ID \| Attempts \| Branch \| Commit \| Budget estimate \| Usage total \| Verifier usage total \|/i,
+      /\| Ticket \| Wave \| Backend \| Touch set \| Extras \| Status \| Session ID \| Attempts \| Branch \| Commit \| Budget estimate \| Usage total \| Verifier usage total \|/i,
       "the ticket table contains all required state and usage columns",
     );
     requireText(runState, /usage_total[\s\S]*every dispatch and resume[\s\S]*delivering path/i, "worker usage is summed across dispatches and resumes on the delivering path");
@@ -933,6 +933,37 @@ describe("implement-tickets integration gate and run-state contract", () => {
     requireText(continueSection, /reconcile each recorded integration branch[\s\S]*against Git/i, "continue reconciles recorded state against git");
     requireText(continueSection, /drift[\s\S]*git checkout -B <integration-branch> <sha>/, "continue rewinds drift through a branch checkout");
     requireText(continueSection, /re-present the Plan[\s\S]*resume from (?:the )?(?:earliest eligible )?frontier/i, "continue presents the reconciled Plan and resumes at the frontier");
+  });
+
+  it("records accepted extras in the run state and reads them back on continue", async () => {
+    const state = await readTextOrNull(statePath);
+    assert.ok(state, "the run-state and resume procedure exists");
+    const runState = markdownSection(state, "Run status, failure, and resume");
+    requireText(runState, /extras column[\s\S]*after the Touch set column/i, "the extras column follows the Touch set column");
+    requireText(runState, /write(?:s)? (?:a ticket's )?(?:accepted )?extras[\s\S]*when (?:they are|it is) accepted/i, "extras are written when accepted");
+    requireText(runState, /clean[- ]merge overlap[\s\S]*row\s+of both tickets/i, "a clean-merge overlap is noted in both rows");
+    const continueSection = markdownSection(state, "Continue and reconcile");
+    requireText(continueSection, /read(?:s)? (?:each ticket's )?(?:accepted )?extras back from the (?:Extras column|run state)/i, "continue reads extras back");
+  });
+
+  it("summarizes extras at each wave end and in the final handoff table", async () => {
+    const gate = await readTextOrNull(gatePath);
+    assert.ok(gate, "the integration gate procedure exists");
+    const summary = markdownSection(gate, "Wave summary");
+    assert.ok(summary, "the gate has a wave summary section");
+    requireText(summary, /end of each wave[\s\S]*every ticket (?:that has|with) extras[\s\S]*files/i, "the wave summary lists each ticket with its extras");
+    requireText(summary, /clean[- ]merge overlap[\s\S]*green gate[\s\S]*note/i, "a clean-merge overlap is a note in the summary");
+    const handoff = markdownSection(gate, "Successful handoff");
+    requireText(handoff, /table of (?:all )?tickets and their accepted extra files/i, "the handoff has an extras table");
+  });
+
+  it("defines extra and drift in the glossary and calls the touch set a planning baseline", async () => {
+    const glossary = await readTextOrNull(path.join(repoRoot, "docs/glossary.md"));
+    const lines = glossary?.split(/\r?\n/) ?? [];
+    assert.ok(lines.find((l) => l.startsWith("| Extra |")), "the glossary defines Extra");
+    assert.ok(lines.find((l) => l.startsWith("| Drift |")), "the glossary defines Drift");
+    const touch = lines.find((l) => l.startsWith("| Touch set |"));
+    assert.match(touch, /planning baseline/i);
   });
 
   it("keeps status and list read-only", async () => {

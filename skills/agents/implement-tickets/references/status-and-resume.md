@@ -13,16 +13,21 @@ Integration branch: `implement-tickets/<feature-slug>`
 Integration commit: `<current-sha>`
 Usage is reported as given and is possibly cache-inclusive.
 
-| Ticket | Wave | Backend | Touch set | Status | Session ID | Attempts | Branch | Commit | Budget estimate | Usage total | Verifier usage total |
-| --- | --- | --- | --- | --- | --- | ---: | --- | --- | ---: | ---: | ---: |
-| 01 | 1 | native | `src/main.mjs` | integrated | `<session-id>` | 1 | `implement-tickets-work/<feature-slug>/01` | `<sha>` | `<Budget line or none>` | `<reported total or unknown>` | `<reported total or unknown>` |
+| Ticket | Wave | Backend | Touch set | Extras | Status | Session ID | Attempts | Branch | Commit | Budget estimate | Usage total | Verifier usage total |
+| --- | --- | --- | --- | --- | --- | --- | ---: | --- | --- | ---: | ---: | ---: |
+| 01 | 1 | native | `src/main.mjs` | `none` | integrated | `<session-id>` | 1 | `implement-tickets-work/<feature-slug>/01` | `<sha>` | `<Budget line or none>` | `<reported total or unknown>` | `<reported total or unknown>` |
 ```
 
 Keep one row per ticket in dependency order. Record its wave, selected backend,
-touch set, current status, latest session ID, ticket attempts, worker branch,
+touch set, accepted extras, current status, latest session ID, ticket attempts, worker branch,
 integrated commit, and `budget_estimate` from the ticket's Budget line verbatim
 (`none` if absent). Record the run mode (`Run mode: serial` or `Run mode: parallel`), the
-integration branch, and the current integration commit above the table. Status progresses through pending, dispatched,
+integration branch, and the current integration commit above the table. The Extras column sits after the Touch set column and lists the ticket's
+accepted extra files (`none` when there are none). Write a ticket's extras to
+the run state when they are accepted, not at the end of the wave, so a crash
+loses nothing. A clean-merge overlap (paths shared by two tickets that merged
+cleanly with a green gate) is recorded as a note in the Extras cell of the row
+of both tickets. Status progresses through pending, dispatched,
 verifying, verified, integrated, or `BLOCKED` with its reason.
 
 `usage_total` is the sum of the usage reported by every dispatch and resume on
@@ -72,13 +77,15 @@ For a valid status file:
    good ticket commit and rewind the integration branch to it with
    `git checkout -B <integration-branch> <sha>`. Record the discarded commits
    and invalidate affected ticket state before dispatching again.
-3. Read the run mode from the `Run mode:` line. A record with no `Run mode:`
+3. Read each ticket's accepted extras back from the Extras column and Git;
+   accepted extras stay accepted.
+4. Read the run mode from the `Run mode:` line. A record with no `Run mode:`
    line predates the mode and counts as parallel when any wave holds more than
    one ticket, otherwise as serial. A mode change needs approval because it
    changes the waves.
-4. Re-present the Plan using reconciled Git state, current blockers, and
+5. Re-present the Plan using reconciled Git state, current blockers, and
    eligible tickets. Wait for approval before dispatching.
-5. Resume from the earliest eligible frontier. Keep blocked tickets and their
+6. Resume from the earliest eligible frontier. Keep blocked tickets and their
    dependants held; an explicit continue may proceed with the independent
    partial path.
 
