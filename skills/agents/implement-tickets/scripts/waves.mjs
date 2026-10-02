@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createHash } from "node:crypto";
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -35,12 +36,14 @@ function parseTicket(file, text) {
   }
 
   return {
+    file,
     number,
     numberText,
     title: heading[2],
     blockedByText: fieldValue(text, "Blocked by"),
     contextText,
     seam: fieldValue(text, "Seam") ?? "",
+    budget: fieldValue(text, "Budget") ?? "none",
     touchSet: null,
     warnings: [],
   };
@@ -196,7 +199,150 @@ async function loadTickets(directory) {
     ticket.blockers = parseBlockers(ticket, ticketsByNumber, ticketsByTitle);
     ticket.touchSet = parseTouchSet(ticket.contextText);
   }
+  return { ticketDirectory, tickets };
+}
+
+function manifestTicketBasename(file) {
+  return path.posix.basename(file.replaceAll("\\", "/"));
+}
+
+function hasUniqueManifestTicketNumbers(tickets) {
+  const numbers = new Set();
+  for (const ticket of tickets) {
+    if (!TICKET_FILE.test(manifestTicketBasename(ticket.file))) continue;
+    if (numbers.has(ticket.number)) return false;
+    numbers.add(ticket.number);
+  }
+  return true;
+}
+
+function isUsableManifest(value) {
+  return value !== null
+    && typeof value === "object"
+    && !Array.isArray(value)
+    && value.version === 1
+    && typeof value.specSha256 === "string"
+    && Array.isArray(value.tickets)
+    && value.tickets.every((ticket) => ticket !== null
+      && typeof ticket === "object"
+      && !Array.isArray(ticket)
+      && Number.isInteger(ticket.number)
+      && typeof ticket.file === "string"
+      && Array.isArray(ticket.blockedBy)
+      && ticket.blockedBy.every((blocker) => Number.isInteger(blocker)))
+    && hasUniqueManifestTicketNumbers(value.tickets);
+}
+
+function manifestStatus(status, warning) {
+  return { statuses: [status], warnings: warning ? [warning] : [] };
+}
+
+function manifestTicketFacts(value) {
+  const tickets = new Map();
+  for (const ticket of value.tickets) {
+    const file = manifestTicketBasename(ticket.file);
+    const match = file.match(TICKET_FILE);
+    if (!match) continue;
+
+    tickets.set(ticket.number, {
+      file,
+      blockers: [...new Set(ticket.blockedBy.map(Number))].sort((a, b) => a - b),
+    });
+  }
   return tickets;
+}
+
+function currentTicketFacts(tickets) {
+  return new Map(tickets.map((ticket) => [ticket.number, {
+    file: ticket.file,
+    blockers: ticket.blockers.map(Number).sort((a, b) => a - b),
+  }]));
+}
+
+function ticketSetWarnings(manifestTickets, tickets) {
+  const currentTickets = currentTicketFacts(tickets);
+  const numbers = [...new Set([...manifestTickets.keys(), ...currentTickets.keys()])]
+    .sort((a, b) => a - b);
+  const warnings = [];
+
+  for (const number of numbers) {
+    const recorded = manifestTickets.get(number);
+    const current = currentTickets.get(number);
+    const numberText = padTicket(number);
+    if (!recorded) {
+      warnings.push(`Ticket ${numberText} was added after the manifest was written.`);
+      continue;
+    }
+    if (!current) {
+      warnings.push(`Ticket ${numberText} recorded in the manifest is missing from the current ticket set.`);
+      continue;
+    }
+    if (recorded.file !== current.file) {
+      warnings.push(`Ticket ${numberText} was renamed from ${recorded.file} to ${current.file} after the manifest was written.`);
+    }
+    if (recorded.blockers.length !== current.blockers.length
+      || recorded.blockers.some((blocker, index) => blocker !== current.blockers[index])) {
+      warnings.push(`Ticket ${numberText} has different resolved blockers than the manifest.`);
+    }
+  }
+
+  return warnings;
+}
+
+async function readManifest(featureDirectory, tickets) {
+  let bytes;
+  try {
+    bytes = await readFile(path.join(featureDirectory, "manifest.json"));
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      return manifestStatus("missing", "Manifest is missing; run the ticket checker with --write-budget to create it.");
+    }
+    return manifestStatus("ignored", "Manifest was ignored because it could not be read.");
+  }
+
+  let value;
+  try {
+    value = JSON.parse(bytes.toString("utf8"));
+  } catch {
+    return manifestStatus("ignored", "Manifest was ignored because it is not valid JSON.");
+  }
+  if (!isUsableManifest(value)) {
+    return manifestStatus("ignored", "Manifest was ignored because its version or required data is unsupported.");
+  }
+
+  const statuses = [];
+  const warnings = [];
+  let specBytes;
+  try {
+    specBytes = await readFile(path.join(featureDirectory, "spec.md"));
+  } catch {
+    statuses.push("spec unavailable");
+    warnings.push("Spec fingerprint cannot be checked because spec.md is unavailable.");
+  }
+
+  if (specBytes) {
+    const currentSpecSha256 = createHash("sha256").update(specBytes).digest("hex");
+    if (currentSpecSha256 !== value.specSha256) {
+      statuses.push("spec changed");
+      warnings.push("Spec changed since the tickets were checked; re-run the ticket checker with --write-budget to refresh the manifest.");
+    }
+  }
+
+  const comparisonWarnings = ticketSetWarnings(manifestTicketFacts(value), tickets);
+  if (comparisonWarnings.length > 0) {
+    statuses.push("ticket set differs");
+    warnings.push(...comparisonWarnings);
+  }
+  if (statuses.length === 0) statuses.push("matches");
+  return { statuses, warnings };
+}
+
+function featureDirectoryFor(directory, ticketDirectory) {
+  const absoluteTicketDirectory = path.resolve(ticketDirectory);
+  if (path.basename(absoluteTicketDirectory) === "issues") {
+    return path.dirname(absoluteTicketDirectory);
+  }
+  return path.resolve(directory);
 }
 
 function parseArguments(argv) {
@@ -232,23 +378,26 @@ function parseArguments(argv) {
 }
 
 export async function planWaves({ directory, serial = false, concurrency = DEFAULT_CONCURRENCY, marker = DEFAULT_MARKER }) {
-  const tickets = await loadTickets(directory);
+  const { ticketDirectory, tickets } = await loadTickets(directory);
   const waves = makeWaves(tickets, { serial });
   const validation = await readParallelValidation(marker);
-  const warnings = tickets.flatMap((ticket) => ticket.warnings);
+  const manifest = await readManifest(featureDirectoryFor(directory, ticketDirectory), tickets);
+  const warnings = [...tickets.flatMap((ticket) => ticket.warnings), ...manifest.warnings];
 
   return {
     concurrency,
     serial,
     parallelValidated: validation.validated,
     parallelValidationStatus: validation.status,
+    manifest,
     waves,
-    tickets: tickets.map(({ numberText, title, blockers, wave, touchSet, warnings: ticketWarnings }) => ({
+    tickets: tickets.map(({ numberText, title, blockers, wave, touchSet, budget, warnings: ticketWarnings }) => ({
       number: numberText,
       title,
       wave,
       blockers,
       touchSet,
+      budget,
       warnings: ticketWarnings,
     })),
     warnings,

@@ -80,7 +80,10 @@ Follow [references/planning.md](references/planning.md). Resolve and read the
 feature's tickets and planning context, validate the dependency order, and run
 `scripts/waves.mjs` on the feature's `issues/` directory. The script reads each
 ticket's `Blocked by` and `Context` fields and returns blockers, touch sets,
-warnings, waves, concurrency, and the parallel-validation state.
+budget, warnings, waves, concurrency, the parallel-validation state, and a
+`manifest` field with manifest statuses and warnings. Manifest warnings join
+the other planning warnings in the Plan. Wave planning comes from ticket files
+and never from the manifest.
 
 Present a Plan that lists every ticket with its wave, blockers, touch set, test
 seam, matched agent, and retry budget. The Plan also names the backend, the run
@@ -93,6 +96,8 @@ Pause for explicit approval. What the approval covers is listed in
 [references/planning.md](references/planning.md#5-present-the-plan-and-pause).
 No file outside the feature directory changes until approval. Do not dispatch
 workers or write run state before approval.
+Every manifest state is advisory: it cannot stop the run, it is not recorded in
+the run status file, and the approval pause is always reached.
 
 ## Stage 1 — Execute approved waves
 

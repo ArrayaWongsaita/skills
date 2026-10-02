@@ -83,7 +83,7 @@ describe("grill-to-tickets composite skill contract", () => {
   });
 
   it("keeps the manifest out of the three implementer skills and their references", async () => {
-    for (const implementer of ["implement-tickets", "agy-implement", "opencode-implement"]) {
+    for (const implementer of ["agy-implement", "opencode-implement"]) {
       const directory = path.resolve("skills/agents", implementer);
       const files = [path.join(directory, "SKILL.md"), ...(await filesUnder(path.join(directory, "references")))];
       for (const file of files) {

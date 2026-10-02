@@ -188,6 +188,18 @@
         "Records the culprit and recovery sequence in status"
       ],
       "files": []
+    },
+    {
+      "id": 19,
+      "name": "spec-hash warning appears in the produced Plan after the spec changes",
+      "prompt": "/implement-tickets .scratch/stale-manifest/issues/ The ticket checker wrote manifest.json, then spec.md changed. Present the Plan.",
+      "expected_output": "The produced Plan shows the spec-hash warning: Spec changed since the tickets were checked; re-run the ticket checker with --write-budget to refresh the manifest. Planning continues to the approval pause.",
+      "expectations": [
+        "Reports the spec-hash mismatch in the produced Plan",
+        "Names --write-budget as the cure after spec.md changes since the tickets were checked",
+        "Keeps the manifest warning advisory so planning reaches the approval pause"
+      ],
+      "files": []
     }
   ]
 }

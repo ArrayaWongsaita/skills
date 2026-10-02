@@ -96,3 +96,15 @@ the marker to `status: validated YYYY-MM-DD` using the run date.
 สถานะ: กำลังรอ human validation และยังไม่มีการบันทึกผล
 หลังทำ run ให้บันทึกวันที่ การตั้งค่า harness และผลของแต่ละ check ไว้ที่นี่
 ความพร้อมของ parallel ยังคงถูกกั้นไว้จนกว่าจะมีผลสำเร็จที่บันทึกไว้
+
+## Addendum (2026-10-01) / ภาคผนวก (2026-10-01): manifest reader
+
+`skills/agents/implement-tickets/scripts/waves.mjs` is the manifest reader. Its
+stale-manifest diagnostics are warn-only and advisory: they never block planning
+or change the approval flow. The `specSha256` fingerprint is SHA-256 of the raw
+bytes of `spec.md`, compared without normalization.
+
+วันที่ 2026-10-01 กำหนดให้ `skills/agents/implement-tickets/scripts/waves.mjs`
+เป็นตัวอ่าน manifest โดยรายงาน manifest ที่ล้าสมัยเป็นคำเตือนเท่านั้นและเป็นข้อมูล
+ประกอบการตัดสินใจ ไม่หยุดการวางแผนหรือเปลี่ยนขั้นตอนอนุมัติ ค่า fingerprint
+`specSha256` คือ SHA-256 ของไบต์ดิบใน `spec.md` และเปรียบเทียบโดยไม่ normalize

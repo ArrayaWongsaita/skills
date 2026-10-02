@@ -70,6 +70,10 @@ marker ของ parallel execution อยู่ใน
 [planning reference](../../skills/agents/implement-tickets/references/planning.md)
 และ [ADR 0021](../decisions/0021-touch-set-drift-without-reapproval.md)
 
+ตัวอ่าน manifest เปรียบเทียบ spec และชุด ticket. Plan แสดงคำเตือน spec-hash และคำเตือน ticket-set
+ส่วนคอลัมน์ Budget แสดง Budget ของ ticket แต่ละใบ คำเตือนเป็นข้อมูลประกอบและไม่หยุดการวางแผน
+[planning reference](../../skills/agents/implement-tickets/references/planning.md) อธิบายวิธีแก้คำเตือน spec-hash.
+
 ### Seam และ Context
 
 รายละเอียดฟิลด์ Seam และ Context อยู่ใน
@@ -141,6 +145,11 @@ and reported, unless they hit the deny-list, the per-ticket cap, or a real
 conflict. See the
 [planning reference](../../skills/agents/implement-tickets/references/planning.md)
 and [ADR 0021](../decisions/0021-touch-set-drift-without-reapproval.md).
+
+The manifest reader compares the spec and ticket set. The Plan reports a spec-hash
+warning and a ticket-set warning. The Budget column shows each ticket's Budget;
+warnings are advisory and do not stop planning. The [planning reference](../../skills/agents/implement-tickets/references/planning.md)
+explains how to clear the spec-hash warning.
 
 ### Seam and Context
 

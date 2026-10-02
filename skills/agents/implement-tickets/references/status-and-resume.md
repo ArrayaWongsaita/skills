@@ -152,7 +152,10 @@ For a valid status file:
    one ticket, otherwise as serial. A mode change needs approval because it
    changes the waves.
 5. Re-present the Plan using reconciled Git state, current blockers, and
-   eligible tickets. Wait for approval before dispatching, unless only accepted
+   eligible tickets. When `continue` re-presents the Plan, rerun the manifest
+   check against the current spec and ticket files. If `spec.md` was edited
+   between sessions, include the spec-hash warning in the Plan. Wait for
+   approval before dispatching, unless only accepted
    extras happened: then reconcile Git and resume without a new approval, and
    re-ask only unanswered parked questions. A change to the run mode, waves,
    blockers, ticket set, budget, backend, or concurrency, or an edit the
