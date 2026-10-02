@@ -116,7 +116,7 @@ Stop: Handoff message (/clear, DAG summary + recommended implementer แล้�
    - **เสนอ `Risk: high` ที่ quiz:** skill เสนอ `Risk: high` พร้อมเหตุผลตามกฎใน [ticket-format reference](../../skills/agents/grill-to-tickets/references/ticket-format.md); ผู้ใช้ยืนยันหรือปฏิเสธทีละ ticket และเฉพาะ high ที่ยืนยันแล้วเท่านั้นที่ถูกเขียนลงไฟล์ ticket ส่วน ticket อื่นเขียนโดยไม่มีฟิลด์ Risk
    - ดูสัญญาหลักสำหรับการจัดการ warnings และการแก้ ticket ระหว่าง quiz
 5. **Stop — Handoff (ส่งมอบงาน):**
-   - พิมพ์ข้อความ handoff ตามลำดับ: `/clear` → **DAG summary** → `recommended implementer` จาก checker → `Manifest: .scratch/<feature-slug>/manifest.json` เมื่อมี → คำสั่ง `/implement-tickets`; เพิ่มบรรทัด hint `--with <backend>` ได้เมื่อใช้ adapter
+   - พิมพ์ข้อความ handoff ตามลำดับ: `/clear` → **DAG summary** → `recommended implementer` จาก checker → `Manifest: .scratch/<feature-slug>/manifest.json` เมื่อมี → คำสั่ง `/implement-tickets`
    - handoff ระบุ parked questions ที่รับเป็นสมมติฐาน; ดู [สัญญาคำถามที่พักไว้](../../skills/agents/grill-to-tickets/references/parked-questions.md) สำหรับรายละเอียด
    - แสดงข้อความสรุปและแนะนำขั้นตอนสำหรับเซสชันถัดไป:
      ```text
@@ -131,7 +131,6 @@ Stop: Handoff message (/clear, DAG summary + recommended implementer แล้�
      Manifest: .scratch/<feature-slug>/manifest.json
      # 3. implement ทั้งโฟลเดอร์ใน session ใหม่
      /implement-tickets .scratch/<feature-slug>/
-     # Optional adapter hint: add --with <backend> to the command.
      ```
 
 ---
