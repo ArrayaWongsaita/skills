@@ -61,6 +61,17 @@ marker ของ parallel execution อยู่ใน
 เมื่อ run สำเร็จ ให้ส่งต่อ integration branch และ review commands แล้วหยุดก่อน
 review, push หรือเปิด PR
 
+### โหมดการรันและ extras
+
+ค่าเริ่มต้นคือโหมด serial (หนึ่ง ticket ต่อ wave) ใช้ `--parallel` เพื่อเปิด parallel
+สถานะ marker ของ
+การ validate อยู่ใน
+[parallel-validation reference](../../../skills/agents/implement-tickets/references/parallel-validation.md)
+ไฟล์ที่ worker แตะนอก touch set (extras) ยอมรับอัตโนมัติและรายงานให้ทราบ
+ยกเว้นชน deny-list, เกิน cap หรือ conflict จริง ดู
+[planning reference](../../../skills/agents/implement-tickets/references/planning.md)
+และ [ADR 0021](../../decisions/0021-touch-set-drift-without-reapproval.md)
+
 ### Seam และ Context
 
 การใช้ฟิลด์ Seam และ Context อ้างอิง
@@ -120,6 +131,18 @@ Run `/implement-tickets continue [slug]` to resume a saved run.
 
 After a successful run, hand off the integration branch and review commands,
 then stop before review, push, or opening a pull request.
+
+### Run modes and extras
+
+Serial mode (one ticket per wave) is the default. Pass `--parallel` to opt in to
+parallel mode. The
+validation marker is described in the
+[parallel-validation reference](../../../skills/agents/implement-tickets/references/parallel-validation.md).
+Files a worker touches beyond its touch set (extras) are accepted automatically
+and reported, unless they hit the deny-list, the per-ticket cap, or a real
+conflict. See the
+[planning reference](../../../skills/agents/implement-tickets/references/planning.md)
+and [ADR 0021](../../decisions/0021-touch-set-drift-without-reapproval.md).
 
 ### Seam and Context
 

@@ -1134,3 +1134,53 @@ describe("implement-tickets integration gate and run-state contract", () => {
     }
   });
 });
+
+describe("implement-tickets touch-set drift decision record and docs", () => {
+  const adrPath = path.join(repoRoot, "docs/decisions/0021-touch-set-drift-without-reapproval.md");
+
+  it("files a bilingual record that narrows the approval gate and clarifies the serial default", async () => {
+    const adr = await readTextOrNull(adrPath);
+    assert.ok(adr, "ADR 0021 exists");
+    assert.match(adr, /^# ADR 0021: Touch-set drift without re-approval/m);
+    assert.match(adr, /Narrows \/ [^\n]*: ADR 0020 decision 1/);
+    assert.ok(markdownSection(adr, "Context / บริบท"), "has a Context section");
+    const decision = markdownSection(adr, "Decision / การตัดสินใจ");
+    assert.ok(decision, "has a Decision section");
+    assert.match(decision, /waves,\s+blockers,\s+tickets,\s+budget, backend,?\s+and\s+concurrency/i);
+    assert.match(decision, /serial[\s\S]*default/i);
+    assert.match(decision, /--parallel/);
+    assert.match(decision, /clarif/i);
+    assert.match(decision, /[฀-๿]/, "has Thai text");
+  });
+
+  it("lists the rejected alternatives and the semantic-conflict trade-off", async () => {
+    const adr = await readTextOrNull(adrPath);
+    assert.ok(adr, "ADR 0021 exists");
+    const rejected = markdownSection(adr, "Rejected alternatives / ทางเลือกที่ปฏิเสธ");
+    assert.ok(rejected, "has a Rejected alternatives section");
+    for (const alt of [/ask on every extra/i, /defer on any path overlap/i, /defer to the next wave/i, /keep parallel as the default/i, /strict flag/i]) {
+      assert.match(rejected, alt);
+    }
+    const consequences = markdownSection(adr, "Consequences / ผลที่ตามมา");
+    assert.ok(consequences, "has a Consequences section");
+    assert.match(consequences, /semantic conflict/i);
+    assert.match(consequences, /tests/i);
+  });
+
+  it("mentions the default mode, parallel flag, validation marker, and extras on both pages", async () => {
+    for (const file of ["docs/guides/implement-tickets.md", "docs/skills/agents/implement-tickets.md"]) {
+      const doc = await readTextOrNull(path.join(repoRoot, file));
+      assert.ok(doc, `${file} exists`);
+      for (const heading of ["Run modes and extras", "โหมดการรันและ extras"]) {
+        const section = markdownSection(doc, heading);
+        assert.ok(section, `${file} has ${heading}`);
+        assert.match(section, /serial|ทีละ ticket/i);
+        assert.match(section, /--parallel/);
+        assert.match(section, /parallel-validation\.md/);
+        assert.match(section, /extras?/i);
+        assert.match(section, /planning\.md/);
+        assert.match(section, /0021-touch-set-drift-without-reapproval\.md/);
+      }
+    }
+  });
+});
