@@ -55,6 +55,13 @@ export function markdownSection(markdown, headingTitle) {
   return lines.slice(start.index, nextSection?.index ?? lines.length).join("\n");
 }
 
+// One named section with all whitespace runs collapsed, so a regex can span wrapped lines.
+export function flatMarkdownSection(markdown, headingTitle) {
+  const section = markdownSection(markdown, headingTitle);
+  assert.ok(section, `${headingTitle} section exists`);
+  return section.replace(/\s+/g, " ");
+}
+
 export function assertAbsentFromMarkdownSections(markdown, pattern, message) {
   const { lines, entries } = headingEntries(markdown);
   const sections = [];

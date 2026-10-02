@@ -17,6 +17,17 @@ function fieldValue(text, name) {
   return text.match(new RegExp(`^\\*\\*${escaped}:\\*\\*[ \\t]*([^\\r\\n]*?)[ \\t]*$`, "m"))?.[1];
 }
 
+// A missing Risk field is low; `low` and `high — <reason>` are read as written;
+// anything else, including a repeated Risk line, is treated as high with a
+// warning. fieldValue already trims the value, as check-tickets.mjs does.
+function parseRisk(numberText, riskText, riskLineCount) {
+  if (riskLineCount > 1) return { level: "high", warning: `Ticket ${numberText} repeats the Risk field and is treated as high.` };
+  if (riskText === undefined) return { level: "low", warning: null };
+  if (riskText === "low") return { level: "low", warning: null };
+  if (/^high — \S.*$/.test(riskText)) return { level: "high", warning: null };
+  return { level: "high", warning: `Ticket ${numberText} has a malformed Risk value "${riskText}" and is treated as high.` };
+}
+
 function parseTicket(file, text) {
   const filename = file.match(TICKET_FILE);
   const heading = text.match(/^#\s+(\d+):\s*(.+?)\s*$/m);
@@ -35,6 +46,8 @@ function parseTicket(file, text) {
     throw new Error(`issues/${numberText}: **Context:** is missing or empty`);
   }
 
+  const { level: risk, warning: riskWarning } = parseRisk(numberText, fieldValue(text, "Risk"), (text.match(/^\*\*Risk:\*\*/gm) ?? []).length);
+
   return {
     file,
     number,
@@ -44,8 +57,9 @@ function parseTicket(file, text) {
     contextText,
     seam: fieldValue(text, "Seam") ?? "",
     budget: fieldValue(text, "Budget") ?? "none",
+    risk,
     touchSet: null,
-    warnings: [],
+    warnings: riskWarning ? [riskWarning] : [],
   };
 }
 
@@ -391,13 +405,14 @@ export async function planWaves({ directory, serial = false, concurrency = DEFAU
     parallelValidationStatus: validation.status,
     manifest,
     waves,
-    tickets: tickets.map(({ numberText, title, blockers, wave, touchSet, budget, warnings: ticketWarnings }) => ({
+    tickets: tickets.map(({ numberText, title, blockers, wave, touchSet, budget, risk, warnings: ticketWarnings }) => ({
       number: numberText,
       title,
       wave,
       blockers,
       touchSet,
       budget,
+      risk,
       warnings: ticketWarnings,
     })),
     warnings,

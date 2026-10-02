@@ -8,7 +8,7 @@
 ### implement-tickets คืออะไร?
 
 `implement-tickets` ช่วยนำชุด ticket ที่ publish แล้วไปสู่แผนงาน การ implement
-และการตรวจสอบก่อนรวมงาน โดยมีจุดส่งต่อให้ผู้ใช้ทบทวนก่อนเริ่ม execute
+และการตรวจสอบก่อนรวมงาน โดยมีจุดหยุดให้ผู้ใช้ทบทวนก่อนเริ่ม execute เมื่อใช้ `--strict`
 
 ### การเรียกใช้งาน
 
@@ -33,8 +33,8 @@ npx skills add ArrayaWongsaita/skills --skill implement-tickets
 ### ขั้นตอนหลัก
 
 1. **Plan:** อ่าน ticket และเตรียมแผนสำหรับชุดงาน
-2. **Pause:** ให้ผู้ใช้ทบทวนและอนุมัติแผน
-3. **Execute:** ทำงานและตรวจผลก่อนรวมงาน
+2. **Pause:** ให้ผู้ใช้ทบทวนและอนุมัติแผนเมื่อรันแบบ `--strict` (ค่าเริ่มต้นไม่หยุดรอ)
+3. **Execute:** ทำงาน และตรวจผลด้วย verifier ทุก ticket ใน strict run หรือเฉพาะ ticket ที่เสี่ยงในค่าเริ่มต้น ก่อนรวมงาน
 4. **Handoff:** ส่งต่อ integration branch และ review commands แล้วหยุดก่อน review, push หรือเปิด PR
 
 ### Integration gate, status, and resume
@@ -49,7 +49,7 @@ npx skills add ArrayaWongsaita/skills --skill implement-tickets
 
 ### Dispatch, verifier และ timeout
 
-หลังอนุมัติ ให้อ้างอิง [dispatch contract](../../skills/agents/implement-tickets/references/dispatch-contract.md),
+เมื่อเริ่ม execute (หลังอนุมัติใน strict run) ให้อ้างอิง [dispatch contract](../../skills/agents/implement-tickets/references/dispatch-contract.md),
 [worker prompt scaffold](../../skills/agents/implement-tickets/references/prompt-scaffold.md)
 และ [verification contract](../../skills/agents/implement-tickets/references/verification.md).
 
@@ -68,6 +68,11 @@ marker ของ parallel execution อยู่ใน
 ไฟล์ที่ worker แตะนอก touch set (extras) ยอมรับอัตโนมัติและรายงานให้ทราบ
 ยกเว้นชน deny-list, เกิน cap หรือ conflict จริง ดู
 [planning reference](../../skills/agents/implement-tickets/references/planning.md)
+
+ใช้ `--strict` (ตั้งครั้งเดียวต่อการรัน และไม่ขึ้นกับ option อื่น) เพื่อให้หยุดรอการอนุมัติ Plan
+ก่อน dispatch worker บรรทัด `Strictness:` ใน Plan และพฤติกรรมของการรันที่ไม่มี flag (default strictness) ดู [SKILL.md](../../skills/agents/implement-tickets/SKILL.md) และ [planning reference](../../skills/agents/implement-tickets/references/planning.md)
+กติกา risk signal ดู [verification reference](../../skills/agents/implement-tickets/references/verification.md#risk-based-verification)
+ส่วน `Verifier: skipped`, `continue` และ `continue --strict` ดู [status-and-resume reference](../../skills/agents/implement-tickets/references/status-and-resume.md)
 และ [ADR 0021](../decisions/0021-touch-set-drift-without-reapproval.md)
 
 ตัวอ่าน manifest เปรียบเทียบ spec และชุด ticket. Plan แสดงคำเตือน spec-hash และคำเตือน ticket-set
@@ -123,7 +128,7 @@ for saved runs. See the shared glossary entry for
 
 ### Dispatch and verification
 
-After approval, follow the [dispatch contract](../../skills/agents/implement-tickets/references/dispatch-contract.md),
+Once execution starts (after approval in a strict run), follow the [dispatch contract](../../skills/agents/implement-tickets/references/dispatch-contract.md),
 [worker prompt scaffold](../../skills/agents/implement-tickets/references/prompt-scaffold.md),
 and [verification contract](../../skills/agents/implement-tickets/references/verification.md).
 
@@ -140,6 +145,14 @@ See the planning reference for the ticket's Seam and Context fields.
 Serial mode (one ticket per wave) is the default. Pass `--parallel` to opt in to
 parallel mode. The validation marker is described in the
 [parallel-validation reference](../../skills/agents/implement-tickets/references/parallel-validation.md).
+
+Pass `--strict` (set once per run, independent of the other options) to pause for Plan
+approval before any worker is dispatched. What a run with no flag does, and the `Strictness:` line in
+the Plan, are defined in the [planning reference](../../skills/agents/implement-tickets/references/planning.md).
+The risk signals are defined in the [verification reference](../../skills/agents/implement-tickets/references/verification.md#risk-based-verification);
+`Verifier: skipped`, `continue`, and `continue --strict` are defined in the
+[status-and-resume reference](../../skills/agents/implement-tickets/references/status-and-resume.md).
+
 Files a worker touches beyond its touch set (extras) are accepted automatically
 and reported, unless they hit the deny-list, the per-ticket cap, or a real
 conflict. See the

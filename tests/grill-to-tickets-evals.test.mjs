@@ -221,6 +221,16 @@ it("covers parked-flow and retires stale ticket-review verdicts", async () => {
   ]) assert.match(text, requirement);
 });
 
+it("has eval 49 for the Risk: high proposal, confirmation, and rejection at the ticket quiz", async () => {
+  const { evals } = await evalsJson();
+  const entry = evals.find((e) => e.id === 49);
+  assert.ok(entry, "eval 49 exists");
+  const text = `${entry.prompt ?? ""} ${entry.expected_output ?? ""} ${(entry.expectations ?? []).join(" ")}`;
+  assert.match(text, /propos\w* `?Risk: high/i);
+  assert.match(text, /confirm/i);
+  assert.match(text, /reject/i);
+});
+
  it("covers path-only Preflight resume while retaining older lock lines", async () => {
   const entry = (await evalsJson()).evals.find((e) => /preflight records paths only on resume/i.test(e.name));
   assert.ok(entry, "no eval case covers path-only Preflight resume");

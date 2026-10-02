@@ -55,7 +55,8 @@ ticket attempt or continue with implementation.
 2. **Green:** make the smallest implementation that makes the tests pass.
 3. **Refactor:** tidy only the changes you made and keep the tests passing.
 
-Run the ticket tests and the project's configured typecheck. If the repository
+Run the ticket tests and the project's configured typecheck. The full test
+suite is left to the integration gate, which runs it after each squash-merge. If the repository
 has no typecheck command, report that instead of inventing one.
 
 ## Constraints
@@ -72,9 +73,12 @@ has no typecheck command, report that instead of inventing one.
 
 End your report with exactly these sections:
 
-- **Red output:** the failing test run from the red step, verbatim.
-- **Green output:** the passing test run and typecheck from the final step,
-  verbatim, noting if no typecheck is configured.
+- **Red output:** the red command you ran, its exit code, and the failing
+  test run from the red step, verbatim and unabridged.
+- **Green output:** the green command you ran, its exit code, and the passing
+  test run from the final step, verbatim and unabridged, then the typecheck
+  result (command, exit code, output), or `none configured` when the
+  repository has no typecheck command.
 - **Files changed:** every file created or modified, split into test files and
   implementation files.
 - **Test → criterion table:** each new test mapped to the acceptance criterion

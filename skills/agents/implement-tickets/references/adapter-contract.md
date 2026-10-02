@@ -65,7 +65,7 @@ The table below defines outcome routing:
 
 | Outcome | Core action | Attempt accounting |
 | --- | --- | --- |
-| `completed` | Send the worker report to a fresh verifier. Integrate only after verification. | The report is eligible for verification. |
+| `completed` | Decide under [risk-based verification](verification.md#risk-based-verification): strict runs and risky tickets go to a fresh verifier and integrate only after verification; a non-risky default-strictness ticket is judged on its evidence. | The report is eligible for verification. |
 | `failed_infra` | Not counted: retry infrastructure at most two times; after two retries, mark `BLOCKED (TICKET_PROVIDER_FAILED)`. | At most two retries. |
 | `failed_other` | Append the failure evidence and resume the same session. A third counted failure marks `BLOCKED (TICKET_VERIFICATION_FAILED)`. | One counted attempt. |
 

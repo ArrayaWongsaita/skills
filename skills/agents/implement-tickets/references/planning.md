@@ -2,8 +2,8 @@
 
 Planning is read-only. Resolve the feature argument, load its ticket files and
 planning context, validate the ticket set, calculate waves, and present a Plan.
-Pause for explicit approval before dispatching or changing any file outside the
-feature directory.
+A strict run pauses for explicit approval before dispatching or changing any file
+outside the feature directory.
 
 ## 1. Resolve and read the feature
 
@@ -85,12 +85,18 @@ orchestrator. Record the matched worker agent for each ticket.
 
 Present one row for every ticket, in ticket order:
 
-| Ticket | Wave | Blockers | Budget | Touch set | Seam | Matched agent | Retry budget |
-| --- | ---: | --- | --- | --- | --- | --- | ---: |
+| Ticket | Wave | Blockers | Budget | Touch set | Seam | Matched agent | Retry budget | Risk |
+| --- | ---: | --- | --- | --- | --- | --- | ---: | --- |
 
 The Budget column shows the text after each ticket file's own Budget field
 label, or `none` when that field is absent. It is information only and applies
 no limit or triage.
+
+The Risk column shows each ticket's declared risk as the wave script reports it
+in its `risk` value: `high` or `low`. A ticket whose Risk field is absent (a missing field) is
+shown as `low`. A malformed or repeated Risk value reads as `high`, and the script adds a warning for
+it that the Plan carries. The declared risk changes no wave, blocker, or touch
+set.
 
 Also state:
 
@@ -99,6 +105,8 @@ Also state:
 - run mode: serial by default, or parallel with `--parallel` or
   `--concurrency N`; a change of mode needs approval because it changes the
   waves;
+- strictness on a `Strictness:` line next to the run mode: `strict` with
+  `--strict`. A change of strictness is not a change of waves;
 - concurrency cap, in parallel mode only: `4` by default or the supplied
   `--concurrency N`. In serial mode there is nothing to cap, so the Plan shows
   no concurrency cap; the shared worker-and-verifier cap of four stays enforced
@@ -113,7 +121,12 @@ Also state:
 - retry budget: three ticket attempts, unless the run contract later defines
   a narrower infrastructure retry.
 
-Pause for explicit approval after presenting the Plan. The approval covers the
+A strict run presents the Plan and dispatches no worker and writes no run
+state until the person approves. A run with no flag is in default strictness:
+it prints the Plan and starts without a pause. Planning errors and a failed preflight stop the run
+before any dispatch in both strictness values.
+
+In a strict run, pause for explicit approval after presenting the Plan. The approval covers the
 run mode, waves, blockers, ticket set, budget, backend, and concurrency. A
 change to any of them asks for approval before continuing. Accepted extras do
 not change the Plan structure and need no new approval. No file outside the

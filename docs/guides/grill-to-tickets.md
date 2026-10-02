@@ -113,6 +113,7 @@ Stop: Handoff message (/clear, DAG summary + recommended implementer แล้�
    - ทุก ticket ระบุ stories ที่ส่งมอบและ dependency พร้อม **Seam**, **Context** และ **Budget** ตามรูปแบบใน `references/ticket-format.md`
    - checker รายงานความครอบคลุม, budget, DAG และ warnings; manifest สำหรับ handoff อยู่ที่ `.scratch/<feature-slug>/manifest.json` และมี `recommendedImplementers: ["implement-tickets"]` ทุก wave width ดู [สัญญา grill-to-tickets หลัก](../../skills/agents/grill-to-tickets/SKILL.md) สำหรับกฎ checker และ manifest
    - **Ticket review (Stage 3.5):** หลัง checker PASS และก่อน quiz ให้ทำ ticket review ดู [สัญญา grill-to-tickets หลัก](../../skills/agents/grill-to-tickets/SKILL.md) และ [brief สำหรับผู้รีวิว ticket](../../skills/agents/grill-to-tickets/references/ticket-review.md) สำหรับรายละเอียด
+   - **เสนอ `Risk: high` ที่ quiz:** skill เสนอ `Risk: high` พร้อมเหตุผลตามกฎใน [ticket-format reference](../../skills/agents/grill-to-tickets/references/ticket-format.md); ผู้ใช้ยืนยันหรือปฏิเสธทีละ ticket และเฉพาะ high ที่ยืนยันแล้วเท่านั้นที่ถูกเขียนลงไฟล์ ticket ส่วน ticket อื่นเขียนโดยไม่มีฟิลด์ Risk
    - ดูสัญญาหลักสำหรับการจัดการ warnings และการแก้ ticket ระหว่าง quiz
 5. **Stop — Handoff (ส่งมอบงาน):**
    - พิมพ์ข้อความ handoff ตามลำดับ: `/clear` → **DAG summary** → `recommended implementer` จาก checker → `Manifest: .scratch/<feature-slug>/manifest.json` เมื่อมี → คำสั่ง `/implement-tickets`; เพิ่มบรรทัด hint `--with <backend>` ได้เมื่อใช้ adapter

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile, access, readdir } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
-import { assertAbsentFromMarkdownSections, assertSkillMarkdownSectionsDoNotMatch, markdownHeaderBlock, markdownHeadings, markdownSection } from "./helpers/markdown-contract.mjs";
+import { assertAbsentFromMarkdownSections, assertSkillMarkdownSectionsDoNotMatch, flatMarkdownSection, markdownHeaderBlock, markdownHeadings, markdownSection } from "./helpers/markdown-contract.mjs";
 
 async function fileExists(filePath) {
   await access(filePath, constants.R_OK);
@@ -376,6 +376,24 @@ describe("grill-to-tickets composite skill contract", () => {
         "all three allowed routes reach Stage 3",
       );
     }
+  });
+
+  it("proposes Risk: high by rule at the ticket quiz and writes only confirmed highs", async () => {
+    const flatSection = flatMarkdownSection;
+    const stage3 = flatSection(await readFile(skillFiles[0], "utf8"), "Stage 3 — Tickets");
+    const format = flatSection(await readFile(path.resolve(canonicalDir, "references/ticket-format.md"), "utf8"), "4. Quiz the user");
+    const review = (await readFile(path.resolve(canonicalDir, "references/ticket-review.md"), "utf8")).replace(/\s+/g, " ");
+    for (const [name, text] of [["SKILL.md Stage 3", stage3], ["ticket-format.md quiz", format]]) {
+      assert.match(text, /propos\w* `Risk: high`[^.]*reason/i, `${name}: the quiz proposes Risk: high with a reason`);
+      assert.match(text, /blocks? three or more tickets/i, `${name}: blocks three or more tickets`);
+      assert.match(text, /shared public interface or contract/i, `${name}: shared public interface or contract`);
+      assert.match(text, /migration, auth, security, payment, or concurrency/i, `${name}: sensitive code areas`);
+      assert.match(text, /external or irreversible side effect/i, `${name}: external or irreversible side effect`);
+      assert.match(text, /confirms? or rejects? each proposed/i, `${name}: the person confirms or rejects each proposal`);
+      assert.match(text, /only a confirmed high is written/i, `${name}: only a confirmed high is written`);
+      assert.match(text, /without a Risk field/i, `${name}: other tickets are written without a Risk field`);
+    }
+    assert.match(review, /proposes no `Risk` value[^.]*\. The `Risk: high` proposal belongs to the main thread at the quiz/, "ticket-review.md leaves the Risk proposal to the main thread at the quiz");
   });
 
   it("runs the ticket checker before the quiz and traces every ticket to its stories", async () => {

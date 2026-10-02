@@ -297,6 +297,8 @@ granularity and blocking edges, showing each ticket's Seam, Context, and
 Budget, and showing the checker's story-coverage table, budget table, DAG
 summary, and every warning. Re-run the checker after every change with `--write-budget`.
 
+**Risk proposal.** At the quiz the main thread proposes `Risk: high`, with a reason, for each ticket that matches any of these: it blocks three or more tickets; it changes a shared public interface or contract another ticket uses; it touches migration, auth, security, payment, or concurrency code; it has an external or irreversible side effect. The person confirms or rejects each proposed high. Only a confirmed high is written to its ticket file, as `**Risk:** high — <reason>` directly after `**Budget:**`; every other ticket, including one whose proposal is rejected, is written without a Risk field. Re-run the checker with `--write-budget` after the Risk lines are written.
+
 **Stage 3.5 — Ticket review.** After the checker prints `result: PASS` and
 ticket errors are fixed, run one review before the quiz. Match
 `--ticket-review 0` as whole tokens; that exact value skips the

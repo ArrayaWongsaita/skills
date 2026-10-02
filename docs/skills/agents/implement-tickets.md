@@ -3,13 +3,13 @@
 ## ภาษาไทย / Thai
 
 `implement-tickets` นำชุด ticket ที่ publish แล้วผ่านการวางแผน การ implement
-การตรวจสอบ และการรวมงาน โดยให้ผู้ใช้ทบทวนแผนก่อนเริ่ม execute
+การตรวจสอบ และการรวมงาน โดยพิมพ์ Plan ก่อนเริ่ม และให้ผู้ใช้ทบทวนก่อน execute เมื่อใช้ `--strict`
 
 ### ใช้เมื่อไร
 
 - มีชุด ticket ที่ต้องการวางแผนและทำงานเป็นลำดับ
-- ต้องการให้มีการตรวจผลก่อนรวมงาน
-- ต้องการทบทวนแผนก่อนเริ่ม implement
+- ต้องการให้มีการตรวจผลก่อนรวมงาน (ทุก ticket ใน strict run หรือเฉพาะ ticket ที่เสี่ยง)
+- ต้องการทบทวนแผนก่อนเริ่ม implement (ใช้ `--strict`)
 
 ### การเรียกใช้งาน
 
@@ -31,8 +31,8 @@ npx skills add ArrayaWongsaita/skills --skill implement-tickets
 ### วิธีทำงานหลัก
 
 1. อ่าน ticket และเตรียมแผน
-2. หยุดให้ผู้ใช้ทบทวนและอนุมัติแผน
-3. หลังอนุมัติ ให้ worker ทำงานและ verifier ตรวจผลก่อน integration
+2. ถ้าใช้ `--strict` ให้หยุดให้ผู้ใช้ทบทวนและอนุมัติแผน (ค่าเริ่มต้นพิมพ์ Plan แล้วเริ่มเลย)
+3. worker ทำงาน และ verifier ตรวจผลก่อน integration ทุก ticket ใน strict run หรือเฉพาะ ticket ที่เสี่ยงในค่าเริ่มต้น
 4. ส่งต่อ integration branch และ review commands แล้วหยุดก่อน review, push หรือเปิด PR
 
 การค้นหา adapter, lock fallback, แนวทางติดตั้ง และ worktree ownership อ้างอิง
@@ -48,7 +48,7 @@ marker ของ parallel execution อยู่ใน
 
 ### Dispatch, verifier และ timeout
 
-หลัง approval ให้ทำตาม [dispatch contract](../../../skills/agents/implement-tickets/references/dispatch-contract.md),
+เมื่อเริ่ม execute (หลัง approval ใน strict run) ให้ทำตาม [dispatch contract](../../../skills/agents/implement-tickets/references/dispatch-contract.md),
 [worker prompt scaffold](../../../skills/agents/implement-tickets/references/prompt-scaffold.md)
 และ [verification contract](../../../skills/agents/implement-tickets/references/verification.md).
 
@@ -73,6 +73,11 @@ review, push หรือเปิด PR
 ไฟล์ที่ worker แตะนอก touch set (extras) ยอมรับอัตโนมัติและรายงานให้ทราบ
 ยกเว้นชน deny-list, เกิน cap หรือ conflict จริง ดู
 [planning reference](../../../skills/agents/implement-tickets/references/planning.md)
+
+ใช้ `--strict` (ตั้งครั้งเดียวต่อการรัน และไม่ขึ้นกับ option อื่น) เพื่อให้หยุดรอการอนุมัติ Plan
+ก่อน dispatch worker บรรทัด `Strictness:` ใน Plan และพฤติกรรมของการรันที่ไม่มี flag (default strictness) ดู [SKILL.md](../../../skills/agents/implement-tickets/SKILL.md) และ [planning reference](../../../skills/agents/implement-tickets/references/planning.md)
+กติกา risk signal ดู [verification reference](../../../skills/agents/implement-tickets/references/verification.md#risk-based-verification)
+ส่วน `Verifier: skipped`, `continue` และ `continue --strict` ดู [status-and-resume reference](../../../skills/agents/implement-tickets/references/status-and-resume.md)
 และ [ADR 0021](../../decisions/0021-touch-set-drift-without-reapproval.md)
 
 ### Seam และ Context
@@ -119,13 +124,13 @@ explains how to clear the spec-hash warning.
 ### Main workflow
 
 1. Read the tickets and prepare a plan.
-2. Pause for the user to review and approve the plan.
-3. After approval, workers implement and a verifier checks the results before integration.
+2. With `--strict`, pause for the user to review and approve the plan; by default the plan is printed and the run starts.
+3. Workers implement, and a verifier checks the results before integration for every ticket in a strict run or for risky tickets only by default.
 4. Hand off the integration branch and review commands, then stop before review, push, or a pull request.
 
 ### Dispatch and verification
 
-After approval, follow the [dispatch contract](../../../skills/agents/implement-tickets/references/dispatch-contract.md),
+Once execution starts (after approval in a strict run), follow the [dispatch contract](../../../skills/agents/implement-tickets/references/dispatch-contract.md),
 [worker prompt scaffold](../../../skills/agents/implement-tickets/references/prompt-scaffold.md),
 and [verification contract](../../../skills/agents/implement-tickets/references/verification.md).
 
@@ -145,6 +150,14 @@ then stop before review, push, or opening a pull request.
 Serial mode (one ticket per wave) is the default. Pass `--parallel` to opt in to
 parallel mode. The validation marker is described in the
 [parallel-validation reference](../../../skills/agents/implement-tickets/references/parallel-validation.md).
+
+Pass `--strict` (set once per run, independent of the other options) to pause for Plan
+approval before any worker is dispatched. What a run with no flag does, and the `Strictness:` line in
+the Plan, are defined in the [planning reference](../../../skills/agents/implement-tickets/references/planning.md).
+The risk signals are defined in the [verification reference](../../../skills/agents/implement-tickets/references/verification.md#risk-based-verification);
+`Verifier: skipped`, `continue`, and `continue --strict` are defined in the
+[status-and-resume reference](../../../skills/agents/implement-tickets/references/status-and-resume.md).
+
 Files a worker touches beyond its touch set (extras) are accepted automatically
 and reported, unless they hit the deny-list, the per-ticket cap, or a real
 conflict. See the
