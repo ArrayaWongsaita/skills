@@ -1,0 +1,42 @@
+[
+  {
+    "query": "Rename the fetch_records symbol to load_records across the twelve files under src/store — a mechanical, self-contained subtask you can hand off.",
+    "should_trigger": true
+  },
+  {
+    "query": "Generate the TypeScript interfaces and Zod schemas for the 15 data models in src/schemas. It is pure boilerplate — delegate this subtask and keep this session for the work that needs judgment.",
+    "should_trigger": true
+  },
+  {
+    "query": "Summarise the error spikes in this 40k-line build log and give me the five largest, with timestamps and line numbers.",
+    "should_trigger": true
+  },
+  {
+    "query": "Run the linter over packages/web and report every finding back to me.",
+    "should_trigger": true
+  },
+  {
+    "query": "/tokenme-agent rename DEFAULT_TIMEOUT to REQUEST_TIMEOUT across the nine files in src/config",
+    "should_trigger": true
+  },
+  {
+    "query": "$tokenme-agent summarise the error spikes in /Users/user/project/logs/build.log",
+    "should_trigger": true
+  },
+  {
+    "query": "Rotate the database password: edit /Users/user/project/.env.secrets and update the matching entry in ~/.aws/credentials.",
+    "should_trigger": false
+  },
+  {
+    "query": "Weigh PostgreSQL against MongoDB for the billing service and tell me which of the two architectures we should pick.",
+    "should_trigger": false
+  },
+  {
+    "query": "Implement ticket 07 — Risk: high — the rework of the auth middleware's token refresh path.",
+    "should_trigger": false
+  },
+  {
+    "query": "Now apply the same change to the other file we discussed earlier in this chat.",
+    "should_trigger": false
+  }
+]

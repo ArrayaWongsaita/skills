@@ -1,0 +1,74 @@
+{
+  "skill_name": "tokenme-agent",
+  "evals": [
+    {
+      "id": 1,
+      "name": "bare-dispatch-of-a-mechanical-rename",
+      "prompt": "Use tokenme for this: rename `fetch_records` to `load_records` across the twelve files in /Users/user/project/src/store, then run the store's test file and report the result.",
+      "expected_output": "The host checks the keep-local rules and the eligibility checklist first, then sizes the twelve files against the 60k planning budget. It writes a self-contained prompt — absolute paths, the conventions the task needs, checkable acceptance criteria — to /tmp/tokenme-prompts/<task-id>.md and dispatches a bare, headless tokenme run: JSON out, nothing persisted, slash commands off, stdout to the result file and stderr to a separate error file. After the run the host applies the four-part result gate, the baseline comparison, and the test run itself before reporting done.",
+      "expectations": [
+        "Writes the prompt to a file and passes it with -p \"$(cat /tmp/tokenme-prompts/<task-id>.md)\" so quotes and backticks stay out of the shell",
+        "Dispatches bare by default: --bare, --output-format json, --no-session-persistence and --disable-slash-commands",
+        "Redirects stdout to /tmp/tokenme-runs/<task-id>.json and stderr to the separate /tmp/tokenme-runs/<task-id>.err",
+        "Names Read Glob Grep Edit Write Bash on --allowed-tools so the run edits the named files and runs the tests without stalling on a permission prompt",
+        "Carries the history-changing git patterns and the nested claude / claude-tokenme blocks on --disallowed-tools",
+        "Checks is_error false, a success subtype, terminal_reason completed and a zero exit code, then compares the recorded baseline and runs the test itself before reporting done"
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "read-only-log-summarising",
+      "prompt": "Summarise the five largest error spikes in /Users/user/project/logs/build.log — use tokenme so my context stays free.",
+      "expected_output": "The host scopes the run to the three read tools with --allowed-tools \"Read Glob Grep\", which restricts the run to reading, globbing and grepping: it cannot edit a file or run a shell command. The prompt is self-contained — the absolute log path, the fixed output, and the rule that the named input stays unchanged — and the run stays bare by default. The host reads the envelope gate, then hands the summary on with its own check behind it, treating the run's account as a claim to check.",
+      "expectations": [
+        "Scopes the run with --allowed-tools \"Read Glob Grep\" — the restriction itself leaves a read job no edit and no shell",
+        "Keeps --bare, --output-format json, and the two separate output files",
+        "Writes the objective, the absolute input path, and checkable acceptance criteria into the prompt file",
+        "Reads the envelope gate before passing the summary on"
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "oversized-job-split-into-chunks",
+      "prompt": "Use tokenme to add the new license header to all forty files in /Users/user/project/src — about 400 KB of code in total.",
+      "expected_output": "The host sizes the task before dispatch: about 400,000 bytes divided by 4, times 1.5, is about 150k of footprint against a 60k planning budget, so the task does not fit and is split before any dispatch. The forty files become per-file or per-directory chunks that each fit the budget, and every chunk runs as its own delegate run with its own prompt, result and error files. The chunks stay independent — each chunk's prompt carries everything that chunk needs, none depending on another's output. A run that comes back with truncated edits, files it omitted, or a terminal reason other than completed is treated as failed and re-split smaller; compaction is never relied on.",
+      "expectations": [
+        "Sizes the task with footprint = file bytes / 4 * 1.5 plus the run's fixed overhead against the 60k planning budget",
+        "Splits the forty files into per-file or per-directory chunks, each sized with the formula before its dispatch",
+        "Dispatches each chunk as its own delegate run with its own prompt, result and error files",
+        "Keeps the chunks independent: each chunk's prompt carries everything that chunk needs",
+        "Treats a run showing an overflow symptom as failed and re-splits it smaller"
+      ],
+      "files": []
+    },
+    {
+      "id": 4,
+      "name": "failed-run-falls-back-to-the-host",
+      "prompt": "Use tokenme for the formatting pass on /Users/user/project/src/api. If the delegated run falls over, take the work back and finish it here.",
+      "expected_output": "The first run fails the result gate — the envelope shows is_error true. The host reads the error file, reports stderr, and retries once with a narrower chunk sized again against the planning budget. The retry fails too, so the host does the task itself; the policy ends there, with no loop. A gateway or authentication failure ends delegation at once instead: without a retry, the host reports stderr and does the task itself, because a dead endpoint stays dead.",
+      "expectations": [
+        "Reads /tmp/tokenme-runs/<task-id>.err and reports stderr when the envelope fails the gate",
+        "Retries once with a narrower chunk — a smaller file set or a smaller slice of the task",
+        "Has the host do the task itself when the retry fails too, with no loop",
+        "Stops delegation at once on a gateway or authentication failure and does the task itself without a retry"
+      ],
+      "files": []
+    },
+    {
+      "id": 5,
+      "name": "refused-secrets-task-stays-on-the-host",
+      "prompt": "Use tokenme to move the API keys into /Users/user/project/.env.production and fix the loader that reads them.",
+      "expected_output": "The keep-local rules are checked before dispatch, because a bare run reads no project instructions. The task touches a `.env` file, so the host keeps the task and dispatches nothing — the keys reach no gateway. The host does the sensitive edit itself and considers delegating only the mechanical remainder, the loader fix, when that remainder passes the eligibility checklist on its own; it tells the user the task stayed on the host and why.",
+      "expectations": [
+        "Checks the keep-local rules before dispatch",
+        "Keeps a task touching a `.env` file on the host and dispatches nothing",
+        "Sends the task's secrets to no gateway",
+        "Does the sensitive edit itself and considers delegating only the mechanical remainder that passes the checklist",
+        "Tells the user the task stayed on the host and why"
+      ],
+      "files": []
+    }
+  ]
+}
