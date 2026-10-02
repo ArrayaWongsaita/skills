@@ -73,7 +73,8 @@ and do not increment this retry count.
 ## Measuring touch-set extras
 
 The orchestrator computes extras right after a worker returns and before
-verification, so later steps act on a trusted list. An extra is a changed file
+verification (the decision to verify, see
+[risk-based verification](verification.md#risk-based-verification), comes after), so later steps act on a trusted list. An extra is a changed file
 outside the ticket's declared touch set. Take the changed files from the worker
 branch itself:
 
