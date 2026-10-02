@@ -9,6 +9,8 @@ import { markdownHeaderBlock, markdownHeadings, markdownSection } from "./helper
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const skillRoot = path.join(repoRoot, "skills/agents/implement-tickets");
+const gatePath = path.join(skillRoot, "references/integration-gate.md");
+const statePath = path.join(skillRoot, "references/status-and-resume.md");
 const wavesScript = path.join(skillRoot, "scripts/waves.mjs");
 const preflightScript = path.join(skillRoot, "scripts/preflight.mjs");
 const adapterFixtureRoot = path.join(repoRoot, "tests/fixtures/implement-tickets/adapters");
@@ -30,6 +32,18 @@ async function readTextOrNull(file) {
   } catch {
     return null;
   }
+}
+
+async function readDrainSection() {
+  const gate = await readTextOrNull(gatePath);
+  const drainSection = markdownSection(gate ?? "", "Conflict deferral and drain rounds");
+  assert.ok(drainSection, "the conflict deferral and drain rounds section exists");
+  return drainSection.replace(/\s+/g, " ");
+}
+
+async function glossaryRow(term) {
+  const glossary = await readTextOrNull(path.join(repoRoot, "docs/glossary.md"));
+  return (glossary?.split(/\r?\n/) ?? []).find((line) => line.startsWith(`| ${term} |`));
 }
 
 function ticket(number, { blockers = [], context = "", seam = "the core contract test", title = `Ticket ${number}` } = {}) {
@@ -345,16 +359,16 @@ describe("implement-tickets skill and documentation contract", () => {
   });
 
   it("records the run mode above the run-state table and resumes in it", async () => {
-    const state = await readTextOrNull(path.join(skillRoot, "references/status-and-resume.md"));
+    const state = await readTextOrNull(statePath);
     assert.ok(state, "the status reference exists");
     const runState = markdownSection(state, "Run status, failure, and resume");
     const template = runState.match(/```markdown\s*([\s\S]*?)```/)?.[1];
     assert.match(template, /^Run mode: (?:serial|parallel)/m, "the template has a run mode line");
     assert.ok(template.indexOf("Run mode:") < template.indexOf("| Ticket |"), "the mode line sits above the table");
-    const cont = markdownSection(state, "Continue and reconcile");
-    assert.match(cont, /reads? the run mode from the `Run mode:` line/i, "continue reads the mode from the line");
-    assert.match(cont, /mode change[\s\S]{0,40}needs approval/i, "a mode change needs approval");
-    assert.match(cont, /no `Run mode:`\s+line[\s\S]{0,160}parallel when any wave holds more\s+than\s+one\s+ticket[\s\S]{0,40}otherwise[\s\S]{0,20}serial/i, "a record without a mode line is inferred from its waves");
+    const continueSection = markdownSection(state, "Continue and reconcile");
+    assert.match(continueSection, /reads? the run mode from the `Run mode:` line/i, "continue reads the mode from the line");
+    assert.match(continueSection, /mode change[\s\S]{0,40}needs approval/i, "a mode change needs approval");
+    assert.match(continueSection, /no `Run mode:`\s+line[\s\S]{0,160}parallel when any wave holds more\s+than\s+one\s+ticket[\s\S]{0,40}otherwise[\s\S]{0,20}serial/i, "a record without a mode line is inferred from its waves");
   });
 
   it("links bilingual Seam and Context guidance to the planning reference in both user-facing pages", async () => {
@@ -565,59 +579,60 @@ describe("implement-tickets worker dispatch and verification contract", () => {
 
   it("parks a ticket on a deny-list or cap hit and keeps its work", async () => {
     const dispatch = await readTextOrNull(dispatchPath);
-    const state = await readTextOrNull(path.join(skillRoot, "references/status-and-resume.md"));
+    const state = await readTextOrNull(statePath);
     const adapter = await readTextOrNull(path.join(skillRoot, "references/adapter-contract.md"));
-    const glossary = await readTextOrNull(path.join(repoRoot, "docs/glossary.md"));
-    assert.ok(dispatch && state && adapter && glossary, "dispatch, state, adapter and glossary files exist");
-    const park = markdownSection(dispatch, "Deny-list and cap hits");
-    assert.ok(park, "the dispatch contract has a deny-list and cap section");
-    requireText(park, /deny-list[\s\S]{0,200}before\s+verification[\s\S]{0,200}BLOCKED \(TOUCH_SET_APPROVAL\)/i, "a deny-list extra parks the ticket before verification");
+    assert.ok(dispatch && state && adapter, "dispatch, state and adapter files exist");
+    const denyListSection = markdownSection(dispatch, "Deny-list and cap hits");
+    assert.ok(denyListSection, "the dispatch contract has a deny-list and cap section");
+    requireText(denyListSection, /deny-list[\s\S]{0,200}before\s+verification[\s\S]{0,200}BLOCKED \(TOUCH_SET_APPROVAL\)/i, "a deny-list extra parks the ticket before verification");
     for (const name of ["package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lockb", ".github/workflows/", ".gitlab-ci.yml", ".env*", "docs/decisions/"]) {
-      assert.ok(park.includes(name), `the deny-list names ${name}`);
+      assert.ok(denyListSection.includes(name), `the deny-list names ${name}`);
     }
-    requireText(park, /read-only Context items?[\s\S]{0,80}no ticket edits/i, "read-only Context items that no ticket edits are denied");
-    requireText(park, /lockfile names?[\s\S]{0,80}environment files[\s\S]{0,60}any directory depth/i, "names and environment files match at any depth");
-    requireText(park, /(?:directory|prefix)[\s\S]{0,60}from the repository root/i, "directory entries match from the repository root");
-    requireText(park, /read-only[\s\S]{0,60}exact path/i, "read-only items match by exact path");
-    requireText(park, /any\s+ticket\s+in\s+the\s+set\s+declares\s+as\s+its\s+own\s+edit[\s\S]{0,120}not a deny-list case/i, "an extra another ticket edits is not a deny-list case");
-    requireText(park, /more\s+than\s+five\s+distinct\s+extra\s+files[\s\S]{0,120}all\s+its\s+dispatches[\s\S]{0,160}dropped[\s\S]{0,60}no\s+longer\s+count/i, "the cap is five distinct files across dispatches and dropped extras do not count");
-    requireText(park, /unknown\s+touch\s+set[\s\S]{0,120}no\s+cap[\s\S]{0,80}deny-list\s+still\s+applies/i, "an unknown touch set has no cap but keeps the deny-list");
-    requireText(park, /work\s+is\s+kept[\s\S]{0,60}worker\s+branch/i, "the parked work is kept on the worker branch");
+    requireText(denyListSection, /read-only Context items?[\s\S]{0,80}no ticket edits/i, "read-only Context items that no ticket edits are denied");
+    requireText(denyListSection, /lockfile names?[\s\S]{0,80}environment files[\s\S]{0,60}any directory depth/i, "names and environment files match at any depth");
+    requireText(denyListSection, /(?:directory|prefix)[\s\S]{0,60}from the repository root/i, "directory entries match from the repository root");
+    requireText(denyListSection, /read-only[\s\S]{0,60}exact path/i, "read-only items match by exact path");
+    requireText(denyListSection, /any\s+ticket\s+in\s+the\s+set\s+declares\s+as\s+its\s+own\s+edit[\s\S]{0,120}not a deny-list case/i, "an extra another ticket edits is not a deny-list case");
+    requireText(denyListSection, /more\s+than\s+five\s+distinct\s+extra\s+files[\s\S]{0,120}all\s+its\s+dispatches[\s\S]{0,160}dropped[\s\S]{0,60}no\s+longer\s+count/i, "the cap is five distinct files across dispatches and dropped extras do not count");
+    requireText(denyListSection, /unknown\s+touch\s+set[\s\S]{0,120}no\s+cap[\s\S]{0,80}deny-list\s+still\s+applies/i, "an unknown touch set has no cap but keeps the deny-list");
+    requireText(denyListSection, /work\s+is\s+kept[\s\S]{0,60}worker\s+branch/i, "the parked work is kept on the worker branch");
     requireText(markdownHeaderBlock(state), /Status progresses[^.]*`BLOCKED \(TOUCH_SET_APPROVAL\)`/i, "the status list names the touch-set approval token");
     requireText(markdownSection(adapter, "Worktree cleanup"), /parked[\s\S]{0,120}exempt[\s\S]{0,80}sweep/i, "parked adapter worktrees are exempt from the sweep");
     requireText(markdownSection(dispatch, "Extras into a later-wave ticket's files"), /later-wave ticket[\s\S]{0,200}accepted with a warning[\s\S]{0,200}base that already contains the change/i, "an extra into a later-wave ticket's file is accepted with a warning");
     requireText(markdownSection(adapter, "Failover"), /Adapter backends carry the same Touch-set extras section[\s\S]{0,80}free-form[\s\S]{0,120}envelope schema does not change/i, "adapters carry extras in the free-form report with an unchanged envelope schema");
-    requireText(glossary, /\| Deny-list \|/, "the glossary defines deny-list");
-    requireText(glossary, /\| Touch-set approval block \|/, "the glossary defines touch-set approval block");
+    assert.ok(await glossaryRow("Deny-list"), "the glossary defines deny-list");
+    assert.ok(await glossaryRow("Touch-set approval block"), "the glossary defines touch-set approval block");
   });
 
   it("holds only what a parked ticket must and releases it after an answer", async () => {
-    const state = await readTextOrNull(path.join(skillRoot, "references/status-and-resume.md"));
-    const gate = await readTextOrNull(path.join(skillRoot, "references/integration-gate.md"));
+    const state = await readTextOrNull(statePath);
+    const gate = await readTextOrNull(gatePath);
     const verification = await readTextOrNull(path.join(skillRoot, "references/verification.md"));
-    const glossary = await readTextOrNull(path.join(repoRoot, "docs/glossary.md"));
-    assert.ok(state && gate && verification && glossary, "state, gate, verification and glossary files exist");
-    const hold = markdownSection(state, "Hold set and release");
-    assert.ok(hold, "the run-state contract has a hold set and release section");
-    requireText(hold, /hold set[\s\S]{0,300}overlaps[\s\S]{0,120}effective\s+touch\s+set[\s\S]{0,200}transitive\s+dependants/i, "the hold set is overlap plus transitive dependants");
-    requireText(hold, /unknown\s+touch\s+set[\s\S]{0,80}holds\s+all\s+later\s+tickets/i, "an unknown touch set holds all later tickets");
-    requireText(hold, /outside the hold set keep running[\s\S]{0,80}later waves[\s\S]{0,200}gate runs without any held ticket/i, "independent tickets keep running and the gate skips held tickets");
-    requireText(hold, /in flight or verified finishes[\s\S]{0,120}not merged until release[\s\S]{0,300}original wave and ticket order/i, "held tickets finish but merge after release in original order");
+    assert.ok(state && gate && verification, "state, gate and verification files exist");
+    const holdSection = markdownSection(state, "Hold set and release");
+    assert.ok(holdSection, "the run-state contract has a hold set and release section");
+    requireText(holdSection, /hold set[\s\S]{0,300}overlaps[\s\S]{0,120}effective\s+touch\s+set[\s\S]{0,200}transitive\s+dependants/i, "the hold set is overlap plus transitive dependants");
+    requireText(holdSection, /unknown\s+touch\s+set[\s\S]{0,80}holds\s+all\s+later\s+tickets/i, "an unknown touch set holds all later tickets");
+    requireText(holdSection, /outside the hold set keep running[\s\S]{0,80}later waves[\s\S]{0,200}gate runs without any held ticket/i, "independent tickets keep running and the gate skips held tickets");
+    requireText(holdSection, /in flight or verified finishes[\s\S]{0,120}not merged until release[\s\S]{0,300}original wave and ticket order/i, "held tickets finish but merge after release in original order");
     const partial = markdownSection(state, "Verification failure and partial path");
     assert.ok(partial, "the run-state contract has a partial path section");
     requireText(partial, /exception to the halt rule[\s\S]{0,200}stops only when every unintegrated ticket is\s+held or blocked/i, "the block is an exception to the halt rule");
-    requireText(hold, /notes\s+line[\s\S]{0,120}keyed by ticket number[\s\S]{0,800}Record the answer when it arrives[\s\S]{0,120}every frontier[\s\S]{0,120}clear/i, "the question and answer live in a notes line");
-    requireText(hold, /shown at the end of the wave[\s\S]{0,120}does not wait/i, "the question is shown at the end of the wave");
-    requireText(hold, /fresh verifier[\s\S]{0,200}release\s+pass[\s\S]{0,200}pre-pass commit[\s\S]{0,200}hold is\s+released after it passes/i, "approval verifies, merges in a release pass, and releases after the gate");
-    requireText(hold, /rejection[\s\S]{0,60}extras are dropped[\s\S]{0,200}latest integration commit[\s\S]{0,200}declared files[\s\S]{0,200}costs one attempt[\s\S]{0,120}hold stays until the\s+ticket integrates/i, "rejection redispatches at one attempt and keeps the hold");
-    requireText(hold, /ends\s+blocked[\s\S]{0,80}overlap\s+lift[\s\S]{0,80}dependants\s+stay\s+held/i, "a blocked parked ticket lifts overlap-only holds");
+    requireText(holdSection, /notes\s+line[\s\S]{0,120}keyed by ticket number/i, "the question and answer live in a notes line");
+    requireText(holdSection, /Record the answer when it arrives[\s\S]{0,120}every frontier[\s\S]{0,120}clear/i, "the answer is recorded, read at every frontier, and cleared");
+    requireText(holdSection, /shown at the end of the wave[\s\S]{0,120}does not wait/i, "the question is shown at the end of the wave");
+    requireText(holdSection, /several\s+tickets\s+were\s+parked[\s\S]{0,80}shown\s+together,\s+once,\s+at\s+the\s+end\s+of\s+that\s+wave/i, "several parked questions are shown together once at the wave end");
+    requireText(markdownSection(state, "Continue and reconcile"), /`BLOCKED \(TOUCH_SET_APPROVAL\)` park[\s\S]{0,120}without the explicit-continue gate/i, "continue after only a touch-set park needs no explicit-continue gate");
+    requireText(holdSection, /fresh verifier[\s\S]{0,200}release\s+pass[\s\S]{0,200}pre-pass commit[\s\S]{0,200}hold is\s+released after it passes/i, "approval verifies, merges in a release pass, and releases after the gate");
+    requireText(holdSection, /rejection[\s\S]{0,60}extras are dropped[\s\S]{0,200}latest integration commit[\s\S]{0,200}declared files[\s\S]{0,200}costs one attempt[\s\S]{0,120}hold stays until the\s+ticket integrates/i, "rejection redispatches at one attempt and keeps the hold");
+    requireText(holdSection, /ends\s+blocked[\s\S]{0,80}overlap\s+lift[\s\S]{0,80}dependants\s+stay\s+held/i, "a blocked parked ticket lifts overlap-only holds");
     requireText(partial, /every unanswered parked question[\s\S]{0,160}including one for\s+another blocked ticket/i, "every halt report lists unanswered parked questions");
     requireText(markdownSection(state, "Continue and reconcile"), /re-asks any unanswered parked question[\s\S]{0,200}derives held and deferred state from the\s+parked rows, the notes line, and Git/i, "continue re-asks and derives held state");
-    requireText(hold, /each parked ticket has its own `Notes:` line[\s\S]{0,400}release pre-pass sha is `none` until[\s\S]{0,300}clear a ticket's line[\s\S]{0,160}on release[\s\S]{0,80}on rejection/i, "the notes line covers several parked tickets, the pre-pass sha lifecycle, and clearing");
+    requireText(holdSection, /each parked ticket has its own `Notes:` line[\s\S]{0,400}release pre-pass sha is `none` until[\s\S]{0,300}clear a ticket's line[\s\S]{0,160}on release[\s\S]{0,80}on rejection/i, "the notes line covers several parked tickets, the pre-pass sha lifecycle, and clearing");
     requireText(markdownSection(gate, "Release pass"), /mini-wave[\s\S]{0,200}own pre-pass commit[\s\S]{0,60}gate base/i, "the release pass is a mini-wave with its own gate base");
     requireText(markdownHeaderBlock(gate), /gate runs without any\s+held ticket/i, "the integration gate runs without held tickets");
     requireText(markdownSection(verification, "Approved parked branch"), /approves[\s\S]{0,200}fresh verifier[\s\S]{0,200}release\s+pass/i, "an approved parked branch is re-verified");
-    requireText(glossary, /\| Hold set \|/, "the glossary defines hold set");
+    assert.match(await glossaryRow("Hold set") ?? "", /declared or effective touch set overlaps/i, "the glossary defines hold set by overlap");
   });
 
   it("points execution mechanics to canonical contracts in scoped skill and guide sections", async () => {
@@ -915,9 +930,6 @@ describe("implement-tickets adapter and preflight contract", () => {
 });
 
 describe("implement-tickets integration gate and run-state contract", () => {
-  const gatePath = path.join(skillRoot, "references/integration-gate.md");
-  const statePath = path.join(skillRoot, "references/status-and-resume.md");
-
   function requireText(text, expression, behavior) {
     assert.ok(expression.test(text), behavior);
   }
@@ -993,52 +1005,36 @@ describe("implement-tickets integration gate and run-state contract", () => {
   });
 
   it("accepts a clean-merge overlap and defers only a real conflict to a drain round in the same wave", async () => {
-    const gate = await readTextOrNull(gatePath);
-    assert.ok(gate, "the integration gate procedure exists");
-    const drain = markdownSection(gate, "Conflict deferral and drain rounds");
-    assert.ok(drain, "the conflict deferral and drain rounds section exists");
-    const flat = drain.replace(/\s+/g, " ");
-    requireText(flat, /overlap[\s\S]*?merges? cleanly[\s\S]*?gate passes[\s\S]*?(?:accepted|integrated)[\s\S]*?recorded/i, "a clean-merge overlap is accepted and recorded");
-    requireText(flat, /squash-merge conflict[\s\S]*?defers? the ticket to a drain round in the same wave/i, "a real conflict defers to a drain round in the same wave");
-    requireText(flat, /lowest ticket number wins[\s\S]*?later tickets in the pass keep merging/i, "the lowest number wins and later tickets keep merging");
-    requireText(flat, /next wave (?:does not start|waits)[\s\S]*?(?:integrated|drain)/i, "the next wave waits for the wave to be integrated");
+    const drainText = await readDrainSection();
+    requireText(drainText, /overlap[^.]{0,120}merges? cleanly[^.]{0,80}gate passes[^.]{0,80}(?:accepted|integrated)[^.]{0,80}recorded/i, "a clean-merge overlap is accepted and recorded");
+    requireText(drainText, /squash-merge conflict[^.]{0,80}defers? the ticket to a drain round in the same wave/i, "a real conflict defers to a drain round in the same wave");
+    requireText(drainText, /lowest ticket number wins[^.]{0,80}later tickets in the pass keep merging/i, "the lowest number wins and later tickets keep merging");
+    requireText(drainText, /next wave (?:does not start|waits)[^.]{0,80}(?:integrated|drain)/i, "the next wave waits for the wave to be integrated");
   });
 
   it("restarts a deferred ticket on the latest integration commit, one per drain round in ticket order", async () => {
-    const gate = await readTextOrNull(gatePath);
-    const drain = markdownSection(gate ?? "", "Conflict deferral and drain rounds");
-    assert.ok(drain, "the conflict deferral and drain rounds section exists");
-    const flat = drain.replace(/\s+/g, " ");
-    requireText(flat, /fresh (?:worker )?dispatch from the latest integration commit[\s\S]*?note of its known extras[\s\S]*?verified again/i, "a deferred ticket is redispatched fresh with its extras and re-verified");
-    requireText(flat, /one (?:deferred ticket )?per drain round[\s\S]*?ticket order/i, "deferred tickets run one per drain round in ticket order");
+    const drainText = await readDrainSection();
+    requireText(drainText, /fresh (?:worker )?dispatch from the latest integration commit[\s\S]*?note of its known extras[\s\S]*?verified again/i, "a deferred ticket is redispatched fresh with its extras and re-verified");
+    requireText(drainText, /one (?:deferred ticket )?per drain round[\s\S]*?ticket order/i, "deferred tickets run one per drain round in ticket order");
   });
 
   it("charges no attempt for a deferral and one attempt for a gate culprit outside the drain", async () => {
-    const gate = await readTextOrNull(gatePath);
-    const drain = markdownSection(gate ?? "", "Conflict deferral and drain rounds");
-    assert.ok(drain, "the conflict deferral and drain rounds section exists");
-    const flat = drain.replace(/\s+/g, " ");
-    requireText(flat, /deferral adds no attempt/i, "a conflict deferral adds no attempt");
-    requireText(flat, /culprit of a failing gate[\s\S]*?serially[\s\S]*?one attempt[\s\S]*?not (?:go )?through a drain round/i, "a gate culprit costs one attempt and skips the drain round");
+    const drainText = await readDrainSection();
+    requireText(drainText, /deferral adds no attempt/i, "a conflict deferral adds no attempt");
+    requireText(drainText, /culprit of a failing gate[\s\S]*?serially[\s\S]*?one attempt[\s\S]*?not (?:go )?through a drain round/i, "a gate culprit costs one attempt and skips the drain round");
   });
 
   it("gates after the first pass and every drain round and isolates the culprit within the pass", async () => {
-    const gate = await readTextOrNull(gatePath);
-    const drain = markdownSection(gate ?? "", "Conflict deferral and drain rounds");
-    assert.ok(drain, "the conflict deferral and drain rounds section exists");
-    const flat = drain.replace(/\s+/g, " ");
-    requireText(flat, /gate runs after the first merge pass and after every drain round/i, "the gate runs after the first pass and each drain round");
-    requireText(flat, /replays only the tickets merged in that pass[\s\S]*?commit before (?:that|a) drain round/i, "isolation replays only that pass from the commit before a drain round");
-    requireText(flat, /culprit's (?:serial )?redispatch finishes[\s\S]*?before any pending drain round/i, "the culprit redispatch finishes before a pending drain round");
+    const drainText = await readDrainSection();
+    requireText(drainText, /gate runs after the first merge pass and after every drain round/i, "the gate runs after the first pass and each drain round");
+    requireText(drainText, /replays only the tickets merged in that pass[\s\S]*?commit before (?:that|a) drain round/i, "isolation replays only that pass from the commit before a drain round");
+    requireText(drainText, /culprit's (?:serial )?redispatch finishes[\s\S]*?before any pending drain round/i, "the culprit redispatch finishes before a pending drain round");
   });
 
   it("ends drain rounds because each round integrates, spends an attempt, or parks", async () => {
-    const gate = await readTextOrNull(gatePath);
-    const drain = markdownSection(gate ?? "", "Conflict deferral and drain rounds");
-    assert.ok(drain, "the conflict deferral and drain rounds section exists");
-    const flat = drain.replace(/\s+/g, " ");
-    requireText(flat, /integrates its ticket, spends an attempt, or parks it/i, "each drain round makes progress");
-    requireText(flat, /blocked after three attempts/i, "a ticket that keeps failing ends blocked after three attempts");
+    const drainText = await readDrainSection();
+    requireText(drainText, /integrates its ticket, spends an attempt, or parks it/i, "each drain round makes progress");
+    requireText(drainText, /blocked after three attempts/i, "a ticket that keeps failing ends blocked after three attempts");
   });
 
   it("makes deferral win over mechanical conflict resolution for drift conflicts only", async () => {
@@ -1048,10 +1044,8 @@ describe("implement-tickets integration gate and run-state contract", () => {
   });
 
   it("defines drain round and real conflict in the glossary", async () => {
-    const glossary = await readTextOrNull(path.join(repoRoot, "docs/glossary.md"));
-    const lines = glossary?.split(/\r?\n/) ?? [];
-    assert.ok(lines.some((line) => /^\| Drain round \|/.test(line) && /deferred/i.test(line)), "the glossary defines drain round");
-    assert.ok(lines.some((line) => /^\| Real conflict \|/.test(line) && /squash-merge/i.test(line)), "the glossary defines real conflict");
+    assert.match(await glossaryRow("Drain round") ?? "", /deferred/i, "the glossary defines drain round");
+    assert.match(await glossaryRow("Real conflict") ?? "", /squash-merge/i, "the glossary defines real conflict");
   });
 
   it("records accepted extras in the run state and reads them back on continue", async () => {
@@ -1084,8 +1078,8 @@ describe("implement-tickets integration gate and run-state contract", () => {
     const stage0 = markdownSection(skill, "Stage 0 — Plan, then pause");
     requireText(stage0, /references\/planning\.md#5-present-the-plan-and-pause/, "Stage 0 points to the planning reference for the approval scope");
     requireText(constraints, /references\/planning\.md#5-present-the-plan-and-pause[\s\S]{0,120}asks\s+for\s+approval[\s\S]{0,80}accepted\s+extras\s+alone\s+never\s+do/i, "the constraint points to the approval scope and says extras never need approval");
-    const cont = markdownSection(state, "Continue and reconcile");
-    requireText(cont, /only\s+(?:accepted\s+)?extras[\s\S]{0,160}without\s+a\s+new\s+approval/i, "continue with only extras resumes without approval");
+    const continueSection = markdownSection(state, "Continue and reconcile");
+    requireText(continueSection, /only\s+(?:accepted\s+)?extras[\s\S]{0,160}without\s+a\s+new\s+approval/i, "continue with only extras resumes without approval");
   });
 
   it("summarizes extras at each wave end and in the final handoff table", async () => {
@@ -1100,12 +1094,9 @@ describe("implement-tickets integration gate and run-state contract", () => {
   });
 
   it("defines extra and drift in the glossary and calls the touch set a planning baseline", async () => {
-    const glossary = await readTextOrNull(path.join(repoRoot, "docs/glossary.md"));
-    const lines = glossary?.split(/\r?\n/) ?? [];
-    assert.ok(lines.find((l) => l.startsWith("| Extra |")), "the glossary defines Extra");
-    assert.ok(lines.find((l) => l.startsWith("| Drift |")), "the glossary defines Drift");
-    const touch = lines.find((l) => l.startsWith("| Touch set |"));
-    assert.match(touch, /planning baseline/i);
+    assert.ok(await glossaryRow("Extra"), "the glossary defines Extra");
+    assert.ok(await glossaryRow("Drift"), "the glossary defines Drift");
+    assert.match(await glossaryRow("Touch set") ?? "", /planning baseline/i, "the glossary calls the touch set a planning baseline");
   });
 
   it("keeps status and list read-only", async () => {
@@ -1155,10 +1146,10 @@ describe("implement-tickets touch-set drift decision record and docs", () => {
     assert.ok(markdownSection(adr, "Context / บริบท"), "has a Context section");
     const decision = markdownSection(adr, "Decision / การตัดสินใจ");
     assert.ok(decision, "has a Decision section");
-    assert.match(decision, /waves,\s+blockers,\s+tickets,\s+budget, backend,?\s+and\s+concurrency/i);
-    assert.match(decision, /serial[\s\S]*default/i);
+    assert.match(decision, /run mode,\s+waves,\s+blockers,\s+ticket set,\s+budget,\s+backend,\s+and\s+concurrency/i);
+    assert.match(decision, /Serial \(one ticket per wave\) is the default run mode/);
     assert.match(decision, /--parallel/);
-    assert.match(decision, /clarif/i);
+    assert.match(decision, /This clarifies ADR 0020/);
     assert.match(decision, /[฀-๿]/, "has Thai text");
   });
 
@@ -1173,7 +1164,7 @@ describe("implement-tickets touch-set drift decision record and docs", () => {
     const consequences = markdownSection(adr, "Consequences / ผลที่ตามมา");
     assert.ok(consequences, "has a Consequences section");
     assert.match(consequences, /semantic conflict/i);
-    assert.match(consequences, /tests/i);
+    assert.match(consequences, /project's\s+tests/i);
   });
 
   it("mentions the default mode, parallel flag, validation marker, and extras on both pages", async () => {

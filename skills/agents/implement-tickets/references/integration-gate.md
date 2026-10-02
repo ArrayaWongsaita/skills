@@ -81,6 +81,19 @@ At the end of each wave, print a summary listing every ticket that has extras
 together with those files. A clean-merge overlap, where tickets changed the same
 paths, merged cleanly, and passed a green gate, is recorded as a note in this
 summary and in the run-state row of both tickets; it does not defer anything.
+Questions of tickets parked in the wave are shown with the summary, together and
+once.
+
+```text
+Wave 2 integrated.
+| Ticket | Accepted extra files |
+| --- | --- |
+| 02 | `docs/research/topic.md` |
+Note: clean-merge overlap on `src/app.ts` (03, 05).
+```
+
+The table has the same columns as the handoff table in "Successful handoff"
+below, with one row per ticket that has extras.
 
 ## Successful handoff
 

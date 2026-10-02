@@ -80,12 +80,12 @@ evidence and the orchestrator judges whether the ticket is complete.
 ## Worktree cleanup
 
 The core owns the worker branch and worktree. The adapter must not create,
-switch, merge, or remove either one; it must work only at `worktree_path` (the
-worktree path) and return its envelope. The core removes the worktree after integration.
+switch, merge, or remove either one; it must work only at `worktree_path` and
+return its envelope. The core removes the worktree after integration.
 Failed and blocked worktrees remain available for inspection and are swept on
-`continue`; worktrees of parked tickets (`BLOCKED (TOUCH_SET_APPROVAL)`) are exempt
-from that sweep, because approval needs the kept work. Native runs keep harness-managed isolation; they do
-not use adapter-created worktrees.
+`continue`. Worktrees of parked tickets (`BLOCKED (TOUCH_SET_APPROVAL)`) are
+exempt from that sweep, because approval needs the kept work. Native runs keep
+harness-managed isolation; they do not use adapter-created worktrees.
 
 ## Fixture adapter
 

@@ -87,7 +87,8 @@ dependants. A parked ticket with an unknown touch set holds all later tickets.
 ### Question, answer, and notes line
 
 The question is shown at the end of the wave where the ticket was parked, and
-the run does not wait for the answer. It is stored with its answer in a notes
+the run does not wait for the answer. When several tickets were parked in the
+wave, their questions are shown together, once, at the end of that wave. It is stored with its answer in a notes
 line under the run-state table, keyed by ticket number:
 
 ```markdown
@@ -160,8 +161,11 @@ For a valid status file:
    extras, not a Plan approval. It derives held and deferred state from the
    parked rows, the notes line, and Git, so no extra status token is added.
 6. Resume from the earliest eligible frontier. Keep blocked tickets and their
-   dependants held; an explicit continue may proceed with the independent
-   partial path.
+   dependants held. After a `BLOCKED (TOUCH_SET_APPROVAL)` park, `continue`
+   resumes the unheld tickets without the explicit-continue gate, because that
+   block is an exception to the halt rule; only after another block, such as
+   `BLOCKED (TICKET_VERIFICATION_FAILED)`, may an explicit continue proceed
+   with the independent partial path.
 
 Update `status.md` as dispatches return, verifiers report, tickets integrate,
 and gates pass or fail. A gate-triggered serial redispatch increments the

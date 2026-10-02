@@ -22,8 +22,8 @@ ADR 0020 ระบุว่าการ execute ต้องผ่านกา�
 
 ## Decision / การตัดสินใจ
 
-1. The Plan approval covers waves, blockers, tickets, budget, backend, and
-   concurrency. A ticket's declared touch set is a planning baseline, not an
+1. The Plan approval covers the run mode, waves, blockers, ticket set, budget,
+   backend, and concurrency. A ticket's declared touch set is a planning baseline, not an
    approval boundary.
 2. Extras (files touched beyond the declared touch set) are accepted
    automatically, recorded in the run state, and reported at each wave end and
@@ -38,8 +38,8 @@ ADR 0020 ระบุว่าการ execute ต้องผ่านกา�
    planner's capability, and it fits ADR 0020 decision 4, the parallel
    validation gate.
 
-1. Plan approval ครอบคลุม wave, blocker, ticket, budget, backend และ concurrency
-   touch set ที่ ticket ประกาศไว้เป็นเพียง baseline ของการวางแผน ไม่ใช่ขอบเขตการอนุมัติ
+1. Plan approval ครอบคลุมโหมดการรัน, wave, blocker, ชุด ticket, budget, backend
+   และ concurrency touch set ที่ ticket ประกาศไว้เป็นเพียง baseline ของการวางแผน ไม่ใช่ขอบเขตการอนุมัติ
 2. Extras (ไฟล์ที่แตะนอก touch set) ยอมรับอัตโนมัติ บันทึกใน run state และรายงานตอนจบ
    wave กับใน handoff สุดท้าย ยกเว้นกรณีชน deny-list, เกิน 5 ไฟล์ต่อ ticket
    หรือเกิด conflict จริงกับ ticket พี่น้อง
