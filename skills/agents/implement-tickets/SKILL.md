@@ -31,8 +31,14 @@ Options are set once for the run:
   subagents.
 - `--agent <name>` pins the native worker agent for the run.
 - `--model <id>` passes a model value to the selected backend.
-- `--concurrency N` sets the shared worker and verifier cap; default `4`.
-- `--serial` puts one ticket in each wave.
+- `--parallel` opts in to parallel mode: waves built from blockers and touch
+  sets. Without it the run is serial and each ticket has its own wave.
+- `--concurrency N` sets the shared worker and verifier cap in parallel mode
+  and implies `--parallel`; the cap is `4` by default.
+- `--serial` is an alias of the default serial mode. Combining `--serial` with
+  `--parallel` or `--concurrency` is rejected before the Plan is presented.
+
+Pass `--serial` to `scripts/waves.mjs` unless parallel mode is selected.
 
 Before presenting any Plan, run
 [`scripts/preflight.mjs`](scripts/preflight.mjs) for every backend, including
@@ -61,7 +67,8 @@ Existing runs can be inspected or resumed with:
 - `/implement-tickets status [slug]` to read one run's `status.md`;
 - `/implement-tickets list` to list saved runs; or
 - `/implement-tickets continue [slug]` to reconcile a run with Git, re-present
-  its Plan, and resume from the frontier.
+  its Plan, and resume from the frontier in the recorded run mode. When only
+  extras were accepted, it resumes without a new approval.
 
 `status` and `list` are read-only. A valid run record starts with
 `skill: implement-tickets`; see
@@ -79,12 +86,16 @@ the other planning warnings in the Plan. Wave planning comes from ticket files
 and never from the manifest.
 
 Present a Plan that lists every ticket with its wave, blockers, touch set, test
-seam, matched agent, and retry budget. The Plan also names the backend, the
-concurrency cap, and every warning. When the marker is not validated, print the
-standalone line `parallel not yet validated`.
+seam, matched agent, and retry budget. The Plan also names the backend, the run
+mode, and every warning. In parallel mode it names the concurrency cap, and when
+the marker is not validated it prints the standalone line
+`parallel not yet validated`. In serial mode it shows no concurrency cap and
+omits that line.
 
-Pause for explicit approval. No file outside the feature directory changes
-until approval. Do not dispatch workers or write run state before approval.
+Pause for explicit approval. What the approval covers is listed in
+[references/planning.md](references/planning.md#5-present-the-plan-and-pause).
+No file outside the feature directory changes until approval. Do not dispatch
+workers or write run state before approval.
 Every manifest state is advisory: it cannot stop the run, it is not recorded in
 the run status file, and the approval pause is always reached.
 
@@ -107,8 +118,16 @@ branch and review commands. Stop before review, push, or a pull request.
 
 - Treat malformed tickets, unresolved blockers, cycles, and invalid numbering
   as planning errors. Do not dispatch from an invalid ticket set.
-- Keep a worker inside its declared touch set. An unknown touch set is a
-  warning and receives an exclusive wave.
+- The declared touch set is a planning baseline, not an approval boundary.
+  Extras are measured and accepted: an extra file that is not on the
+  deny-list, is within the cap, and conflicts with no sibling ticket is
+  accepted without asking, and the ticket integrates. An unknown touch set is
+  a warning and receives an exclusive wave.
+- A change to anything the Plan approval covers (see
+  [references/planning.md](references/planning.md#5-present-the-plan-and-pause))
+  asks for approval before continuing; accepted extras alone never do.
 - Keep the Plan read-only until the user explicitly approves it.
 - The orchestrator writes no implementation code except a mechanical merge
-  conflict resolution.
+  conflict resolution. That allowance stays for conflicts outside drift; for a
+  drift conflict, deferral takes precedence and the ticket goes to a drain round
+  (see the [integration gate](references/integration-gate.md)).

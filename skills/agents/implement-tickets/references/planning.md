@@ -35,6 +35,10 @@ raises a warning.
 
 ## 3. Compute waves
 
+The run mode is serial by default. `--parallel` opts in to parallel mode, and
+`--concurrency N` implies it. Pass `--serial` to the script unless parallel mode
+is selected, so the script and its checker contract stay unchanged.
+
 Run:
 
 ```bash
@@ -51,7 +55,8 @@ from checker-valid ticket sets.
 
 A ticket with an unknown touch set receives an otherwise empty wave, and no
 later ticket joins that wave. Later tickets still obey blocker waves and touch
-overlap. `--serial` assigns each ticket its own wave in ticket order.
+overlap. `--serial` assigns each ticket its own wave in ticket order; it is the
+default mode.
 `--concurrency N` is echoed in the JSON output and does not change the waves;
 the orchestrator enforces the cap across workers and verifiers.
 
@@ -91,17 +96,26 @@ Also state:
 
 - backend: native harness subagents by default, or the selected `--with`
   adapter;
-- concurrency cap: `4` by default or the supplied `--concurrency N`;
+- run mode: serial by default, or parallel with `--parallel` or
+  `--concurrency N`; a change of mode needs approval because it changes the
+  waves;
+- concurrency cap, in parallel mode only: `4` by default or the supplied
+  `--concurrency N`. In serial mode there is nothing to cap, so the Plan shows
+  no concurrency cap; the shared worker-and-verifier cap of four stays enforced
+  silently;
 - all script and planning warnings, including unknown touch sets;
 - manifest warnings join the other planning warnings in the Plan. Include the
   spec-hash warning and its cure as reported: “Spec changed since the tickets
   were checked; re-run the ticket checker with `--write-budget` to refresh the
   manifest.”;
-- the standalone line `parallel not yet validated` when the marker says
-  `status: not validated`;
+- the standalone line `parallel not yet validated` when the run is in parallel
+  mode and the marker says `status: not validated`;
 - retry budget: three ticket attempts, unless the run contract later defines
   a narrower infrastructure retry.
 
-Pause for explicit approval after presenting the Plan. No file outside the
-feature directory changes until approval. On requested adjustments, update the
+Pause for explicit approval after presenting the Plan. The approval covers the
+run mode, waves, blockers, ticket set, budget, backend, and concurrency. A
+change to any of them asks for approval before continuing. Accepted extras do
+not change the Plan structure and need no new approval. No file outside the
+feature directory changes until approval. On a requested adjustment, update the
 Plan and ask for approval again; do not start execution based on silence.

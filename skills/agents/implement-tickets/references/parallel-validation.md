@@ -15,7 +15,8 @@ perform this validation.
 2. Publish a minimal spec and two independent tickets in
    `.scratch/parallel-smoke/`, using the current valid ticket format. Give each
    ticket a different `(new)` path and no blocking edge.
-3. Run `/implement-tickets .scratch/parallel-smoke/`. Before approving the
+3. Run `/implement-tickets --parallel .scratch/parallel-smoke/`; serial is the
+   default mode, so the flag is required. Before approving the
    Plan, confirm it places both tickets in the same two-wide wave. If it does
    not, stop and record the failed observation in the ADR.
 4. Approve the Plan. Observe both background workers start while the main
@@ -42,4 +43,4 @@ perform this validation.
 8. After a successful run is recorded, change this file's marker to
    `status: validated YYYY-MM-DD`, using the run date. The wave script reads
    this line and sets `parallelValidated` in its JSON output; while the marker
-   is not validated, the Plan prints `parallel not yet validated`.
+   is not validated, the Plan in parallel mode prints `parallel not yet validated`.

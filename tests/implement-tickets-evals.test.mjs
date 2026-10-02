@@ -87,9 +87,11 @@ describe("implement-tickets eval suite contract", () => {
     it("covers deterministic waves and the serial and concurrency choices", async () => {
       const { evals } = await readJson("evals.json");
       const hay = (pattern) => evals.some((item) => pattern.test(`${item.name}\n${item.expected_output}\n${item.expectations.join("\n")}`));
-      assert.ok(hay(/independent tickets[\s\S]{0,240}same wave/i));
-      assert.ok(hay(/overlapping touch sets[\s\S]{0,240}successive waves/i));
+      assert.ok(hay(/--parallel[\s\S]{0,240}independent tickets[\s\S]{0,240}same wave/i));
+      assert.ok(hay(/--parallel[\s\S]{0,240}overlapping touch sets[\s\S]{0,240}successive waves/i));
       assert.ok(hay(/--serial[\s\S]{0,240}one ticket per wave/i));
+      assert.ok(hay(/without a mode flag[\s\S]{0,240}one ticket per wave/i));
+      assert.ok(hay(/--concurrency[\s\S]{0,120}implies[\s\S]{0,40}parallel/i));
       assert.ok(hay(/concurrency cap[\s\S]{0,240}(?:worker|verifier)[\s\S]{0,240}(?:combined|together)/i));
     });
 

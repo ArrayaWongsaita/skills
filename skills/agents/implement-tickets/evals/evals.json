@@ -37,10 +37,10 @@
     {
       "id": 4,
       "name": "blocked dependency branch preserves independent tickets",
-      "prompt": "/implement-tickets .scratch/partial-demo/issues/ after approval. Ticket 01 becomes BLOCKED and ticket 03 depends on it; ticket 02 is independent.",
+      "prompt": "/implement-tickets .scratch/partial-demo/issues/ after approval. Ticket 01 becomes BLOCKED (TICKET_VERIFICATION_FAILED) and ticket 03 depends on it; ticket 02 is independent.",
       "expected_output": "Ticket 01 is BLOCKED, its dependants are held, and the independent ticket 02 continues to the verified partial path.",
       "expectations": [
-        "Does not start a dependant whose blocker is blocked",
+        "Does not start a dependant whose blocker is blocked, and halts at the next frontier for this verification-failure block (the touch-set-approval parking exception does not apply)",
         "Preserves independent work and reports the resume path"
       ],
       "files": []
@@ -69,8 +69,8 @@
     {
       "id": 7,
       "name": "independent tickets share a deterministic wave",
-      "prompt": "/implement-tickets .scratch/wave-demo/issues/ has three independent tickets with disjoint touch sets.",
-      "expected_output": "Independent tickets with disjoint known touch sets enter the same wave, subject to the concurrency cap.",
+      "prompt": "/implement-tickets --parallel .scratch/wave-demo/issues/ has three independent tickets with disjoint touch sets.",
+      "expected_output": "With --parallel, independent tickets with disjoint known touch sets enter the same wave, subject to the concurrency cap.",
       "expectations": [
         "Preserves ticket-number order in wave reporting"
       ],
@@ -79,8 +79,8 @@
     {
       "id": 8,
       "name": "overlapping touch sets move to successive waves",
-      "prompt": "/implement-tickets .scratch/overlap-demo/issues/ has two otherwise independent tickets that both edit the same file.",
-      "expected_output": "The overlapping touch sets are serialized into successive waves so both workers do not edit the same known path at once.",
+      "prompt": "/implement-tickets --parallel .scratch/overlap-demo/issues/ has two otherwise independent tickets that both edit the same file.",
+      "expected_output": "With --parallel, the overlapping touch sets are serialized into successive waves so both workers do not edit the same known path at once.",
       "expectations": [
         "Names the overlap reason in the Plan"
       ],
@@ -88,11 +88,12 @@
     },
     {
       "id": 9,
-      "name": "serial mode creates one ticket per wave",
-      "prompt": "/implement-tickets --serial .scratch/serial-demo/issues/ contains four independent tickets.",
-      "expected_output": "With --serial, the Plan places one ticket per wave regardless of independent touch sets.",
+      "name": "serial mode is the default and creates one ticket per wave",
+      "prompt": "/implement-tickets .scratch/serial-demo/issues/ without a mode flag contains four independent tickets.",
+      "expected_output": "Without a mode flag the run is serial, and --serial is accepted as an alias of this default, so the Plan places one ticket per wave regardless of independent touch sets; --parallel opts in to waves.",
       "expectations": [
-        "Explains that --serial changes wave width, not the ticket dependency graph"
+        "States the run mode in the Plan and shows no concurrency cap in serial mode",
+        "Explains that --concurrency N implies parallel mode and that combining --serial with --parallel or --concurrency is rejected before the Plan"
       ],
       "files": []
     },

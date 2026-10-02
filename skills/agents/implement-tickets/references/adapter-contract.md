@@ -69,17 +69,23 @@ The table below defines outcome routing:
 | `failed_infra` | Not counted: retry infrastructure at most two times; after two retries, mark `BLOCKED (TICKET_PROVIDER_FAILED)`. | At most two retries. |
 | `failed_other` | Append the failure evidence and resume the same session. A third counted failure marks `BLOCKED (TICKET_VERIFICATION_FAILED)`. | One counted attempt. |
 
+Adapter backends carry the same Touch-set extras section in the free-form
+worker report; the envelope schema does not change and there is no
+adapter-specific drift rule. The core measures extras from the worker branch as
+for native runs.
+
 An envelope is a transport result, not a verdict. The verifier supplies raw
 evidence and the orchestrator judges whether the ticket is complete.
 
 ## Worktree cleanup
 
 The core owns the worker branch and worktree. The adapter must not create,
-switch, merge, or remove either one; it must work only at `worktree_path` (the
-worktree path) and return its envelope. The core removes the worktree after integration.
+switch, merge, or remove either one; it must work only at `worktree_path` and
+return its envelope. The core removes the worktree after integration.
 Failed and blocked worktrees remain available for inspection and are swept on
-`continue`. Native runs keep harness-managed isolation; they do
-not use adapter-created worktrees.
+`continue`. Worktrees of parked tickets (`BLOCKED (TOUCH_SET_APPROVAL)`) are
+exempt from that sweep, because approval needs the kept work. Native runs keep
+harness-managed isolation; they do not use adapter-created worktrees.
 
 ## Fixture adapter
 
