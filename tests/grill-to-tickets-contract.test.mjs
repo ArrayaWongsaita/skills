@@ -356,7 +356,6 @@ describe("grill-to-tickets composite skill contract", () => {
       assert.doesNotMatch(handoff, /catalog/i, "the handoff has no catalog-commit step");
       assert.match(handoff, /\/clear/);
       assert.match(handoff, /\/implement-tickets \.scratch\/<feature-slug>\//);
-      assert.match(handoff, /--with <backend>/, "the handoff gives the adapter option in one line");
       assert.doesNotMatch(handoff, /\/(?:agy-implement|opencode-implement)\b/);
       assert.ok(
         handoff.indexOf("/clear") < handoff.indexOf("/implement-tickets"),

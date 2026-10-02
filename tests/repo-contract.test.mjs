@@ -771,7 +771,6 @@ describe("grill-to-tickets production records and guides", () => {
       "guide handoff message",
     );
     assert.match(message[1], /\/implement-tickets \.scratch\/<feature-slug>\//);
-    assert.match(message[1], /--with <backend>/);
     assert.match(guideStage3, /recommendedImplementers:\s*\["implement-tickets"\]/,
       "the guide states the manifest recommendation at every width");
 
@@ -788,7 +787,6 @@ describe("grill-to-tickets production records and guides", () => {
       "skill page English handoff",
     );
     assert.match(english, /\/implement-tickets \.scratch\/<feature-slug>\//);
-    assert.match(english, /--with <backend>/);
     assert.match(english, /recommendedImplementers[\s\S]{0,80}\["implement-tickets"\]/,
       "the skill page documents the manifest recommendation");
 
@@ -798,7 +796,6 @@ describe("grill-to-tickets production records and guides", () => {
       assert.ok(evaluation, `handoff eval ${id} exists`);
       const contract = `${evaluation.expected_output}\n${evaluation.expectations.join("\n")}`;
       assert.match(contract, /\/implement-tickets \.scratch\//, `handoff eval ${id} names the command`);
-      assert.match(contract, /--with <backend>/, `handoff eval ${id} documents the adapter hint`);
       assert.match(contract, /recommendedImplementers[\s\S]{0,80}implement-tickets/,
         `handoff eval ${id} documents the manifest field`);
     }
@@ -848,36 +845,41 @@ describe("grill-to-tickets production records and guides", () => {
     }
   });
 
-  it("links implement-tickets usage semantics to the glossary and leaves sibling cache wording", async () => {
-    const pages = [
-      ["docs/guides/implement-tickets.md", [
-        ["### Integration gate, status, and resume", "../glossary.md"],
-        ["### Run status, integration, and resume", "../glossary.md"],
-      ]],
-      ["docs/skills/agents/implement-tickets.md", [
-        ["### Integration gate, status, and resume", "../../glossary.md"],
-        ["### Run status, integration, and resume", "../../glossary.md"],
-      ]],
-    ];
-    for (const [file, sections] of pages) {
-      const page = await readTextOrNull(file);
-      assert.ok(page, `${file} exists`);
-      for (const [heading, glossaryPath] of sections) {
-        const status = sectionOf(page, heading);
-        assert.ok(status, `${file} has the ${heading} section`);
-        assert.match(status, /status-and-resume\.md/, `${file} links run-state details to their contract`);
-        assert.match(status, new RegExp(`usage_total[\\s\\S]*${glossaryPath.replaceAll("/", "\\/")}`), `${file} links usage semantics to the canonical glossary`);
-        assert.doesNotMatch(status, /cache-inclusive|dispatch and resume|verifier_usage_total/, `${file} does not copy usage semantics`);
-      }
-    }
-
+  it("keeps sibling implementer guides on the read list and excluding cache reads", async () => {
     for (const skill of ["agy-implement", "opencode-implement"]) {
-      const guide = await readTextOrNull(`docs/guides/${skill}.md`);
-      assert.ok(guide, `the ${skill} guide exists`);
+      const guideFile = `docs/guides/${skill}.md`;
+      const guide = await readTextOrNull(guideFile);
+      assert.ok(guide, `${guideFile} exists`);
 
-      const line = bulletLine(guide, "การบันทึก budget:");
-      assert.ok(line, `the ${skill} guide has a budget bullet`);
-      assert.match(line, /ไม่นับ cache read/, `the ${skill} budget bullet still excludes cache reads`);
+      const context = bulletLine(guide, "Context:");
+      assert.ok(context, `${guideFile} has a Context bullet`);
+      assert.match(context, /read list/, `${guideFile} Context bullet keeps the read list`);
+      assert.doesNotMatch(context, /worker\s*สร้าง|ของตัวเอง/, `${guideFile} Context bullet does not have the worker build its own read list`);
+      assert.match(
+        context,
+        /(orchestrator|implementer)[^;]*\*\*read list\*\*[^;]*prompt/,
+        `${guideFile} Context bullet has the orchestrator build the read list into the worker prompt`,
+      );
+
+      const pageFile = `docs/skills/agents/${skill}.md`;
+      const page = await readTextOrNull(pageFile);
+      assert.ok(page, `${pageFile} exists`);
+
+      const passages = page.split(/\n\s*\n/).filter((paragraph) => /^Seam, Context/.test(paragraph));
+      assert.equal(passages.length, 2, `${pageFile} has a Thai and an English Seam, Context paragraph`);
+      for (const passage of passages) {
+        const flat = passage.replace(/\s+/g, " ");
+        assert.doesNotMatch(
+          flat,
+          /ประกอบ \*\*read list\*\* ของตัวเอง|builds its \*\*read list\*\*/,
+          `${pageFile} does not have the worker build its own read list`,
+        );
+        assert.match(
+          flat,
+          /orchestrator (ประกอบ|builds)[^.]*\*\*read list\*\*/,
+          `${pageFile} has the orchestrator build the read list`,
+        );
+      }
     }
   });
 
@@ -955,17 +957,7 @@ describe("grill-to-tickets production records and guides", () => {
     }
   });
 
-  it("links implement-tickets run state and usage definitions to their canonical references", async () => {
-    const page = await readTextOrNull("docs/skills/agents/implement-tickets.md");
-    assert.ok(page, "the implement-tickets skill page exists");
-    for (const heading of ["### Integration gate, status, and resume", "### Run status, integration, and resume"]) {
-      const status = sectionOf(page, heading);
-      assert.ok(status, `the page has ${heading}`);
-      assert.match(status, /status-and-resume\.md/, "the page links run-state behavior to its contract");
-      assert.match(status, /usage_total[\s\S]*glossary\.md/, "the page links usage semantics to the glossary");
-      assert.doesNotMatch(status, /cache-inclusive|dispatch and resume|verifier_usage_total/, "the page leaves usage semantics to canonical sources");
-    }
-
+  it("keeps sibling implementer usage_total in their Seam, Context paragraphs", async () => {
     const seamParagraphs = async (skill) => {
       const file = `docs/skills/agents/${skill}.md`;
       const page = await readTextOrNull(file);
@@ -1090,15 +1082,12 @@ describe("grill-to-tickets production records and guides", () => {
     const glossary = await readTextOrNull("docs/glossary.md");
     assert.ok(glossary, "the glossary exists");
 
-    const terms = ["Wave", "Touch set", "Adapter", "Backend", "Envelope", "Integration gate"];
+    const terms = ["Wave", "Touch set", "Integration gate"];
     const rows = Object.fromEntries(terms.map((term) => [term, tableRow(glossary, term)]));
     const meanings = {
-      Wave: /group of tickets[\s\S]*parallel waves?|run together/i,
-      "Touch set": /paths?[\s\S]*\(edit from NN\)[\s\S]*wave planning/i,
-      Adapter: /`implement-tickets-<backend>`[\s\S]*`--with/,
-      Backend: /native subagents[\s\S]*adapter/i,
-      Envelope: /`outcome`[\s\S]*`session_id`[\s\S]*`report`[\s\S]*`usage`/,
-      "Integration gate": /typecheck[\s\S]*full test suite[\s\S]*integrated/i,
+      Wave: /group of tickets[\s\S]*run together/i,
+      "Touch set": /paths?[\s\S]*\(edit from NN\)[\s\S]*extras/i,
+      "Integration gate": /typecheck[\s\S]*full test suite[\s\S]*squash-merged/i,
     };
     for (const [term, row] of Object.entries(rows)) {
       assert.ok(row, `the glossary has a row for ${term}`);
@@ -1116,8 +1105,7 @@ describe("grill-to-tickets production records and guides", () => {
 
     const usage = tableRow(glossary, "usage_total");
     assert.ok(usage, "the usage_total row exists");
-    assert.match(usage, /`implement-tickets`/, "usage_total names implement-tickets");
-    assert.doesNotMatch(usage, new RegExp(`\x60${["subagent", "implement"].join("-")}\x60`), "usage_total no longer names the retired core");
+    assert.doesNotMatch(usage, /`implement-tickets`/, "usage_total no longer names implement-tickets, which tracks no usage");
   });
 
   it("defines the planning and implementation terms in bilingual glossary rows", async () => {
@@ -1181,11 +1169,11 @@ describe("grill-to-tickets production records and guides", () => {
     assert.match(usage.english, /dispatch[\s\S]*resume/, "usage_total sums every dispatch and every resume");
     assert.match(
       usage.english,
-      /agy-implement[\s\S]*opencode-implement[\s\S]*cache reads excluded[\s\S]*implement-tickets[\s\S]*cache-inclusive/,
-      "usage_total excludes cache reads only for agy and opencode, and is possibly cache-inclusive for implement-tickets",
+      /agy-implement[\s\S]*opencode-implement[\s\S]*cache reads excluded[\s\S]*cache-inclusive/,
+      "usage_total excludes cache reads for agy and opencode's main path, and is possibly cache-inclusive for opencode's fallback",
     );
     assert.match(usage.thai, /dispatch[\s\S]*resume/, "the Thai usage_total definition sums every dispatch and every resume");
-    assert.match(usage.thai, /implement-tickets[\s\S]*cache-inclusive/, "the Thai usage_total definition says implement-tickets is possibly cache-inclusive");
+    assert.match(usage.thai, /cache-inclusive/, "the Thai usage_total definition says the fallback path is possibly cache-inclusive");
 
     // opencode-implement is in both groups: its main path excludes cache reads, its native-subagent fallback path
     // records the subagent's reported tokens as given. Each half is cut where the cache-excluding clause ends.
@@ -1203,7 +1191,6 @@ describe("grill-to-tickets production records and guides", () => {
       /`opencode-implement`(?!'s main path)/,
       "usage_total does not list opencode-implement unqualified among the cache-excluding implementers",
     );
-    assert.match(english.reported, /`implement-tickets`/, "usage_total records implement-tickets' reported tokens");
     assert.match(
       english.reported,
       /`opencode-implement`'s native-subagent fallback path[\s\S]*cache-inclusive/,
@@ -1218,7 +1205,6 @@ describe("grill-to-tickets production records and guides", () => {
       /(?<!main path ของ )`opencode-implement`/,
       "the Thai usage_total definition does not list opencode-implement unqualified among the cache-excluding implementers",
     );
-    assert.match(thai.reported, /`implement-tickets`/, "the Thai usage_total definition records implement-tickets' reported tokens");
     assert.match(
       thai.reported,
       /fallback path[^`]*ของ `opencode-implement`[\s\S]*cache-inclusive/,

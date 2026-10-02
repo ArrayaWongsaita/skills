@@ -47,7 +47,7 @@ describe("implement-tickets eval suite contract", () => {
     it("declares implement-tickets and unique, well-formed behavior cases", async () => {
       const payload = await readJson("evals.json");
       assert.equal(payload.skill_name, "implement-tickets");
-      assert.ok(Array.isArray(payload.evals) && payload.evals.length >= 15);
+      assert.ok(Array.isArray(payload.evals) && payload.evals.length >= 10);
       const ids = new Set();
       const names = new Set();
       for (const item of payload.evals) {
@@ -68,54 +68,27 @@ describe("implement-tickets eval suite contract", () => {
       }
     });
 
-    it("carries forward applicable planning, test-first, verifier, status, and handoff cases", async () => {
+    it("covers planning, serial runs, verification, recovery, resume, and handoff", async () => {
       const { evals } = await readJson("evals.json");
       const hay = (pattern) => evals.some((item) => pattern.test(`${item.name}\n${item.expected_output}\n${item.expectations.join("\n")}`));
-      const retainedCases = {
-        "approval before source mutation": /pauses? for explicit approval[\s\S]{0,180}no file outside[\s\S]{0,80}changes/i,
-        "ticket seam and Context read-list behavior": /Seam[\s\S]{0,120}verbatim[\s\S]{0,260}Context[\s\S]{0,200}read list/i,
-        "independent verifier reproduces red and checks coverage": /verifier[\s\S]{0,300}(?:reproduces|reproducing) red[\s\S]{0,300}(?:acceptance criteria|coverage)/i,
-        "blocked dependency branch preserves independent work": /BLOCKED[\s\S]{0,300}(?:dependants|dependents)[\s\S]{0,300}independent/i,
-        "read-only status and list": /status and list[\s\S]{0,200}read-only/i,
-        "handoff stops before review and publication": /handoff[\s\S]{0,300}(?:stop|stops) before review[\s\S]{0,200}(?:push|pull request)/i,
-      };
-      for (const [label, pattern] of Object.entries(retainedCases)) {
-        assert.ok(hay(pattern), `no applicable migrated eval covers ${label}`);
-      }
+      assert.ok(hay(/Plan[\s\S]{0,300}no approval pause/i), "the Plan starts without a pause");
+      assert.ok(hay(/one ticket at a time[\s\S]{0,200}ascending number/i), "tickets run serially");
+      assert.ok(hay(/Seam[\s\S]{0,120}verbatim[\s\S]{0,260}Context/i), "Seam and Context reach the worker");
+      assert.ok(hay(/first (?:worker )?command[\s\S]{0,240}integration SHA[\s\S]{0,200}failed_infra/i), "worker sync is the first command");
+      assert.ok(hay(/no Risk: high, no risk signal, and complete evidence/i), "verification is risk-based");
+      assert.ok(hay(/fresh native Explore verifier[\s\S]{0,240}raw evidence[\s\S]{0,120}no verdict/i), "the verifier returns raw evidence");
+      assert.ok(hay(/failed_infra[\s\S]{0,200}without counting an attempt/i), "infra failures count no attempt");
+      assert.ok(hay(/rejects an extra[\s\S]{0,200}one attempt/i), "unexplained extras are rejected");
+      assert.ok(hay(/squash-merges[\s\S]{0,200}full typecheck[\s\S]{0,120}full test suite/i), "the gate runs the full checks");
+      assert.ok(hay(/git checkout -B[\s\S]{0,300}one attempt/i), "a failing gate rewinds and retries");
+      assert.ok(hay(/BLOCKED[\s\S]{0,300}(?:dependants|dependents)[\s\S]{0,300}independent/i), "blocked tickets hold dependants");
+      assert.ok(hay(/continue[\s\S]{0,300}reconciles[\s\S]{0,200}Git/i), "continue reconciles Git");
+      assert.ok(hay(/handoff[\s\S]{0,300}stops before review[\s\S]{0,200}(?:push|pull request)/i), "handoff stops before review");
     });
 
-    it("covers deterministic waves and the serial and concurrency choices", async () => {
-      const { evals } = await readJson("evals.json");
-      const hay = (pattern) => evals.some((item) => pattern.test(`${item.name}\n${item.expected_output}\n${item.expectations.join("\n")}`));
-      assert.ok(hay(/--parallel[\s\S]{0,240}independent tickets[\s\S]{0,240}same wave/i));
-      assert.ok(hay(/--parallel[\s\S]{0,240}overlapping touch sets[\s\S]{0,240}successive waves/i));
-      assert.ok(hay(/--serial[\s\S]{0,240}one ticket per wave/i));
-      assert.ok(hay(/without a mode flag[\s\S]{0,240}one ticket per wave/i));
-      assert.ok(hay(/--concurrency[\s\S]{0,120}implies[\s\S]{0,40}parallel/i));
-      assert.ok(hay(/concurrency cap[\s\S]{0,240}(?:worker|verifier)[\s\S]{0,240}(?:combined|together)/i));
-    });
-
-    it("covers native worker synchronization, infra retries, and immediate verification", async () => {
-      const { evals } = await readJson("evals.json");
-      const hay = (pattern) => evals.some((item) => pattern.test(`${item.name}\n${item.expected_output}\n${item.expectations.join("\n")}`));
-      assert.ok(hay(/first command[\s\S]{0,240}integration SHA[\s\S]{0,200}failed_infra/i));
-      assert.ok(hay(/fresh native Explore verifier[\s\S]{0,240}raw evidence[\s\S]{0,120}no verdict/i));
-      assert.ok(hay(/timeout|crash|lost subagent/i) && hay(/infra retries[\s\S]{0,200}without counting an attempt/i));
-    });
-
-    it("covers adapter preflight, envelope outcomes, and source-derived install guidance", async () => {
-      const { evals } = await readJson("evals.json");
-      const hay = (pattern) => evals.some((item) => pattern.test(`${item.name}\n${item.expected_output}\n${item.expectations.join("\n")}`));
-      assert.ok(hay(/--with[\s\S]{0,200}adapter[\s\S]{0,300}(?:lock source|install line)/i));
-      assert.ok(hay(/failed_infra[\s\S]{0,240}failed_other[\s\S]{0,240}completed/i));
-      assert.ok(hay(/missing adapter[\s\S]{0,240}before planning/i));
-    });
-
-    it("covers the per-wave integration gate and culprit recovery", async () => {
-      const { evals } = await readJson("evals.json");
-      const hay = (pattern) => evals.some((item) => pattern.test(`${item.name}\n${item.expected_output}\n${item.expectations.join("\n")}`));
-      assert.ok(hay(/integration gate[\s\S]{0,300}ticket order[\s\S]{0,240}(?:typecheck|full suite)/i));
-      assert.ok(hay(/first failing merge[\s\S]{0,300}last good commit[\s\S]{0,300}serial attempt/i));
+    it("keeps removed options out of the cases", async () => {
+      const text = JSON.stringify((await readJson("evals.json")).evals);
+      assert.doesNotMatch(text, /--parallel|--concurrency|--serial|--strict|--with|adapter|envelope/i);
     });
   });
 });
