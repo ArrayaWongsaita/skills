@@ -58,6 +58,7 @@ Wide refactors are the exception to vertical slicing. A wide refactor is one mec
   - `C` counts the ticket's lines matching `^\s*- \[[ xX]\] `;
   - `M` counts the distinct parent directories of its `(edit)`, `(new)`, and `(edit from NN)` files.
   Run `scripts/check-tickets.mjs` to check the line; `--write-budget` writes it from the measurement. Without Node, write `**Budget:** unmeasured` and apply the checks by hand.
+- **Risk:** Optional. A single-line `**Risk:**` directly after `**Budget:**`, either `**Risk:** low` or `**Risk:** high — <reason>`. The value is lower-case `low`, or lower-case `high` followed by ` — ` (an em dash with spaces) and a non-empty reason; anything else is a checker error. A missing field means `low`, so old tickets stay valid. The Risk line is left out of the Budget measurement, so adding it by hand does not make the Budget line stale.
 
 ### 4. Quiz the user
 
@@ -106,6 +107,7 @@ Write one file per ticket under `.scratch/<feature-slug>/issues/<NN>-<slug>.md`,
 **Seam:** one test boundary from the spec's Testing Decisions
 **Context:** spec § <ref> · path/to/file · (edit) path/to/file · (new) path/to/file · (from NN) path/to/file · (edit from NN) path/to/file
 **Budget:** read ~<N>k tokens · <C> criteria · <M> modules
+**Risk:** low | high — <reason> (optional; a missing field means low)
 **Status:** ready-for-agent
 
 - [ ] Acceptance criterion 1

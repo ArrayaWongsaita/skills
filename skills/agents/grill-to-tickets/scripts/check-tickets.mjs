@@ -28,6 +28,8 @@
 //   (edit) files, at ⌈ASCII code points ÷ 4⌉ + non-ASCII code points, plus 2000
 //   for each (new), (from NN), or (edit from NN) file; the differs check is
 //   skipped for a ticket with Context errors;
+// - an optional single-line **Risk:** (`low` or `high — <reason>`) sits directly
+//   after **Budget:** and is left out of the Budget measurement;
 // - with --write-budget, the measurement is written to each ticket's Budget line
 //   (inserted directly after Context when absent), skipping tickets with Context
 //   errors, before every check runs;
@@ -315,7 +317,7 @@ async function canonicalExistingPrefix(candidate) {
 
 // The read tokens, criteria, and modules a ticket's Budget line records.
 function measureBudget(ticket, { spec, files }) {
-  const budgetLines = new Set(ticket.fields.filter((f) => f.name === "Budget").map((f) => f.lineIndex));
+  const budgetLines = new Set(ticket.fields.filter((f) => f.name === "Budget" || f.name === "Risk").map((f) => f.lineIndex));
   const sources = [ticket.lines.filter((_, index) => !budgetLines.has(index)).join("\n")];
   const modules = new Set();
   let allowance = 0;
@@ -780,6 +782,25 @@ export function checkFeature({ spec, tickets: ticketFiles, files }) {
       const [, n, c, m] = match.map(Number);
       if (n !== Math.round(measured.tokens / 1000) || c !== measured.criteria || m !== measured.modules) {
         errors.push(`${where}: **Budget:** ${value} differs from the measurement (${measured.line})`);
+      }
+    }
+
+    // The optional Risk field: absent means low; present, it sits directly
+    // after Budget as `low` or `high — <reason>`.
+    const riskFields = ticket.fields.filter((f) => f.name === "Risk");
+    if (riskFields.length > 1) {
+      errors.push(`${where}: **Risk:** is repeated`);
+    }
+    if (riskFields.length > 0) {
+      const riskIndex = ticket.fields.findIndex((f) => f.name === "Risk");
+      if (riskIndex !== budgetIndex + 1) {
+        errors.push(`${where}: **Risk:** must come directly after **Budget:**`);
+      }
+      if (isFollowedByNonField(riskFields[0], ticket.lines)) {
+        errors.push(`${where}: **Risk:** is followed directly by a non-field line`);
+      }
+      if (!/^(low|high — \S.*)$/.test(riskFields[0].value.trim())) {
+        errors.push(`${where}: **Risk:** is malformed (write "low" or "high — <reason>")`);
       }
     }
   }
