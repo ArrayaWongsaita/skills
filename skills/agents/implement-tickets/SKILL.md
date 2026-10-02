@@ -31,8 +31,14 @@ Options are set once for the run:
   subagents.
 - `--agent <name>` pins the native worker agent for the run.
 - `--model <id>` passes a model value to the selected backend.
-- `--concurrency N` sets the shared worker and verifier cap; default `4`.
-- `--serial` puts one ticket in each wave.
+- `--parallel` opts in to parallel mode: waves built from blockers and touch
+  sets. Without it the run is serial and each ticket has its own wave.
+- `--concurrency N` sets the shared worker and verifier cap in parallel mode
+  and implies `--parallel`; the cap is `4` by default.
+- `--serial` is an alias of the default serial mode. Combining `--serial` with
+  `--parallel` or `--concurrency` is rejected before the Plan is presented.
+
+Pass `--serial` to `scripts/waves.mjs` unless parallel mode is selected.
 
 Before presenting any Plan, run
 [`scripts/preflight.mjs`](scripts/preflight.mjs) for every backend, including
@@ -61,7 +67,7 @@ Existing runs can be inspected or resumed with:
 - `/implement-tickets status [slug]` to read one run's `status.md`;
 - `/implement-tickets list` to list saved runs; or
 - `/implement-tickets continue [slug]` to reconcile a run with Git, re-present
-  its Plan, and resume from the frontier.
+  its Plan, and resume from the frontier in the recorded run mode.
 
 `status` and `list` are read-only. A valid run record starts with
 `skill: implement-tickets`; see
@@ -76,9 +82,11 @@ ticket's `Blocked by` and `Context` fields and returns blockers, touch sets,
 warnings, waves, concurrency, and the parallel-validation state.
 
 Present a Plan that lists every ticket with its wave, blockers, touch set, test
-seam, matched agent, and retry budget. The Plan also names the backend, the
-concurrency cap, and every warning. When the marker is not validated, print the
-standalone line `parallel not yet validated`.
+seam, matched agent, and retry budget. The Plan also names the backend, the run
+mode, and every warning. In parallel mode it names the concurrency cap, and when
+the marker is not validated it prints the standalone line
+`parallel not yet validated`. In serial mode it shows no concurrency cap and
+omits that line.
 
 Pause for explicit approval. No file outside the feature directory changes
 until approval. Do not dispatch workers or write run state before approval.

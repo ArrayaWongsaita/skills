@@ -34,6 +34,10 @@ raises a warning.
 
 ## 3. Compute waves
 
+The run mode is serial by default. `--parallel` opts in to parallel mode, and
+`--concurrency N` implies it. Pass `--serial` to the script unless parallel mode
+is selected, so the script and its checker contract stay unchanged.
+
 Run:
 
 ```bash
@@ -50,7 +54,8 @@ from checker-valid ticket sets.
 
 A ticket with an unknown touch set receives an otherwise empty wave, and no
 later ticket joins that wave. Later tickets still obey blocker waves and touch
-overlap. `--serial` assigns each ticket its own wave in ticket order.
+overlap. `--serial` assigns each ticket its own wave in ticket order; it is the
+default mode.
 `--concurrency N` is echoed in the JSON output and does not change the waves;
 the orchestrator enforces the cap across workers and verifiers.
 
@@ -83,10 +88,16 @@ Also state:
 
 - backend: native harness subagents by default, or the selected `--with`
   adapter;
-- concurrency cap: `4` by default or the supplied `--concurrency N`;
+- run mode: serial by default, or parallel with `--parallel` or
+  `--concurrency N`; a change of mode needs approval because it changes the
+  waves;
+- concurrency cap, in parallel mode only: `4` by default or the supplied
+  `--concurrency N`. In serial mode there is nothing to cap, so the Plan shows
+  no concurrency cap; the shared worker-and-verifier cap of four stays enforced
+  silently;
 - all script and planning warnings, including unknown touch sets;
-- the standalone line `parallel not yet validated` when the marker says
-  `status: not validated`;
+- the standalone line `parallel not yet validated` when the run is in parallel
+  mode and the marker says `status: not validated`;
 - retry budget: three ticket attempts, unless the run contract later defines
   a narrower infrastructure retry.
 

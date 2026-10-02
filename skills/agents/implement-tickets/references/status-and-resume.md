@@ -8,6 +8,7 @@ single Markdown file is the run record. Its first line is exactly
 skill: implement-tickets
 # Run status: <feature-slug>
 
+Run mode: serial
 Integration branch: `implement-tickets/<feature-slug>`
 Integration commit: `<current-sha>`
 Usage is reported as given and is possibly cache-inclusive.
@@ -20,8 +21,8 @@ Usage is reported as given and is possibly cache-inclusive.
 Keep one row per ticket in dependency order. Record its wave, selected backend,
 touch set, current status, latest session ID, ticket attempts, worker branch,
 integrated commit, and `budget_estimate` from the ticket's Budget line verbatim
-(`none` if absent). Record the integration branch and current integration
-commit above the table. Status progresses through pending, dispatched,
+(`none` if absent). Record the run mode (`Run mode: serial` or `Run mode: parallel`), the
+integration branch, and the current integration commit above the table. Status progresses through pending, dispatched,
 verifying, verified, integrated, or `BLOCKED` with its reason.
 
 `usage_total` is the sum of the usage reported by every dispatch and resume on
@@ -71,9 +72,13 @@ For a valid status file:
    good ticket commit and rewind the integration branch to it with
    `git checkout -B <integration-branch> <sha>`. Record the discarded commits
    and invalidate affected ticket state before dispatching again.
-3. Re-present the Plan using reconciled Git state, current blockers, and
+3. Read the run mode from the `Run mode:` line. A record with no `Run mode:`
+   line predates the mode and counts as parallel when any wave holds more than
+   one ticket, otherwise as serial. A mode change needs approval because it
+   changes the waves.
+4. Re-present the Plan using reconciled Git state, current blockers, and
    eligible tickets. Wait for approval before dispatching.
-4. Resume from the earliest eligible frontier. Keep blocked tickets and their
+5. Resume from the earliest eligible frontier. Keep blocked tickets and their
    dependants held; an explicit continue may proceed with the independent
    partial path.
 

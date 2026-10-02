@@ -309,11 +309,52 @@ describe("implement-tickets skill and documentation contract", () => {
       "the Plan has a row for every ticket with all required columns",
     );
     assert.match(plan, /backend:\s*native harness subagents/i, "the Plan names the default backend");
-    assert.match(plan, /concurrency cap:\s*`4` by default/i, "the Plan names the default concurrency cap");
+    assert.match(plan, /concurrency cap[^`]{0,80}`4` by default/i, "the Plan names the default concurrency cap in parallel mode");
     assert.match(plan, /all script and planning warnings/i, "the Plan includes all planning warnings");
     assert.match(plan, /parallel not yet validated/, "the pending marker is printed in the Plan");
     assert.match(plan, /pause for explicit approval/i, "the Plan waits for explicit approval");
     assert.match(plan, /no file outside the\s+feature directory changes until approval/i, "files outside the feature directory stay untouched before approval");
+  });
+
+  it("defaults to serial runs and opts in to parallel waves with --parallel", async () => {
+    const skill = await readTextOrNull(path.join(skillRoot, "SKILL.md"));
+    const planning = await readTextOrNull(path.join(skillRoot, "references/planning.md"));
+    assert.ok(skill && planning, "the skill and planning reference exist");
+    const invocation = markdownSection(skill, "Invocation");
+    assert.match(invocation, /--parallel`[\s\S]{0,160}opt/i, "--parallel opts in to waves built from blockers and touch sets");
+    assert.match(invocation, /--serial`[\s\S]{0,120}alias[\s\S]{0,60}default/i, "--serial is an alias of the default");
+    assert.match(invocation, /--concurrency N`[\s\S]{0,120}implies[\s\S]{0,20}`--parallel`/i, "--concurrency implies --parallel");
+    assert.match(invocation, /`--serial`[\s\S]{0,60}(?:with|and)[\s\S]{0,60}`--parallel`[\s\S]{0,120}`--concurrency[\s\S]{0,120}reject[\s\S]{0,80}before[\s\S]{0,40}Plan/i, "combining --serial with --parallel or --concurrency is rejected before the Plan");
+    const stage0 = markdownSection(skill, "Stage 0 — Plan, then pause");
+    assert.match(stage0, /run\s+mode/i, "the Plan names the run mode");
+    assert.match(stage0, /parallel mode[\s\S]{0,160}parallel not yet validated|parallel not yet validated[\s\S]{0,160}parallel mode/i, "the not-validated line is parallel-mode only");
+    const waves = markdownSection(planning, "3. Compute waves");
+    assert.match(waves, /pass(?:es)? `--serial`[\s\S]{0,80}unless parallel mode/i, "the planner receives --serial unless parallel mode is selected");
+    const plan = markdownSection(planning, "5. Present the Plan and pause");
+    assert.match(plan, /run mode:[\s\S]{0,160}serial[\s\S]{0,80}default/i, "the Plan states the run mode");
+    assert.match(plan, /serial mode[\s\S]{0,80}no concurrency cap/i, "serial mode shows no cap");
+    assert.match(plan, /cap of four[\s\S]{0,60}silently/i, "the shared cap of four stays enforced silently");
+  });
+
+  it("describes serial as the default and parallel as the opt-in in the glossary Wave entry", async () => {
+    const glossary = await readTextOrNull(path.join(repoRoot, "docs/glossary.md"));
+    const wave = glossary?.split(/\r?\n/).find((line) => line.startsWith("| Wave |"));
+    assert.ok(wave, "the glossary has a Wave entry");
+    assert.match(wave, /serial[\s\S]{0,40}default/i);
+    assert.match(wave, /`--parallel`/);
+  });
+
+  it("records the run mode above the run-state table and resumes in it", async () => {
+    const state = await readTextOrNull(path.join(skillRoot, "references/status-and-resume.md"));
+    assert.ok(state, "the status reference exists");
+    const runState = markdownSection(state, "Run status, failure, and resume");
+    const template = runState.match(/```markdown\s*([\s\S]*?)```/)?.[1];
+    assert.match(template, /^Run mode: (?:serial|parallel)/m, "the template has a run mode line");
+    assert.ok(template.indexOf("Run mode:") < template.indexOf("| Ticket |"), "the mode line sits above the table");
+    const cont = markdownSection(state, "Continue and reconcile");
+    assert.match(cont, /reads? the run mode from the `Run mode:` line/i, "continue reads the mode from the line");
+    assert.match(cont, /mode change[\s\S]{0,40}needs approval/i, "a mode change needs approval");
+    assert.match(cont, /no `Run mode:`\s+line[\s\S]{0,160}parallel when any wave holds more\s+than\s+one\s+ticket[\s\S]{0,40}otherwise[\s\S]{0,20}serial/i, "a record without a mode line is inferred from its waves");
   });
 
   it("links bilingual Seam and Context guidance to the planning reference in both user-facing pages", async () => {
@@ -398,6 +439,7 @@ describe("implement-tickets skill and documentation contract", () => {
     assert.match(procedure, /two independent tickets/i);
     assert.match(procedure, /\/implement-tickets/);
     assert.match(procedure, /two-wide wave/i);
+    assert.match(procedure, /\/implement-tickets --parallel/, "the smoke run opts in to parallel mode");
     assert.match(procedure, /background workers/i);
     assert.match(procedure, /TaskStop/);
     assert.match(procedure, /permission prompts[\s\S]*main session/i);
