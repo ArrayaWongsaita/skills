@@ -122,4 +122,6 @@ branch and review commands. Stop before review, push, or a pull request.
   continuing; accepted extras alone never do.
 - Keep the Plan read-only until the user explicitly approves it.
 - The orchestrator writes no implementation code except a mechanical merge
-  conflict resolution.
+  conflict resolution. That allowance stays for conflicts outside drift; for a
+  drift conflict, deferral takes precedence and the ticket goes to a drain round
+  (see the [integration gate](references/integration-gate.md)).

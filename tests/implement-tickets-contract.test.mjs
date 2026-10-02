@@ -987,6 +987,68 @@ describe("implement-tickets integration gate and run-state contract", () => {
     requireText(continueSection, /re-present the Plan[\s\S]*resume from (?:the )?(?:earliest eligible )?frontier/i, "continue presents the reconciled Plan and resumes at the frontier");
   });
 
+  it("accepts a clean-merge overlap and defers only a real conflict to a drain round in the same wave", async () => {
+    const gate = await readTextOrNull(gatePath);
+    assert.ok(gate, "the integration gate procedure exists");
+    const drain = markdownSection(gate, "Conflict deferral and drain rounds");
+    assert.ok(drain, "the conflict deferral and drain rounds section exists");
+    const flat = drain.replace(/\s+/g, " ");
+    requireText(flat, /overlap[\s\S]*?merges? cleanly[\s\S]*?gate passes[\s\S]*?(?:accepted|integrated)[\s\S]*?recorded/i, "a clean-merge overlap is accepted and recorded");
+    requireText(flat, /squash-merge conflict[\s\S]*?defers? the ticket to a drain round in the same wave/i, "a real conflict defers to a drain round in the same wave");
+    requireText(flat, /lowest ticket number wins[\s\S]*?later tickets in the pass keep merging/i, "the lowest number wins and later tickets keep merging");
+    requireText(flat, /next wave (?:does not start|waits)[\s\S]*?(?:integrated|drain)/i, "the next wave waits for the wave to be integrated");
+  });
+
+  it("restarts a deferred ticket on the latest integration commit, one per drain round in ticket order", async () => {
+    const gate = await readTextOrNull(gatePath);
+    const drain = markdownSection(gate ?? "", "Conflict deferral and drain rounds");
+    assert.ok(drain, "the conflict deferral and drain rounds section exists");
+    const flat = drain.replace(/\s+/g, " ");
+    requireText(flat, /fresh (?:worker )?dispatch from the latest integration commit[\s\S]*?note of its known extras[\s\S]*?verified again/i, "a deferred ticket is redispatched fresh with its extras and re-verified");
+    requireText(flat, /one (?:deferred ticket )?per drain round[\s\S]*?ticket order/i, "deferred tickets run one per drain round in ticket order");
+  });
+
+  it("charges no attempt for a deferral and one attempt for a gate culprit outside the drain", async () => {
+    const gate = await readTextOrNull(gatePath);
+    const drain = markdownSection(gate ?? "", "Conflict deferral and drain rounds");
+    assert.ok(drain, "the conflict deferral and drain rounds section exists");
+    const flat = drain.replace(/\s+/g, " ");
+    requireText(flat, /deferral adds no attempt/i, "a conflict deferral adds no attempt");
+    requireText(flat, /culprit of a failing gate[\s\S]*?serially[\s\S]*?one attempt[\s\S]*?not (?:go )?through a drain round/i, "a gate culprit costs one attempt and skips the drain round");
+  });
+
+  it("gates after the first pass and every drain round and isolates the culprit within the pass", async () => {
+    const gate = await readTextOrNull(gatePath);
+    const drain = markdownSection(gate ?? "", "Conflict deferral and drain rounds");
+    assert.ok(drain, "the conflict deferral and drain rounds section exists");
+    const flat = drain.replace(/\s+/g, " ");
+    requireText(flat, /gate runs after the first merge pass and after every drain round/i, "the gate runs after the first pass and each drain round");
+    requireText(flat, /replays only the tickets merged in that pass[\s\S]*?commit before (?:that|a) drain round/i, "isolation replays only that pass from the commit before a drain round");
+    requireText(flat, /culprit's (?:serial )?redispatch finishes[\s\S]*?before any pending drain round/i, "the culprit redispatch finishes before a pending drain round");
+  });
+
+  it("ends drain rounds because each round integrates, spends an attempt, or parks", async () => {
+    const gate = await readTextOrNull(gatePath);
+    const drain = markdownSection(gate ?? "", "Conflict deferral and drain rounds");
+    assert.ok(drain, "the conflict deferral and drain rounds section exists");
+    const flat = drain.replace(/\s+/g, " ");
+    requireText(flat, /integrates its ticket, spends an attempt, or parks it/i, "each drain round makes progress");
+    requireText(flat, /blocked after three attempts/i, "a ticket that keeps failing ends blocked after three attempts");
+  });
+
+  it("makes deferral win over mechanical conflict resolution for drift conflicts only", async () => {
+    const skill = await readTextOrNull(path.join(skillRoot, "SKILL.md"));
+    assert.ok(skill, "SKILL.md exists");
+    requireText(skill, /mechanical merge\s+conflict resolution[\s\S]*?outside drift[\s\S]*?drift conflict[\s\S]*?deferral (?:takes precedence|wins)/i, "deferral takes precedence for drift conflicts and the allowance stays outside drift");
+  });
+
+  it("defines drain round and real conflict in the glossary", async () => {
+    const glossary = await readTextOrNull(path.join(repoRoot, "docs/glossary.md"));
+    const lines = glossary?.split(/\r?\n/) ?? [];
+    assert.ok(lines.some((line) => /^\| Drain round \|/.test(line) && /deferred/i.test(line)), "the glossary defines drain round");
+    assert.ok(lines.some((line) => /^\| Real conflict \|/.test(line) && /squash-merge/i.test(line)), "the glossary defines real conflict");
+  });
+
   it("records accepted extras in the run state and reads them back on continue", async () => {
     const state = await readTextOrNull(statePath);
     assert.ok(state, "the run-state and resume procedure exists");

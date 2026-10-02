@@ -24,6 +24,35 @@ ticket to a drain round inside the pass at no attempt cost, and the approved
 extras stay accepted. Held tickets never dispatched then resume in their
 original wave and ticket order.
 
+## Conflict deferral and drain rounds
+
+A real conflict is a squash-merge that does not apply. Paths that overlap but
+merge cleanly are not a conflict: when the squash-merges apply cleanly and the
+gate passes, both tickets are integrated and the overlap is recorded.
+
+A squash-merge conflict defers the ticket to a drain round in the same wave.
+Tickets merge in ascending number, the lowest ticket number wins, and later
+tickets in the pass keep merging after a deferral. The next wave does not start
+until the wave is integrated, drain rounds included.
+
+- A deferred ticket gets a fresh dispatch from the latest integration commit,
+  with the same prompt plus a note of its known extras, and is verified again.
+- Deferred tickets run one per drain round, serially, in ticket order. Each round
+  runs its ticket alone on a base that already holds every merged sibling, so it
+  cannot conflict with them, and no overlap grouping is needed.
+- A conflict deferral adds no attempt. The culprit of a failing gate is
+  redispatched serially at one attempt and does not go through a drain round.
+- The gate runs after the first merge pass and after every drain round, while
+  deferred tickets are still unmerged. Culprit isolation replays only the tickets
+  merged in that pass; after a drain round it replays from the commit before that
+  drain round. When a first-pass gate fails while tickets are still deferred, the
+  culprit's redispatch finishes (verify, merge, gate) before any pending drain
+  round runs.
+- Drain rounds end because each round integrates its ticket, spends an attempt,
+  or parks it. A ticket that fails verification or the gate keeps spending
+  attempts and ends blocked after three attempts; a ticket that parks leaves the
+  drain and follows the parking rules.
+
 ## Find and isolate a failing merge
 
 If the gate fails:
