@@ -25,7 +25,7 @@ npx skills add ArrayaWongsaita/skills --skill review-to-pr
 
 - มี integration branch จาก `implement` / `agy-implement` / `implement-tickets` ที่
   verify แล้วแต่ยังไม่ได้ review และอยากขับ §8–9 ของ feature-flow ด้วยคำสั่งเดียว
-- อยากได้ loop `code-review` สองแกนที่มี budget สามรอบ, การจับ blocker เป็น cluster,
+- อยากได้ loop `code-review` สองแกนที่ค่าเริ่มต้น 1 รอบ (เพิ่มได้ด้วย `--rounds`, สูงสุดสามรอบ), การจับ blocker เป็น cluster,
   system `scrutinize` แบบมีเงื่อนไข, และ suite เขียว ด้วยกติกาเดียวกับ implement siblings
 - อยากให้ fix ลงเป็น `fix(review):` commit แยก ไม่ยัดกลับเข้า ticket commit
 
@@ -55,13 +55,13 @@ review point, `/review-to-pr <slug>` เพื่อระบุ feature directo
    source, เขียน `review-status.md`, หยุดรอ approve
 2. **Stage 1 — code-review สองแกน**: รัน `code-review` inline เทียบ review point,
    normalize finding เป็น blocking / non-blocking, blocker → Stage 2, ไม่มี → Stage 3
-   (budget สามรอบ, หยุดก่อนถ้ารอบไหนไม่ขยับ)
+   (ค่าเริ่มต้น 1 รอบ, `--rounds <n>` สูงสุด 3, หยุดก่อนถ้ารอบไหนไม่ขยับ; รอบสุดท้ายยังแก้ blocker แต่ไม่ re-review)
 3. **Stage 2 — แก้ blocker**: จับเป็น cluster, cluster ที่ต้องแตะ test หรือหลายไฟล์ →
    worker + verifier subagent, cluster ไฟล์เดียวไม่แตะ test → แก้ inline, ลง
    `fix(review):` commit หนึ่งอันต่อ cluster แล้วกลับ Stage 1
 4. **Stage 3 — system `scrutinize`**: รันเฉพาะเมื่อ diff cross-cutting / risky ตาม
    checklist ADR 0003, normalize verdict, sub-loop `scrutinize → fix → tests →
-   code-review → scrutinize` (budget หกรอบ แยกจาก code budget)
+   code-review → scrutinize` (ค่าเริ่มต้น 1 รอบ, `--scrutinize-rounds <n>` สูงสุด 6, แยกจาก code budget)
 5. **Stage 4 — suite เขียว**: verifier สด รัน typecheck เต็มและ test suite เต็มบน
    integration branch, red → blocker ใหม่กลับ Stage 2
 6. **Stage 5 — handoff**: ปริ้นต์ branch, verdict, `fix(review):` commit, บรรทัด suite
@@ -80,13 +80,13 @@ sub-command: `continue` resume พร้อม Reality reconciliation, `status` 
 - `references/review-point.md` — preflight, resolve review point, resolve slug +
   spec source, `review-status.md` เริ่มต้น, การ pause
 - `references/review-loop.md` — การเรียก `code-review` inline สองแกน, การ normalize
-  blocking / non-blocking, findings ledger, budget สามรอบ, การหยุดแบบ no-progress
+  blocking / non-blocking, findings ledger, budget (ค่าเริ่มต้น 1 สูงสุด 3), การหยุดแบบ no-progress
 - `references/fix-dispatch.md` — clustering, กติกา dispatch-vs-inline, contract
   worker + verifier ที่ copy จาก `implement-tickets`, `MAX_FIX_ATTEMPTS = 3`,
   `fix(review):` commit, การจัดการ unfixable
 - `references/scrutiny-gate.md` — checklist cross-cutting / risky, การรัน
   `scrutinize` inline, การ normalize verdict, sub-loop ที่ code-review ไม่ข้าม,
-  budget หกรอบอิสระ
+  budget อิสระ (ค่าเริ่มต้น 1 สูงสุด 6)
 - `references/status-and-resume.md` — field set `review-status.md`, halt / partial
   report, `continue` (Reality reconciliation), `status`
 - `evals/evals.json` — เคสพฤติกรรม หนึ่งเคสต่อ decision branch, รูปแบบ benchmark ของ
@@ -119,7 +119,7 @@ npx skills add ArrayaWongsaita/skills --skill review-to-pr
 
 - You have a verified-but-unreviewed integration branch from `implement`,
   `agy-implement`, or `implement-tickets` and want feature-flow §8–9 as one
-  command with the same budgets and stop rules.
+  command with the same stop rules and a minimal default budget.
 - You want the bounded two-axis `code-review` loop, blocker clustering, the
   conditional system `scrutinize`, and a green full suite run the same way every
   time.
@@ -155,8 +155,8 @@ the feature slug from the integration branch: `implement-tickets/foo` gives
    for approval.
 2. **Stage 1 — Two-axis code-review**: run `code-review` inline against the
    review point, normalize each finding to blocking or non-blocking, route
-   blockers to Stage 2 and a clean review to Stage 3 (three-cycle budget, early
-   stop on a no-progress cycle).
+   blockers to Stage 2 and a clean review to Stage 3 (1 round by default, `--rounds` up to 3, early
+   stop on a no-progress cycle; the last round's fixes are not re-reviewed).
 3. **Stage 2 — Fix the blockers**: cluster the blockers; a cluster that needs a
    test or touches several files goes to a worker + verifier subagent, a
    one-file no-test cluster is applied inline; land one `fix(review):` commit per
@@ -164,7 +164,7 @@ the feature slug from the integration branch: `implement-tickets/foo` gives
 4. **Stage 3 — System scrutinize**: run `scrutinize` inline only when the diff is
    cross-cutting or risky by the ADR 0003 checklist, normalize the verdict, and
    drive the sub-loop `scrutinize → fix → tests → code-review → scrutinize` on
-   its own six-cycle budget.
+   its own budget (1 round by default, `--scrutinize-rounds` up to 6).
 5. **Stage 4 — Full suite green**: a fresh verifier runs the whole typecheck and
    the whole test suite on the integration branch; a red suite is a new blocker
    back to Stage 2.
@@ -187,17 +187,27 @@ read-only.
   slug and spec-source resolution, the initial `review-status.md`, and the pause
 - `references/review-loop.md` — the inline two-axis `code-review` call
   blocking vs
-  non-blocking normalization, the findings ledger, the three-cycle budget, and
+  non-blocking normalization, the findings ledger, the round budget (default 1, ceiling 3), and
   the no-progress early stop
 - `references/fix-dispatch.md` — clustering, the dispatch-vs-inline rule, the
   worker + verifier contract copied from `implement-tickets`,
   `MAX_FIX_ATTEMPTS = 3`, the `fix(review):` commit, and unfixable handling
 - `references/scrutiny-gate.md` — the cross-cutting / risky checklist, the inline
   `scrutinize` pass, verdict normalization, the never-skipped code-review in the
-  sub-loop, and the independent six-cycle budget
+  sub-loop, and the independent scrutinize budget (default 1, ceiling 6)
 - `references/status-and-resume.md` — the `review-status.md` field set, the halt
   / partial report, `continue` (Reality reconciliation), and `status`
 - `evals/evals.json` — behavioral cases, one per decision branch, in
   `skill-creator`'s benchmark format; run on demand, not in CI
 - `evals/trigger-evals.json` — guards that the skill's description does not read
   as model-invocable (the skill is `disable-model-invocation`)
+
+## เลือกจำนวนรอบ (ค่าเริ่มต้นประหยัด)
+
+- ค่าเริ่มต้น: `code_budget = 1`, `scrutinize_budget = 1` — review หนึ่งรอบ แก้
+  blocker หนึ่งรอบ แล้วไป suite เขียว fix รอบสุดท้ายไม่ถูก re-review และ handoff
+  จะบอกไว้
+- ตั้งตอนเรียก: `/review-to-pr --rounds 3 --scrutinize-rounds 2`
+- เพิ่มทีหลังโดยไม่เริ่มใหม่: `/review-to-pr continue --rounds 3
+  [--scrutinize-rounds <n>]` — ค่าที่ให้คือยอดรวมใหม่ (ไม่ต่ำกว่ารอบที่ใช้ไปแล้ว,
+  ไม่เกินเพดาน 3 / 6) cycle ที่ใช้ไปแล้วถูกยกมา จึงรันเฉพาะรอบที่เพิ่ม

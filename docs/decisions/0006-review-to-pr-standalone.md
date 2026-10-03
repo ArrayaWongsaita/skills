@@ -72,7 +72,7 @@ it by skill name only and builds from `main` regardless of merge order.
 
 ### Trade-offs / ข้อแลกเปลี่ยน
 
-- The code-review three-cycle budget, the scrutinize six-cycle budget, the stall
+- The code-review budget (default 1 round, ceiling three) and the scrutinize budget (default 1 round, ceiling six) — both raisable per run with `--rounds` / `--scrutinize-rounds` or later with `continue` — the stall
   rule, and the `status.md` + Reality reconciliation discipline now exist in a
   fourth place in the repo and can drift. A shared-`references/` refactor across
   the implement/review siblings is a deferred follow-up, the same posture the
@@ -81,7 +81,7 @@ it by skill name only and builds from `main` regardless of merge order.
   call from a checklist rather than a formula; the mitigation is that the handoff
   always states whether the gate ran and why.
 
-budget สามชุด, stall rule, และวินัย state + Reality reconciliation อยู่ในที่ที่สี่
+budget สองชุด (ค่าเริ่มต้น 1 รอบ เพดาน 3 / 6, เพิ่มได้ด้วย `--rounds` และ `continue`), stall rule, และวินัย state + Reality reconciliation อยู่ในที่ที่สี่
 ของ repo และ drift ได้ — shared-`references/` refactor เป็น follow-up ที่เลื่อนไว้
 
 ## Rejected alternatives / ทางเลือกที่ไม่เลือก

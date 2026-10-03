@@ -65,9 +65,16 @@ cycle, and `unfixable` when its cluster exhausts `MAX_FIX_ATTEMPTS` (see
   `code_cycles`. Editing between reviews — the Stage 2 fixes — consumes no cycle.
 - Record per cycle: the reviewed `HEAD` fingerprint, and the findings that are
   **new**, **resolved**, and **still open** this cycle.
-- **The ceiling is three cycles.** After a third completed two-axis review that
-  still reports blockers, stop and report the unresolved blockers rather than
-  starting a fourth.
+- **The budget is `code_budget` cycles** — the `--rounds` value, **default 1**,
+  never more than **three cycles** (the hard ceiling). After the last budgeted
+  review, do not start another. If it reported blockers, Stage 2 still fixes them
+  and lands the `fix(review):` commits, but those fixes are **not re-reviewed**:
+  mark them `resolved` only as far as Stage 4's full suite confirms, record
+  "fixes not re-reviewed — budget spent" for the handoff, and go on to Stage 3.
+  A cluster that fails `MAX_FIX_ATTEMPTS`, or a stall, is still `unfixable` /
+  `stalled` and reported not PR-ready. Raising the budget later is
+  `/review-to-pr continue --rounds <n>`
+  ([status-and-resume.md](status-and-resume.md)).
 - **No-progress early stop.** A cycle that resolves **no** blocker *and* turns up
   **nothing new** ends the loop before the ceiling — a fix cycle that moved
   nothing will move nothing on a retry. Mark the surviving blockers `stalled`
@@ -79,6 +86,8 @@ cycle, and `unfixable` when its cluster exhausts `MAX_FIX_ATTEMPTS` (see
   back to Stage 1 for the next review.
 - **No blocker this cycle** (a clean review, non-blocking findings only) → Stage 3
   ([scrutiny-gate.md](scrutiny-gate.md)).
-- **Ceiling reached or loop stalled with blockers open** → carry the open
+- **Budget spent after a fix round** → Stage 3 with the "fixes not re-reviewed"
+  note carried to the handoff.
+- **Loop stalled, or a cluster `unfixable`, with blockers open** → carry the open
   blockers into the handoff as "not PR-ready" and stop
   ([status-and-resume.md](status-and-resume.md)).

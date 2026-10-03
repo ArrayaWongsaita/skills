@@ -29,7 +29,7 @@ Stage 1: Two-axis code-review    code-review inline -> normalize findings -> rou
    |  blockers -> Stage 2      no blockers -> Stage 3
    v
 Stage 2: Fix the blockers   cluster -> dispatch or inline -> one fix(review): commit
-   |  -> back to Stage 1   (code budget: three cycles, early stop on no progress)
+   |  -> back to Stage 1   (code budget: 1 round by default, --rounds up to 3, early stop on no progress)
    v
 Stage 3: System scrutinize -- only if cross-cutting or risky
    |  skip -> Stage 4 with a note      run -> scrutinize inline -> sub-loop
@@ -73,6 +73,16 @@ Run options, set once at invocation:
 - `--model <id>` — pass this model to every worker as a raw value. Omitted by
   default, so workers inherit the orchestrator's model and the skill stays
   portable across harnesses.
+- `--rounds <n>` — the **code-review round budget**, `1`–`3`. **Default `1`**: one
+  two-axis review, one round of fixes, no re-review. Raise it when the first pass
+  is not enough; `3` is the hard ceiling.
+- `--scrutinize-rounds <n>` — the **scrutinize round budget**, `1`–`6`. **Default
+  `1`**: one inline pass, with at most one `fix-then-ship` fix. `6` is the hard
+  ceiling.
+
+The chosen budgets are recorded in `review-status.md` (`code_budget`,
+`scrutinize_budget`). They can be raised later without starting over — see
+`continue` below.
 
 Codex policy is declared in `agents/openai.yaml`
 (`allow_implicit_invocation: false`). Claude Code installations rely on
@@ -83,10 +93,14 @@ A run or a sub-command begins only on an explicit human invocation.
 
 Detailed in [references/status-and-resume.md](references/status-and-resume.md).
 
-- `/review-to-pr continue [slug]` — resume an interrupted run with Reality
-  reconciliation: confirm the branch and its recorded `fix(review):` commits
-  still exist, re-run `code-review` and the full suite, re-open any finding whose
-  fix no longer holds, then resume from the recorded stage.
+- `/review-to-pr continue [slug] [--rounds <n>] [--scrutinize-rounds <n>]` —
+  resume an interrupted run, **or extend a finished one** with more rounds, with
+  Reality reconciliation: confirm the branch and its recorded `fix(review):`
+  commits still exist, re-run `code-review` and the full suite, re-open any
+  finding whose fix no longer holds, then resume from the recorded stage. The
+  `--rounds` / `--scrutinize-rounds` values are new totals (at least the
+  rounds already spent, at most the ceilings); the spent cycle counts carry
+  over, so `--rounds 3` after a default run adds two more reviews.
 - `/review-to-pr status [slug]` — the cycle history and the findings ledger,
   read-only.
 
@@ -136,10 +150,13 @@ nor merged. Normalize each finding to blocking or non-blocking by the
 `gates.md` "Code normalization" rule, and record every finding in the ledger.
 Route on the result: any blocker → Stage 2; none → Stage 3.
 
-The code budget is **three completed two-axis reviews**. Editing between reviews
-consumes no cycle. A cycle that resolves no blocker and turns up nothing new ends
-the loop early with a report — a fix cycle that moved nothing will move nothing
-on a retry.
+The code budget is `--rounds` **completed two-axis reviews** — **1 by default**,
+three at most. Editing between reviews consumes no cycle. When the last budgeted
+review reports blockers, Stage 2 still fixes them, but no further review runs: the
+handoff records "fixes not re-reviewed" and the `continue --rounds <n>` command to
+add rounds. A cycle that resolves no blocker and turns up nothing new ends the
+loop early with a report — a fix cycle that moved nothing will move nothing on a
+retry.
 
 ## Stage 2 — Fix the blockers
 
@@ -179,7 +196,8 @@ surfaced a structural finding.
   typecheck → code-review → scrutinize`, with the `code-review` step always run;
   `reject` → stop and report the single biggest reason for a human decision.
 
-The scrutinize budget is **six cycles, independent of the code budget**. The same
+The scrutinize budget is `--scrutinize-rounds` cycles — **1 by default**, six at
+most — **independent of the code budget**. The same
 blocking findings surviving two consecutive cycles end the sub-loop early. The
 handoff always records whether the gate ran and why.
 
@@ -187,7 +205,7 @@ handoff always records whether the gate ran and why.
 
 A fresh `Explore` verifier runs the whole project typecheck and the whole test
 suite on the integration branch `HEAD`. Green → Stage 5. Red → the failure is a
-new blocker: back to Stage 2 for one code cycle. If the code ceiling is already
+new blocker: back to Stage 2 for one code cycle. If the code budget is already
 spent, stop and report the red suite as unresolved — not PR-ready.
 
 ## Stage 5 — Handoff
@@ -197,13 +215,16 @@ Print the handoff and stop:
 ```text
 Integration branch <branch> is reviewed.
 
-code-review:  <clean | N fix(review): commits landed>   cycles: <n>/3
+code-review:  <clean | N fix(review): commits landed>   cycles: <n>/<budget> (max 3)
+              <fixes not re-reviewed — budget spent | omit>
 scrutinize:   <ran: <checklist item> — <verdict> | self-contained — skipped>
 full suite:   green on <HEAD sha>
 
 fix(review): commits added:
   <sha>  fix(review): <summary>
   ...
+
+Want a deeper pass?  /review-to-pr continue --rounds <n> [--scrutinize-rounds <n>]
 
 The next commands, in a fresh context — the Retro, then the PR:
 /retro-to-remedies
@@ -222,8 +243,8 @@ stays the primary path.
 
 Follow [references/status-and-resume.md](references/status-and-resume.md). Run
 state lives in `.scratch/<feature-slug>/review-status.md` — `review_point`,
-`feature_slug`, `integration_branch`, `spec_source`, `stage`, `code_cycles`,
-`scrutinize_cycles`, the `findings` ledger (`{id, axis, status, cluster}`), and
+`feature_slug`, `integration_branch`, `spec_source`, `stage`, `code_budget`,
+`code_cycles`, `scrutinize_budget`, `scrutinize_cycles`, the `findings` ledger (`{id, axis, status, cluster}`), and
 the `fix_commits` list. The file is the whole record; a crash or a closed session
 loses nothing.
 

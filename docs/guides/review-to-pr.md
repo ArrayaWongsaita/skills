@@ -26,8 +26,9 @@ Skill นี้จะนำ Branch ดังกล่าวมาผ่านก
 3. **มี System Scrutinize Gate เมื่อเข้าเกณฑ์เสี่ยง:**
    - หาก Diff ของโค้ดแตะส่วนสำคัญของระบบ (Routing, Auth, Database Schema, Migrations, Shared Config, หรือกระทบหลายโมดูล) จะเรียก `scrutinize` เข้ามาตรวจเชิงสถาปัตยกรรมทั้งระบบ
 4. **จำกัดงบประมาณการรีวิวเพื่อไม่ให้วนลูปไม่รู้จบ (Bounded Loops):**
-   - Code Review จำกัดไม่เกิน **3 รอบ**
-   - Scrutinize Gate จำกัดไม่เกิน **6 รอบ**
+   - ค่าเริ่มต้นประหยัดสุด: Code Review **1 รอบ** และ Scrutinize Gate **1 รอบ**
+   - เลือกเพิ่มได้ด้วย `--rounds <n>` (สูงสุด **3**) และ `--scrutinize-rounds <n>` (สูงสุด **6**) หรือเพิ่มทีหลังด้วย `/review-to-pr continue --rounds <n>`
+   - รอบสุดท้ายยังแก้ blocker แต่ไม่ review ซ้ำ handoff จะระบุไว้
    - มีระบบตรวจจับการไม่คืบหน้า (No-progress / Stall detection) เพื่อหยุดแจ้งมนุษย์ทันทีหากแก้ไม่ตรงจุด
 5. **หยุดก่อนเปิด PR (Safe Terminal Stance):**
    - ทำงานเสร็จแล้วจะส่งมอบรายงานพร้อมแนะนำคำสั่ง `/retro-to-remedies` เพื่อเก็บบทเรียนของ Run ก่อน แล้วจึง `/pr-to-dev` โดยไม่ทำการ `git push` หรือสร้าง PR ขึ้น GitHub เองโดยพลการ
@@ -74,7 +75,7 @@ npx skills add thananon/9arm-skills --skill scrutinize
 - `/review-to-pr <slug>` — ระบุชื่อ feature directory ใน `.scratch/<slug>/`
 
 **คำสั่งย่อย (Sub-commands):**
-- `/review-to-pr continue [slug]` — กู้คืนการรีวิวที่ค้างอยู่ (ตรวจสอบ branch, commit เดิม และเปิด finding ที่ยังไม่คลี่คลายขึ้นมาใหม่)
+- `/review-to-pr continue [slug] [--rounds <n>] [--scrutinize-rounds <n>]` — กู้คืนการรีวิวที่ค้างอยู่ หรือเพิ่มรอบให้ run ที่จบแล้ว (ตรวจสอบ branch, commit เดิม และเปิด finding ที่ยังไม่คลี่คลายขึ้นมาใหม่; รอบที่ใช้ไปแล้วถูกยกมา)
 - `/review-to-pr status [slug]` — เรียกดูประวัติ cycle และรายการ findings (Read-only)
 
 ---
@@ -101,7 +102,7 @@ Stage 1: Two-axis code-review    code-review inline -> จำแนก blockers 
    │  (มี blockers ➔ Stage 2)    (ผ่านฉลุย / ไม่มี blocker ➔ Stage 3)
    ▼
 Stage 2: Fix the blockers        จัดกลุ่ม -> สั่งแก้ (inline หรือ worker) -> commit fix(review):
-   │  (เสร็จแล้ววนกลับไป Stage 1 เพื่อรีวิวซ้ำ สูงสุด 3 รอบ)
+   │  (เสร็จแล้ววนกลับไป Stage 1 เพื่อรีวิวซ้ำ ตามงบ --rounds ค่าเริ่มต้น 1 สูงสุด 3)
    ▼
 Stage 3: System scrutinize       ประเมินเกณฑ์ความเสี่ยง (ADR 0003) -> ถ้าเข้าเกณฑ์ให้รัน scrutinize
    ▼
