@@ -27,11 +27,11 @@
 `retro-to-remedies` วางตัวอยู่ในขั้นตอนสำคัญของ engineering pipeline:
 
 ```text
-review-to-pr ──► retro-to-remedies ──► pr-to-dev
+review-to-pr ──► retro-to-remedies ──► pr-to-base
 ```
 
 - **รับช่วงต่อจาก `review-to-pr`**: เมื่อการรีวิวโค้ดสองแกนผ่านพ้นและชุดทดสอบเขียวทั้งหมดแล้ว `review-to-pr` จะแนะนำให้เรียกใช้ `/retro-to-remedies`
-- **ส่งต่อไปยัง `pr-to-dev`**: หลังจาก Text remedies ถูก commit ลงบน integration branch และ Code remedies ถูกแปลงเป็น prompt ส่งมอบแล้ว ผู้ใช้จึงรัน `/pr-to-dev` เพื่อเปิด Pull Request ต่อไป ทำให้ Pull Request นั้นแบกรับทั้งตัวฟีเจอร์และบทเรียนที่ได้จากฟีเจอร์นั้นไปพร้อมกัน
+- **ส่งต่อไปยัง `pr-to-base`**: หลังจาก Text remedies ถูก commit ลงบน integration branch และ Code remedies ถูกแปลงเป็น prompt ส่งมอบแล้ว ผู้ใช้จึงรัน `/pr-to-base` เพื่อเปิด Pull Request ต่อไป ทำให้ Pull Request นั้นแบกรับทั้งตัวฟีเจอร์และบทเรียนที่ได้จากฟีเจอร์นั้นไปพร้อมกัน
 
 ---
 
@@ -130,7 +130,7 @@ Stage 1 ทำหน้าที่นำ Misses ทั้งหมดมาป�
   - **Prune**: ลบบรรทัดคำสั่งที่ล้าสมัยออกจาก instruction file ที่ถืออยู่ (`AGENTS.md`, `CLAUDE.md`, หรือ `CODING_STANDARDS.md`)
 - **กฎ 1 Commit ต่อ 1 Remedy และการบันทึก Retro Log**: commit การเปลี่ยนแปลง Text remedies แต่ละข้อที่อนุมัติลงบน working branch แยกจากกันเป็น `chore(retro): <remedy>` (สามรายการที่อนุมัติจะได้ 3 commits) พร้อมกับ entry ของ Remedy นั้นใน `docs/retro-log.md` ใน commit เดียวกัน และบันทึก SHA ของแต่ละ commit กลับลงในรายงาน Retro report ส่วนผลลัพธ์อื่นๆ ทั้งหมดจะถูก commit ใน commit สุดท้าย `chore(retro): log <feature-slug>`
 - **รัน Check Scripts หนึ่งรอบ**: รัน script ตรวจสอบที่มีอยู่ในโปรเจกต์ (`validate`, `check`, `lint`, `test`) อย่างละหนึ่งรอบ หากมีคำสั่งใดล้มเหลว (ผลเป็นสีแดง) จะหยุดทำงานทันทีก่อนเข้าสู่ handoff พร้อมระบุชื่อคำสั่งที่ล้มเหลวและ commit ที่ตามหลัง
-- **การส่งมอบ (Handoff)**: แสดง ready-to-run prompt สำหรับ Code remedies (เช่น `/grill-to-tickets` สำหรับ Check, Skill fix, Access) ที่ตอบรับด้วย `hand off` (รายการเหล่านี้จะไม่ถูก apply หรือ commit ในรอบนี้) จากนั้นพิมพ์ `/pr-to-dev` เป็นขั้นตอนถัดไป โดยการรันจะไม่ทำการ `git push`, ไม่เปิด pull request, และเปิด GitHub issue เฉพาะเมื่อผู้ใช้ร้องขออย่างชัดเจนเท่านั้น
+- **การส่งมอบ (Handoff)**: แสดง ready-to-run prompt สำหรับ Code remedies (เช่น `/grill-to-tickets` สำหรับ Check, Skill fix, Access) ที่ตอบรับด้วย `hand off` (รายการเหล่านี้จะไม่ถูก apply หรือ commit ในรอบนี้) จากนั้นพิมพ์ `/pr-to-base` เป็นขั้นตอนถัดไป โดยการรันจะไม่ทำการ `git push`, ไม่เปิด pull request, และเปิด GitHub issue เฉพาะเมื่อผู้ใช้ร้องขออย่างชัดเจนเท่านั้น
 
 ---
 

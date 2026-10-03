@@ -36,10 +36,10 @@ Print the handoff and stop. It names:
 - the **green-suite confirmation** — the `HEAD` SHA the full suite passed on;
 - the **`fix(review):` commits added**, sha + summary, in fix order;
 - any **non-blocking findings carried, not fixed**;
-- the **`/retro-to-remedies` command**, then the **`/pr-to-dev` command**, to run
+- the **`/retro-to-remedies` command**, then the **`/pr-to-base` command**, to run
   next in a fresh context.
 
-The run performs **no PR step** — no `git push`, no `gh`, no `/pr-to-dev`. Opening
+The run performs **no PR step** — no `git push`, no `gh`, no `/pr-to-base`. Opening
 the PR is the next command, run by hand. This is the same terminal stance
 `implement-tickets` takes toward `/code-review`.
 

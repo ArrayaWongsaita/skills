@@ -579,14 +579,14 @@ describe("review-to-pr skill contract", () => {
         assert.match(s, /scrutinize/);
         assert.match(s, /fix\(review\):/);
         assert.match(s, /green.*suite|suite.*green/i);
-        assert.match(s, /\/pr-to-dev/);
+        assert.match(s, /\/pr-to-base/);
         assert.match(s, /no `?git push`?/i);
         assert.match(s, /no `?gh`?/i);
-        assert.match(s, /no PR step|no `?\/pr-to-dev`?/i);
+        assert.match(s, /no PR step|no `?\/pr-to-base`?/i);
       }
-      // the run must not instruct an actual push / gh / pr-to-dev call
+      // the run must not instruct an actual push / gh / pr-to-base call
       for (const body of await skillBodies()) {
-        assert.doesNotMatch(body, /run `?\/pr-to-dev`?|execute `?gh pr|`git push` origin/i);
+        assert.doesNotMatch(body, /run `?\/pr-to-base`?|execute `?gh pr|`git push` origin/i);
       }
     });
 
@@ -632,14 +632,14 @@ describe("review-to-pr skill contract", () => {
       }
     });
 
-    it("asserts the handoff order (/retro-to-remedies before /pr-to-dev) and the partial-report order (after /review-to-pr continue)", async () => {
+    it("asserts the handoff order (/retro-to-remedies before /pr-to-base) and the partial-report order (after /review-to-pr continue)", async () => {
       for (const body of await skillBodies()) {
         const s = stageSection(body, 5);
         assert.ok(s, "Stage 5 section present");
         assert.match(
           s,
-          /\/retro-to-remedies\s*\n\s*\/pr-to-dev/,
-          "Stage 5 handoff block prints /retro-to-remedies on the line before /pr-to-dev",
+          /\/retro-to-remedies\s*\n\s*\/pr-to-base/,
+          "Stage 5 handoff block prints /retro-to-remedies on the line before /pr-to-base",
         );
       }
       for (const dir of skillDirs) {

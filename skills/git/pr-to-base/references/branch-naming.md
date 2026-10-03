@@ -32,9 +32,9 @@ A branch collision is not proof that an existing branch belongs to this task.
 
 ## Protected branch cases
 
-- On dev: compare dev to origin/dev. If dev has local-only commits, inspect messages and diffs. Continue only when they are clearly the requested coherent work and no unrelated history would enter the PR; otherwise stop.
-- On main or master: never commit. Only branch automatically if HEAD has no unique commits relative to origin/dev and can be safely rebased; otherwise stop.
-- On an existing working branch: reuse it when history relative to origin/dev is coherent. Do not create a nested branch merely to change its name.
+- On the base branch (or dev): compare the local branch to its origin counterpart. If it has local-only commits, inspect messages and diffs. Continue only when they are clearly the requested coherent work and no unrelated history would enter the PR; otherwise stop.
+- On main or master: never commit. Only branch automatically if HEAD has no unique commits relative to origin/<base> and can be safely rebased; otherwise stop.
+- On an existing working branch: reuse it when history relative to origin/<base> is coherent. Do not create a nested branch merely to change its name.
 - On detached HEAD: stop and report. Do not guess a branch name or move the user to a new base.
 
 Branch creation carries the current worktree forward. Do not stash just to switch branches and do not discard the user's index.

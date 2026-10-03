@@ -40,7 +40,7 @@ Add a body only when the staged change needs rationale, migration ordering, comp
 
 ## PR title
 
-Use the overall coherent task from origin/dev...HEAD. If several commits form one task, write a broader title that remains accurate. The PR title may match the main commit but must be based on the complete PR diff.
+Use the overall coherent task from origin/<base>...HEAD. If several commits form one task, write a broader title that remains accurate. The PR title may match the main commit but must be based on the complete PR diff.
 
 ## Validation
 

@@ -40,11 +40,11 @@
     },
     {
       "id": 4,
-      "name": "the run stops before the PR and hands off /pr-to-dev",
+      "name": "the run stops before the PR and hands off /pr-to-base",
       "prompt": "/review-to-pr .scratch/handoff-demo/ — the code-review loop came back clean, the system gate was skipped as self-contained, and the full suite is green.",
-      "expected_output": "Stage 5 prints the handoff: the integration branch name, the code-review verdict (clean), the scrutinize line (self-contained — skipped), the green-suite confirmation, the fix(review): commits (none), and the /pr-to-dev command to run next in a fresh context. The run performs no PR step — no git push, no gh, no /pr-to-dev.",
+      "expected_output": "Stage 5 prints the handoff: the integration branch name, the code-review verdict (clean), the scrutinize line (self-contained — skipped), the green-suite confirmation, the fix(review): commits (none), and the /pr-to-base command to run next in a fresh context. The run performs no PR step — no git push, no gh, no /pr-to-base.",
       "expectations": [
-        "Prints the branch, the code-review and scrutinize verdicts, the green-suite line, and the /pr-to-dev command",
+        "Prints the branch, the code-review and scrutinize verdicts, the green-suite line, and the /pr-to-base command",
         "Runs no git push and no gh, and opens no pull request",
         "Leaves opening the PR as the next command the user runs by hand"
       ],
@@ -487,11 +487,11 @@
     },
     {
       "id": 41,
-      "name": "the clean handoff prints /retro-to-remedies on the line before /pr-to-dev",
+      "name": "the clean handoff prints /retro-to-remedies on the line before /pr-to-base",
       "prompt": "/review-to-pr .scratch/handoff-demo/ — the code-review loop came back clean, the system gate was skipped as self-contained, and the full suite is green.",
-      "expected_output": "Stage 5 prints the handoff and ends with the two next commands in a fresh context: /retro-to-remedies on the line before /pr-to-dev. The run performs no PR step — no git push, no gh, no /pr-to-dev.",
+      "expected_output": "Stage 5 prints the handoff and ends with the two next commands in a fresh context: /retro-to-remedies on the line before /pr-to-base. The run performs no PR step — no git push, no gh, no /pr-to-base.",
       "expectations": [
-        "Prints /retro-to-remedies on the line before /pr-to-dev",
+        "Prints /retro-to-remedies on the line before /pr-to-base",
         "Keeps the run free of any PR step",
         "Leaves both commands for the user to run by hand"
       ],

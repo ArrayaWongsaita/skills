@@ -38,7 +38,7 @@ Stage 4: Full suite green   fresh verifier runs the whole typecheck + whole suit
    |  red -> new blocker -> Stage 2
    v
 Stage 5: Handoff   branch, verdicts, fix commits, green-suite line
-         /retro-to-remedies -> /pr-to-dev, run by hand; no PR step
+         /retro-to-remedies -> /pr-to-base, run by hand; no PR step
 ```
 
 ## Invocation
@@ -228,10 +228,10 @@ Want a deeper pass?  /review-to-pr continue --rounds <n> [--scrutinize-rounds <n
 
 The next commands, in a fresh context — the Retro, then the PR:
 /retro-to-remedies
-/pr-to-dev
+/pr-to-base
 ```
 
-The run performs no PR step — no `git push`, no `gh`, no `/pr-to-dev` — the same
+The run performs no PR step — no `git push`, no `gh`, no `/pr-to-base` — the same
 terminal stance `implement-tickets` takes toward `/code-review`. A run that
 ended with `unfixable` blockers or a red suite prints the partial report from
 [references/status-and-resume.md](references/status-and-resume.md) instead: the
@@ -258,9 +258,9 @@ loses nothing.
 - Fix commits are `fix(review):` commits appended to the integration branch, one
   per cluster, in the order the fixes are made. They stay their own commits
   rather than folding into a ticket commit (feature ADR 0002).
-- The run performs no PR step — `git push`, `gh`, `/pr-to-dev`, and issue-tracker
+- The run performs no PR step — `git push`, `gh`, `/pr-to-base`, and issue-tracker
   updates are all left for the human. The handoff prints the `/retro-to-remedies`
-  and `/pr-to-dev` commands; running them is the next step, by hand.
+  and `/pr-to-base` commands; running them is the next step, by hand.
 - Keep `engineering-workflow`, `grill-to-tickets`, `agy-implement`,
   `implement-tickets`, every `mattpocock/skills`-sourced file, and
   `skills-lock.json` exactly as they are — this skill is standalone by design

@@ -43,7 +43,7 @@ branch เช่น `implement-tickets/foo` ได้ `foo`; ตัวอย่�
 - อยาก review `spec.md` ก่อนแตก ticket — นั่นคือ Design Review Gate ของ
   `grill-to-tickets`
 - เป็น branch แก้บั๊กหรือ incident — v1 รองรับเฉพาะ feature integration branch
-- อยากให้เปิด PR ให้ด้วย — skill นี้ปริ้นต์คำสั่ง `/pr-to-dev` แต่ไม่รันเอง
+- อยากให้เปิด PR ให้ด้วย — skill นี้ปริ้นต์คำสั่ง `/pr-to-base` แต่ไม่รันเอง
 
 ### วิธีทำงานหลัก
 
@@ -65,7 +65,7 @@ review point, `/review-to-pr <slug>` เพื่อระบุ feature directo
 5. **Stage 4 — suite เขียว**: verifier สด รัน typecheck เต็มและ test suite เต็มบน
    integration branch, red → blocker ใหม่กลับ Stage 2
 6. **Stage 5 — handoff**: ปริ้นต์ branch, verdict, `fix(review):` commit, บรรทัด suite
-   เขียว, และคำสั่ง `/retro-to-remedies` ก่อน `/pr-to-dev` — ไม่ push ไม่เปิด PR
+   เขียว, และคำสั่ง `/retro-to-remedies` ก่อน `/pr-to-base` — ไม่ push ไม่เปิด PR
 
 sub-command: `continue` resume พร้อม Reality reconciliation, `status` อ่านอย่างเดียว
 
@@ -136,7 +136,7 @@ npx skills add ArrayaWongsaita/skills --skill review-to-pr
   `grill-to-tickets`'s Design Review Gate.
 - The branch is a bug fix or an incident — v1 accepts feature integration
   branches only.
-- You want the PR opened for you — this skill prints the `/pr-to-dev` command and
+- You want the PR opened for you — this skill prints the `/pr-to-base` command and
   runs no PR step.
 
 ### Main workflow
@@ -170,7 +170,7 @@ the feature slug from the integration branch: `implement-tickets/foo` gives
    back to Stage 2.
 6. **Stage 5 — Handoff**: print the branch, the verdicts, the `fix(review):`
    commits, the green-suite line, and the `/retro-to-remedies` command on the
-   line before `/pr-to-dev`. It never pushes or opens a PR.
+   line before `/pr-to-base`. It never pushes or opens a PR.
 
 Sub-commands: `continue` resumes with Reality reconciliation; `status` is
 read-only.

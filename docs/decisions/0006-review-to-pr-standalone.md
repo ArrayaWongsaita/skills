@@ -52,8 +52,8 @@ it by skill name only and builds from `main` regardless of merge order.
    or `skills-lock.json`. Its references to the implement siblings are
    skill-name mentions, not file links, so it builds and validates from `main`
    regardless of merge order.
-4. It stops before the PR — the handoff prints the `/pr-to-dev` command and the
-   run performs no PR step: no `git push`, no `gh`, no `/pr-to-dev`.
+4. It stops before the PR — the handoff prints the `/pr-to-base` command and the
+   run performs no PR step: no `git push`, no `gh`, no `/pr-to-base`.
 
 การตัดสินใจ: สร้าง `review-to-pr` เป็น skill standalone เต็มตัว เป็นเจ้าของ machinery
 ของตัวเอง ไม่แก้และไม่พึ่ง skill อื่น และหยุดก่อนเปิด PR

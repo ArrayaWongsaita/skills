@@ -1,5 +1,5 @@
 {
-  "skill_name": "pr-to-dev",
+  "skill_name": "pr-to-base",
   "evals": [
     {
       "id": 1,
@@ -222,11 +222,50 @@
       "id": 19,
       "name": "unrelated git operation active",
       "prompt": "Create a PR to dev while an unrelated revert or normal git bisect session is already active in the worktree.",
-      "expected_output": "Detect the actual REVERT_HEAD or BISECT_START marker, stop before starting pr-to-dev, leave the operation and user work untouched, and allow resume only with unambiguous evidence that an operation belongs to this workflow.",
+      "expected_output": "Detect the actual REVERT_HEAD or BISECT_START marker, stop before starting pr-to-base, leave the operation and user work untouched, and allow resume only with unambiguous evidence that an operation belongs to this workflow.",
       "expectations": [
         "Checks marker existence rather than treating git-path output as active state",
         "Detects normal bisect through BISECT_START rather than relying only on BISECT_HEAD",
         "Does not guess operation ownership or begin mutations on top of it"
+      ],
+      "files": []
+    },
+    {
+      "id": 20,
+      "name": "default base is dev when none is named",
+      "prompt": "/pr-to-base — open a PR for my current feature branch. No branch is mentioned and the repository default branch is main.",
+      "expected_output": "Resolve <base> as dev, fetch, verify origin/dev, rebase on origin/dev, and create or update the PR with --base dev, then verify baseRefName is dev.",
+      "expectations": [
+        "Resolves the base as dev without asking",
+        "Does not use the repository default branch main as the base",
+        "Uses origin/dev for rebase, diff and freshness",
+        "Verifies baseRefName is dev"
+      ],
+      "files": []
+    },
+    {
+      "id": 21,
+      "name": "an explicit base branch overrides the default",
+      "prompt": "/pr-to-base release/1.2 — prepare my fix branch for review.",
+      "expected_output": "Resolve <base> as release/1.2, verify origin/release/1.2 exists, rebase onto it, compare the full origin/release/1.2...HEAD diff, push safely, and create or update the PR with --base release/1.2, verifying baseRefName.",
+      "expectations": [
+        "Uses release/1.2 as <base> for every state, not dev",
+        "Rebases on origin/release/1.2 and checks base freshness against it",
+        "Creates or updates the PR with explicit base release/1.2",
+        "Reports the branch as <branch> → release/1.2"
+      ],
+      "files": []
+    },
+    {
+      "id": 22,
+      "name": "a missing base branch stops without fallback",
+      "prompt": "/pr-to-base staging-next — the remote has no staging-next branch.",
+      "expected_output": "After fetch, origin/staging-next does not exist, so stop and name the branch. Do not fall back to dev or the default branch and do not create a PR.",
+      "expectations": [
+        "Verifies origin/<base> after fetch",
+        "Stops naming the missing branch",
+        "Does not fall back to dev or main",
+        "Creates no branch, commit or PR"
       ],
       "files": []
     }
