@@ -1,6 +1,6 @@
 # PR description and template integration
 
-The PR body is derived from the complete origin/dev...HEAD diff, commit history, validation evidence, and repository instructions. It is not a restatement of the latest commit.
+The PR body is derived from the complete origin/<base>...HEAD diff, commit history, validation evidence, and repository instructions. It is not a restatement of the latest commit.
 
 ## Template discovery
 
@@ -71,7 +71,7 @@ Quote the signal-carrying lines rather than whole logs, and redact secrets, toke
 
 ## Merge Danger
 
-Judge both lines from the complete origin/dev...HEAD diff, the same inspection the Breaking, Database, and Security sections rely on.
+Judge both lines from the complete origin/<base>...HEAD diff, the same inspection the Breaking, Database, and Security sections rely on.
 
 - **Door:** two-way when reverting the merge fully undoes it: code-only, no persisted data, no external contract. One-way when a revert leaves something behind: a migration or backfill, a changed on-wire or on-disk format, a public API or event that other systems consume, deleted data, sent messages, or a published package. Name the one-way part.
 - **Blast radius:** one word for who or what feels a bad merge (`isolated`, `module`, `service`, `consumers`, `users`, `data`), then the concrete ramifications worth checking, such as layout shift, broken consumers, mobile, performance, or permissions.
@@ -92,6 +92,6 @@ Fetch the existing body first. Preserve useful human-written sections, reviewer 
 
 Use a temporary reviewed body file when invoking gh:
 
-    gh pr create --base dev --head <branch> --title "<title>" --body-file <body-file>
+    gh pr create --base <base> --head <branch> --title "<title>" --body-file <body-file>
 
 The explicit base is part of the invariant. Verify the resulting PR independently.

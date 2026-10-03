@@ -1,25 +1,25 @@
-# คู่มือการติดตั้งและใช้งาน Skill: pr-to-dev
+# คู่มือการติดตั้งและใช้งาน Skill: pr-to-base
 
 - **หมวดหมู่ (Category):** `git`
 - **แหล่งติดตั้ง (Install Source):** `ArrayaWongsaita/skills`
-- **ไฟล์นิยามหลัก (Definition):** [`skills/git/pr-to-dev/SKILL.md`](../../skills/git/pr-to-dev/SKILL.md)
+- **ไฟล์นิยามหลัก (Definition):** [`skills/git/pr-to-base/SKILL.md`](../../skills/git/pr-to-base/SKILL.md)
 
 ---
 
-## 1. pr-to-dev คืออะไรและมีไว้สำหรับทำอะไร?
+## 1. pr-to-base คืออะไรและมีไว้สำหรับทำอะไร?
 
-`pr-to-dev` เป็น **Git & GitHub Automation Skill** ที่ทำหน้าที่จัดเตรียมงานที่กำลังทำอยู่ในเครื่องอย่างปลอดภัยให้อยู่บน Working Branch ที่ผ่านการตรวจสอบแล้ว จากนั้นสร้างหรืออัปเดต Pull Request ที่มี Base ชี้ไปยัง branch `dev` โดยอัตโนมัติ
+`pr-to-base` เป็น **Git & GitHub Automation Skill** ที่ทำหน้าที่จัดเตรียมงานที่กำลังทำอยู่ในเครื่องอย่างปลอดภัยให้อยู่บน Working Branch ที่ผ่านการตรวจสอบแล้ว จากนั้นสร้างหรืออัปเดต Pull Request ที่มี Base ชี้ไปยัง **base branch** ที่ระบุ (ค่าเริ่มต้นคือ `dev`) โดยอัตโนมัติ
 
-จุดเด่นสำคัญที่สุดของ `pr-to-dev` คือเป็น **State Machine ที่เน้นความปลอดภัยสูงสุด (Strict Safety Invariants)** ไม่ใช่เป็นเพียงสคริปต์รันคำสั่ง Git ทั่วไป มันจะไม่ยอมให้โค้ดพัง, ไม่เสี่ยงต่อการ Push ทับงานผู้อื่น และไม่ทำให้งานในเครื่องสูญหาย
+จุดเด่นสำคัญที่สุดของ `pr-to-base` คือเป็น **State Machine ที่เน้นความปลอดภัยสูงสุด (Strict Safety Invariants)** ไม่ใช่เป็นเพียงสคริปต์รันคำสั่ง Git ทั่วไป มันจะไม่ยอมให้โค้ดพัง, ไม่เสี่ยงต่อการ Push ทับงานผู้อื่น และไม่ทำให้งานในเครื่องสูญหาย
 
 ### กฎความปลอดภัยที่เข้มงวด (Hard Safety Rules)
-1. **ห้าม Commit งานลงบน `dev`, `main`, หรือ `master` เด็ดขาด**
-2. **ยึด `origin/dev` เป็นฐานบูรณาการหลักเสมอ** (ไม่ใช้ local dev ที่อาจล้าสมัย)
+1. **ห้าม Commit งานลงบน `<base>`, `dev`, `main`, หรือ `master` เด็ดขาด**
+2. **ยึด `origin/<base>` เป็นฐานบูรณาการหลักเสมอ** (ไม่ใช้ local branch ที่อาจล้าสมัย; `<base>` คือ `dev` เว้นแต่ผู้ใช้ระบุอย่างอื่น)
 3. **ห้ามใช้ `git add .` หรือ `git add -A` แบบสุ่มสี่สุ่มห้า:** บังคับเลือก Stage เฉพาะไฟล์ที่ผ่านการตรวจสอบแล้ว (Selective Staging) ป้องกันไม่ให้ไฟล์ความลับ (.env, credentials) หรือไฟล์ชั่วคราวหลุดเข้าไป
 4. **ห้ามใช้ `git push --force` เด็ดขาด:** บังคับใช้ `--force-with-lease` ที่ระบุ Expected SHA แบบเจาะจงเมื่อต้องเขียนประวัติทับ
-5. **ตรวจสอบความสดใหม่ (Freshness Check) ก่อน Push:** ตรวจสอบว่า `origin/dev` มีคนอื่น Push เข้ามาก่อนหน้าหรือไม่ ถ้ามี จะทำ Safe Rebase ซ้ำสูงสุด 2 ครั้ง
+5. **ตรวจสอบความสดใหม่ (Freshness Check) ก่อน Push:** ตรวจสอบว่า `origin/<base>` มีคนอื่น Push เข้ามาก่อนหน้าหรือไม่ ถ้ามี จะทำ Safe Rebase ซ้ำสูงสุด 2 ครั้ง
 6. **ไม่ตัดสินใจเดาเองเมื่อเจอ Semantic Conflict:** หาก Rebase ติดขัดในส่วนที่มีความเสี่ยงสูง (เช่น Auth, Permissions, Database Migration, การคำนวณเงิน) จะหยุดและแจ้งผู้ใช้ทันที
-7. **ป้องกันการเปิด PR ซ้ำซ้อน (Idempotent):** หากมี PR ของ Branch นี้ที่ชี้ไปที่ `dev` เปิดค้างอยู่แล้ว จะทำการอัปเดตแทนการสร้างใหม่
+7. **ป้องกันการเปิด PR ซ้ำซ้อน (Idempotent):** หากมี PR ของ Branch นี้ที่ชี้ไปที่ `<base>` เปิดค้างอยู่แล้ว จะทำการอัปเดตแทนการสร้างใหม่
 
 ---
 
@@ -46,7 +46,7 @@
 รันคำสั่งติดตั้งตัว skill เดียวได้ทันที:
 
 ```bash
-npx skills add ArrayaWongsaita/skills --skill pr-to-dev
+npx skills add ArrayaWongsaita/skills --skill pr-to-base
 ```
 
 ---
@@ -54,12 +54,13 @@ npx skills add ArrayaWongsaita/skills --skill pr-to-dev
 ## 3. วิธีการใช้งานและขั้นตอนการทำงาน (Usage & Workflow)
 
 ### คำสั่งเรียกใช้งาน (Invocation)
-- Slash command: `/pr-to-dev`
+- Slash command: `/pr-to-base [base]` — ไม่ระบุ base จะใช้ `dev`; เช่น `/pr-to-base main`, `/pr-to-base release/1.2`
 - คำสั่งภาษาธรรมชาติ (Natural Language):
   - "Create PR to dev"
   - "Ship current work to dev"
   - "Prepare my changes for review"
   - "Commit and open a PR targeting dev"
+  - "Open a PR to release/1.2" (ระบุ base อื่นได้ ถ้าไม่ระบุใช้ `dev`)
 
 ---
 
@@ -82,15 +83,15 @@ npx skills add ArrayaWongsaita/skills --skill pr-to-dev
       ↓
 12 CAPTURE_REMOTE_SHA              (บันทึก SHA ปัจจุบันบนรีโมต)
       ↓
-13-14 REBASE_ON_ORIGIN_DEV         (Rebase บน origin/dev พร้อม Conflict Safety Gate)
+13-14 REBASE_ON_ORIGIN_BASE        (Rebase บน origin/<base> พร้อม Conflict Safety Gate)
       ↓
 15 POST_REBASE_VALIDATION          (รันเทสต์ซ้ำหลัง Rebase เพื่อยืนยันว่าไม่พัง)
       ↓
-16-17 VERIFY_DIFF & FRESHNESS      (ตรวจ diff รวมทั้งหมดที่จะปรากฏบน PR และตรวจ dev ซ้ำ)
+16-17 VERIFY_DIFF & FRESHNESS      (ตรวจ diff รวมทั้งหมดที่จะปรากฏบน PR และตรวจ base ซ้ำ)
       ↓
 18 PUSH_WITH_SAFE_LEASE            (Push ขึ้น remote ด้วย safe lease)
       ↓
-19-20 FIND_PR & CREATE_OR_UPDATE   (ค้นหา PR เดิมเพื่ออัปเดต หรือสร้าง PR ใหม่ไปยัง dev)
+19-20 FIND_PR & CREATE_OR_UPDATE   (ค้นหา PR เดิมเพื่ออัปเดต หรือสร้าง PR ใหม่ไปยัง <base>)
       ↓
 21 REPORT                          (รายงานผลลัพธ์พร้อม URL ของ PR ที่สร้างสำเร็จ)
 ```
@@ -101,7 +102,7 @@ npx skills add ArrayaWongsaita/skills --skill pr-to-dev
 
 ### ตัวอย่างที่ 1: เรียกคำสั่งโดยตรงหลังทำรีวิวเสร็จ
 ```text
-/pr-to-dev
+/pr-to-base
 ```
 
 ### ตัวอย่างที่ 2: สั่งด้วยภาษาธรรมชาติ
@@ -141,6 +142,6 @@ https://github.com/my-org/my-app/pull/42
 
 ## 5. ข้อควรระวังและสิ่งที่ไม่ควรใช้
 - **ไม่ใช้สำหรับ Merge หรือ Deploy:** Skill นี้มีหน้าที่เตรียมและสร้าง/อัปเดต Pull Request เท่านั้น จะไม่มีการกด Merge PR, Deploy หรือจัดการ Release
-- **ไม่ใช้สำหรับ PR ที่มีเป้าหมายเป็น `main`:** Skill นี้ถูกออกแบบมาเฉพาะสำหรับ Git Flow ที่เปิดเข้า branch `dev` เท่านั้น
+- **Base ต้องเป็น branch เดียวที่ resolve ได้:** ระบุด้วย argument หรือในคำสั่ง ไม่ระบุใช้ `dev` ไม่เดาจาก default branch ของ repo และถ้า `origin/<base>` ไม่มีจะหยุดโดยไม่ fallback ไป branch อื่น ส่วนการ merge, release, deploy ยังอยู่นอกขอบเขต
 - **ต้องล็อกอิน `gh` ให้เรียบร้อย:** หากไม่ได้ล็อกอิน GitHub CLI ขั้นตอน Preflight จะหยุดการทำงานทันทีเพื่อความปลอดภัย
 - **อย่าวางไฟล์ความลับไว้ใน Worktree:** แม้ว่าจะมีระบบ Selective Staging ป้องกันไว้ แต่เพื่อความปลอดภัยสูงสุด ควรใส่ `.gitignore` ให้เรียบร้อย

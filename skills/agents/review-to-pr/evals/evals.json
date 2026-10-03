@@ -40,11 +40,11 @@
     },
     {
       "id": 4,
-      "name": "the run stops before the PR and hands off /pr-to-dev",
+      "name": "the run stops before the PR and hands off /pr-to-base",
       "prompt": "/review-to-pr .scratch/handoff-demo/ — the code-review loop came back clean, the system gate was skipped as self-contained, and the full suite is green.",
-      "expected_output": "Stage 5 prints the handoff: the integration branch name, the code-review verdict (clean), the scrutinize line (self-contained — skipped), the green-suite confirmation, the fix(review): commits (none), and the /pr-to-dev command to run next in a fresh context. The run performs no PR step — no git push, no gh, no /pr-to-dev.",
+      "expected_output": "Stage 5 prints the handoff: the integration branch name, the code-review verdict (clean), the scrutinize line (self-contained — skipped), the green-suite confirmation, the fix(review): commits (none), and the /pr-to-base command to run next in a fresh context. The run performs no PR step — no git push, no gh, no /pr-to-base.",
       "expectations": [
-        "Prints the branch, the code-review and scrutinize verdicts, the green-suite line, and the /pr-to-dev command",
+        "Prints the branch, the code-review and scrutinize verdicts, the green-suite line, and the /pr-to-base command",
         "Runs no git push and no gh, and opens no pull request",
         "Leaves opening the PR as the next command the user runs by hand"
       ],
@@ -191,7 +191,7 @@
     {
       "id": 16,
       "name": "the third completed two-axis review is the ceiling",
-      "prompt": "/review-to-pr — cycles 1 and 2 each found and fixed blockers. Cycle 3's review still reports one blocker, but it is a newly surfaced one and the two earlier blockers are resolved.",
+      "prompt": "/review-to-pr --rounds 3 — cycles 1 and 2 each found and fixed blockers. Cycle 3's review still reports one blocker, but it is a newly surfaced one and the two earlier blockers are resolved.",
       "expected_output": "code_cycles is 3 — the ceiling. Even though cycle 3 made progress (two resolved, one new), no fourth two-axis review runs. The run stops and reports the one open blocker as unresolved / not PR-ready, with the per-cycle history, and hands over /review-to-pr continue.",
       "expectations": [
         "Treats three completed two-axis reviews as the hard ceiling",
@@ -204,7 +204,7 @@
     {
       "id": 17,
       "name": "a no-progress cycle ends the loop before the ceiling",
-      "prompt": "/review-to-pr — cycle 1 found blocker X and a fix landed. Cycle 2's review still reports X (the fix did not resolve it) and turns up nothing new.",
+      "prompt": "/review-to-pr --rounds 3 — cycle 1 found blocker X and a fix landed. Cycle 2's review still reports X (the fix did not resolve it) and turns up nothing new.",
       "expected_output": "Cycle 2 resolved no blocker and found nothing new — a no-progress cycle. The loop ends here, at cycle 2, before the three-cycle ceiling. Blocker X is marked stalled in the ledger and reported; the run does not mechanically re-review a third time.",
       "expectations": [
         "Detects the no-progress cycle (no blocker resolved, nothing new)",
@@ -398,7 +398,7 @@
     {
       "id": 32,
       "name": "the scrutinize budget is independent of the code budget",
-      "prompt": "/review-to-pr — the Stage 1 code loop already spent all three code cycles resolving blockers. The system gate then triggers and its first scrutinize pass returns fix-then-ship.",
+      "prompt": "/review-to-pr --rounds 3 — the Stage 1 code loop already spent all three code cycles resolving blockers. The system gate then triggers and its first scrutinize pass returns fix-then-ship.",
       "expected_output": "The scrutinize gate runs on its own fresh six-cycle budget — the exhausted three-cycle code budget does not block it. The intra-sub-loop code-review steps consume scrutinize cycles, not the (already spent) code cycles. Passing the code gate never reset the scrutinize count and vice versa.",
       "expectations": [
         "Runs the system gate even though the code budget is spent",
@@ -424,7 +424,7 @@
     {
       "id": 34,
       "name": "a red suite with the code ceiling spent stops and reports unresolved",
-      "prompt": "/review-to-pr — Stage 4. The full suite is red, and all three code cycles are already spent on earlier blockers.",
+      "prompt": "/review-to-pr --rounds 3 — Stage 4. The full suite is red, and all three code cycles are already spent on earlier blockers.",
       "expected_output": "With the code ceiling exhausted, the run cannot open another fix cycle. It stops and reports the red suite as unresolved / not PR-ready, with the failing output, the stage reached, the cycles spent (3/3), and the /review-to-pr continue command. It does not force a green result or open a PR.",
       "expectations": [
         "Stops rather than starting a fourth code cycle",
@@ -487,11 +487,11 @@
     },
     {
       "id": 41,
-      "name": "the clean handoff prints /retro-to-remedies on the line before /pr-to-dev",
+      "name": "the clean handoff prints /retro-to-remedies on the line before /pr-to-base",
       "prompt": "/review-to-pr .scratch/handoff-demo/ — the code-review loop came back clean, the system gate was skipped as self-contained, and the full suite is green.",
-      "expected_output": "Stage 5 prints the handoff and ends with the two next commands in a fresh context: /retro-to-remedies on the line before /pr-to-dev. The run performs no PR step — no git push, no gh, no /pr-to-dev.",
+      "expected_output": "Stage 5 prints the handoff and ends with the two next commands in a fresh context: /retro-to-remedies on the line before /pr-to-base. The run performs no PR step — no git push, no gh, no /pr-to-base.",
       "expectations": [
-        "Prints /retro-to-remedies on the line before /pr-to-dev",
+        "Prints /retro-to-remedies on the line before /pr-to-base",
         "Keeps the run free of any PR step",
         "Leaves both commands for the user to run by hand"
       ],
@@ -507,6 +507,32 @@
         "Prints the /review-to-pr continue command first",
         "Prints /retro-to-remedies after the /review-to-pr continue command",
         "Performs no PR step"
+      ],
+      "files": []
+    },
+    {
+      "id": 43,
+      "name": "the default budget is one round and the last round's fixes are not re-reviewed",
+      "prompt": "/review-to-pr — no flags. The single code-review reports two blockers.",
+      "expected_output": "code_budget defaults to 1, so after this one completed two-axis review no second review starts. Stage 2 still clusters and lands the fix(review): commits, Stage 3 and Stage 4 run, and the handoff says the fixes were not re-reviewed (budget spent) and prints /review-to-pr continue --rounds <n> to add rounds.",
+      "expectations": [
+        "Uses a code budget of 1 and a scrutinize budget of 1 when no flags are given",
+        "Still fixes the blockers from the single review and lands fix(review): commits",
+        "Does not start a second two-axis review",
+        "Notes the fixes were not re-reviewed and prints the continue --rounds command"
+      ],
+      "files": []
+    },
+    {
+      "id": 44,
+      "name": "continue --rounds raises the budget of a finished run",
+      "prompt": "/review-to-pr continue --rounds 3 — the earlier run finished with code_budget 1, code_cycles 1, fixes not re-reviewed.",
+      "expected_output": "Reality reconciliation runs first, then code_budget becomes 3 (clamped to the ceiling, not below the 1 cycle spent). code_cycles carries over as 1, so the run re-enters Stage 1 and runs at most two added reviews, then Stage 4 and the handoff again.",
+      "expectations": [
+        "Reconciles git refs and re-runs the gates before trusting review-status.md",
+        "Sets code_budget to the new total of 3 within the ceiling",
+        "Carries the spent code_cycles over instead of resetting it",
+        "Runs only the added rounds, then Stage 4 and the handoff"
       ],
       "files": []
     }

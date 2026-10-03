@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // PreToolUse guardrail for the Bash tool. Enforces the "Forbidden automatically"
-// git list from skills/git/pr-to-dev/references/safety-rules.md for every agent
+// git list from skills/git/pr-to-base/references/safety-rules.md for every agent
 // working in this repository, so those rules hold even when no skill is loaded.
 //
 // Exit 2 blocks the command and shows stderr to the agent. Any internal error
@@ -13,7 +13,14 @@ import { execFileSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 
-const PROTECTED_BRANCHES = new Set(["main", "master", "dev"]);
+// Extra protected branches (for example a pr-to-base release branch) come from
+// GIT_GUARD_PROTECTED_BRANCHES, a comma-separated list.
+const PROTECTED_BRANCHES = new Set([
+  "main",
+  "master",
+  "dev",
+  ...(process.env.GIT_GUARD_PROTECTED_BRANCHES ?? "").split(",").map((b) => b.trim()).filter(Boolean),
+]);
 const WRAPPERS = new Set(["sudo", "command", "exec", "env", "time", "nohup"]);
 
 // Split a shell command into segments of words. Quotes are honoured, and

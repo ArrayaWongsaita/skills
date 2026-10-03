@@ -276,7 +276,7 @@
       "expectations": [
         "Recognizes Code remedy with user choice hand off",
         "Applies no file changes or commits for the Code remedy",
-        "Prints the /grill-to-tickets prompt in the handoff before /pr-to-dev"
+        "Prints the /grill-to-tickets prompt in the handoff before /pr-to-base"
       ],
       "files": [
         "evals/fixtures/opencode-implement-hosted-model/review-status.md"

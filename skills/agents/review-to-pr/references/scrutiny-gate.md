@@ -1,6 +1,6 @@
 # The conditional system-scrutinize gate (Stage 3)
 
-`scrutinize` is an end-to-end code-path trace with its own six-cycle budget —
+`scrutinize` is an end-to-end code-path trace with its own round budget (default 1, six at most) —
 expensive. On a self-contained feature whose blast radius the code-review Spec
 axis already covered, it mostly restates the code-review result. So Stage 3 runs
 it **only when the integrated change is cross-cutting or risky**. The checklist
@@ -73,22 +73,27 @@ scrutinize → fix → tests or typecheck → code-review → scrutinize
 - **code-review** — run the two-axis `code-review` again. This step is **always
   run** — it is the gate check that a scrutinize fix did not regress a standard
   or the spec. This intra-sub-loop `code-review` **consumes a scrutinize cycle,
-  not a code cycle** — the Stage 1 three-cycle budget is untouched here.
+  not a code cycle** — the Stage 1 code budget is untouched here.
 - **scrutinize** — re-run the inline pass and re-normalize the verdict.
 
 Repeat until `scrutinize` returns `ship`.
 
 ## 5. Budget and early stops
 
-- **The ceiling is six scrutinize cycles**, counted independently of the Stage 1
-  code budget. One completed `scrutinize` review consumes one scrutinize cycle;
+- **The budget is `scrutinize_budget` cycles** — the `--scrutinize-rounds` value,
+  **default 1**, never more than **six scrutinize cycles** (the hard ceiling) —
+  counted independently of the Stage 1 code budget. With the default of 1, a
+  `fix-then-ship` verdict gets its one fix plus tests or typecheck, with no
+  re-review, and the handoff notes "scrutinize fix not re-reviewed"; `rework`
+  and `reject` stop and report, since one round cannot redo them. One completed `scrutinize` review consumes one scrutinize cycle;
   so does the intra-sub-loop `code-review`. Editing between reviews does not.
 - **Stall.** The **same blocking findings surviving two consecutive cycles** —
   with no new and no resolved findings — end the sub-loop early. Report the
   stalled findings rather than mechanically re-reviewing.
-- **Budget exhaustion.** If cycle 6 completes without `ship`, stop and report the
-  unresolved findings and the per-cycle history. **Cycle 7 needs explicit human
-  authorization** and a materially different approach.
+- **Budget exhaustion.** If the last budgeted cycle completes without `ship` (cycle 6 at the ceiling), stop and report the
+  unresolved findings and the per-cycle history. Beyond the ceiling, **cycle 7 needs explicit human
+  authorization** and a materially different approach; below it, the human raises
+  the budget with `/review-to-pr continue --scrutinize-rounds <n>`.
 
 ## 6. The handoff always records the gate
 

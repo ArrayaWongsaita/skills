@@ -24,7 +24,17 @@ function assertAllowed(command, cwd) {
   assert.equal(result.status, 0, `expected "${command}" to be allowed; stderr: ${result.stderr}`);
 }
 
-describe("git guardrail hook: pr-to-dev forbidden actions", () => {
+describe("git guardrail hook: extra protected branches from the environment", () => {
+  it("blocks a push to a branch listed in GIT_GUARD_PROTECTED_BRANCHES and allows it otherwise", () => {
+    const input = JSON.stringify({ tool_name: "Bash", tool_input: { command: "git push origin HEAD:release/1.2" }, cwd: repoRoot });
+    const withEnv = spawnSync(process.execPath, [hookPath], { input, encoding: "utf8", env: { ...process.env, GIT_GUARD_PROTECTED_BRANCHES: "release/1.2, staging" } });
+    assert.equal(withEnv.status, 2, withEnv.stderr);
+    const without = spawnSync(process.execPath, [hookPath], { input, encoding: "utf8", env: { ...process.env, GIT_GUARD_PROTECTED_BRANCHES: "" } });
+    assert.equal(without.status, 0, without.stderr);
+  });
+});
+
+describe("git guardrail hook: pr-to-base forbidden actions", () => {
   const blocked = [
     "git reset --hard",
     "git reset --hard HEAD~1",
@@ -90,7 +100,7 @@ describe("git guardrail hook: command parsing", () => {
 
   it("ignores git text that is only an argument to another command", () => {
     assertAllowed('echo "git reset --hard"');
-    assertAllowed("grep -n 'git push --force' skills/git/pr-to-dev/SKILL.md");
+    assertAllowed("grep -n 'git push --force' skills/git/pr-to-base/SKILL.md");
     assertAllowed('git log --grep "git reset --hard"');
   });
 

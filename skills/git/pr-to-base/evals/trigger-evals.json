@@ -46,5 +46,13 @@
   {
     "query": "Review this existing pull request for security issues.",
     "should_trigger": false
+  },
+  {
+    "query": "Open a PR to release/1.2 for my current changes.",
+    "should_trigger": true
+  },
+  {
+    "query": "Prepare this branch and create the pull request against main.",
+    "should_trigger": true
   }
 ]

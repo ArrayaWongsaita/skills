@@ -1,4 +1,4 @@
-# ADR 0012: retro-to-remedies is a standalone skill between review-to-pr and pr-to-dev
+# ADR 0012: retro-to-remedies is a standalone skill between review-to-pr and pr-to-base
 
 - Date / วันที่: 2026-09-24
 
@@ -6,7 +6,7 @@
 
 Accepted / ยอมรับแล้ว
 
-ยอมรับแล้ว — `retro-to-remedies` เป็น skill แบบ standalone ตั้งอยู่ระหว่าง `review-to-pr` และ `pr-to-dev`
+ยอมรับแล้ว — `retro-to-remedies` เป็น skill แบบ standalone ตั้งอยู่ระหว่าง `review-to-pr` และ `pr-to-base`
 
 ## Context / บริบท
 
@@ -17,7 +17,7 @@ Every completed Run in the engineering workflow (`grill-to-tickets` → implemen
 ## Decision / การตัดสินใจ
 
 1. **Standalone Architecture**: Build `retro-to-remedies` as a fully standalone skill under `skills/agents/retro-to-remedies/`, which is the only tracked copy ([ADR 0011](0011-keep-planning-notes-and-installed-skills-local.md) keeps installed copies out of the repository). It operates independently from other skills and owns its own run-state parsers.
-2. **Placement in the Pipeline (ADR 0004)**: Place the skill between `review-to-pr` and `pr-to-dev` on the integration branch. This ensures all primary sources are finalized before retro analysis begins. Applied text remedies are committed directly on the branch as `chore(retro): <remedy>`, allowing the eventual pull request to carry both the feature changes and the environmental improvements. Refuse invocation on `main`, `master`, or `dev`.
+2. **Placement in the Pipeline (ADR 0004)**: Place the skill between `review-to-pr` and `pr-to-base` on the integration branch. This ensures all primary sources are finalized before retro analysis begins. Applied text remedies are committed directly on the branch as `chore(retro): <remedy>`, allowing the eventual pull request to carry both the feature changes and the environmental improvements. Refuse invocation on `main`, `master`, or `dev`.
 3. **Classification Rule (ADR 0001)**: Classify misses deterministically. Mechanical misses become automated Checks. Judgement misses become Standards in `CODING_STANDARDS.md` or Reuse Catalog rules. Navigation issues become Pointers in `AGENTS.md`. Stale instructions become Prunes. Missing tools or context become Access remedies. Skill issues become Skill fixes.
 4. **Text Remedies vs Code Remedies (ADR 0002)**: The retro directly applies and commits only Text remedies (Standards, Pointers, Prunes) upon user confirmation. Code remedies (Checks, Skill fixes, Access) require implementation and testing, so they are handed off as `/grill-to-tickets` prompts rather than built ad-hoc during the retro.
 5. **Durable Retro Log (ADR 0003)**: Maintain a per-project ledger at `docs/retro-log.md` recording all proposed remedies, underlying misses, and human decisions. This prevents re-proposing declined items and provides the primary signal for identifying recurrence and failed remedies.

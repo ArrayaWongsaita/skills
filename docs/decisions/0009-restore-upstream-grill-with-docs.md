@@ -37,7 +37,7 @@ Keeping the fork cost four things:
    calls are installed.
 3. The full lifecycle lives in the standalone chain
    `grill-to-tickets` → `subagent-implement` (or `agy-implement` /
-   `opencode-implement`) → `review-to-pr` → `pr-to-dev`, or in one run through
+   `opencode-implement`) → `review-to-pr` → `pr-to-base`, or in one run through
    `engineering-workflow`.
 
 ## Consequences / ผลที่ตามมา

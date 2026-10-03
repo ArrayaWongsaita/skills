@@ -170,13 +170,13 @@ describe("retro-to-remedies skill contract", () => {
       assert.match(skillDoc, /^## ภาษาไทย \/ Thai\s*$/m);
       assert.match(skillDoc, /^## English \/ ภาษาอังกฤษ\s*$/m);
       assert.match(skillDoc, /review-to-pr/);
-      assert.match(skillDoc, /pr-to-dev/);
+      assert.match(skillDoc, /pr-to-base/);
       assert.match(skillDoc, /\/retro-to-remedies/);
       assert.match(skillDoc, /npx skills add ArrayaWongsaita\/skills --skill retro-to-remedies/);
 
       const guideDoc = await readFile(path.resolve("docs/guides/retro-to-remedies.md"), "utf8");
       assert.match(guideDoc, /review-to-pr/);
-      assert.match(guideDoc, /pr-to-dev/);
+      assert.match(guideDoc, /pr-to-base/);
       assert.match(guideDoc, /\/retro-to-remedies/);
     });
 
@@ -184,7 +184,7 @@ describe("retro-to-remedies skill contract", () => {
       const adr = await readFile(path.resolve("docs/decisions/0012-retro-to-remedies-standalone.md"), "utf8");
       assert.match(adr, /retro-to-remedies/);
       assert.match(adr, /review-to-pr/);
-      assert.match(adr, /pr-to-dev/);
+      assert.match(adr, /pr-to-base/);
       assert.match(adr, /0001/);
       assert.match(adr, /0002/);
       assert.match(adr, /0003/);
@@ -520,11 +520,11 @@ describe("retro-to-remedies skill contract", () => {
       }
     });
 
-    it("prints Code remedy prompts then /pr-to-dev, never pushes or opens PR, issue only on explicit request", async () => {
+    it("prints Code remedy prompts then /pr-to-base, never pushes or opens PR, issue only on explicit request", async () => {
       for (const dir of skillDirs) {
         const c = await readFile(path.resolve(dir, "references/apply-and-handoff.md"), "utf8");
         assert.match(c, /Code remed(y|ies).*prompt/i);
-        assert.match(c, /\/pr-to-dev/);
+        assert.match(c, /\/pr-to-base/);
         assert.match(c, /pushes nothing|no push|never push/i);
         assert.match(c, /opens no pull request|no PR/i);
         assert.match(c, /GitHub issue only on an explicit request|issue only on.*explicit request/i);
@@ -550,7 +550,7 @@ describe("retro-to-remedies skill contract", () => {
         const handoffText = handoffMatch[0];
         assert.match(handoffText, /completion criterion|completion/i);
         assert.match(handoffText, /Code remed(y|ies).*prompt/i);
-        assert.match(handoffText, /\/pr-to-dev/);
+        assert.match(handoffText, /\/pr-to-base/);
       }
     });
 
@@ -560,14 +560,14 @@ describe("retro-to-remedies skill contract", () => {
       assert.match(skillDoc, /chore\(retro\):\s*<remedy>/);
       assert.match(skillDoc, /CODING_STANDARDS\.md/);
       assert.match(skillDoc, /AGENTS\.md/);
-      assert.match(skillDoc, /\/pr-to-dev/);
+      assert.match(skillDoc, /\/pr-to-base/);
 
       const guideDoc = await readFile(path.resolve("docs/guides/retro-to-remedies.md"), "utf8");
       assert.match(guideDoc, /Stage 2/i);
       assert.match(guideDoc, /chore\(retro\):\s*<remedy>/);
       assert.match(guideDoc, /CODING_STANDARDS\.md/);
       assert.match(guideDoc, /AGENTS\.md/);
-      assert.match(guideDoc, /\/pr-to-dev/);
+      assert.match(guideDoc, /\/pr-to-base/);
     });
   });
 

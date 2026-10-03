@@ -1,16 +1,16 @@
 # Conflict resolution
 
-A rebase conflict is a semantic review gate, not a text-editing exercise. Read repository instructions, the conflicting diff, nearby tests, and the current dev-side contract before choosing a resolution.
+A rebase conflict is a semantic review gate, not a text-editing exercise. Read repository instructions, the conflicting diff, nearby tests, and the current base-side contract before choosing a resolution.
 
 ## Procedure
 
 1. Run git status and list every unmerged path.
 2. Read conflict markers and both staged sides. Inspect parent commits and surrounding code when the marker is insufficient.
 3. Classify each file and behavior as low, medium, or high risk.
-4. Resolve only conflicts whose intended behavior is proven by the request, current branch diff, origin/dev behavior, tests, or repository conventions.
+4. Resolve only conflicts whose intended behavior is proven by the request, current branch diff, origin/<base> behavior, tests, or repository conventions.
 5. Add each resolved path explicitly and run git rebase --continue.
 6. Repeat status and semantic review until rebase completes or a safe stop is required.
-7. After completion, run post-rebase validation and inspect the full origin/dev...HEAD diff.
+7. After completion, run post-rebase validation and inspect the full origin/<base>...HEAD diff.
 
 ## Risk taxonomy
 

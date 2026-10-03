@@ -1,0 +1,6 @@
+interface:
+  display_name: "PR to base"
+  short_description: "Safely prepare and open PRs targeting a base branch (dev by default)"
+  default_prompt: "Use $pr-to-base [base] to prepare the current coherent work and create or update a verified Pull Request targeting the base branch (dev when none is named)."
+policy:
+  allow_implicit_invocation: true

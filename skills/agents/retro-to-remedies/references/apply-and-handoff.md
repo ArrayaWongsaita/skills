@@ -1,6 +1,6 @@
 # Apply and Handoff
 
-Stage 2 applies approved Text remedies, creates individual commits on the working branch, runs verification checks once, and presents the handoff prompts before `/pr-to-dev`.
+Stage 2 applies approved Text remedies, creates individual commits on the working branch, runs verification checks once, and presents the handoff prompts before `/pr-to-base`.
 
 ## Destinations
 
@@ -62,7 +62,7 @@ When all check scripts pass cleanly (green):
    - A Code remedy answered `hand off` appears only as a prompt; it is not applied or committed in this run.
 2. Conclude the handoff by printing:
    ```text
-   /pr-to-dev
+   /pr-to-base
    ```
 
 ### Stance

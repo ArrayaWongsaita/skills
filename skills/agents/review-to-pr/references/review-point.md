@@ -76,6 +76,8 @@ Create `.scratch/<feature-slug>/review-status.md` with, at minimum:
 | `feature_slug` | the resolved slug |
 | `integration_branch` | the current branch name and its `HEAD` SHA |
 | `spec_source` | `spec.md + issues/`, `spec.md`, or `commit-messages` |
+| `code_budget` | `--rounds` value, default `1` (max 3) |
+| `scrutinize_budget` | `--scrutinize-rounds` value, default `1` (max 6) |
 | `stage` | `0 — awaiting approval` |
 
 The full field set (`code_cycles`, `scrutinize_cycles`, the `findings` ledger,

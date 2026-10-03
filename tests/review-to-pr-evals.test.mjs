@@ -196,7 +196,7 @@ describe("review-to-pr eval suite contract", () => {
         "red suite + ceiling spent -> stop": /red suite with the code ceiling spent/i,
         "continue -> Reality reconciliation": /continue reconciles against reality/i,
         "status -> read-only": /status is read-only/i,
-        "handoff -> /pr-to-dev, no PR step": /stops before the PR|no PR step|opens no pull request/i,
+        "handoff -> /pr-to-base, no PR step": /stops before the PR|no PR step|opens no pull request/i,
         "--agent pin and --model pass-through": /--agent pins the fix worker|--model is a raw pass-through/i,
       };
       for (const [label, re] of Object.entries(branches)) {

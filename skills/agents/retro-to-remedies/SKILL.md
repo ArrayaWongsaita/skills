@@ -1,6 +1,6 @@
 ---
 name: retro-to-remedies
-description: Review a finished Run's primary sources to classify misses into environment remedies, commit applied text remedies, record outcomes in the Retro Log, and hand off code remedies before pr-to-dev.
+description: Review a finished Run's primary sources to classify misses into environment remedies, commit applied text remedies, record outcomes in the Retro Log, and hand off code remedies before pr-to-base.
 disable-model-invocation: true
 ---
 
@@ -83,6 +83,6 @@ Completion criterion: every applied Text remedy is committed in its own `chore(r
 
 ### Handoff
 
-Present the handoff following [references/apply-and-handoff.md](references/apply-and-handoff.md). Print each Code remedy's ready-to-run prompt (such as `/grill-to-tickets`), followed by `/pr-to-dev`. A Code remedy answered `hand off` appears only as a prompt. The run pushes nothing to any remote branch, opens no pull request, and opens a GitHub issue only on an explicit human request.
+Present the handoff following [references/apply-and-handoff.md](references/apply-and-handoff.md). Print each Code remedy's ready-to-run prompt (such as `/grill-to-tickets`), followed by `/pr-to-base`. A Code remedy answered `hand off` appears only as a prompt. The run pushes nothing to any remote branch, opens no pull request, and opens a GitHub issue only on an explicit human request.
 
-Completion criterion: every Code remedy prompt is printed in order, followed by `/pr-to-dev`, with no git push or pull request created.
+Completion criterion: every Code remedy prompt is printed in order, followed by `/pr-to-base`, with no git push or pull request created.
