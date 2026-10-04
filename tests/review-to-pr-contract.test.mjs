@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile, access, readdir } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
-import { markdownSection } from "./helpers/markdown-contract.mjs";
+import { flatMarkdownSection, markdownSection } from "./helpers/markdown-contract.mjs";
 
 // The reference set SKILL.md links, the guide's Related files list, and the
 // references/ directory must agree. One source of truth for the three checks.
@@ -688,17 +688,19 @@ describe("review-to-pr skill contract", () => {
 
   describe("implement-tickets Worker branches after Cleanup", () => {
     it("names the per-attempt Worker branch and says it no longer exists after Cleanup", async () => {
-      const files = [
-        "docs/guides/review-to-pr.md",
-        "docs/skills/agents/review-to-pr.md",
-        "skills/agents/review-to-pr/SKILL.md",
-        "skills/agents/review-to-pr/references/review-point.md",
+      const sections = [
+        { file: "docs/guides/review-to-pr.md", heading: "1. review-to-pr คืออะไรและมีไว้สำหรับทำอะไร?", gone: /ไม่มีอีกแล้วหลัง Cleanup/ },
+        { file: "docs/skills/agents/review-to-pr.md", heading: "ควรใช้เมื่อไร", gone: /ไม่มีอีกแล้วหลัง Cleanup/ },
+        { file: "docs/skills/agents/review-to-pr.md", heading: "Main workflow", gone: /no longer exist after `implement-tickets` Cleanup/ },
+        { file: "skills/agents/review-to-pr/SKILL.md", heading: "Invocation", gone: /no longer exist after Cleanup/ },
+        { file: "skills/agents/review-to-pr/references/review-point.md", heading: "3. Resolve the feature slug and the spec source", gone: /no longer exist after Cleanup/ },
       ];
-      for (const file of files) {
-        const c = (await readFile(path.resolve(file), "utf8")).replace(/\s*\n\s*/g, " ");
-        assert.match(c, /implement-tickets-work\/(?:foo|wishlist-sync|<slug>)\/(?:01|<NN>)-a1/, `${file} uses the per-attempt branch form`);
-        assert.match(c, /no longer exist|ไม่มีอีกแล้ว/, `${file} says Worker branches are gone after Cleanup`);
-        assert.doesNotMatch(c, /review-to-pr (?:requires|depends on|reads) (?:the )?worker branch/i, `${file} does not depend on Worker branches`);
+      for (const { file, heading, gone } of sections) {
+        const c = flatMarkdownSection(await readFile(path.resolve(file), "utf8"), heading);
+        const label = `${file} § ${heading}`;
+        assert.match(c, /implement-tickets-work\/(?:foo|wishlist-sync)\/01-a1/, `${label} uses the per-attempt branch form`);
+        assert.match(c, gone, `${label} says Worker branches are gone after Cleanup`);
+        assert.doesNotMatch(c, /review-to-pr (?:requires|depends on|reads) (?:the )?worker branch/i, `${label} does not depend on Worker branches`);
       }
     });
   });

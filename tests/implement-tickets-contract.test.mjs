@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { flatMarkdownSection, markdownSection } from "./helpers/markdown-contract.mjs";
+import { flatMarkdownSection, markdownHeaderBlock, markdownSection } from "./helpers/markdown-contract.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const skillRoot = path.join(repoRoot, "skills/agents/implement-tickets");
@@ -23,6 +23,14 @@ async function exists(file) {
 const flatten = (text) => text.replace(/\s*\n\s*/g, " ");
 const read = async (rel) => flatten(await readFile(path.join(skillRoot, rel), "utf8"));
 const readRepo = async (rel) => flatten(await readFile(path.join(repoRoot, rel), "utf8"));
+// One named section of a file, whitespace-collapsed so a rewrap cannot break a token.
+const skillSection = async (rel, heading) => flatMarkdownSection(await readFile(path.join(skillRoot, rel), "utf8"), heading);
+const repoSection = async (rel, heading) => flatMarkdownSection(await readFile(path.join(repoRoot, rel), "utf8"), heading);
+// The text before the first `##` heading, whitespace-collapsed.
+const skillHeader = async (rel) => markdownHeaderBlock(await readFile(path.join(skillRoot, rel), "utf8")).replace(/\s+/g, " ");
+const matchAll = (text, patterns, label) => {
+  for (const pattern of patterns) assert.match(text, pattern, `${label}: ${pattern}`);
+};
 
 function ticket(number, { blockers = [], context = "", seam = "the core contract test", title = `Ticket ${number}`, risk } = {}) {
   return [
@@ -219,17 +227,24 @@ describe("implement-tickets minimal serial core", () => {
   });
 
   it("names the Worker branch per attempt and states the harness path assumption", async () => {
-    const dispatch = await read("references/dispatch-contract.md");
-    assert.match(dispatch, /implement-tickets-work\/<slug>\/NN-aK/);
-    assert.match(dispatch, /NN-aK-iJ/);
-    assert.match(dispatch, /kept worktree[\s\S]{0,200}never collides/i);
-    assert.match(dispatch, /assum[\s\S]{0,200}returns the worktree path and (?:its )?branch name/i);
-    assert.match(dispatch, /git worktree list[\s\S]{0,200}confirm|confirm[\s\S]{0,300}git worktree list/i);
-    assert.match(dispatch, /keep the worktree[\s\S]{0,120}new branch name/i);
-    assert.doesNotMatch(dispatch, /discard the branch/i);
-    const scaffold = await read("references/prompt-scaffold.md");
-    assert.match(scaffold, /<worker-branch>[\s\S]{0,200}NN-aK/);
-    assert.match(scaffold, /per attempt/i);
+    const branch = await skillSection("references/dispatch-contract.md", "Worker branch per attempt");
+    matchAll(branch, [
+      /implement-tickets-work\/<slug>\/NN-aK`/,
+      /`implement-tickets-work\/<slug>\/NN-aK-iJ`/,
+      /a new name never collides/i,
+      /This assumes `isolation: "worktree"` returns the worktree path and its branch name/,
+      /Confirm it on the first real dispatch/,
+      /compare the returned path and branch with `git worktree list`/,
+      /matching the attempt's branch name in `git worktree list`/,
+    ], "dispatch contract, Worker branch per attempt");
+    const kept = await skillSection("references/dispatch-contract.md", "Kept worktrees");
+    assert.doesNotMatch(kept, /discard the branch/i);
+    const extras = await skillSection("references/dispatch-contract.md", "Measuring extras");
+    assert.match(extras, /keep the worktree and redispatch on a new branch name/);
+    assert.doesNotMatch(extras, /discard the branch/i);
+    const scaffold = await skillSection("references/prompt-scaffold.md", "Working directory");
+    assert.match(scaffold, /branch <worker-branch>, named per attempt/);
+    assert.match(scaffold, /`implement-tickets-work\/<slug>\/NN-aK`, or `NN-aK-iJ` for an infrastructure retry/);
   });
 
   it("measures extras from the worker branch diff and rejects unexplained ones at one attempt", async () => {
@@ -282,50 +297,81 @@ describe("implement-tickets minimal serial core", () => {
   });
 
   it("cleans up the Worker worktree and branches after a green gate and a written row", async () => {
-    const gate = await read("references/integration-gate.md");
-    assert.match(gate, /green[\s\S]{0,300}row[\s\S]{0,200}written[\s\S]{0,300}Cleanup/i);
-    assert.match(gate, /worktree, then the Worker branch, then any other branch the harness created/i);
-    assert.match(gate, /integrated attempt and every earlier kept attempt[\s\S]{0,120}infrastructure-retry/i);
-    assert.match(gate, /before (?:starting )?the next ticket/i);
-    assert.match(gate, /git worktree remove <path>/);
-    assert.match(gate, /no force flag/i);
-    assert.match(gate, /git branch -D <branch>/);
-    assert.match(gate, /squash-merge[\s\S]{0,200}unmerged/i);
-    assert.match(gate, /never edits the Branch or Commit columns/i);
-    assert.match(gate, /recorded path is `\?`[\s\S]{0,200}looked up by branch name[\s\S]{0,300}Step `cleanup`[\s\S]{0,120}nothing is removed/i);
-    assert.match(gate, /fails[\s\S]{0,200}Step `cleanup`[\s\S]{0,200}still attempts the branch deletion[\s\S]{0,200}next ticket/i);
-    assert.match(gate, /already gone[\s\S]{0,120}success[\s\S]{0,120}no report entry/i);
-    const state = await read("references/status-and-resume.md");
-    assert.match(state, /a worktree removal or branch deletion fails/i);
-    assert.match(state, /Step: <[^>]*\bcleanup\b[^>]*>/);
-    const skill = await read("SKILL.md");
-    assert.match(skill, /Cleanup[\s\S]{0,200}integration-gate\.md#cleanup/);
-    assert.ok(skill.indexOf("Cleanup") > skill.indexOf("Squash-merge and run the gate"), "Cleanup follows the gate in the flow");
+    const intro = await skillHeader("references/integration-gate.md");
+    matchAll(intro, [
+      /Once the gate is green/,
+      /row is written/,
+      /run \[Cleanup\]\(#cleanup\)/,
+      /before starting the next ticket/,
+    ], "integration gate intro");
+    const cleanup = await skillSection("references/integration-gate.md", "Cleanup");
+    matchAll(cleanup, [
+      /the Worker worktree, then the Worker branch, then any other branch the harness created/,
+      /every earlier kept attempt of the ticket, including infrastructure-retry attempts/,
+      /before the next ticket starts/,
+      /Take each path and harness branch from the Worktree cell/,
+      /`git worktree remove <path>`/,
+      /the plain form, no force flag/,
+      /`git branch -D <branch>`/,
+      /a squash-merge leaves the Worker branch unmerged/,
+      /never edits the Branch or Commit columns of `status\.md`/,
+      /recorded path is `\?`/,
+      /looked up by branch name in the worktree list/,
+      /nothing is removed for that attempt/,
+      /When a removal fails/,
+      /append a report entry with Step `cleanup`/,
+      /Cleanup still attempts the branch deletion/,
+      /A failure never stops the run/,
+      /already gone counts as success and writes no report entry/,
+    ], "integration gate, Cleanup");
+    const report = await skillSection("references/status-and-resume.md", "Run report");
+    assert.match(report, /a worktree removal or branch deletion fails during \[Cleanup\]\(integration-gate\.md#cleanup\)/);
+    assert.match(report, /Step: <[^>]*\bcleanup\b[^>]*>/);
+    const stage = await skillSection("SKILL.md", "Stage 1 — Build each ticket");
+    assert.match(stage, /\[Cleanup\]\(references\/integration-gate\.md#cleanup\)/);
+    assert.ok(stage.indexOf("Squash-merge and run the gate") !== -1, "Stage 1 has the gate step");
+    assert.ok(stage.indexOf("Clean up the ticket's Worker worktrees") > stage.indexOf("Squash-merge and run the gate"), "Cleanup follows the gate in the flow");
   });
 
   it("keeps the worktree of a failed, rejected, or conflicted attempt and of a BLOCKED ticket", async () => {
-    const gate = await read("references/integration-gate.md");
-    assert.match(gate, /Redispatch the ticket[\s\S]{0,300}keeps? (?:its|the old) Worker worktree[\s\S]{0,120}new branch name/i);
-    assert.match(gate, /conflict[\s\S]{0,300}old attempt keeps its worktree[\s\S]{0,120}new branch name/i);
-    const dispatch = await read("references/dispatch-contract.md");
-    assert.match(dispatch, /failed the gate[\s\S]{0,200}verifier[\s\S]{0,200}extras check[\s\S]{0,200}keeps its Worker worktree/i);
-    assert.match(dispatch, /redispatch[\s\S]{0,120}new branch name/i);
-    assert.match(dispatch, /BLOCKED[\s\S]{0,120}keeps all its attempts' worktrees/i);
-    assert.match(dispatch, /never removed at run end/i);
+    const failing = await skillSection("references/integration-gate.md", "Failing gate");
+    assert.match(failing, /The failed attempt keeps its Worker worktree, so the retry takes a new branch name/);
+    const intro = await skillHeader("references/integration-gate.md");
+    assert.match(intro, /redispatch the ticket from the latest integration commit/);
+    assert.match(intro, /The old attempt keeps its worktree and the new one takes a new branch name/);
+    const kept = await skillSection("references/dispatch-contract.md", "Kept worktrees");
+    matchAll(kept, [
+      /An attempt that failed the gate/,
+      /rejected by the verifier or the extras check/,
+      /redispatched after a non-mechanical merge conflict/,
+      /keeps its Worker worktree/,
+      /the redispatch takes a new branch name/,
+      /A BLOCKED ticket keeps all its attempts' worktrees/,
+      /never removed at run end/,
+    ], "dispatch contract, Kept worktrees");
   });
 
   it("names every leftover worktree in the handoff", async () => {
-    const gate = await read("references/integration-gate.md");
-    assert.match(gate, /every worktree left behind[\s\S]{0,200}BLOCKED[\s\S]{0,200}failed removal[\s\S]{0,200}unknown path/i);
+    const handoff = await skillSection("references/integration-gate.md", "Handoff");
+    matchAll(handoff, [
+      /Name every worktree left behind by path/,
+      /all the worktrees of each BLOCKED ticket/,
+      /each worktree of a failed removal/,
+      /unknown path \(`\?`\)/,
+    ], "integration gate, Handoff");
   });
 
   it("continues after Worker branches are gone", async () => {
-    const state = await read("references/status-and-resume.md");
-    assert.match(state, /integrated[\s\S]{0,200}only against its squash commit on the integration branch/i);
-    assert.match(state, /removed Worker branch[\s\S]{0,120}not drift/i);
-    assert.match(state, /Worker branches? (?:is|are) checked only for[\s\S]{0,80}not integrated/i);
-    assert.match(state, /fresh worker, even when[\s\S]{0,60}Worker branch is missing/i);
-    assert.match(state, /`verifying` or\s+`dispatched`[\s\S]{0,200}infrastructure-retry[\s\S]{0,60}`NN-aK-iJ`/i);
+    const cont = await skillSection("references/status-and-resume.md", "Continue");
+    matchAll(cont, [
+      /An integrated ticket is reconciled only against its squash commit on the integration branch/,
+      /a removed Worker branch is not drift/,
+      /Worker branches are checked only for tickets that are not integrated/,
+      /A ticket that was `verifying` or `dispatched` restarts from a fresh worker/,
+      /even when its recorded Worker branch is missing/,
+      /infrastructure-retry branch name `NN-aK-iJ`/,
+      /It counts no attempt/,
+    ], "status-and-resume, Continue");
   });
 
   it("hands off a green run without starting review or publication", async () => {
@@ -341,15 +387,25 @@ describe("implement-tickets minimal serial core", () => {
   it("records the run in status.md and resumes only through continue", async () => {
     const state = await read("references/status-and-resume.md");
     assert.match(state, /first line is exactly `skill: implement-tickets`/);
-    assert.match(state, /\| Ticket \| Status \| Attempts \| Branch \| Commit \| Worktree \| Extras \| Risk \| Verifier \|/);
-    assert.match(state, /`aK: <path>`[\s\S]{0,200}`aK-iJ: <path>`[\s\S]{0,200}\(harness: <branch>\)[\s\S]{0,200}`\?`/);
-    assert.match(state, /written when the worker returns/i);
-    assert.match(state, /matching its branch name in the worktree list/i);
-    assert.match(state, /unknown path/i);
-    assert.match(state, /Worktree cell[\s\S]{0,200}local branches[\s\S]{0,200}worktree list[\s\S]{0,200}never from the `Attempts` column/i);
-    const verification = await read("references/verification.md");
-    assert.match(verification, /recorded worktree path/i);
-    assert.match(verification, /scratch checkout[\s\S]{0,200}out of Cleanup/i);
+    const header = await skillHeader("references/status-and-resume.md");
+    assert.match(header, /\| Ticket \| Status \| Attempts \| Branch \| Commit \| Worktree \| Extras \| Risk \| Verifier \|/);
+    const column = await skillSection("references/status-and-resume.md", "Worktree column");
+    matchAll(column, [
+      /`aK: <path>`/,
+      /`aK-iJ: <path>`/,
+      /\(harness: <branch>\)/,
+      /written `\?`/,
+      /The path is written when the worker returns/,
+      /matching its branch name in the worktree list/,
+      /reported as an unknown path in `report\.md` and the handoff/,
+      /one more than the highest `K` found in the Worktree cell/,
+      /in the local branches matching `implement-tickets-work\/<slug>\/NN-\*`/,
+      /and in the worktree list, and derive `J` the same way/,
+      /never from the `Attempts` column/,
+    ], "status-and-resume, Worktree column");
+    const verifier = await skillSection("references/verification.md", "Verifier");
+    assert.match(verifier, /recorded worktree path from the ticket's Worktree cell, not the branch/);
+    assert.match(verifier, /scratch checkout at the pre-ticket SHA stays the verifier's to remove and is out of Cleanup/);
     assert.doesNotMatch(state, /usage|Session ID|Budget estimate|Strictness|Run mode/i);
     assert.match(state, /holds its transitive dependants/i);
     assert.match(state, /\/implement-tickets continue <feature-slug>/);
@@ -391,29 +447,47 @@ describe("implement-tickets documentation and decision record", () => {
   });
 
   describe("review fix 1 — unnamed harness branch is left alone", () => {
-    const unnamed = /harness branch[^.]*result does not name[^.]*(?:not deleted|left alone)[^.]*Cleanup[\s\S]{0,300}unknown[\s\S]{0,200}report\.md[\s\S]{0,200}handoff/i;
+    const tokens = [
+      /A harness branch the (?:worker )?result does not name is not deleted by Cleanup/,
+      /Cleanup reports it as an unknown branch in `report\.md` \(Step `cleanup`\)/,
+      /the handoff names it/,
+    ];
 
     it("says in the dispatch contract assumption paragraph that Cleanup leaves it and reports it unknown", async () => {
-      const dispatch = await readFile(path.join(skillRoot, "references/dispatch-contract.md"), "utf8");
-      const section = flatMarkdownSection(dispatch, "Worker branch per attempt");
-      assert.match(section, unnamed);
+      const section = await skillSection("references/dispatch-contract.md", "Worker branch per attempt");
+      matchAll(section, tokens, "dispatch contract, Worker branch per attempt");
     });
 
     it("says in the integration gate Cleanup section that Cleanup leaves it and reports it unknown", async () => {
-      const gate = await readFile(path.join(skillRoot, "references/integration-gate.md"), "utf8");
-      const section = flatMarkdownSection(gate, "Cleanup");
-      assert.match(section, unnamed);
+      const section = await skillSection("references/integration-gate.md", "Cleanup");
+      matchAll(section, tokens, "integration gate, Cleanup");
     });
   });
 
   describe("ticket 05 — Cleanup in the guide and the skill doc", () => {
     it("describes Cleanup after a green gate and its exceptions in Thai and English", async () => {
       for (const file of ["docs/guides/implement-tickets.md", "docs/skills/agents/implement-tickets.md"]) {
-        const c = await readRepo(file);
-        assert.match(c, /\*\*Cleanup:\*\* ลบ worktree ตามด้วย Worker branch[^.]*gate เขียว[\s\S]{0,400}ไม่ลบ[\s\S]{0,200}BLOCKED/, `${file} Thai Cleanup step with its exceptions`);
-        assert.match(c, /\*\*Cleanup:\*\* after a green gate[^.]*remove[^.]*worktree, then the Worker branch[\s\S]{0,400}kept[\s\S]{0,200}BLOCKED[\s\S]{0,300}report\.md/i, `${file} English Cleanup step with its exceptions`);
-        assert.match(c, /integration-gate\.md#cleanup/, `${file} links the Cleanup section`);
+        const thai = await repoSection(file, "ขั้นตอนหลัก");
+        matchAll(thai, [
+          /\*\*Cleanup:\*\* ลบ worktree ตามด้วย Worker branch/,
+          /หลัง gate เขียว/,
+          /ไม่ลบ worktree ของ attempt/,
+          /ticket ที่ BLOCKED/,
+          /`report\.md` \(Step `cleanup`\)/,
+          /integration-gate\.md#cleanup/,
+        ], `${file} Thai Main workflow`);
+        const english = await repoSection(file, "Main workflow");
+        matchAll(english, [
+          /\*\*Cleanup:\*\* after a green gate/,
+          /remove the ticket's worktree, then the Worker branch/,
+          /failed the gate, was rejected by the verifier or for extras/,
+          /every worktree of a BLOCKED ticket/,
+          /`report\.md` \(Step `cleanup`\)/,
+          /the handoff names each leftover worktree/,
+          /integration-gate\.md#cleanup/,
+        ], `${file} English Main workflow`);
       }
     });
   });
+
 });

@@ -86,47 +86,54 @@ describe("implement-tickets eval suite contract", () => {
       assert.ok(hay(/handoff[\s\S]{0,300}stops before review[\s\S]{0,200}(?:push|pull request)/i), "handoff stops before review");
     });
 
+    // The single eval entry with this id, as one searchable string. Each assertion names the case
+    // that must hold the rule, so a sentence in another case cannot satisfy it.
+    const caseText = (evals, id) => {
+      const item = evals.find((entry) => entry.id === id);
+      assert.ok(item, `eval ${id} exists`);
+      return `${item.name}\n${item.expected_output}\n${item.expectations.join("\n")}`;
+    };
+    const assertCase = (evals, id, patterns) => {
+      const text = caseText(evals, id);
+      for (const pattern of patterns) assert.match(text, pattern, `eval ${id}: ${pattern}`);
+    };
+
     it("covers per-attempt Worker branches and the recorded Worktree column", async () => {
       const { evals } = await readJson("evals.json");
-      const hay = (pattern) => evals.some((item) => pattern.test(`${item.name}\n${item.expected_output}\n${item.expectations.join("\n")}`));
-      assert.ok(hay(/NN-a1[\s\S]{0,300}NN-a2[\s\S]{0,300}different branch name/i), "each attempt takes its own branch name");
-      assert.ok(hay(/NN-a1-i1[\s\S]{0,300}NN-a1-i2/), "infrastructure retries take -i1 and -i2");
-      assert.ok(hay(/a1: <path>[\s\S]{0,200}a1-i1: <path>[\s\S]{0,200}\(harness: <branch>\)[\s\S]{0,200}`\?`/), "the Worktree cell grammar");
-      assert.ok(hay(/worktree list[\s\S]{0,200}matching the attempt's branch name[\s\S]{0,300}unknown path/i), "a crashed worker's worktree is found by branch name");
-      assert.ok(hay(/Worktree cell[\s\S]{0,200}local branches[\s\S]{0,200}worktree list[\s\S]{0,200}never from the Attempts column/i), "K and J come from the cell, branches, and worktree list");
-      assert.ok(hay(/verifier[\s\S]{0,200}recorded worktree path/i), "the verifier gets the recorded worktree path");
+      assertCase(evals, 14, [/03-a1/, /03-a2/, /different branch name/, /implement-tickets-work\/<slug>\/NN-aK/, /worker prompt/]);
+      assertCase(evals, 15, [/NN-a1-i1/, /NN-a1-i2/, /Counts no attempt/i]);
+      assertCase(evals, 16, [/a1: <path>/, /a1-i1: <path>/, /\(harness: <branch>\)/, /`\?`/, /when the worker returns/]);
+      assertCase(evals, 17, [/matching the attempt's branch name/, /worktree list/, /unknown path/]);
+      assertCase(evals, 18, [/Worktree cell/, /local branches/, /worktree list/, /never from the Attempts column/, /03-a4/]);
+      assertCase(evals, 19, [/recorded worktree path/, /not the branch/, /scratch checkout/]);
     });
 
     it("covers Cleanup after a green gate", async () => {
       const { evals } = await readJson("evals.json");
-      const hay = (pattern) => evals.some((item) => pattern.test(`${item.name}\n${item.expected_output}\n${item.expectations.join("\n")}`));
-      assert.ok(hay(/worktree[\s\S]{0,100}then[\s\S]{0,60}Worker branch[\s\S]{0,200}before (?:starting )?(?:the next ticket|ticket 03)/i), "removal order and timing");
-      assert.ok(hay(/attempts 1 and 2[\s\S]{0,300}attempt 3[\s\S]{0,300}infrastructure-retry/i), "every earlier kept attempt is removed");
-      assert.ok(hay(/harness branch[\s\S]{0,200}after the worktree/i), "the harness branch is deleted");
-      assert.ok(hay(/Branch and Commit columns[\s\S]{0,100}not edited/i), "columns are left unedited");
-      assert.ok(hay(/git worktree remove[\s\S]{0,80}no force flag[\s\S]{0,200}git branch -D/i), "stated command forms");
-      assert.ok(hay(/path is `\?`[\s\S]{0,200}branch name[\s\S]{0,200}Step `cleanup`[\s\S]{0,100}nothing is removed/i), "an unknown path is looked up then reported");
-      assert.ok(hay(/removal fails[\s\S]{0,200}Step `cleanup`[\s\S]{0,200}branch deletion[\s\S]{0,200}next ticket/i), "a failed removal is non-fatal");
-      assert.ok(hay(/already gone[\s\S]{0,200}no report entry/i), "an already-gone target writes nothing");
+      assertCase(evals, 20, [/then the Worker branch/, /before starting ticket 03/, /git worktree remove <path>/, /no force flag/, /git branch -D/, /squash-merge leaves it unmerged/]);
+      assertCase(evals, 21, [/attempts 1 and 2 as well as attempt 3/, /infrastructure-retry attempt/]);
+      assertCase(evals, 22, [/harness branch worktree-x after the worktree is removed/, /Worker branch too/]);
+      assertCase(evals, 23, [/Branch and Commit columns of ticket 02 are not edited/]);
+      assertCase(evals, 24, [/recorded path is `\?`/, /by its branch name in the worktree list/, /Step `cleanup`/, /nothing is removed for that attempt/]);
+      assertCase(evals, 25, [/removal fails/, /Step `cleanup`/, /still attempts the branch deletion/i, /starts ticket 03/, /force flag/]);
+      assertCase(evals, 26, [/already gone/i, /no report entry/i]);
     });
 
     it("covers kept worktrees for failed attempts, BLOCKED tickets, and the handoff listing", async () => {
       const { evals } = await readJson("evals.json");
-      const hay = (pattern) => evals.some((item) => pattern.test(`${item.name}\n${item.expected_output}\n${item.expectations.join("\n")}`));
-      assert.ok(hay(/failed (?:its )?gate[\s\S]{0,300}worktree[\s\S]{0,40}(?:is )?not removed[\s\S]{0,200}new branch name/i), "a failed gate keeps the worktree");
-      assert.ok(hay(/verifier rejects[\s\S]{0,300}keeps? the (?:attempt's )?worktree[\s\S]{0,200}new branch name/i), "a verifier rejection keeps the worktree");
-      assert.ok(hay(/rejects an unexplained extra[\s\S]{0,300}keeps? the (?:attempt's )?worktree[\s\S]{0,200}new branch name/i), "an extras rejection keeps the worktree");
-      assert.ok(hay(/non-mechanical merge conflict[\s\S]{0,300}keeps? the old worktree[\s\S]{0,200}new branch name/i), "a conflict redispatch keeps the old worktree");
-      assert.ok(hay(/BLOCKED[\s\S]{0,200}keeps all its attempts' worktrees[\s\S]{0,200}removes none/i), "a BLOCKED ticket keeps every worktree");
-      assert.ok(hay(/handoff[\s\S]{0,200}every worktree[\s\S]{0,100}BLOCKED[\s\S]{0,100}failed removal[\s\S]{0,100}unknown path/i), "the handoff lists leftovers");
-      assert.doesNotMatch(JSON.stringify(evals), /discards the branch/i);
+      assertCase(evals, 8, [/rejects an unexplained extra, keeps the attempt's worktree/i, /new branch name/]);
+      assertCase(evals, 27, [/Worker worktree of attempt 1 is not removed/, /new branch name/]);
+      assertCase(evals, 28, [/verifier rejects/, /keeps the attempt's worktree/, /new branch name/]);
+      assertCase(evals, 29, [/non-mechanical merge conflict/, /keeps the old worktree/, /new branch name/]);
+      assertCase(evals, 30, [/keeps all its attempts' worktrees/, /removes none/i]);
+      assertCase(evals, 31, [/every worktree left behind by path/, /BLOCKED ticket 04/, /failed removal/, /unknown path/]);
+      for (const id of [8, 27, 28, 29]) assert.doesNotMatch(caseText(evals, id), /discards the branch/i, `eval ${id} keeps the branch`);
     });
 
     it("covers continue after Worker branches are gone", async () => {
       const { evals } = await readJson("evals.json");
-      const hay = (pattern) => evals.some((item) => pattern.test(`${item.name}\n${item.expected_output}\n${item.expectations.join("\n")}`));
-      assert.ok(hay(/integrated[\s\S]{0,200}Worker branch[\s\S]{0,40}removed[\s\S]{0,300}squash commit[\s\S]{0,200}does not rewind/i), "an integrated row with a removed branch is not drift");
-      assert.ok(hay(/dispatched[\s\S]{0,200}Worker branch[\s\S]{0,40}missing[\s\S]{0,300}fresh worker[\s\S]{0,200}NN-aK-iJ/i), "a non-integrated row with a missing branch restarts on an infrastructure-retry name");
+      assertCase(evals, 32, [/only against its squash commit on the integration branch/, /removed Worker branch is not drift/, /does not rewind/]);
+      assertCase(evals, 33, [/because ticket 02 is not integrated/, /fresh worker/, /NN-aK-iJ/, /counting no attempt/]);
     });
 
     it("keeps removed options out of the cases", async () => {
