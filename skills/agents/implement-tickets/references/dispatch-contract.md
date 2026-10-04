@@ -33,7 +33,9 @@ This assumes `isolation: "worktree"` returns the worktree path and its branch
 name. Confirm it on the first real dispatch: dispatch a worker that commits, then
 compare the returned path and branch with `git worktree list`. When a result
 lacks either, find the worktree by matching the attempt's branch name in
-`git worktree list`.
+`git worktree list`. A harness branch the result does not name is not deleted
+by Cleanup; Cleanup reports it as an unknown branch in `report.md` (Step
+`cleanup`) and the handoff names it.
 
 ## Kept worktrees
 

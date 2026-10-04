@@ -47,6 +47,9 @@ harness branch from the Worktree cell.
   the run.
 - A worktree or branch that is already gone counts as success and writes no
   report entry.
+- A harness branch the worker result does not name is not deleted by Cleanup;
+  Cleanup reports it as an unknown branch in `report.md` (Step `cleanup`), and
+  the handoff names it.
 
 ## Handoff
 

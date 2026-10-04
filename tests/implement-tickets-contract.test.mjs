@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { markdownSection } from "./helpers/markdown-contract.mjs";
+import { flatMarkdownSection, markdownSection } from "./helpers/markdown-contract.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const skillRoot = path.join(repoRoot, "skills/agents/implement-tickets");
@@ -388,6 +388,22 @@ describe("implement-tickets documentation and decision record", () => {
       assert.match(page, /ADR 0023/);
       assert.doesNotMatch(page, /--parallel|--strict|--with|adapter-contract|parallel-validation|waves\.mjs/, `${file} has no removed option`);
     }
+  });
+
+  describe("review fix 1 — unnamed harness branch is left alone", () => {
+    const unnamed = /harness branch[^.]*result does not name[^.]*(?:not deleted|left alone)[^.]*Cleanup[\s\S]{0,300}unknown[\s\S]{0,200}report\.md[\s\S]{0,200}handoff/i;
+
+    it("says in the dispatch contract assumption paragraph that Cleanup leaves it and reports it unknown", async () => {
+      const dispatch = await readFile(path.join(skillRoot, "references/dispatch-contract.md"), "utf8");
+      const section = flatMarkdownSection(dispatch, "Worker branch per attempt");
+      assert.match(section, unnamed);
+    });
+
+    it("says in the integration gate Cleanup section that Cleanup leaves it and reports it unknown", async () => {
+      const gate = await readFile(path.join(skillRoot, "references/integration-gate.md"), "utf8");
+      const section = flatMarkdownSection(gate, "Cleanup");
+      assert.match(section, unnamed);
+    });
   });
 
   describe("ticket 05 — Cleanup in the guide and the skill doc", () => {
