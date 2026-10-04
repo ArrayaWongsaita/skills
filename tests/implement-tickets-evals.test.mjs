@@ -47,7 +47,7 @@ describe("implement-tickets eval suite contract", () => {
     it("declares implement-tickets and unique, well-formed behavior cases", async () => {
       const payload = await readJson("evals.json");
       assert.equal(payload.skill_name, "implement-tickets");
-      assert.ok(Array.isArray(payload.evals) && payload.evals.length >= 31);
+      assert.ok(Array.isArray(payload.evals) && payload.evals.length >= 33);
       const ids = new Set();
       const names = new Set();
       for (const item of payload.evals) {
@@ -120,6 +120,13 @@ describe("implement-tickets eval suite contract", () => {
       assert.ok(hay(/BLOCKED[\s\S]{0,200}keeps all its attempts' worktrees[\s\S]{0,200}removes none/i), "a BLOCKED ticket keeps every worktree");
       assert.ok(hay(/handoff[\s\S]{0,200}every worktree[\s\S]{0,100}BLOCKED[\s\S]{0,100}failed removal[\s\S]{0,100}unknown path/i), "the handoff lists leftovers");
       assert.doesNotMatch(JSON.stringify(evals), /discards the branch/i);
+    });
+
+    it("covers continue after Worker branches are gone", async () => {
+      const { evals } = await readJson("evals.json");
+      const hay = (pattern) => evals.some((item) => pattern.test(`${item.name}\n${item.expected_output}\n${item.expectations.join("\n")}`));
+      assert.ok(hay(/integrated[\s\S]{0,200}Worker branch[\s\S]{0,40}removed[\s\S]{0,300}squash commit[\s\S]{0,200}does not rewind/i), "an integrated row with a removed branch is not drift");
+      assert.ok(hay(/dispatched[\s\S]{0,200}Worker branch[\s\S]{0,40}missing[\s\S]{0,300}fresh worker[\s\S]{0,200}NN-aK-iJ/i), "a non-integrated row with a missing branch restarts on an infrastructure-retry name");
     });
 
     it("keeps removed options out of the cases", async () => {

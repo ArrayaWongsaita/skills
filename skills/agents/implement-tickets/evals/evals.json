@@ -364,6 +364,29 @@
         "Includes an unknown path among the leftovers"
       ],
       "files": []
+    },
+    {
+      "id": 32,
+      "name": "continue reconciles an integrated row whose Worker branch was removed",
+      "prompt": "/implement-tickets continue demo. status.md shows ticket 01 integrated and its Worker branch implement-tickets-work/demo/01-a1 no longer exists, because Cleanup removed it.",
+      "expected_output": "continue reconciles the integrated ticket 01 only against its squash commit on the integration branch. The removed Worker branch is not drift, so the integration branch does not rewind and the row is not reset.",
+      "expectations": [
+        "Checks the integrated row only against its squash commit on the integration branch",
+        "Does not treat the removed Worker branch as drift and does not rewind"
+      ],
+      "files": []
+    },
+    {
+      "id": 33,
+      "name": "continue restarts a dispatched row whose Worker branch is missing",
+      "prompt": "/implement-tickets continue demo. status.md shows ticket 02 dispatched with the recorded Worker branch implement-tickets-work/demo/02-a1, and that branch is missing.",
+      "expected_output": "continue checks the Worker branch because ticket 02 is not integrated, finds it missing, and restarts ticket 02 from a fresh worker on an infrastructure-retry branch name of the form NN-aK-iJ (implement-tickets-work/demo/02-a1-i1), counting no attempt.",
+      "expectations": [
+        "Checks the Worker branch only because the row is not integrated",
+        "Restarts the dispatched ticket from a fresh worker",
+        "Uses the infrastructure-retry branch name NN-aK-iJ, such as 02-a1-i1, and counts no attempt"
+      ],
+      "files": []
     }
   ]
 }

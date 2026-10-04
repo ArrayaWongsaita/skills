@@ -319,6 +319,15 @@ describe("implement-tickets minimal serial core", () => {
     assert.match(gate, /every worktree left behind[\s\S]{0,200}BLOCKED[\s\S]{0,200}failed removal[\s\S]{0,200}unknown path/i);
   });
 
+  it("continues after Worker branches are gone", async () => {
+    const state = await read("references/status-and-resume.md");
+    assert.match(state, /integrated[\s\S]{0,200}only against its squash commit on the integration branch/i);
+    assert.match(state, /removed Worker branch[\s\S]{0,120}not drift/i);
+    assert.match(state, /Worker branches? (?:is|are) checked only for[\s\S]{0,80}not integrated/i);
+    assert.match(state, /fresh worker, even when[\s\S]{0,60}Worker branch is missing/i);
+    assert.match(state, /`verifying` or\s+`dispatched`[\s\S]{0,200}infrastructure-retry[\s\S]{0,60}`NN-aK-iJ`/i);
+  });
+
   it("hands off a green run without starting review or publication", async () => {
     const gate = await read("references/integration-gate.md");
     assert.match(gate, /implement-tickets\/<slug>/);

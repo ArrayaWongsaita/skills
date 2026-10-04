@@ -86,12 +86,17 @@ and the command `/implement-tickets continue <feature-slug>`.
 first line is not `skill: implement-tickets` and tell the person to recover the
 old run from git history or start over.
 
-1. Reconcile each recorded integration branch, commit, worker branch, and ticket
-   commit against Git. If Git drifted from the recorded sequence, find the last
-   good ticket commit, rewind the integration branch to it with the
-   [gate's rewind](integration-gate.md#failing-gate), record the discarded commits,
-   and reset the affected rows.
+1. Reconcile each recorded integration branch, commit, and ticket commit
+   against Git. An integrated ticket is reconciled only against its squash
+   commit on the integration branch: Cleanup removes its Worker branch, so a
+   removed Worker branch is not drift. Worker branches are checked only for
+   tickets that are not integrated. If Git drifted from the recorded sequence,
+   find the last good ticket commit, rewind the integration branch to it with
+   the [gate's rewind](integration-gate.md#failing-gate), record the discarded
+   commits, and reset the affected rows.
 2. Re-run planning on the current tickets and print the Plan.
 3. Resume from the first ready ticket. A ticket that was `verifying` or
-   `dispatched` restarts from a fresh worker. An integrated ticket is not
-   re-verified.
+   `dispatched` restarts from a fresh worker, even when its recorded Worker
+   branch is missing, on the infrastructure-retry branch name `NN-aK-iJ`, with
+   `K` and `J` derived as in the [Worktree column](#worktree-column). It counts
+   no attempt. An integrated ticket is not re-verified.
