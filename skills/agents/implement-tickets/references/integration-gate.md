@@ -9,7 +9,8 @@ the gate is green and the ticket's `status.md` row is written, run
 
 A merge conflict is mechanical when the orchestrator can resolve it without
 changing behavior; otherwise redispatch the ticket from the latest integration
-commit at the cost of one attempt.
+commit at the cost of one attempt. The old attempt keeps its worktree and the new
+one takes a new branch name.
 
 ## Failing gate
 
@@ -19,7 +20,8 @@ If the gate fails, the ticket is the culprit:
    `git checkout -B <integration-branch> <sha>` (the one rewind command, also
    used by `continue`).
 2. Redispatch the ticket from that commit with the failing output in the
-   prompt. This counts one attempt.
+   prompt. The failed attempt keeps its Worker worktree, so the retry takes a
+   new branch name. This counts one attempt.
 
 Record the failing check, the ticket, and the last good commit in `status.md`.
 
@@ -68,8 +70,10 @@ complete list:
 
 List by number the tickets that skipped the verifier (for example
 `Skipped the verifier: 02, 04`), or print `none`. List any blocked tickets with
-their reasons. Name `report.md` when it has entries, or print
-`Run report: none`.
+their reasons. Name every worktree left behind by path: all the worktrees of
+each BLOCKED ticket and each worktree of a failed removal, including an unknown
+path (`?`). Kept worktrees are never removed at run end. Name `report.md` when
+it has entries, or print `Run report: none`.
 
 Stop after printing the handoff. Review, push, and the pull request stay with
 the person.

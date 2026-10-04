@@ -303,6 +303,22 @@ describe("implement-tickets minimal serial core", () => {
     assert.ok(skill.indexOf("Cleanup") > skill.indexOf("Squash-merge and run the gate"), "Cleanup follows the gate in the flow");
   });
 
+  it("keeps the worktree of a failed, rejected, or conflicted attempt and of a BLOCKED ticket", async () => {
+    const gate = await read("references/integration-gate.md");
+    assert.match(gate, /Redispatch the ticket[\s\S]{0,300}keeps? (?:its|the old) Worker worktree[\s\S]{0,120}new branch name/i);
+    assert.match(gate, /conflict[\s\S]{0,300}old attempt keeps its worktree[\s\S]{0,120}new branch name/i);
+    const dispatch = await read("references/dispatch-contract.md");
+    assert.match(dispatch, /failed the gate[\s\S]{0,200}verifier[\s\S]{0,200}extras check[\s\S]{0,200}keeps its Worker worktree/i);
+    assert.match(dispatch, /redispatch[\s\S]{0,120}new branch name/i);
+    assert.match(dispatch, /BLOCKED[\s\S]{0,120}keeps all its attempts' worktrees/i);
+    assert.match(dispatch, /never removed at run end/i);
+  });
+
+  it("names every leftover worktree in the handoff", async () => {
+    const gate = await read("references/integration-gate.md");
+    assert.match(gate, /every worktree left behind[\s\S]{0,200}BLOCKED[\s\S]{0,200}failed removal[\s\S]{0,200}unknown path/i);
+  });
+
   it("hands off a green run without starting review or publication", async () => {
     const gate = await read("references/integration-gate.md");
     assert.match(gate, /implement-tickets\/<slug>/);

@@ -47,7 +47,7 @@ describe("implement-tickets eval suite contract", () => {
     it("declares implement-tickets and unique, well-formed behavior cases", async () => {
       const payload = await readJson("evals.json");
       assert.equal(payload.skill_name, "implement-tickets");
-      assert.ok(Array.isArray(payload.evals) && payload.evals.length >= 26);
+      assert.ok(Array.isArray(payload.evals) && payload.evals.length >= 31);
       const ids = new Set();
       const names = new Set();
       for (const item of payload.evals) {
@@ -108,6 +108,18 @@ describe("implement-tickets eval suite contract", () => {
       assert.ok(hay(/path is `\?`[\s\S]{0,200}branch name[\s\S]{0,200}Step `cleanup`[\s\S]{0,100}nothing is removed/i), "an unknown path is looked up then reported");
       assert.ok(hay(/removal fails[\s\S]{0,200}Step `cleanup`[\s\S]{0,200}branch deletion[\s\S]{0,200}next ticket/i), "a failed removal is non-fatal");
       assert.ok(hay(/already gone[\s\S]{0,200}no report entry/i), "an already-gone target writes nothing");
+    });
+
+    it("covers kept worktrees for failed attempts, BLOCKED tickets, and the handoff listing", async () => {
+      const { evals } = await readJson("evals.json");
+      const hay = (pattern) => evals.some((item) => pattern.test(`${item.name}\n${item.expected_output}\n${item.expectations.join("\n")}`));
+      assert.ok(hay(/failed (?:its )?gate[\s\S]{0,300}worktree[\s\S]{0,40}(?:is )?not removed[\s\S]{0,200}new branch name/i), "a failed gate keeps the worktree");
+      assert.ok(hay(/verifier rejects[\s\S]{0,300}keeps? the (?:attempt's )?worktree[\s\S]{0,200}new branch name/i), "a verifier rejection keeps the worktree");
+      assert.ok(hay(/rejects an unexplained extra[\s\S]{0,300}keeps? the (?:attempt's )?worktree[\s\S]{0,200}new branch name/i), "an extras rejection keeps the worktree");
+      assert.ok(hay(/non-mechanical merge conflict[\s\S]{0,300}keeps? the old worktree[\s\S]{0,200}new branch name/i), "a conflict redispatch keeps the old worktree");
+      assert.ok(hay(/BLOCKED[\s\S]{0,200}keeps all its attempts' worktrees[\s\S]{0,200}removes none/i), "a BLOCKED ticket keeps every worktree");
+      assert.ok(hay(/handoff[\s\S]{0,200}every worktree[\s\S]{0,100}BLOCKED[\s\S]{0,100}failed removal[\s\S]{0,100}unknown path/i), "the handoff lists leftovers");
+      assert.doesNotMatch(JSON.stringify(evals), /discards the branch/i);
     });
 
     it("keeps removed options out of the cases", async () => {

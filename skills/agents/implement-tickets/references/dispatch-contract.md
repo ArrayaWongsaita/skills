@@ -35,6 +35,14 @@ compare the returned path and branch with `git worktree list`. When a result
 lacks either, find the worktree by matching the attempt's branch name in
 `git worktree list`.
 
+## Kept worktrees
+
+An attempt that failed the gate, is rejected by the verifier or the extras
+check, or is redispatched after a non-mechanical merge conflict keeps its Worker
+worktree, and the redispatch takes a new branch name. A BLOCKED ticket keeps all
+its attempts' worktrees. Kept worktrees are never removed at run end; the
+[handoff](integration-gate.md#handoff) names them.
+
 ## Infrastructure failures
 
 A worker crash, a missing report, a hung or lost subagent, and a failed sync to

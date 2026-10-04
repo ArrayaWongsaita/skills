@@ -93,6 +93,7 @@
       "expectations": [
         "Measures extras from the git diff, not the worker's list",
         "Rejects an unexplained extra at the cost of one attempt",
+        "Rejects an unexplained extra, keeps the attempt's worktree, and redispatches on a new branch name",
         "Accepts an explained extra, records it, and verifies the ticket"
       ],
       "files": []
@@ -306,6 +307,61 @@
       "expectations": [
         "Treats an already-gone worktree or branch as success",
         "Writes no report entry for it"
+      ],
+      "files": []
+    },
+    {
+      "id": 27,
+      "name": "a failed gate keeps the attempt's worktree",
+      "prompt": "/implement-tickets .scratch/keep-gate-demo/issues/. Attempt 1 of ticket 03 failed its gate and the orchestrator rewinds the integration branch.",
+      "expected_output": "The orchestrator rewinds and redispatches ticket 03 with the failing output. The Worker worktree of attempt 1 is not removed, and attempt 2 runs on a new branch name.",
+      "expectations": [
+        "Does not remove the Worker worktree of the attempt that failed its gate",
+        "Redispatches the retry on a new branch name"
+      ],
+      "files": []
+    },
+    {
+      "id": 28,
+      "name": "a verifier rejection keeps the attempt's worktree",
+      "prompt": "/implement-tickets .scratch/keep-verifier-demo/issues/. The verifier returns raw evidence for ticket 03 and the orchestrator judges it insufficient.",
+      "expected_output": "When the orchestrator judges that the verifier rejects ticket 03, it keeps the attempt's worktree and redispatches on a new branch name at the cost of one attempt. Nothing says the branch is discarded.",
+      "expectations": [
+        "Keeps the worktree of the attempt the verifier rejected",
+        "Redispatches on a new branch name and counts one attempt"
+      ],
+      "files": []
+    },
+    {
+      "id": 29,
+      "name": "a non-mechanical merge-conflict redispatch keeps the old worktree",
+      "prompt": "/implement-tickets .scratch/keep-conflict-demo/issues/. Squash-merging ticket 03 hits a merge conflict the orchestrator cannot resolve without changing behavior.",
+      "expected_output": "After a non-mechanical merge conflict, the orchestrator redispatches ticket 03 from the latest integration commit at the cost of one attempt. It keeps the old worktree and the new attempt takes a new branch name.",
+      "expectations": [
+        "Keeps the old attempt's worktree after a non-mechanical merge conflict",
+        "Takes a new branch name for the redispatch"
+      ],
+      "files": []
+    },
+    {
+      "id": 30,
+      "name": "a BLOCKED ticket keeps all its worktrees",
+      "prompt": "/implement-tickets .scratch/keep-blocked-demo/issues/. Ticket 04 exhausted its attempts and became BLOCKED, and the run ends.",
+      "expected_output": "A BLOCKED ticket keeps all its attempts' worktrees. Run end removes none of them; they stay for inspection before continue.",
+      "expectations": [
+        "Keeps every attempt worktree of the BLOCKED ticket",
+        "Removes none of the kept worktrees at run end"
+      ],
+      "files": []
+    },
+    {
+      "id": 31,
+      "name": "the handoff names every leftover worktree",
+      "prompt": "/implement-tickets .scratch/keep-handoff-demo/issues/. One worktree removal failed, ticket 04 is BLOCKED, and one recorded path is unknown.",
+      "expected_output": "The handoff lists every worktree left behind by path: the worktrees of BLOCKED ticket 04, the worktree of the failed removal, and the unknown path (`?`).",
+      "expectations": [
+        "Lists the worktree paths of the BLOCKED ticket and of the failed removal in the handoff",
+        "Includes an unknown path among the leftovers"
       ],
       "files": []
     }
