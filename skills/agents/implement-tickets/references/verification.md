@@ -39,9 +39,14 @@ Agent(
   subagent_type: Explore,
   description:   "verify ticket <NN> <slug>",
   prompt:        <ticket acceptance criteria, worker report, changed test files,
-                  pre-ticket integration SHA, worker branch, measured extras>,
+                  pre-ticket integration SHA, recorded worktree path, measured extras>,
 )
 ```
+
+Give the verifier the recorded worktree path from the ticket's Worktree cell, not
+the branch: Git will not check out a branch that a live worktree holds. The
+verifier's own scratch checkout at the pre-ticket SHA stays the verifier's to
+remove and is out of Cleanup.
 
 If the `Explore` report is too shallow to judge, dispatch a fresh
 `general-purpose` verifier with explicit read-only instructions. A verifier
@@ -50,7 +55,7 @@ edits no file, creates no commit, and returns raw evidence with no verdict:
 1. In a scratch checkout at the pre-ticket integration SHA, apply only the
    worker's test files and run them; record whether they fail for the missing
    behavior rather than a compile or import error.
-2. On the worker branch, run the ticket's new or changed tests, the project's
+2. In the recorded worktree, run the ticket's new or changed tests, the project's
    configured typecheck, and the full test suite; record each command and
    output, or that no typecheck is configured.
 3. Summarize the test diff: changed test files, case count, and the acceptance

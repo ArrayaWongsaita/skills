@@ -52,8 +52,10 @@ Resolve the slug in order:
    so `implement-tickets/wishlist-sync` → `wishlist-sync` and a flat
    `wishlist-sync` → `wishlist-sync`. For an `implement-tickets` run, the
    integration branch is `implement-tickets/<slug>` and the worker branches
-   are `implement-tickets-work/<slug>/<NN>`. For example, `implement-tickets/wishlist-sync`
-   has worker branches such as `implement-tickets-work/wishlist-sync/01`.
+   are `implement-tickets-work/<slug>/<NN>-aK`. For example, `implement-tickets/wishlist-sync`
+   has worker branches such as `implement-tickets-work/wishlist-sync/01-a1`.
+   Those worker branches no longer exist after Cleanup, and this skill does not
+   depend on them.
 3. **Else the most recently modified `.scratch/*/` directory**, named back to the
    user for confirmation before it is used.
 

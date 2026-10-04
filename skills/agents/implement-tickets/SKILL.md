@@ -48,6 +48,8 @@ For each ticket in order, until every ticket is integrated:
    [integration gate](references/integration-gate.md).
 4. Record the ticket in `status.md`, and any problem in `report.md`, per
    [status and resume](references/status-and-resume.md).
+5. Clean up the ticket's Worker worktrees and branches with
+   [Cleanup](references/integration-gate.md#cleanup), then start the next ticket.
 
 A ticket that exhausts its attempts is `BLOCKED`; it and its dependants wait for
 `continue`, and independent tickets keep going.

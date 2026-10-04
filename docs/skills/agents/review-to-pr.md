@@ -30,10 +30,11 @@ npx skills add ArrayaWongsaita/skills --skill review-to-pr
 - อยากให้ fix ลงเป็น `fix(review):` commit แยก ไม่ยัดกลับเข้า ticket commit
 
 ชื่อ branch ของ `implement-tickets` คือ integration branch
-`implement-tickets/<slug>` และ worker branches `implement-tickets-work/<slug>/<NN>`
+`implement-tickets/<slug>` และ worker branches `implement-tickets-work/<slug>/<NN>-aK`
+(worker branches ไม่มีอีกแล้วหลัง Cleanup ของ `implement-tickets`; skill นี้ไม่พึ่งพามัน)
 เมื่อเรียก `/review-to-pr` โดยไม่ใส่ argument ให้ derive slug จาก integration
 branch เช่น `implement-tickets/foo` ได้ `foo`; ตัวอย่าง worker branch คือ
-`implement-tickets-work/foo/01` และ integration branch กำหนด slug
+`implement-tickets-work/foo/01-a1` และ integration branch กำหนด slug
 
 ### ไม่ควรใช้เมื่อไร
 
@@ -145,9 +146,11 @@ Invoke `/review-to-pr` from the integration branch (or `/review-to-pr <ref>` to
 override the review point, `/review-to-pr <slug>` to name the feature directory).
 
 `implement-tickets` uses integration branches `implement-tickets/<slug>` and
-worker branches `implement-tickets-work/<slug>/<NN>`. With no argument, derive
-the feature slug from the integration branch: `implement-tickets/foo` gives
-`foo`; a worker branch example is `implement-tickets-work/foo/01`.
+worker branches `implement-tickets-work/<slug>/<NN>-aK`. The worker branches no
+longer exist after `implement-tickets` Cleanup, and `review-to-pr` does not
+depend on them. With no argument, derive the feature slug from the integration
+branch: `implement-tickets/foo` gives `foo`; a worker branch example is
+`implement-tickets-work/foo/01-a1`.
 
 1. **Stage 0 — Pin the review point (read-only)**: preflight a clean tree,
    resolve the review point (an explicit `<ref>`, else `git merge-base main

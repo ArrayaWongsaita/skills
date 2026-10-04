@@ -11,9 +11,9 @@ skill: implement-tickets
 Integration branch: `implement-tickets/<feature-slug>`
 Integration commit: `<current-sha>`
 
-| Ticket | Status | Attempts | Branch | Commit | Extras | Risk | Verifier |
-| --- | --- | ---: | --- | --- | --- | --- | --- |
-| 01 | integrated | 1 | `implement-tickets-work/<feature-slug>/01` | `<sha>` | `none` | `low` | `skipped` |
+| Ticket | Status | Attempts | Branch | Commit | Worktree | Extras | Risk | Verifier |
+| --- | --- | ---: | --- | --- | --- | --- | --- | --- |
+| 01 | integrated | 1 | `implement-tickets-work/<feature-slug>/01-a1` | `<sha>` | `a1: <path>` | `none` | `low` | `skipped` |
 ```
 
 One row per ticket in ticket order. Status moves through pending, dispatched,
@@ -22,7 +22,30 @@ for a declared `Risk: high`, or the name of the
 [risk signal](verification.md#risk) that made the ticket risky. Verifier is
 `ran` or `skipped`. Extras lists the accepted extra files, written when they
 are accepted. Attempts counts ticket attempts only; infrastructure failures
-count none.
+count none. Branch and Commit hold the latest attempt's branch and the commit it
+produced.
+
+## Worktree column
+
+The Worktree cell lists every attempt of the ticket, separated by semicolons:
+`aK: <path>`, or `aK-iJ: <path>` for an infrastructure retry. A harness branch
+that differs from the Worker branch is appended as ` (harness: <branch>)`, and a
+path the orchestrator could not identify is written `?`. For example:
+`a1: /w/one; a2: /w/two (harness: worktree-x); a2-i1: ?`.
+
+The path is written when the worker returns. A worker that never returns is found
+by matching its branch name in the worktree list; a crash before the worker
+created its branch leaves a path the orchestrator cannot identify, which is
+reported as an unknown path in `report.md` and the handoff. When the harness
+result lacks the path or branch name, fall back to the worktree list
+([dispatch contract](dispatch-contract.md#worker-branch-per-attempt)).
+
+`K` is the number after `a`, so `a1-i1` counts as `K=1`. For any redispatch,
+derive `K` as one more than the highest `K` found in the Worktree cell, in the
+local branches matching `implement-tickets-work/<slug>/NN-*`, and in the worktree
+list, and derive `J` the same way, never from the `Attempts` column: a reset
+`Attempts` or a crashed worker that never reported a path must not reuse a kept
+name.
 
 ## Run report
 
@@ -32,13 +55,16 @@ improved from real runs. Append one entry at the moment of each of these:
 - a ticket becomes `BLOCKED`, or a gate fails
 - a verifier rejects a ticket, or the orchestrator rejects extras
 - an infrastructure failure repeats
+- a worktree removal or branch deletion fails during
+  [Cleanup](integration-gate.md#cleanup), or an earlier attempt's worktree is not
+  found
 - the written procedure was unclear, missing, or contradictory and the
   orchestrator had to improvise
 
 ```markdown
 ## <NN or run> — <short title>
 
-- Step: <planning | dispatch | measuring | verification | gate | continue>
+- Step: <planning | dispatch | measuring | verification | gate | cleanup | continue>
 - Happened: <what the agent did>
 - Expected: <what the skill text led it to expect>
 - Evidence: <status.md rows, command output, or the agent's message, trimmed>
@@ -60,12 +86,17 @@ and the command `/implement-tickets continue <feature-slug>`.
 first line is not `skill: implement-tickets` and tell the person to recover the
 old run from git history or start over.
 
-1. Reconcile each recorded integration branch, commit, worker branch, and ticket
-   commit against Git. If Git drifted from the recorded sequence, find the last
-   good ticket commit, rewind the integration branch to it with the
-   [gate's rewind](integration-gate.md#failing-gate), record the discarded commits,
-   and reset the affected rows.
+1. Reconcile each recorded integration branch, commit, and ticket commit
+   against Git. An integrated ticket is reconciled only against its squash
+   commit on the integration branch: Cleanup removes its Worker branch, so a
+   removed Worker branch is not drift. Worker branches are checked only for
+   tickets that are not integrated. If Git drifted from the recorded sequence,
+   find the last good ticket commit, rewind the integration branch to it with
+   the [gate's rewind](integration-gate.md#failing-gate), record the discarded
+   commits, and reset the affected rows.
 2. Re-run planning on the current tickets and print the Plan.
 3. Resume from the first ready ticket. A ticket that was `verifying` or
-   `dispatched` restarts from a fresh worker. An integrated ticket is not
-   re-verified.
+   `dispatched` restarts from a fresh worker, even when its recorded Worker
+   branch is missing, on the infrastructure-retry branch name `NN-aK-iJ`, with
+   `K` and `J` derived as in the [Worktree column](#worktree-column). It counts
+   no attempt. An integrated ticket is not re-verified.

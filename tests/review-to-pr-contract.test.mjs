@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile, access, readdir } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
-import { markdownSection } from "./helpers/markdown-contract.mjs";
+import { flatMarkdownSection, markdownSection } from "./helpers/markdown-contract.mjs";
 
 // The reference set SKILL.md links, the guide's Related files list, and the
 // references/ directory must agree. One source of truth for the three checks.
@@ -682,6 +682,35 @@ describe("review-to-pr skill contract", () => {
         const standardsAxis = call.match(/^- \*\*Standards axis\*\*[\s\S]*?(?=^- \*\*Spec axis\*\*)/m);
         assert.ok(standardsAxis, "the inline call has a Standards axis bullet");
         assert.doesNotMatch(standardsAxis[0], /reuse-catalog|Reuse Catalog/, "the Standards axis sources do not include a reuse catalog");
+      }
+    });
+  });
+
+  describe("implement-tickets Worker branches after Cleanup", () => {
+    const GONE_WINDOW = 260;
+    it("names the per-attempt Worker branch and says it no longer exists after Cleanup", async () => {
+      const sections = [
+        { file: "docs/guides/review-to-pr.md", heading: "1. review-to-pr คืออะไรและมีไว้สำหรับทำอะไร?", gone: /ไม่มีอีกแล้วหลัง Cleanup/, mentions: 1 },
+        { file: "docs/skills/agents/review-to-pr.md", heading: "ควรใช้เมื่อไร", gone: /ไม่มีอีกแล้วหลัง Cleanup/, mentions: 2 },
+        { file: "docs/skills/agents/review-to-pr.md", heading: "Main workflow", gone: /no longer exist after `implement-tickets` Cleanup/, mentions: 2 },
+        { file: "skills/agents/review-to-pr/SKILL.md", heading: "Invocation", gone: /no longer exist after Cleanup/, mentions: 2 },
+        { file: "skills/agents/review-to-pr/references/review-point.md", heading: "3. Resolve the feature slug and the spec source", gone: /no longer exist after Cleanup/, mentions: 2 },
+      ];
+      for (const { file, heading, gone, mentions: expectedMentions } of sections) {
+        const c = flatMarkdownSection(await readFile(path.resolve(file), "utf8"), heading);
+        const label = `${file} § ${heading}`;
+        assert.match(c, /implement-tickets-work\/(?:foo|wishlist-sync)\/01-a1/, `${label} uses the per-attempt branch form`);
+        assert.match(c, gone, `${label} says Worker branches are gone after Cleanup`);
+        // Language-independent guard: every mention of a Worker branch must sit within
+        // GONE_WINDOW characters of the "no longer exist" token, so a sentence that
+        // presents a Worker branch as something review-to-pr reads or needs fails here.
+        const gonePositions = [...c.matchAll(new RegExp(gone.source, "g"))].map((m) => m.index);
+        const mentions = [...c.matchAll(/implement-tickets-work\//g)].map((m) => m.index);
+        assert.equal(mentions.length, expectedMentions, `${label} has ${mentions.length} mentions of implement-tickets-work/, expected ${expectedMentions}: a new mention of the Worker branch needs a deliberate test update`);
+        for (const at of mentions) {
+          const near = gonePositions.some((g) => Math.abs(g - at) <= GONE_WINDOW);
+          assert.ok(near, `${label} mentions a Worker branch at offset ${at} without the "no longer exist" token within ${GONE_WINDOW} characters`);
+        }
       }
     });
   });

@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { markdownSection } from "./helpers/markdown-contract.mjs";
+import { flatMarkdownSection, markdownHeaderBlock, markdownSection } from "./helpers/markdown-contract.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const skillRoot = path.join(repoRoot, "skills/agents/implement-tickets");
@@ -23,6 +23,14 @@ async function exists(file) {
 const flatten = (text) => text.replace(/\s*\n\s*/g, " ");
 const read = async (rel) => flatten(await readFile(path.join(skillRoot, rel), "utf8"));
 const readRepo = async (rel) => flatten(await readFile(path.join(repoRoot, rel), "utf8"));
+// One named section of a file, whitespace-collapsed so a rewrap cannot break a token.
+const skillSection = async (rel, heading) => flatMarkdownSection(await readFile(path.join(skillRoot, rel), "utf8"), heading);
+const repoSection = async (rel, heading) => flatMarkdownSection(await readFile(path.join(repoRoot, rel), "utf8"), heading);
+// The text before the first `##` heading, whitespace-collapsed.
+const skillHeader = async (rel) => markdownHeaderBlock(await readFile(path.join(skillRoot, rel), "utf8")).replace(/\s+/g, " ");
+const matchAll = (text, patterns, label) => {
+  for (const pattern of patterns) assert.match(text, pattern, `${label}: ${pattern}`);
+};
 
 function ticket(number, { blockers = [], context = "", seam = "the core contract test", title = `Ticket ${number}`, risk } = {}) {
   return [
@@ -218,6 +226,27 @@ describe("implement-tickets minimal serial core", () => {
     assert.match(dispatch, /two infra retries[\s\S]*BLOCKED \(TICKET_PROVIDER_FAILED\)/i);
   });
 
+  it("names the Worker branch per attempt and states the harness path assumption", async () => {
+    const branch = await skillSection("references/dispatch-contract.md", "Worker branch per attempt");
+    matchAll(branch, [
+      /implement-tickets-work\/<slug>\/NN-aK`/,
+      /`implement-tickets-work\/<slug>\/NN-aK-iJ`/,
+      /a new name never collides/i,
+      /This assumes `isolation: "worktree"` returns the worktree path and its branch name/,
+      /Confirm it on the first real dispatch/,
+      /compare the returned path and branch with `git worktree list`/,
+      /matching the attempt's branch name in `git worktree list`/,
+    ], "dispatch contract, Worker branch per attempt");
+    const kept = await skillSection("references/dispatch-contract.md", "Kept worktrees");
+    assert.doesNotMatch(kept, /discard the branch/i);
+    const extras = await skillSection("references/dispatch-contract.md", "Measuring extras");
+    assert.match(extras, /keep the worktree and redispatch on a new branch name/);
+    assert.doesNotMatch(extras, /discard the branch/i);
+    const scaffold = await skillSection("references/prompt-scaffold.md", "Working directory");
+    assert.match(scaffold, /branch <worker-branch>, named per attempt/);
+    assert.match(scaffold, /`implement-tickets-work\/<slug>\/NN-aK`, or `NN-aK-iJ` for an infrastructure retry/);
+  });
+
   it("measures extras from the worker branch diff and rejects unexplained ones at one attempt", async () => {
     const dispatch = await read("references/dispatch-contract.md");
     assert.match(dispatch, /git diff --name-only --no-renames <pre-ticket-integration-sha> <worker-branch>/);
@@ -267,6 +296,84 @@ describe("implement-tickets minimal serial core", () => {
     assert.match(gate, /counts one attempt/i);
   });
 
+  it("cleans up the Worker worktree and branches after a green gate and a written row", async () => {
+    const intro = await skillHeader("references/integration-gate.md");
+    matchAll(intro, [
+      /Once the gate is green/,
+      /row is written/,
+      /run \[Cleanup\]\(#cleanup\)/,
+      /before starting the next ticket/,
+    ], "integration gate intro");
+    const cleanup = await skillSection("references/integration-gate.md", "Cleanup");
+    matchAll(cleanup, [
+      /the Worker worktree, then the Worker branch, then any other branch the harness created/,
+      /every earlier kept attempt of the ticket, including infrastructure-retry attempts/,
+      /before the next ticket starts/,
+      /Take each path and harness branch from the Worktree cell/,
+      /`git worktree remove <path>`/,
+      /the plain form, no force flag/,
+      /`git branch -D <branch>`/,
+      /a squash-merge leaves the Worker branch unmerged/,
+      /never edits the Branch or Commit columns of `status\.md`/,
+      /recorded path is `\?`/,
+      /looked up by branch name in the worktree list/,
+      /nothing is removed for that attempt/,
+      /When a removal fails/,
+      /append a report entry with Step `cleanup`/,
+      /Cleanup still attempts the branch deletion/,
+      /A failure never stops the run/,
+      /already gone counts as success and writes no report entry/,
+    ], "integration gate, Cleanup");
+    const report = await skillSection("references/status-and-resume.md", "Run report");
+    assert.match(report, /a worktree removal or branch deletion fails during \[Cleanup\]\(integration-gate\.md#cleanup\)/);
+    assert.match(report, /Step: <[^>]*\bcleanup\b[^>]*>/);
+    const stage = await skillSection("SKILL.md", "Stage 1 — Build each ticket");
+    assert.match(stage, /\[Cleanup\]\(references\/integration-gate\.md#cleanup\)/);
+    assert.ok(stage.indexOf("Squash-merge and run the gate") !== -1, "Stage 1 has the gate step");
+    assert.ok(stage.indexOf("Clean up the ticket's Worker worktrees") > stage.indexOf("Squash-merge and run the gate"), "Cleanup follows the gate in the flow");
+  });
+
+  it("keeps the worktree of a failed, rejected, or conflicted attempt and of a BLOCKED ticket", async () => {
+    const failing = await skillSection("references/integration-gate.md", "Failing gate");
+    assert.match(failing, /The failed attempt keeps its Worker worktree, so the retry takes a new branch name/);
+    const intro = await skillHeader("references/integration-gate.md");
+    assert.match(intro, /redispatch the ticket from the latest integration commit/);
+    assert.match(intro, /The old attempt keeps its worktree and the new one takes a new branch name/);
+    const kept = await skillSection("references/dispatch-contract.md", "Kept worktrees");
+    matchAll(kept, [
+      /An attempt that failed the gate/,
+      /rejected by the verifier or the extras check/,
+      /redispatched after a non-mechanical merge conflict/,
+      /keeps its Worker worktree/,
+      /the redispatch takes a new branch name/,
+      /A BLOCKED ticket keeps all its attempts' worktrees/,
+      /never removed at run end/,
+    ], "dispatch contract, Kept worktrees");
+  });
+
+  it("names every leftover worktree in the handoff", async () => {
+    const handoff = await skillSection("references/integration-gate.md", "Handoff");
+    matchAll(handoff, [
+      /Name every worktree left behind by path/,
+      /all the worktrees of each BLOCKED ticket/,
+      /each worktree of a failed removal/,
+      /unknown path \(`\?`\)/,
+    ], "integration gate, Handoff");
+  });
+
+  it("continues after Worker branches are gone", async () => {
+    const cont = await skillSection("references/status-and-resume.md", "Continue");
+    matchAll(cont, [
+      /An integrated ticket is reconciled only against its squash commit on the integration branch/,
+      /a removed Worker branch is not drift/,
+      /Worker branches are checked only for tickets that are not integrated/,
+      /A ticket that was `verifying` or `dispatched` restarts from a fresh worker/,
+      /even when its recorded Worker branch is missing/,
+      /infrastructure-retry branch name `NN-aK-iJ`/,
+      /It counts no attempt/,
+    ], "status-and-resume, Continue");
+  });
+
   it("hands off a green run without starting review or publication", async () => {
     const gate = await read("references/integration-gate.md");
     assert.match(gate, /implement-tickets\/<slug>/);
@@ -280,7 +387,25 @@ describe("implement-tickets minimal serial core", () => {
   it("records the run in status.md and resumes only through continue", async () => {
     const state = await read("references/status-and-resume.md");
     assert.match(state, /first line is exactly `skill: implement-tickets`/);
-    assert.match(state, /\| Ticket \| Status \| Attempts \| Branch \| Commit \| Extras \| Risk \| Verifier \|/);
+    const header = await skillHeader("references/status-and-resume.md");
+    assert.match(header, /\| Ticket \| Status \| Attempts \| Branch \| Commit \| Worktree \| Extras \| Risk \| Verifier \|/);
+    const column = await skillSection("references/status-and-resume.md", "Worktree column");
+    matchAll(column, [
+      /`aK: <path>`/,
+      /`aK-iJ: <path>`/,
+      /\(harness: <branch>\)/,
+      /written `\?`/,
+      /The path is written when the worker returns/,
+      /matching its branch name in the worktree list/,
+      /reported as an unknown path in `report\.md` and the handoff/,
+      /one more than the highest `K` found in the Worktree cell/,
+      /in the local branches matching `implement-tickets-work\/<slug>\/NN-\*`/,
+      /and in the worktree list, and derive `J` the same way/,
+      /never from the `Attempts` column/,
+    ], "status-and-resume, Worktree column");
+    const verifier = await skillSection("references/verification.md", "Verifier");
+    assert.match(verifier, /recorded worktree path from the ticket's Worktree cell, not the branch/);
+    assert.match(verifier, /scratch checkout at the pre-ticket SHA stays the verifier's to remove and is out of Cleanup/);
     assert.doesNotMatch(state, /usage|Session ID|Budget estimate|Strictness|Run mode/i);
     assert.match(state, /holds its transitive dependants/i);
     assert.match(state, /\/implement-tickets continue <feature-slug>/);
@@ -320,4 +445,49 @@ describe("implement-tickets documentation and decision record", () => {
       assert.doesNotMatch(page, /--parallel|--strict|--with|adapter-contract|parallel-validation|waves\.mjs/, `${file} has no removed option`);
     }
   });
+
+  describe("review fix 1 — unnamed harness branch is left alone", () => {
+    const tokens = [
+      /A harness branch the (?:worker )?result does not name is not deleted by Cleanup/,
+      /Cleanup reports it as an unknown branch in `report\.md` \(Step `cleanup`\)/,
+      /the handoff names it/,
+    ];
+
+    it("says in the dispatch contract assumption paragraph that Cleanup leaves it and reports it unknown", async () => {
+      const section = await skillSection("references/dispatch-contract.md", "Worker branch per attempt");
+      matchAll(section, tokens, "dispatch contract, Worker branch per attempt");
+    });
+
+    it("says in the integration gate Cleanup section that Cleanup leaves it and reports it unknown", async () => {
+      const section = await skillSection("references/integration-gate.md", "Cleanup");
+      matchAll(section, tokens, "integration gate, Cleanup");
+    });
+  });
+
+  describe("ticket 05 — Cleanup in the guide and the skill doc", () => {
+    it("describes Cleanup after a green gate and its exceptions in Thai and English", async () => {
+      for (const file of ["docs/guides/implement-tickets.md", "docs/skills/agents/implement-tickets.md"]) {
+        const thai = await repoSection(file, "ขั้นตอนหลัก");
+        matchAll(thai, [
+          /\*\*Cleanup:\*\* ลบ worktree ตามด้วย Worker branch/,
+          /หลัง gate เขียว/,
+          /ไม่ลบ worktree ของ attempt/,
+          /ticket ที่ BLOCKED/,
+          /`report\.md` \(Step `cleanup`\)/,
+          /integration-gate\.md#cleanup/,
+        ], `${file} Thai Main workflow`);
+        const english = await repoSection(file, "Main workflow");
+        matchAll(english, [
+          /\*\*Cleanup:\*\* after a green gate/,
+          /remove the ticket's worktree, then the Worker branch/,
+          /failed the gate, was rejected by the verifier or for extras/,
+          /every worktree of a BLOCKED ticket/,
+          /`report\.md` \(Step `cleanup`\)/,
+          /the handoff names each leftover worktree/,
+          /integration-gate\.md#cleanup/,
+        ], `${file} English Main workflow`);
+      }
+    });
+  });
+
 });

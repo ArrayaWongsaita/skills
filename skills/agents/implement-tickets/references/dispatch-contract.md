@@ -18,11 +18,39 @@ Agent(
 A ticket is ready when every blocker is integrated. A blocked ticket and its
 transitive dependants wait; the next ready ticket goes next.
 
+## Worker branch per attempt
+
+Each attempt builds on its own Worker branch, `implement-tickets-work/<slug>/NN-aK`,
+with `K` the attempt number starting at 1. An infrastructure retry that counts
+no attempt takes `implement-tickets-work/<slug>/NN-aK-iJ`, with `J` counting the
+infrastructure retries of that attempt from 1. The prompt carries the name as
+`<worker-branch>` ([prompt scaffold](prompt-scaffold.md)). A kept worktree holds
+its branch, so a retry on a new name never collides with it. Derive `K` and `J`
+by the [rule next to the Worktree column](status-and-resume.md#worktree-column).
+
+The orchestrator records the worktree path the worker returns in `status.md`.
+This assumes `isolation: "worktree"` returns the worktree path and its branch
+name. Confirm it on the first real dispatch: dispatch a worker that commits, then
+compare the returned path and branch with `git worktree list`. When a result
+lacks either, find the worktree by matching the attempt's branch name in
+`git worktree list`. A harness branch the result does not name is not deleted
+by Cleanup; Cleanup reports it as an unknown branch in `report.md` (Step
+`cleanup`) and the handoff names it.
+
+## Kept worktrees
+
+An attempt that failed the gate, is rejected by the verifier or the extras
+check, or is redispatched after a non-mechanical merge conflict keeps its Worker
+worktree, and the redispatch takes a new branch name. A BLOCKED ticket keeps all
+its attempts' worktrees. Kept worktrees are never removed at run end; the
+[handoff](integration-gate.md#handoff) names them.
+
 ## Infrastructure failures
 
 A worker crash, a missing report, a hung or lost subagent, and a failed sync to
 the integration SHA are `failed_infra`. They count no ticket attempt. Retry with
-a fresh worker; after two infra retries on one ticket, mark it
+a fresh worker on the next `-iJ` branch name, since the failed worker's kept
+worktree still holds its own; after two infra retries on one ticket, mark it
 `BLOCKED (TICKET_PROVIDER_FAILED)`.
 
 ## Measuring extras
@@ -40,6 +68,6 @@ extras.
 
 The orchestrator rejects extras that the acceptance criteria do not explain
 (for example a lockfile, a CI workflow, or an ADR the ticket never mentions):
-discard the branch and redispatch with the prompt told to stay in its declared
-files, at the cost of one attempt. Other extras are accepted, recorded in
+keep the worktree and redispatch on a new branch name with the prompt told to
+stay in its declared files, at the cost of one attempt. Other extras are accepted, recorded in
 `status.md`, and listed in the handoff.
