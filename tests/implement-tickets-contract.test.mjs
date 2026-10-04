@@ -281,6 +281,28 @@ describe("implement-tickets minimal serial core", () => {
     assert.match(gate, /counts one attempt/i);
   });
 
+  it("cleans up the Worker worktree and branches after a green gate and a written row", async () => {
+    const gate = await read("references/integration-gate.md");
+    assert.match(gate, /green[\s\S]{0,300}row[\s\S]{0,200}written[\s\S]{0,300}Cleanup/i);
+    assert.match(gate, /worktree, then the Worker branch, then any other branch the harness created/i);
+    assert.match(gate, /integrated attempt and every earlier kept attempt[\s\S]{0,120}infrastructure-retry/i);
+    assert.match(gate, /before (?:starting )?the next ticket/i);
+    assert.match(gate, /git worktree remove <path>/);
+    assert.match(gate, /no force flag/i);
+    assert.match(gate, /git branch -D <branch>/);
+    assert.match(gate, /squash-merge[\s\S]{0,200}unmerged/i);
+    assert.match(gate, /never edits the Branch or Commit columns/i);
+    assert.match(gate, /recorded path is `\?`[\s\S]{0,200}looked up by branch name[\s\S]{0,300}Step `cleanup`[\s\S]{0,120}nothing is removed/i);
+    assert.match(gate, /fails[\s\S]{0,200}Step `cleanup`[\s\S]{0,200}still attempts the branch deletion[\s\S]{0,200}next ticket/i);
+    assert.match(gate, /already gone[\s\S]{0,120}success[\s\S]{0,120}no report entry/i);
+    const state = await read("references/status-and-resume.md");
+    assert.match(state, /a worktree removal or branch deletion fails/i);
+    assert.match(state, /Step: <[^>]*\bcleanup\b[^>]*>/);
+    const skill = await read("SKILL.md");
+    assert.match(skill, /Cleanup[\s\S]{0,200}integration-gate\.md#cleanup/);
+    assert.ok(skill.indexOf("Cleanup") > skill.indexOf("Squash-merge and run the gate"), "Cleanup follows the gate in the flow");
+  });
+
   it("hands off a green run without starting review or publication", async () => {
     const gate = await read("references/integration-gate.md");
     assert.match(gate, /implement-tickets\/<slug>/);

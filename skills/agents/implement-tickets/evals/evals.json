@@ -229,6 +229,85 @@
         "Leaves the verifier's scratch checkout out of Cleanup"
       ],
       "files": []
+    },
+    {
+      "id": 20,
+      "name": "Cleanup removes the worktree, then the branch, after a green gate",
+      "prompt": "/implement-tickets .scratch/cleanup-demo/issues/. Ticket 02 was squash-merged, its gate is green, and its status.md row is written.",
+      "expected_output": "Cleanup removes the Worker worktree of ticket 02, then the Worker branch, before starting ticket 03. The worktree is removed with the plain form and no force flag; the branch is deleted with the force-delete form because a squash-merge leaves it unmerged.",
+      "expectations": [
+        "Runs Cleanup only after the gate is green and the row is written, before the next ticket starts",
+        "Removes the worktree with git worktree remove <path> and no force flag",
+        "Deletes the Worker branch with git branch -D because a squash-merge leaves it unmerged"
+      ],
+      "files": []
+    },
+    {
+      "id": 21,
+      "name": "Cleanup removes every earlier kept attempt",
+      "prompt": "/implement-tickets .scratch/cleanup-retry-demo/issues/. Attempts 1 and 2 of ticket 03 were kept, attempt 2 also had an infrastructure retry, and attempt 3 integrated.",
+      "expected_output": "Cleanup removes the worktrees and branches of attempts 1, 2 and 3 in the same pass, including the infrastructure-retry attempt, before the next ticket starts.",
+      "expectations": [
+        "Removes the worktrees and branches of attempts 1 and 2 as well as attempt 3",
+        "Includes the infrastructure-retry attempt of attempt 2"
+      ],
+      "files": []
+    },
+    {
+      "id": 22,
+      "name": "Cleanup deletes a differing harness branch",
+      "prompt": "/implement-tickets .scratch/cleanup-harness-demo/issues/. The Worktree cell of integrated ticket 02 records (harness: worktree-x) besides the Worker branch.",
+      "expected_output": "Cleanup deletes the harness branch worktree-x after the worktree is removed, as well as the Worker branch.",
+      "expectations": [
+        "Deletes the recorded harness branch after the worktree is removed",
+        "Deletes the Worker branch too"
+      ],
+      "files": []
+    },
+    {
+      "id": 23,
+      "name": "Cleanup leaves the Branch and Commit columns as history",
+      "prompt": "/implement-tickets .scratch/cleanup-history-demo/issues/. Cleanup just removed the Worker branch of ticket 02.",
+      "expected_output": "status.md still shows the Worker branch and squash commit for ticket 02: the Branch and Commit columns are not edited by Cleanup.",
+      "expectations": [
+        "The Branch and Commit columns of ticket 02 are not edited by Cleanup"
+      ],
+      "files": []
+    },
+    {
+      "id": 24,
+      "name": "an unknown path is looked up, then reported without removal",
+      "prompt": "/implement-tickets .scratch/cleanup-unknown-demo/issues/. An earlier kept attempt of ticket 03 has a recorded path of ? and attempt 3 integrated.",
+      "expected_output": "Because the recorded path is `?`, the orchestrator looks the attempt up by its branch name in the worktree list. When it is still not found, it appends a report entry with Step `cleanup` and nothing is removed for that attempt.",
+      "expectations": [
+        "Looks up an attempt whose path is `?` by branch name in the worktree list",
+        "Appends a report entry with Step `cleanup` when it is still not found",
+        "Removes nothing for that attempt"
+      ],
+      "files": []
+    },
+    {
+      "id": 25,
+      "name": "a failed removal is reported and does not stop the run",
+      "prompt": "/implement-tickets .scratch/cleanup-failure-demo/issues/. The worktree removal for ticket 02 fails because the tree holds untracked files.",
+      "expected_output": "When the worktree removal fails, the orchestrator appends a report entry with Step `cleanup`, still attempts the branch deletion, and starts ticket 03. It does not retry with a force flag.",
+      "expectations": [
+        "Appends a report entry with Step `cleanup`",
+        "Still attempts the branch deletion after the failed worktree removal",
+        "Starts the next ticket and does not force the removal"
+      ],
+      "files": []
+    },
+    {
+      "id": 26,
+      "name": "an already-gone target counts as success",
+      "prompt": "/implement-tickets .scratch/cleanup-gone-demo/issues/. The harness already removed the Worker worktree of ticket 02 before Cleanup ran.",
+      "expected_output": "The worktree is already gone, so it counts as success: no report entry is written and Cleanup continues with the branch and the next ticket.",
+      "expectations": [
+        "Treats an already-gone worktree or branch as success",
+        "Writes no report entry for it"
+      ],
+      "files": []
     }
   ]
 }

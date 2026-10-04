@@ -55,13 +55,16 @@ improved from real runs. Append one entry at the moment of each of these:
 - a ticket becomes `BLOCKED`, or a gate fails
 - a verifier rejects a ticket, or the orchestrator rejects extras
 - an infrastructure failure repeats
+- a worktree removal or branch deletion fails during
+  [Cleanup](integration-gate.md#cleanup), or an earlier attempt's worktree is not
+  found
 - the written procedure was unclear, missing, or contradictory and the
   orchestrator had to improvise
 
 ```markdown
 ## <NN or run> — <short title>
 
-- Step: <planning | dispatch | measuring | verification | gate | continue>
+- Step: <planning | dispatch | measuring | verification | gate | cleanup | continue>
 - Happened: <what the agent did>
 - Expected: <what the skill text led it to expect>
 - Evidence: <status.md rows, command output, or the agent's message, trimmed>

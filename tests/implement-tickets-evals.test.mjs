@@ -47,7 +47,7 @@ describe("implement-tickets eval suite contract", () => {
     it("declares implement-tickets and unique, well-formed behavior cases", async () => {
       const payload = await readJson("evals.json");
       assert.equal(payload.skill_name, "implement-tickets");
-      assert.ok(Array.isArray(payload.evals) && payload.evals.length >= 16);
+      assert.ok(Array.isArray(payload.evals) && payload.evals.length >= 26);
       const ids = new Set();
       const names = new Set();
       for (const item of payload.evals) {
@@ -95,6 +95,19 @@ describe("implement-tickets eval suite contract", () => {
       assert.ok(hay(/worktree list[\s\S]{0,200}matching the attempt's branch name[\s\S]{0,300}unknown path/i), "a crashed worker's worktree is found by branch name");
       assert.ok(hay(/Worktree cell[\s\S]{0,200}local branches[\s\S]{0,200}worktree list[\s\S]{0,200}never from the Attempts column/i), "K and J come from the cell, branches, and worktree list");
       assert.ok(hay(/verifier[\s\S]{0,200}recorded worktree path/i), "the verifier gets the recorded worktree path");
+    });
+
+    it("covers Cleanup after a green gate", async () => {
+      const { evals } = await readJson("evals.json");
+      const hay = (pattern) => evals.some((item) => pattern.test(`${item.name}\n${item.expected_output}\n${item.expectations.join("\n")}`));
+      assert.ok(hay(/worktree[\s\S]{0,100}then[\s\S]{0,60}Worker branch[\s\S]{0,200}before (?:starting )?(?:the next ticket|ticket 03)/i), "removal order and timing");
+      assert.ok(hay(/attempts 1 and 2[\s\S]{0,300}attempt 3[\s\S]{0,300}infrastructure-retry/i), "every earlier kept attempt is removed");
+      assert.ok(hay(/harness branch[\s\S]{0,200}after the worktree/i), "the harness branch is deleted");
+      assert.ok(hay(/Branch and Commit columns[\s\S]{0,100}not edited/i), "columns are left unedited");
+      assert.ok(hay(/git worktree remove[\s\S]{0,80}no force flag[\s\S]{0,200}git branch -D/i), "stated command forms");
+      assert.ok(hay(/path is `\?`[\s\S]{0,200}branch name[\s\S]{0,200}Step `cleanup`[\s\S]{0,100}nothing is removed/i), "an unknown path is looked up then reported");
+      assert.ok(hay(/removal fails[\s\S]{0,200}Step `cleanup`[\s\S]{0,200}branch deletion[\s\S]{0,200}next ticket/i), "a failed removal is non-fatal");
+      assert.ok(hay(/already gone[\s\S]{0,200}no report entry/i), "an already-gone target writes nothing");
     });
 
     it("keeps removed options out of the cases", async () => {
