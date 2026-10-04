@@ -47,7 +47,7 @@ describe("implement-tickets eval suite contract", () => {
     it("declares implement-tickets and unique, well-formed behavior cases", async () => {
       const payload = await readJson("evals.json");
       assert.equal(payload.skill_name, "implement-tickets");
-      assert.ok(Array.isArray(payload.evals) && payload.evals.length >= 10);
+      assert.ok(Array.isArray(payload.evals) && payload.evals.length >= 16);
       const ids = new Set();
       const names = new Set();
       for (const item of payload.evals) {
@@ -84,6 +84,17 @@ describe("implement-tickets eval suite contract", () => {
       assert.ok(hay(/BLOCKED[\s\S]{0,300}(?:dependants|dependents)[\s\S]{0,300}independent/i), "blocked tickets hold dependants");
       assert.ok(hay(/continue[\s\S]{0,300}reconciles[\s\S]{0,200}Git/i), "continue reconciles Git");
       assert.ok(hay(/handoff[\s\S]{0,300}stops before review[\s\S]{0,200}(?:push|pull request)/i), "handoff stops before review");
+    });
+
+    it("covers per-attempt Worker branches and the recorded Worktree column", async () => {
+      const { evals } = await readJson("evals.json");
+      const hay = (pattern) => evals.some((item) => pattern.test(`${item.name}\n${item.expected_output}\n${item.expectations.join("\n")}`));
+      assert.ok(hay(/NN-a1[\s\S]{0,300}NN-a2[\s\S]{0,300}different branch name/i), "each attempt takes its own branch name");
+      assert.ok(hay(/NN-a1-i1[\s\S]{0,300}NN-a1-i2/), "infrastructure retries take -i1 and -i2");
+      assert.ok(hay(/a1: <path>[\s\S]{0,200}a1-i1: <path>[\s\S]{0,200}\(harness: <branch>\)[\s\S]{0,200}`\?`/), "the Worktree cell grammar");
+      assert.ok(hay(/worktree list[\s\S]{0,200}matching the attempt's branch name[\s\S]{0,300}unknown path/i), "a crashed worker's worktree is found by branch name");
+      assert.ok(hay(/Worktree cell[\s\S]{0,200}local branches[\s\S]{0,200}worktree list[\s\S]{0,200}never from the Attempts column/i), "K and J come from the cell, branches, and worktree list");
+      assert.ok(hay(/verifier[\s\S]{0,200}recorded worktree path/i), "the verifier gets the recorded worktree path");
     });
 
     it("keeps removed options out of the cases", async () => {

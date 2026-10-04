@@ -11,7 +11,9 @@ its acceptance criteria, the selected test seam, and every path it needs.
 
 ## Working directory
 
-The harness-created worktree for branch <worker-branch>.
+The harness-created worktree for branch <worker-branch>, named per attempt
+(`implement-tickets-work/<slug>/NN-aK`, or `NN-aK-iJ` for an infrastructure
+retry; see the [dispatch contract](dispatch-contract.md#worker-branch-per-attempt)).
 
 ## First command — sync to the integration tip
 

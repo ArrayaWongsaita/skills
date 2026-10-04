@@ -11,9 +11,9 @@ skill: implement-tickets
 Integration branch: `implement-tickets/<feature-slug>`
 Integration commit: `<current-sha>`
 
-| Ticket | Status | Attempts | Branch | Commit | Extras | Risk | Verifier |
-| --- | --- | ---: | --- | --- | --- | --- | --- |
-| 01 | integrated | 1 | `implement-tickets-work/<feature-slug>/01` | `<sha>` | `none` | `low` | `skipped` |
+| Ticket | Status | Attempts | Branch | Commit | Worktree | Extras | Risk | Verifier |
+| --- | --- | ---: | --- | --- | --- | --- | --- | --- |
+| 01 | integrated | 1 | `implement-tickets-work/<feature-slug>/01-a1` | `<sha>` | `a1: <path>` | `none` | `low` | `skipped` |
 ```
 
 One row per ticket in ticket order. Status moves through pending, dispatched,
@@ -22,7 +22,30 @@ for a declared `Risk: high`, or the name of the
 [risk signal](verification.md#risk) that made the ticket risky. Verifier is
 `ran` or `skipped`. Extras lists the accepted extra files, written when they
 are accepted. Attempts counts ticket attempts only; infrastructure failures
-count none.
+count none. Branch and Commit hold the latest attempt's branch and the commit it
+produced.
+
+## Worktree column
+
+The Worktree cell lists every attempt of the ticket, separated by semicolons:
+`aK: <path>`, or `aK-iJ: <path>` for an infrastructure retry. A harness branch
+that differs from the Worker branch is appended as ` (harness: <branch>)`, and a
+path the orchestrator could not identify is written `?`. For example:
+`a1: /w/one; a2: /w/two (harness: worktree-x); a2-i1: ?`.
+
+The path is written when the worker returns. A worker that never returns is found
+by matching its branch name in the worktree list; a crash before the worker
+created its branch leaves a path the orchestrator cannot identify, which is
+reported as an unknown path in `report.md` and the handoff. When the harness
+result lacks the path or branch name, fall back to the worktree list
+([dispatch contract](dispatch-contract.md#worker-branch-per-attempt)).
+
+`K` is the number after `a`, so `a1-i1` counts as `K=1`. For any redispatch,
+derive `K` as one more than the highest `K` found in the Worktree cell, in the
+local branches matching `implement-tickets-work/<slug>/NN-*`, and in the worktree
+list, and derive `J` the same way, never from the `Attempts` column: a reset
+`Attempts` or a crashed worker that never reported a path must not reuse a kept
+name.
 
 ## Run report
 

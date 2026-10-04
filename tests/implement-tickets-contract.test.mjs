@@ -218,6 +218,20 @@ describe("implement-tickets minimal serial core", () => {
     assert.match(dispatch, /two infra retries[\s\S]*BLOCKED \(TICKET_PROVIDER_FAILED\)/i);
   });
 
+  it("names the Worker branch per attempt and states the harness path assumption", async () => {
+    const dispatch = await read("references/dispatch-contract.md");
+    assert.match(dispatch, /implement-tickets-work\/<slug>\/NN-aK/);
+    assert.match(dispatch, /NN-aK-iJ/);
+    assert.match(dispatch, /kept worktree[\s\S]{0,200}never collides/i);
+    assert.match(dispatch, /assum[\s\S]{0,200}returns the worktree path and (?:its )?branch name/i);
+    assert.match(dispatch, /git worktree list[\s\S]{0,200}confirm|confirm[\s\S]{0,300}git worktree list/i);
+    assert.match(dispatch, /keep the worktree[\s\S]{0,120}new branch name/i);
+    assert.doesNotMatch(dispatch, /discard the branch/i);
+    const scaffold = await read("references/prompt-scaffold.md");
+    assert.match(scaffold, /<worker-branch>[\s\S]{0,200}NN-aK/);
+    assert.match(scaffold, /per attempt/i);
+  });
+
   it("measures extras from the worker branch diff and rejects unexplained ones at one attempt", async () => {
     const dispatch = await read("references/dispatch-contract.md");
     assert.match(dispatch, /git diff --name-only --no-renames <pre-ticket-integration-sha> <worker-branch>/);
@@ -280,7 +294,15 @@ describe("implement-tickets minimal serial core", () => {
   it("records the run in status.md and resumes only through continue", async () => {
     const state = await read("references/status-and-resume.md");
     assert.match(state, /first line is exactly `skill: implement-tickets`/);
-    assert.match(state, /\| Ticket \| Status \| Attempts \| Branch \| Commit \| Extras \| Risk \| Verifier \|/);
+    assert.match(state, /\| Ticket \| Status \| Attempts \| Branch \| Commit \| Worktree \| Extras \| Risk \| Verifier \|/);
+    assert.match(state, /`aK: <path>`[\s\S]{0,200}`aK-iJ: <path>`[\s\S]{0,200}\(harness: <branch>\)[\s\S]{0,200}`\?`/);
+    assert.match(state, /written when the worker returns/i);
+    assert.match(state, /matching its branch name in the worktree list/i);
+    assert.match(state, /unknown path/i);
+    assert.match(state, /Worktree cell[\s\S]{0,200}local branches[\s\S]{0,200}worktree list[\s\S]{0,200}never from the `Attempts` column/i);
+    const verification = await read("references/verification.md");
+    assert.match(verification, /recorded worktree path/i);
+    assert.match(verification, /scratch checkout[\s\S]{0,200}out of Cleanup/i);
     assert.doesNotMatch(state, /usage|Session ID|Budget estimate|Strictness|Run mode/i);
     assert.match(state, /holds its transitive dependants/i);
     assert.match(state, /\/implement-tickets continue <feature-slug>/);

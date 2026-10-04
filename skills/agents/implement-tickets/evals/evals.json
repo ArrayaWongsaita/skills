@@ -89,7 +89,7 @@
       "id": 8,
       "name": "extras that the criteria do not explain are rejected",
       "prompt": "/implement-tickets .scratch/extras-demo/issues/. A worker for ticket 02 also changed package-lock.json, which the ticket never mentions.",
-      "expected_output": "The orchestrator measures extras from the branch diff, rejects an extra the acceptance criteria do not explain, discards the branch and redispatches at the cost of one attempt; an explained extra is accepted, recorded, and makes the ticket risky.",
+      "expected_output": "The orchestrator measures extras from the branch diff, rejects an extra the acceptance criteria do not explain, keeps the worktree and redispatches on a new branch name at the cost of one attempt; an explained extra is accepted, recorded, and makes the ticket risky.",
       "expectations": [
         "Measures extras from the git diff, not the worker's list",
         "Rejects an unexplained extra at the cost of one attempt",
@@ -154,6 +154,79 @@
         "Does not begin review or publish the branch",
         "Provides the integration branch and next review commands",
         "Lists accepted extras and tickets that skipped the verifier"
+      ],
+      "files": []
+    },
+    {
+      "id": 14,
+      "name": "each attempt builds on its own Worker branch",
+      "prompt": "/implement-tickets .scratch/retry-demo/issues/. Attempt 1 of ticket 03 failed its gate and its worktree still exists. Dispatch attempt 2.",
+      "expected_output": "Attempt 1 runs on implement-tickets-work/<slug>/03-a1 and attempt 2 on implement-tickets-work/<slug>/03-a2, so the retry checks out a different branch name from the kept worktree. The worker prompt carries the branch name.",
+      "expectations": [
+        "Names the Worker branch NN-a1 for attempt 1 and NN-a2 for attempt 2 (implement-tickets-work/<slug>/NN-aK)",
+        "Has the retry run git checkout -B on a different branch name from the kept attempt's",
+        "Puts the per-attempt branch name in the worker prompt"
+      ],
+      "files": []
+    },
+    {
+      "id": 15,
+      "name": "infrastructure retries take -iJ branch names and count no attempt",
+      "prompt": "/implement-tickets .scratch/infra-demo/issues/. A worker for ticket 02 attempt 1 crashed and its worktree still holds NN-a1. Retry, and retry again when it crashes again.",
+      "expected_output": "The first infrastructure retry runs on NN-a1-i1 and a further retry on NN-a1-i2, each without counting an attempt; a third failure marks the ticket BLOCKED (TICKET_PROVIDER_FAILED).",
+      "expectations": [
+        "Uses the branch name NN-a1-i1 for the first infrastructure retry",
+        "Uses NN-a1-i2 for a further infrastructure retry",
+        "Counts no attempt for either retry"
+      ],
+      "files": []
+    },
+    {
+      "id": 16,
+      "name": "the Worktree column lists each attempt's path in a fixed grammar",
+      "prompt": "/implement-tickets .scratch/column-demo/issues/. Attempt 2 of ticket 02 returned after an attempt 1 and an infrastructure retry; the harness named a different branch for attempt 2.",
+      "expected_output": "The orchestrator writes the Worktree cell when the worker returns, listing each attempt separated by semicolons: a1: <path> for an attempt, a1-i1: <path> for an infrastructure retry, (harness: <branch>) appended when the harness branch differs from the Worker branch, and `?` for a path it could not identify.",
+      "expectations": [
+        "Writes the Worktree cell when the worker returns, not at integration",
+        "Writes each attempt as a1: <path> and an infrastructure retry as a1-i1: <path>",
+        "Appends (harness: <branch>) when the harness branch differs from the Worker branch",
+        "Writes `?` for a path it could not identify"
+      ],
+      "files": []
+    },
+    {
+      "id": 17,
+      "name": "a crashed worker's worktree is found by its branch name",
+      "prompt": "/implement-tickets .scratch/crash-demo/issues/. A worker for ticket 02 crashed without returning a path.",
+      "expected_output": "The orchestrator reads the worktree list and finds the worktree by matching the attempt's branch name. A crash before the worker created its branch leaves a path it cannot identify, reported as an unknown path in report.md and the handoff.",
+      "expectations": [
+        "Finds the worktree by listing worktrees and matching the attempt's branch name",
+        "Reports a crash before the branch existed as an unknown path in report.md and the handoff",
+        "Falls back to the worktree list whenever the harness result lacks the path or branch name"
+      ],
+      "files": []
+    },
+    {
+      "id": 18,
+      "name": "K and J come from the cell, local branches, and worktree list",
+      "prompt": "/implement-tickets .scratch/derive-demo/issues/. Ticket 03 was reset to Attempts 0 but its Worktree cell lists a1 and a2, and a local branch 03-a3 exists from a crashed worker.",
+      "expected_output": "K for the redispatch is one more than the highest K found in the Worktree cell, the local branches matching implement-tickets-work/<slug>/NN-*, and the worktree list, never from the Attempts column, so the redispatch takes 03-a4. J is derived the same way, and a1-i1 counts as K=1.",
+      "expectations": [
+        "Derives K from the Worktree cell, the local branches, and the worktree list, never from the Attempts column",
+        "Takes 03-a4 although Attempts was reset",
+        "Parses K from the number after a, so a1-i1 counts as K=1",
+        "Derives J the same way"
+      ],
+      "files": []
+    },
+    {
+      "id": 19,
+      "name": "the verifier is given the recorded worktree path",
+      "prompt": "/implement-tickets .scratch/verify-demo/issues/. A risky ticket 02 returned with its worktree recorded in the Worktree cell.",
+      "expected_output": "The orchestrator gives the fresh verifier the recorded worktree path instead of the branch, because Git will not check out a branch that a live worktree holds. The verifier's own scratch checkout at the pre-ticket SHA stays out of Cleanup.",
+      "expectations": [
+        "Passes the verifier the recorded worktree path, not the branch",
+        "Leaves the verifier's scratch checkout out of Cleanup"
       ],
       "files": []
     }
