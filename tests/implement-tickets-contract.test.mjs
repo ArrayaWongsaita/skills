@@ -389,4 +389,15 @@ describe("implement-tickets documentation and decision record", () => {
       assert.doesNotMatch(page, /--parallel|--strict|--with|adapter-contract|parallel-validation|waves\.mjs/, `${file} has no removed option`);
     }
   });
+
+  describe("ticket 05 — Cleanup in the guide and the skill doc", () => {
+    it("describes Cleanup after a green gate and its exceptions in Thai and English", async () => {
+      for (const file of ["docs/guides/implement-tickets.md", "docs/skills/agents/implement-tickets.md"]) {
+        const c = await readRepo(file);
+        assert.match(c, /\*\*Cleanup:\*\* ลบ worktree ตามด้วย Worker branch[^.]*gate เขียว[\s\S]{0,400}ไม่ลบ[\s\S]{0,200}BLOCKED/, `${file} Thai Cleanup step with its exceptions`);
+        assert.match(c, /\*\*Cleanup:\*\* after a green gate[^.]*remove[^.]*worktree, then the Worker branch[\s\S]{0,400}kept[\s\S]{0,200}BLOCKED[\s\S]{0,300}report\.md/i, `${file} English Cleanup step with its exceptions`);
+        assert.match(c, /integration-gate\.md#cleanup/, `${file} links the Cleanup section`);
+      }
+    });
+  });
 });

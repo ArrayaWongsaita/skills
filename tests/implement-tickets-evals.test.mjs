@@ -47,7 +47,7 @@ describe("implement-tickets eval suite contract", () => {
     it("declares implement-tickets and unique, well-formed behavior cases", async () => {
       const payload = await readJson("evals.json");
       assert.equal(payload.skill_name, "implement-tickets");
-      assert.ok(Array.isArray(payload.evals) && payload.evals.length >= 33);
+      assert.ok(Array.isArray(payload.evals) && payload.evals.length === 33);
       const ids = new Set();
       const names = new Set();
       for (const item of payload.evals) {

@@ -12,7 +12,7 @@
 
 เมื่อเรียก `/review-to-pr` โดยไม่ระบุ argument ให้ใช้ slug จาก integration branch
 `implement-tickets/<slug>` เท่านั้น ตัวอย่าง `implement-tickets/foo` ได้ slug `foo`;
-worker branches `implement-tickets-work/foo/01` ไม่ได้กำหนด slug
+worker branches `implement-tickets-work/foo/01-a1` ไม่ได้กำหนด slug (worker branches ไม่มีอีกแล้วหลัง Cleanup ของ `implement-tickets`; skill นี้ไม่พึ่งพามัน)
 
 Skill นี้จะนำ Branch ดังกล่าวมาผ่านกระบวนการตรวจสอบคุณภาพโค้ด, แก้ไขข้อบกพร่อง, ตรวจสอบความเสี่ยงของระบบ และรันชุดทดสอบเต็ม จนได้สถานะที่ "พร้อมเปิด Pull Request (PR-ready)" อย่างแท้จริง
 

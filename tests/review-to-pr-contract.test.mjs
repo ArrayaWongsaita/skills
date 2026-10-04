@@ -685,4 +685,21 @@ describe("review-to-pr skill contract", () => {
       }
     });
   });
+
+  describe("implement-tickets Worker branches after Cleanup", () => {
+    it("names the per-attempt Worker branch and says it no longer exists after Cleanup", async () => {
+      const files = [
+        "docs/guides/review-to-pr.md",
+        "docs/skills/agents/review-to-pr.md",
+        "skills/agents/review-to-pr/SKILL.md",
+        "skills/agents/review-to-pr/references/review-point.md",
+      ];
+      for (const file of files) {
+        const c = (await readFile(path.resolve(file), "utf8")).replace(/\s*\n\s*/g, " ");
+        assert.match(c, /implement-tickets-work\/(?:foo|wishlist-sync|<slug>)\/(?:01|<NN>)-a1/, `${file} uses the per-attempt branch form`);
+        assert.match(c, /no longer exist|ไม่มีอีกแล้ว/, `${file} says Worker branches are gone after Cleanup`);
+        assert.doesNotMatch(c, /review-to-pr (?:requires|depends on|reads) (?:the )?worker branch/i, `${file} does not depend on Worker branches`);
+      }
+    });
+  });
 });

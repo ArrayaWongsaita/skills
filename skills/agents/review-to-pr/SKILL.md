@@ -54,8 +54,8 @@ Run from the integration branch. The argument is optional:
   `git merge-base main HEAD`, and the feature slug comes from the integration
   branch stem. For example, the integration branch `implement-tickets/foo`
   gives the feature slug `foo`. Worker branches are under
-  `implement-tickets-work/foo/`, while the integration branch alone determines
-  the slug. If the current
+  `implement-tickets-work/foo/` (such as `implement-tickets-work/foo/01-a1`) and
+  no longer exist after Cleanup, while the integration branch alone determines the slug. If the current
   branch is not an integration branch, use the most recent `.scratch/*/`
   directory named back to you for confirmation.
 - **`<ref>`** — an argument that `git rev-parse --verify` resolves is the review
