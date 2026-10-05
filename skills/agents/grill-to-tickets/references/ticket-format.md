@@ -105,7 +105,7 @@ Write one file per ticket under `.scratch/<feature-slug>/issues/<NN>-<slug>.md`,
 
 **What to build:** the end-to-end behaviour this ticket makes work, from the user's perspective, not a layer-by-layer implementation list.
 
-**Blocked by:** the numbers of the tickets that gate this one, or "None (can start immediately)".
+**Blocked by:** the numbers of the tickets that gate this one, separated by commas, or "None (can start immediately)"; never prose, the reason goes in What to build.
 **Stories:** user-story numbers delivered (or none)
 **Seam:** one test boundary from the spec's Testing Decisions
 **Context:** spec § <ref> · path/to/file · (edit) path/to/file · (new) path/to/file · (from NN) path/to/file · (edit from NN) path/to/file
