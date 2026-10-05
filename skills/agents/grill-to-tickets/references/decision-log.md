@@ -109,7 +109,9 @@ questions.
 - **Ticket warnings** logs the checker's Stage 3 warnings, one line each with the
   warning text and `— acknowledged` or `— fixed: <change>`, so a resumed run
   knows which warnings are settled. Stage 3 is done only when every warning
-  carries one of the two suffixes.
+  carries one of the two suffixes. The section holds the checker's warnings and
+  the one `plan gate skipped: <reason> — acknowledged` line; the planner's own
+  warnings are summarized at the quiz and not logged.
 - **Rounds** are the log. The open round fills in its `decided:` values as the
   answers arrive; a closed round stays as written. An answer that reverses an
   earlier one is a new entry naming what it replaces (`supersedes R1 Q2`).

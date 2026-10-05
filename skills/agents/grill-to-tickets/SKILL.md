@@ -299,6 +299,8 @@ summary, and every warning. Re-run the checker after every change with `--write-
 
 **Risk proposal.** At the quiz the main thread proposes `Risk: high`, with a reason, for each ticket that matches any of these: it blocks three or more tickets; it changes a shared public interface or contract another ticket uses; it touches migration, auth, security, payment, or concurrency code; it has an external or irreversible side effect. The person confirms or rejects each proposed high. Only a confirmed high is written to its ticket file, as `**Risk:** high — <reason>` directly after `**Budget:**`; every other ticket, including one whose proposal is rejected, is written without a Risk field. Re-run the checker with `--write-budget` after the Risk lines are written.
 
+**Plan gate.** After the checker prints `result: PASS`, look for `implement-tickets/scripts/plan.mjs` under each directory of the Preflight lookup order, run it with Node on the feature directory, and fix the tickets until it exits 0: any non-zero exit (error text `plan: …` on stderr) blocks the handoff until fixed. The plan gate runs before the Stage 3.5 ticket review, and re-runs after each later checker pass that changes tickets. implement-tickets is not a required skill, so it is not covered by Preflight's stop-if-missing rule. Read the planner's warnings from the `warnings` array of the planner's JSON output on stdout, and summarize them at the quiz with one line per warning kind with the ticket numbers; planner warnings are not logged under `## Ticket warnings`. When the planner is not found or Node is unavailable, the gate is skipped: record `plan gate skipped: <reason> — acknowledged` once under `## Ticket warnings` in `decisions.md`, continue, and a later skipped re-run adds nothing.
+
 **Stage 3.5 — Ticket review.** After the checker prints `result: PASS` and
 ticket errors are fixed, run one review before the quiz. Match
 `--ticket-review 0` as whole tokens; that exact value skips the
@@ -338,6 +340,8 @@ Stage 3 is done when all of these hold:
 
 - every warning is logged under `## Ticket warnings` in `decisions.md`, one line
   per warning: `<warning> — acknowledged` or `<warning> — fixed: <change>`;
+  here every warning means the checker's warnings;
+- the plan gate passed or was recorded as skipped;
 - the `ticket review` State is `done` or `skipped`;
 - every `ASK` line under `## Ticket review` carries `— resolved: <change>`,
   `— acknowledged`, or `— superseded: <late decision>`;

@@ -1400,3 +1400,49 @@ describe("Blocked by authoring rule contract", () => {
     assert.match(lines[0], /What to build/);
   });
 });
+
+describe("Stage 3 plan gate contract", () => {
+  const root = "skills/agents/grill-to-tickets";
+  const read = (file) => readFile(`${root}/${file}`, "utf8");
+  const stage3 = async () => markdownSection(await read("SKILL.md"), "Stage 3 — Tickets");
+
+  it("Stage 3 runs the planner under each Preflight directory after PASS and blocks the handoff on a non-zero exit", async () => {
+    const text = await stage3();
+    assert.match(text, /after the checker prints `result: PASS`[\s\S]*?`implement-tickets\/scripts\/plan\.mjs`[\s\S]*?each (?:directory|Preflight lookup directory)[\s\S]*?feature directory/i);
+    assert.match(text, /non-zero exit[\s\S]*?blocks? the handoff until (?:it is )?fixed/i);
+  });
+
+  it("Stage 3 runs the gate before the ticket review, re-runs it, and exempts implement-tickets from stop-if-missing", async () => {
+    const text = await stage3();
+    assert.match(text, /plan gate[\s\S]*?before the (?:Stage 3\.5 )?ticket review/i);
+    assert.match(text, /re-runs? after (?:each|every) later checker pass that changes tickets/i);
+    assert.match(text, /implement-tickets[^\n]*not covered by Preflight's stop-if-missing rule/i);
+  });
+
+  it("Stage 3 reads planner warnings from the JSON, summarizes them at the quiz per kind, and does not log them", async () => {
+    const text = await stage3();
+    assert.match(text, /warnings[\s\S]*?planner's JSON output/i);
+    assert.match(text, /one line per warning kind with the ticket numbers/i);
+    assert.match(text, /not logged under `## Ticket warnings`/i);
+  });
+
+  it("Stage 3 skips the gate with one recorded line when the planner or Node is missing", async () => {
+    const text = await stage3();
+    assert.match(text, /not found or Node is unavailable[\s\S]*?gate is skipped/i);
+    assert.match(text, /`plan gate skipped: <reason> — acknowledged`[\s\S]*?once under `## Ticket warnings`/i);
+    assert.match(text, /later skipped re-run adds nothing/i);
+  });
+
+  it("decision-log says Ticket warnings holds the checker's warnings and the one plan gate skipped line", async () => {
+    const format = markdownSection(await read("references/decision-log.md"), "Format");
+    assert.match(format, /\*\*Ticket warnings\*\*[\s\S]*?checker's[\s\S]*?`plan gate skipped: <reason> — acknowledged` line/i);
+  });
+
+  it("done-when lists the gate, keeps every warning for the checker, and stays clear of an and-chain", async () => {
+    const text = await stage3();
+    const done = text.slice(text.indexOf("Stage 3 is done when"), text.indexOf("After a manifest write"));
+    assert.match(done, /the plan gate passed or was recorded as skipped/i);
+    assert.match(done, /every warning[^\n]*checker's warning/i);
+    assert.doesNotMatch(done, /\band\b[^.]*\band\b[^.]*\band\b/);
+  });
+});
