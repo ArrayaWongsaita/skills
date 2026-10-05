@@ -1358,3 +1358,45 @@ describe("Phase 2 human documentation", () => {
     });
   }
 });
+
+describe("Blocked by authoring rule contract", () => {
+  const root = "skills/agents/grill-to-tickets";
+  const read = (file) => readFile(`${root}/${file}`, "utf8");
+  const slices = async () => flatMarkdownSection(await read("references/ticket-format.md"), "3. Draft vertical slices");
+
+  it("ticket-format states the Blocked by line holds ticket numbers or None and never prose", async () => {
+    const text = await slices();
+    assert.match(text, /\*\*Blocked by:\*\*[^\n]*ticket numbers separated by commas, or `None`/i);
+    assert.match(text, /prose is never allowed/i);
+  });
+
+  it("ticket-format tolerates an exact title per segment, discourages it, and sends reasons to What to build", async () => {
+    const text = await slices();
+    assert.match(text, /exact ticket title is tolerated per segment but discouraged/i);
+    assert.match(text, /reason belongs in What to build/i);
+  });
+
+  it("ticket-format says a bracketed Context path makes the planner treat the touch set as unknown, intentionally", async () => {
+    const text = await slices();
+    assert.match(text, /square brackets in Context[\s\S]*?makes the planner treat the touch set as unknown/i);
+    assert.match(text, /this is intentional/i);
+  });
+
+  it("rationalizations has a row against 'the checker passed, so the planner will' with a refusal action", async () => {
+    const table = markdownSection(await read("references/rationalizations.md"), "Shortcuts");
+    const row = table.split("\n").filter((line) => line.startsWith("|")).slice(2)
+      .map((line) => line.split("|").slice(1, -1).map((cell) => cell.trim()))
+      .find(([excuse]) => /checker passed[^.]*planner will/i.test(excuse));
+    assert.ok(row, "table has the checker-passed row");
+    assert.match(row[1], /Blocked by/);
+    assert.match(row[2], /\b(?:Never|Do not)\b/);
+  });
+
+  it("Stage 3 states the Blocked by rule in one line", async () => {
+    const stage = markdownSection(await read("SKILL.md"), "Stage 3 — Tickets");
+    const lines = stage.split("\n").filter((line) => /ticket numbers separated by commas, or `None`/.test(line));
+    assert.equal(lines.length, 1, "exactly one line states the rule");
+    assert.match(lines[0], /Blocked by/);
+    assert.match(lines[0], /What to build/);
+  });
+});

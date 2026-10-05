@@ -272,7 +272,7 @@ exhaustion or stall, write tickets following
 [ticket-format.md](references/ticket-format.md) against the `spec.md`.
 Break it into tracer-bullet vertical slices, each declaring its blocking edges,
 and write one file per ticket under `.scratch/<feature-slug>/issues/<NN>-<slug>.md`,
-numbered from `01` in dependency order. Every ticket carries a `**Stories:**` line after `**Blocked by:**`: the spec's
+numbered from `01` in dependency order. The Blocked by line holds ticket numbers separated by commas, or `None`; reasons go in What to build. Every ticket carries a `**Stories:**` line after `**Blocked by:**`: the spec's
 user-story numbers it delivers (`2, 5`, or a range `3-6`), or `none` for a
 prefactor.
 

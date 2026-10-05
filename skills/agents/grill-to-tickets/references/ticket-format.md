@@ -42,6 +42,7 @@ Wide refactors are the exception to vertical slicing. A wide refactor is one mec
   - Ticket acceptance criteria derive from the scenarios of the stories the ticket delivers. The checker does not compare criteria with scenarios.
   - Documentation obligations are written as testable statements (for example, "the guide describes X").
 - **No file paths in What to build or criteria:** Avoid specific file paths or code snippets in What to build and the acceptance criteria; they go stale quickly. Context is the one place a ticket names paths. Exception: inlined prototype snippets encoding a decision more precisely than prose can.
+- **Blocked by:** The `**Blocked by:**` line holds ticket numbers separated by commas, or `None`; prose is never allowed. An exact ticket title is tolerated per segment but discouraged. The reason belongs in What to build.
 - **Stories:** Every ticket carries a `**Stories:**` line directly after `**Blocked by:**` listing the spec's user-story numbers it delivers, or `none` for a prefactor.
 - **Seam:** Every ticket carries a `**Seam:**` line directly after `**Stories:**` naming one test boundary, taken from the spec's Testing Decisions. It must be a single non-empty line.
 - **Context:** Every ticket carries a `**Context:**` line directly after `**Seam:**` listing the spec sections and repository files the worker needs. It must be a single line; Context items never wrap. Items are separated by ` · ` and come in six forms:
@@ -51,7 +52,7 @@ Wide refactors are the exception to vertical slicing. A wide refactor is one mec
   - `(new) <path>` — a file this ticket creates; it must not exist yet.
   - `(from NN) <path>` — a file that does not exist yet, that ticket NN creates, and that this ticket reads.
   - `(edit from NN) <path>` — a file that does not exist yet, that ticket NN creates, and that this ticket changes.
-  For both `(from NN)` and `(edit from NN)` forms, ticket NN must carry `(new) <path>` and must be among this ticket's transitive blockers. Paths are relative to the project root and normalised with `path.posix.normalize`. An absolute path, a path that escapes the root, or a directory is an error.
+  For both `(from NN)` and `(edit from NN)` forms, ticket NN must carry `(new) <path>` and must be among this ticket's transitive blockers. Paths are relative to the project root and normalised with `path.posix.normalize`. An absolute path, a path that escapes the root, or a directory is an error. A path with square brackets in Context, such as a `[...slug]` route, makes the planner treat the touch set as unknown; this is intentional.
 - **Budget:** Every ticket carries a `**Budget:**` line directly after `**Context:**` recording the checker's measurement of its Read set. It must be a single non-empty line, shaped `read ~<N>k tokens · <C> criteria · <M> modules`:
   - read tokens = ⌈ASCII code points ÷ 4⌉ + non-ASCII code points, counted over all of these sources together: the ticket file with its `**Budget:**` line removed, each section its `spec §` refs name, and each read-only and `(edit)` file — plus 2000 for each `(new)`, `(from NN)`, or `(edit from NN)` file;
   - `N` is `Math.round(read tokens ÷ 1000)`;
