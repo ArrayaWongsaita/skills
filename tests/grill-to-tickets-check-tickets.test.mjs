@@ -339,6 +339,81 @@ describe("check-tickets", () => {
     assert.ok(checkFeature({ spec, tickets }).errors.some((e) => /Blocked by "Import members" matches no ticket/.test(e)));
   });
 
+  describe("Blocked by parity with the planner", () => {
+    const blockedByErrors = (value, tickets = passing()) => {
+      tickets[2] = ticket("03", "Hide emails", { blockedBy: value, stories: "3" });
+      return checkFeature({ spec, tickets }).errors;
+    };
+    const proseError = (segment) =>
+      `issues/03-hide-emails.md: Blocked by "${segment}" matches no ticket; Blocked by takes ticket numbers or exact ticket titles, not prose (put the reason in What to build)`;
+
+    it("names the segment a comma splits off a parenthesised reason", () => {
+      const tickets = passing();
+      tickets[2] = ticket("03", "Hide emails", { blockedBy: "01, 02 (reason, with a comma)", stories: "3" });
+      const { errors } = checkFeature({ spec, tickets });
+      assert.ok(errors.includes(proseError("with a comma)")), errors.join("\n"));
+    });
+
+    it("reports an un-numbered, non-title segment with the full rule", () => {
+      assert.ok(blockedByErrors("Some prose").includes(proseError("Some prose")));
+    });
+
+    it("reports an empty or whitespace-only value as empty, distinct from missing", () => {
+      for (const value of ["", "   "]) {
+        const errors = blockedByErrors(value);
+        assert.deepEqual(errors, ["issues/03-hide-emails.md: **Blocked by:** is empty"]);
+      }
+      const missing = blockedByErrors(null);
+      assert.deepEqual(missing, ["issues/03-hide-emails.md: **Blocked by:** is missing"]);
+    });
+
+    it("accepts None only as None or None (can start immediately), in any case", () => {
+      for (const value of ["None", "none", "NONE", "None (can start immediately)", "NONE (CAN START IMMEDIATELY)"]) {
+        assert.deepEqual(blockedByErrors(value), [], value);
+      }
+      for (const value of ["None, because X", "None."]) {
+        assert.ok(blockedByErrors(value).some((e) => /Blocked by/.test(e)), value);
+      }
+      assert.ok(blockedByErrors("None, because X").includes(proseError("None")));
+      assert.ok(blockedByErrors("None, because X").includes(proseError("because X")));
+      assert.ok(blockedByErrors("None.").includes(proseError("None.")));
+    });
+
+    it("accepts numbers, titles and comma-only lines the way the planner does", () => {
+      for (const value of ["01", "02, 01", "01: Export members", "# 01", "01, Export members", "01,", ","]) {
+        assert.deepEqual(blockedByErrors(value), [], value);
+      }
+    });
+
+    it("rejects a title containing a comma, a trailing-period title and a title typo", () => {
+      const commaTitled = passing();
+      commaTitled[0] = ticket("01", "Parse, validate", { stories: "1, 1a" });
+      assert.ok(blockedByErrors("Parse, validate", commaTitled).includes(proseError("validate")));
+      assert.ok(blockedByErrors("Export members.").includes(proseError("Export members.")));
+      assert.ok(blockedByErrors("Export memebrs").includes(proseError("Export memebrs")));
+    });
+
+    it("resolves a duplicated title to the last ticket holding it", () => {
+      const tickets = [
+        ticket("01", "Export members", { stories: "1, 1a" }),
+        ticket("02", "Export members", { blockedBy: "01", stories: "2" }),
+        ticket("03", "Hide emails", { blockedBy: "Export members", stories: "3" }),
+      ];
+      assert.deepEqual(checkFeature({ spec, tickets }).errors, []);
+      tickets[1] = ticket("02", "Export members", { blockedBy: "Export members", stories: "2" });
+      const { errors } = checkFeature({ spec, tickets });
+      assert.ok(errors.includes("issues/02-export-members.md: Blocked by 02; a blocker must have a lower number"), errors.join("\n"));
+    });
+
+    it("keeps the words Blocked by in every Blocked by error", () => {
+      for (const value of ["", "Some prose", "07", "03", "None."]) {
+        const errors = blockedByErrors(value);
+        assert.ok(errors.length > 0, value);
+        for (const error of errors) assert.match(error, /Blocked by/, value);
+      }
+    });
+  });
+
   it("rejects badly named ticket files and headings that disagree with them", () => {
     const tickets = [...passing(), { file: "notes.md", text: "# scratch" }];
     tickets[0] = { file: tickets[0].file, text: tickets[0].text.replace("# 01:", "# 04:") };
@@ -1960,5 +2035,15 @@ describe("check-tickets", () => {
     assert.match(header, /manifest\.json/);
     assert.match(header, /manifest/i);
     assert.match(header, /only.*PASS|PASS.*only/i);
+  });
+
+  it("the checker header says every Blocked by segment is a ticket number or an exact ticket title", async () => {
+    const header = (await readFile(script, "utf8"))
+      .split("\n")
+      .filter((line) => line.startsWith("//"))
+      .map((line) => line.replace(/^\/\/\s?/, ""))
+      .join(" ")
+      .replace(/\s+/g, " ");
+    assert.match(header, /every comma-separated segment is a ticket number or an exact ticket title/);
   });
 });

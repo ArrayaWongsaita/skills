@@ -12,7 +12,9 @@
 // - each Scenario line yields at most one error in order: outside a story,
 //   indentation, then keyword; multiple Scenario lines under one story pass;
 // - every ticket's **Stories:** names only stories the spec defines;
-// - every **Blocked by:** entry names an existing, lower-numbered ticket;
+// - every **Blocked by:** entry names an existing, lower-numbered ticket; every
+//   comma-separated segment is a ticket number or an exact ticket title, read as
+//   implement-tickets does, and `None` stands alone;
 // - every ticket has **Seam:** directly after **Stories:**;
 // - every ticket has **Context:** directly after **Seam:**;
 // - every **Seam:** and **Context:** is a single non-empty line with no non-field line directly after it;
@@ -366,30 +368,22 @@ function writeBudgetLine(text, line) {
   return lines.join("\n");
 }
 
+// Reads Blocked by as implement-tickets/scripts/plan.mjs does: comma-separated
+// segments, each a ticket number or an exact (case-insensitive) ticket title.
+// A duplicated title resolves to the last ticket holding it.
 function parseBlockedBy(value, tickets) {
-  const text = value.replace(/\.\s*$/, "").trim();
-  if (/^none\b/i.test(text)) return { refs: [], unresolved: [] };
-  const segments = text.split(/,\s*/);
-  if (!/^#?\d+\b/.test(segments[0])) {
-    const titled = tickets.find((t) => t.title?.toLowerCase() === text.toLowerCase());
-    if (titled) return { refs: [titled.number], unresolved: [] };
-    const refs = [];
-    const unresolved = [];
-    for (const segment of segments) {
-      const match = tickets.find((t) => t.title?.toLowerCase() === segment.trim().toLowerCase());
-      if (match) refs.push(match.number);
-      else unresolved.push(segment.trim());
-    }
-    return { refs, unresolved };
-  }
-  // A segment after a numbered one without its own number continues that
-  // ticket's title ("01: Parse, validate, and store"), so it adds no edge.
+  if (/^none(?:\s*\(can start immediately\))?$/i.test(value)) return { refs: [], unresolved: [] };
+  const byTitle = new Map();
+  for (const t of tickets) if (t.title) byTitle.set(t.title.toLowerCase(), t);
   const refs = [];
-  for (const segment of segments) {
-    const numbered = segment.match(/^#?(\d+)\b/);
-    if (numbered) refs.push(Number(numbered[1]));
+  const unresolved = [];
+  for (const segment of value.split(",").map((item) => item.trim()).filter(Boolean)) {
+    const numbered = segment.match(/^#?\s*(\d+)\b/);
+    const number = numbered ? Number(numbered[1]) : byTitle.get(segment.toLowerCase())?.number;
+    if (number === undefined) unresolved.push(segment);
+    else refs.push(number);
   }
-  return { refs, unresolved: [] };
+  return { refs, unresolved };
 }
 
 function parseStoryRefs(value, stories) {
@@ -514,9 +508,15 @@ export function checkFeature({ spec, tickets: ticketFiles, files }) {
     ticket.blockers = new Set();
     if (blockedBy === undefined) {
       errors.push(`${where}: **Blocked by:** is missing`);
+    } else if (blockedBy.trim() === "") {
+      errors.push(`${where}: **Blocked by:** is empty`);
     } else {
       const { refs, unresolved } = parseBlockedBy(blockedBy, tickets);
-      for (const name of unresolved) errors.push(`${where}: Blocked by "${name}" matches no ticket`);
+      for (const name of unresolved) {
+        errors.push(
+          `${where}: Blocked by "${name}" matches no ticket; Blocked by takes ticket numbers or exact ticket titles, not prose (put the reason in What to build)`,
+        );
+      }
       for (const ref of refs) {
         if (!seen.has(ref)) errors.push(`${where}: Blocked by ${pad(ref)}, which does not exist`);
         else if (ref >= ticket.number) {
