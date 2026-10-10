@@ -377,7 +377,6 @@ describe("implement-tickets minimal serial core", () => {
   it("hands off a green run without starting review or publication", async () => {
     const gate = await read("references/integration-gate.md");
     assert.match(gate, /implement-tickets\/<slug>/);
-    assert.match(gate, /\/review-to-pr <slug>/);
     assert.match(gate, /Accepted extra files/);
     assert.match(gate, /Skipped the verifier: 02, 04/);
     assert.match(gate, /Run report: none/);

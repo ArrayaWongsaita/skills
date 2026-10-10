@@ -256,8 +256,7 @@ describe("personal AI skills repository contract", () => {
       const adr = relative.match(/^docs\/decisions\/(\d{4})-[^/]+\.md$/);
       return relative.split("/").includes(".scratch")
         || relative === "docs/retro-log.md"
-        || (adr && historicalAdrNumbers.has(adr[1]))
-        || relative.startsWith("skills/agents/retro-to-remedies/evals/fixtures/");
+        || (adr && historicalAdrNumbers.has(adr[1]));
     };
     const violations = [];
     for (const { file, text } of files) {
@@ -727,23 +726,6 @@ describe("grill-to-tickets production records and guides", () => {
     }
   });
 
-  it("describes Seam and Context use, the path rule, and the budget recording in the backend guides", async () => {
-    for (const skill of ["agy-implement", "opencode-implement"]) {
-      for (const file of [`docs/guides/${skill}.md`, `docs/skills/agents/${skill}.md`]) {
-        const doc = await readTextOrNull(file);
-        assert.ok(doc, `${file} exists`);
-
-        assert.match(doc, /\*\*Seam:\*\*/, `${file} names the Seam field`);
-        assert.match(doc, /\*\*Context:\*\*/, `${file} names the Context field`);
-        assert.match(doc, /verbatim/, `${file} says the Seam is used verbatim`);
-        assert.match(doc, /read list|read set|รายการอ่าน/, `${file} calls Context the worker's read list`);
-        assert.match(doc, /relative[\s\S]{0,220}absolute/i, `${file} states the path rule`);
-        assert.match(doc, /budget_estimate/, `${file} records budget_estimate`);
-        assert.match(doc, /usage_total/, `${file} records usage_total`);
-      }
-    }
-  });
-
   it("describes the grill-to-tickets handoff in the skill's order: /clear, then the DAG summary, then the implementer command", async () => {
     const guide = await readTextOrNull("docs/guides/grill-to-tickets.md");
     assert.ok(guide, "the grill-to-tickets guide exists");
@@ -807,113 +789,6 @@ describe("grill-to-tickets production records and guides", () => {
     assertFirstMentionOrder(stage5, ["/clear", "DAG summary"], "skill page Thai Stage 5 line");
   });
 
-  it("says the orchestrator builds the worker's read list into the prompt, in the guides and the skill pages", async () => {
-    for (const skill of ["agy-implement", "opencode-implement"]) {
-      const guideFile = `docs/guides/${skill}.md`;
-      const guide = await readTextOrNull(guideFile);
-      assert.ok(guide, `${guideFile} exists`);
-
-      const context = bulletLine(guide, "Context:");
-      assert.ok(context, `${guideFile} has a Context bullet`);
-      assert.match(context, /read list/, `${guideFile} Context bullet keeps the read list`);
-      assert.doesNotMatch(context, /worker\s*สร้าง|ของตัวเอง/, `${guideFile} Context bullet does not have the worker build its own read list`);
-      assert.match(
-        context,
-        /(orchestrator|implementer)[^;]*\*\*read list\*\*[^;]*prompt/,
-        `${guideFile} Context bullet has the orchestrator build the read list into the worker prompt`,
-      );
-
-      const pageFile = `docs/skills/agents/${skill}.md`;
-      const page = await readTextOrNull(pageFile);
-      assert.ok(page, `${pageFile} exists`);
-
-      const passages = page.split(/\n\s*\n/).filter((paragraph) => /^Seam, Context/.test(paragraph));
-      assert.equal(passages.length, 2, `${pageFile} has a Thai and an English Seam, Context paragraph`);
-      for (const passage of passages) {
-        const flat = passage.replace(/\s+/g, " ");
-        assert.doesNotMatch(
-          flat,
-          /ประกอบ \*\*read list\*\* ของตัวเอง|builds its \*\*read list\*\*/,
-          `${pageFile} does not have the worker build its own read list`,
-        );
-        assert.match(
-          flat,
-          /orchestrator (ประกอบ|builds)[^.]*\*\*read list\*\*/,
-          `${pageFile} has the orchestrator build the read list`,
-        );
-      }
-    }
-  });
-
-  it("keeps sibling implementer guides on the read list and excluding cache reads", async () => {
-    for (const skill of ["agy-implement", "opencode-implement"]) {
-      const guideFile = `docs/guides/${skill}.md`;
-      const guide = await readTextOrNull(guideFile);
-      assert.ok(guide, `${guideFile} exists`);
-
-      const context = bulletLine(guide, "Context:");
-      assert.ok(context, `${guideFile} has a Context bullet`);
-      assert.match(context, /read list/, `${guideFile} Context bullet keeps the read list`);
-      assert.doesNotMatch(context, /worker\s*สร้าง|ของตัวเอง/, `${guideFile} Context bullet does not have the worker build its own read list`);
-      assert.match(
-        context,
-        /(orchestrator|implementer)[^;]*\*\*read list\*\*[^;]*prompt/,
-        `${guideFile} Context bullet has the orchestrator build the read list into the worker prompt`,
-      );
-
-      const pageFile = `docs/skills/agents/${skill}.md`;
-      const page = await readTextOrNull(pageFile);
-      assert.ok(page, `${pageFile} exists`);
-
-      const passages = page.split(/\n\s*\n/).filter((paragraph) => /^Seam, Context/.test(paragraph));
-      assert.equal(passages.length, 2, `${pageFile} has a Thai and an English Seam, Context paragraph`);
-      for (const passage of passages) {
-        const flat = passage.replace(/\s+/g, " ");
-        assert.doesNotMatch(
-          flat,
-          /ประกอบ \*\*read list\*\* ของตัวเอง|builds its \*\*read list\*\*/,
-          `${pageFile} does not have the worker build its own read list`,
-        );
-        assert.match(
-          flat,
-          /orchestrator (ประกอบ|builds)[^.]*\*\*read list\*\*/,
-          `${pageFile} has the orchestrator build the read list`,
-        );
-      }
-    }
-  });
-
-  it("splits opencode-implement's usage_total in its guide: the main path excludes cache reads, the fallback path is the subagent's reported tokens, possibly cache-inclusive", async () => {
-    const file = "docs/guides/opencode-implement.md";
-    const guide = await readTextOrNull(file);
-    assert.ok(guide, `${file} exists`);
-
-    const line = bulletLine(guide, "การบันทึก budget:");
-    assert.ok(line, `${file} has a budget bullet`);
-    assert.match(line, /budget_estimate/, `${file} budget bullet keeps budget_estimate`);
-    assert.match(line, /จากทุก usage report บน path ที่ส่ง ticket สำเร็จ/, `${file} budget bullet sums every usage report on the path that delivered the ticket`);
-    assert.match(line, /`unknown`/, `${file} budget bullet keeps the unknown case`);
-
-    // The main path is named first and the fallback path second; each gets its own rule.
-    const split = line.indexOf("fallback path");
-    assert.notEqual(split, -1, `${file} budget bullet names the fallback path`);
-    const mainPath = line.slice(0, split);
-    const fallbackPath = line.slice(split);
-
-    assert.match(
-      mainPath,
-      /main path[\s\S]*input \+ output \+ reasoning[\s\S]*`step_finish`[\s\S]*ไม่นับ cache read/,
-      `${file} budget bullet has the main path count input + output + reasoning over every step_finish event without cache reads`,
-    );
-    assert.doesNotMatch(mainPath, /cache-inclusive/, `${file} budget bullet does not call the main path cache-inclusive`);
-    assert.match(
-      fallbackPath,
-      /subagent[\s\S]*รายงาน[\s\S]*ตามที่ให้มา[\s\S]*cache-inclusive/,
-      `${file} budget bullet has the fallback path record the subagent's reported tokens as given, possibly cache-inclusive`,
-    );
-    assert.doesNotMatch(fallbackPath, /ไม่นับ cache read/, `${file} budget bullet does not exclude cache reads on the fallback path`);
-  });
-
   it("says in the guide's no-issue-tracker bullet that the owned formats have no publish or setup step", async () => {
     const guide = await readTextOrNull("docs/guides/grill-to-tickets.md");
     assert.ok(guide, "the grill-to-tickets guide exists");
@@ -954,26 +829,6 @@ describe("grill-to-tickets production records and guides", () => {
         /Scenario|story coverage|blockers|\bSeam\b|\bContext\b|\bBudget\b|--write-budget|warnings?|coverage|\bDAG\b|recommended implementer|exit [012]/i,
         `the ${language} bullet leaves checker rules and output details in the canonical contract`,
       );
-    }
-  });
-
-  it("keeps sibling implementer usage_total in their Seam, Context paragraphs", async () => {
-    const seamParagraphs = async (skill) => {
-      const file = `docs/skills/agents/${skill}.md`;
-      const page = await readTextOrNull(file);
-      assert.ok(page, `${file} exists`);
-
-      const paragraphs = page.split(/\n\s*\n/).filter((paragraph) => /^Seam, Context/.test(paragraph));
-      assert.equal(paragraphs.length, 2, `${file} has a Thai and an English Seam, Context paragraph`);
-      return { file, flat: paragraphs.map((paragraph) => paragraph.replace(/\s+/g, " ")) };
-    };
-
-    for (const skill of ["agy-implement", "opencode-implement"]) {
-      const { file, flat } = await seamParagraphs(skill);
-      for (const paragraph of flat) {
-        assert.match(paragraph, /usage_total/, `${file} records usage_total`);
-        assert.doesNotMatch(paragraph, /cache-inclusive/, `${file} does not say cache-inclusive`);
-      }
     }
   });
 
@@ -1118,15 +973,6 @@ describe("grill-to-tickets production records and guides", () => {
       assert.equal(row.split("|").length, 5, `the ${term} row has the Term, ภาษาไทย, and Definition cells`);
     }
 
-    const lines = glossary.split("\n");
-    const anchor = lines.indexOf(tableRow(glossary, "Workflow State"));
-    const retro = lines.indexOf(tableRow(glossary, "Retro"));
-    assert.notEqual(anchor, -1, "the glossary keeps its Workflow State row");
-    for (const [term, row] of Object.entries(rows)) {
-      const index = lines.indexOf(row);
-      assert.ok(index > anchor && index < retro, `the ${term} row sits between the Workflow State row and the Retro rows`);
-    }
-
     // A Definition cell is the English definition, " / ", then the Thai one.
     const halves = (row) => {
       const cell = row.split("|")[3].trim();
@@ -1216,8 +1062,6 @@ describe("grill-to-tickets production records and guides", () => {
     const roots = [
       "skills/agents/grill-to-tickets",
       "skills/agents/implement-tickets",
-      "skills/agents/agy-implement",
-      "skills/agents/opencode-implement",
       "tests",
     ];
     const violations = [];
@@ -1235,24 +1079,6 @@ describe("grill-to-tickets production records and guides", () => {
     assert.deepEqual(violations, []);
   });
 
-  it("has no absolute-path wording in the three implementer directories", async () => {
-    const pattern = /every path in the prompt is\s+absolute|absolute\s+paths\s+everywhere/i;
-    const found = [];
-
-    for (const skill of ["implement-tickets", "agy-implement", "opencode-implement"]) {
-      for (const { file, text } of await textFilesUnder(path.join("skills/agents", skill))) {
-        if (file.endsWith(".md")) {
-          try {
-            assertAbsentFromMarkdownSections(text, pattern, `${file} has no absolute-path wording`);
-          } catch (error) {
-            found.push(`${file}: ${error.message}`);
-          }
-        }
-      }
-    }
-
-    assert.deepEqual(found, []);
-  });
 });
 
 describe("Phase 2 decision amendments", () => {

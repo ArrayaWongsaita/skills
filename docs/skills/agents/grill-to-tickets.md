@@ -30,7 +30,6 @@ npx skills add ArrayaWongsaita/skills --skill grill-to-tickets
 
 ### ไม่ควรใช้เมื่อไร
 
-- ถ้าต้องการให้ทำถึงขั้น implement และ review โค้ดใน run เดียว ใช้ `/engineering-workflow` (หรือทำต่อจาก ticket ด้วย `/implement-tickets` แล้วตามด้วย `/review-to-pr`)
 - ถ้าต้องการแค่ discipline เดียว เรียก `/grilling`, `/scrutinize` ตรง ๆ
 
 ### วิธีทำงานหลัก
@@ -104,9 +103,6 @@ is the update tool. No issue tracker is needed: the files under `.scratch/` are 
 
 ### Do not use it when
 
-- You want one run to continue into implementation and code review — use
-  `/engineering-workflow` (or continue from the tickets with
-  `/implement-tickets`, then `/review-to-pr`).
 - You only need one discipline — call `/grilling` or `/scrutinize` directly.
 
 ### Main workflow

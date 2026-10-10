@@ -4,7 +4,7 @@
 
 ## Status / สถานะ
 
-Accepted / ยอมรับแล้ว
+Superseded by ADR 0027 / ถูกแทนที่โดย ADR 0027 (was: Accepted / ยอมรับแล้ว)
 
 ยอมรับแล้ว — `review-to-pr` เป็น skill มาตรฐานแบบ standalone ไม่ผูกกับ
 `engineering-workflow`

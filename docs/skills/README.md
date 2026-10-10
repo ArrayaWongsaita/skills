@@ -17,14 +17,9 @@ npx skills add ArrayaWongsaita/skills --all
 | --- | --- | --- |
 | `agent-instructions-architect` | Set up, audit, refactor, migrate, and validate lean single-agent repository instruction architectures using AGENTS.md, scoped instructions, composable Agent Skills, repository documentation, and deterministic enforcement. Use when creating or reorganizing repository guidance, reducing context or duplication, or adapting one canonical system across Codex, Claude Code, GitHub Copilot CLI, and OpenCode. Do not use for generic prompt writing, application feature work, or multi-agent orchestration. | [คู่มือ / Guide](agents/agent-instructions-architect.md) |
 | `agy-agent` | Delegate well-scoped coding, large-context analysis, search, testing, or mechanical tasks to an Antigravity CLI (`agy`) subagent. Use when offloading work to save host context and quota, when leveraging Gemini's 1M+ token context window for massive file/log or codebase exploration, or when the user says "use agy", "delegate to agy", "run in agy", or "ask antigravity". Do NOT use for tasks requiring conversational context from this chat, ambiguous architecture decisions, or interactive human clarification. | [คู่มือ / Guide](agents/agy-agent.md) |
-| `agy-implement` | Turn a directory of grill-to-tickets tickets into working code by planning execution waves, dispatching one headless agy worker per ticket across several LLM providers, forcing test-first implementation, verifying every result, integrating one commit per ticket onto a branch, and stopping before review. | [คู่มือ / Guide](agents/agy-implement.md) |
 | `design-task-spec` | Design decision-complete software implementation task specifications from vague ideas or existing tickets. Use when explicitly asked to investigate a repository, stress-test requirements for a feature, bug fix, refactor, migration, integration, or infrastructure change, document relevant domain decisions, and produce a source-linked task that another agent can implement without making product or architecture decisions. Do not use this skill to implement the designed task. | [คู่มือ / Guide](agents/design-task-spec.md) |
-| `engineering-workflow` | Explicitly route a feature, bug, incident, or large engineering effort through pure-prompt cognitive orchestration, markdown state artifacts, evidence gates, bounded review loops, and resumable transitions. | [คู่มือ / Guide](agents/engineering-workflow.md) |
 | `grill-to-tickets` | Standalone composite skill that carries one idea from a relentless discovery interview through domain modeling, specification, a bounded design-review gate, and vertical ticket breakdown, then stops at published tickets without implementing. | [คู่มือ / Guide](agents/grill-to-tickets.md) |
 | `implement-tickets` | Plan and implement a grill-to-tickets feature directory serially with native subagents, risk-based verification, and a handoff before review. | [คู่มือ / Guide](agents/implement-tickets.md) |
-| `opencode-implement` | Turn a directory of grill-to-tickets tickets into working code on a resolved, pinned hosted opencode model by planning execution waves, dispatching one headless opencode run worker per ticket in parallel within each wave up to a concurrency cap, forcing test-first implementation, verifying every result, automatically routing to a native-subagent fallback for any ticket the resolved model cannot deliver, integrating one commit per ticket onto a branch, and stopping before review. | [คู่มือ / Guide](agents/opencode-implement.md) |
-| `retro-to-remedies` | Review a finished Run's primary sources to classify misses into environment remedies, commit applied text remedies, record outcomes in the Retro Log, and hand off code remedies before pr-to-base. | [คู่มือ / Guide](agents/retro-to-remedies.md) |
-| `review-to-pr` | Pick up a verified-but-unreviewed integration branch where implement, agy-implement, or implement-tickets stopped and drive it to a PR-ready state — pin a review point, run a bounded two-axis code-review loop, cluster the blockers and land each as one fix(review) commit, run a conditional system scrutinize gate, get the full suite green, then hand off the PR command without opening the PR. | [คู่มือ / Guide](agents/review-to-pr.md) |
 | `tokenme-agent` | Delegate mechanical, self-contained subtasks — a rename across small files, boilerplate, mechanical formatting, lint-and-report, log summarising — to a cheap headless tokenme run so host context and quota stay available for work that needs judgment. Load it when you recognise a mechanical, self-contained subtask in your own plan, or when the task text says "use tokenme", "delegate this", or "do this cheaply". Keep on the host anything touching secrets, credentials or `.env` files, high-risk tickets, code the user marked as staying local, design and architecture choices, and tasks that need this chat's earlier context. | [คู่มือ / Guide](agents/tokenme-agent.md) |
 
 ### Install this category / ติดตั้งทั้งหมวด
@@ -33,14 +28,9 @@ npx skills add ArrayaWongsaita/skills --all
 npx skills add ArrayaWongsaita/skills \
   --skill agent-instructions-architect \
   --skill agy-agent \
-  --skill agy-implement \
   --skill design-task-spec \
-  --skill engineering-workflow \
   --skill grill-to-tickets \
   --skill implement-tickets \
-  --skill opencode-implement \
-  --skill retro-to-remedies \
-  --skill review-to-pr \
   --skill tokenme-agent
 ```
 

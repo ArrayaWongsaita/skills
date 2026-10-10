@@ -82,20 +82,6 @@ describe("grill-to-tickets composite skill contract", () => {
     }
   });
 
-  it("keeps the manifest out of the three implementer skills and their references", async () => {
-    for (const implementer of ["agy-implement", "opencode-implement"]) {
-      const directory = path.resolve("skills/agents", implementer);
-      const files = [path.join(directory, "SKILL.md"), ...(await filesUnder(path.join(directory, "references")))];
-      for (const file of files) {
-        assertAbsentFromMarkdownSections(
-          await readFile(file, "utf8"),
-          /\bmanifest\b/i,
-          `${file} must not depend on the manifest`,
-        );
-      }
-    }
-  });
-
   it("steers positively — no 'Never' or 'Do not' in the instruction body", async () => {
     for (const file of skillFiles) {
       const body = (await readFile(file, "utf8")).replace(/^---\n[\s\S]*?\n---\n/, "");

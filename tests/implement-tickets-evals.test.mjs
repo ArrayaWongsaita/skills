@@ -39,7 +39,7 @@ describe("implement-tickets eval suite contract", () => {
         assert.doesNotMatch(item.query, /[/$]implement-tickets/);
       }
       assert.ok(negatives.some((item) => /implement this|implement the tickets/i.test(item.query)));
-      assert.ok(negatives.some((item) => /agy-implement|opencode-implement|\/implement\b/i.test(item.query)));
+      assert.ok(negatives.some((item) => /\/implement\b/i.test(item.query)));
     });
   });
 

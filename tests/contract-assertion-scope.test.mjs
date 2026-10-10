@@ -73,7 +73,7 @@ describe("Markdown contract assertion scope", () => {
     }
   });
 
-  it("scopes implement-tickets index entries and file-wide Markdown exclusions", async () => {
+  it("scopes implement-tickets index entries", async () => {
     const indexRow = await testCase(
       "tests/repo-contract.test.mjs",
       "lists implement-tickets in the generated agent-skill index",
@@ -92,27 +92,6 @@ describe("Markdown contract assertion scope", () => {
     assert.match(alias, /tableRow\(index,\s*retiredName\)/,
       "the retired command is excluded from the generated skill rows");
 
-    const exclusions = await testCase(
-      "tests/repo-contract.test.mjs",
-      "has no absolute-path wording in the three implementer directories",
-    );
-    assert.match(exclusions, /assertAbsentFromMarkdownSections\(text,/,
-      "Markdown exclusions are checked within parsed sections");
-    assert.doesNotMatch(exclusions, /pattern\.test\(text\)/,
-      "the absolute-path exclusion must not scan a complete Markdown file");
-  });
-
-  it("scopes implementer manifest checks to Markdown sections", async () => {
-    const source = await testCase(
-      "tests/grill-to-tickets-contract.test.mjs",
-      "keeps the manifest out of the three implementer skills and their references",
-    );
-    assert.doesNotMatch(
-      source,
-      /assert\.doesNotMatch\(\s*await readFile\(file,\s*["']utf8["']\)/,
-      "tests/grill-to-tickets-contract.test.mjs:87 must not assert against an entire implementer file",
-    );
-    assert.match(source, /assertAbsentFromMarkdownSections\(/, "the implementer scan checks each Markdown section");
   });
 
   it("scopes grill-to-tickets handoff framing to its handoff section", async () => {

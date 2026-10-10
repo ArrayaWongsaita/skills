@@ -12,7 +12,7 @@
     "should_trigger": false
   },
   {
-    "query": "Use agy-implement to spread these tickets across providers.",
+    "query": "Use agy-agent to spread these tickets across providers.",
     "should_trigger": false
   },
   {

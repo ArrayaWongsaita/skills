@@ -14,8 +14,7 @@ $implement-tickets <dir|slug>
 /implement-tickets continue [slug]
 ```
 
-ไม่มี option: ไม่มีโหมดขนาน, ไม่มี adapter และไม่มีการหยุดรออนุมัติ run พิมพ์ Plan แล้วเริ่มทำงาน
-backend อื่นใช้ `agy-implement` หรือ `opencode-implement` ดู [ADR 0023](../../decisions/0023-implement-tickets-minimal-core.md)
+ไม่มี option: ไม่มีโหมดขนาน, ไม่มี adapter และไม่มีการหยุดรออนุมัติ run พิมพ์ Plan แล้วเริ่มทำงาน ดู [ADR 0023](../../decisions/0023-implement-tickets-minimal-core.md)
 
 ### ติดตั้ง
 
@@ -57,8 +56,7 @@ $implement-tickets <dir|slug>
 ```
 
 There are no options: no parallel mode, no adapters, and no approval pause. The
-run prints the Plan and starts. For other backends use `agy-implement` or
-`opencode-implement`; see [ADR 0023](../../decisions/0023-implement-tickets-minimal-core.md).
+run prints the Plan and starts. See [ADR 0023](../../decisions/0023-implement-tickets-minimal-core.md).
 
 ### Install
 

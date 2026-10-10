@@ -59,7 +59,6 @@ integration branch and review commands:
 ```text
 git log --oneline <base>..implement-tickets/<slug>
 git diff --stat <base>...implement-tickets/<slug>
-/review-to-pr <slug>
 ```
 
 Include the tickets with accepted extra files, so review starts from the
