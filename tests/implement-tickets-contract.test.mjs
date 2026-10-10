@@ -60,4 +60,16 @@ describe("implement-tickets contract", () => {
     assert.match(flatMarkdownSection(skill, "Stopping rule"), /before `code-review`/);
     assert.match(flatMarkdownSection(skill, "Run status"), /not a Run status[\s\S]*stop/i);
   });
+
+  it("states the rerun rules, each in its own section", async () => {
+    const skill = await read("SKILL.md");
+    const done = flatMarkdownSection(skill, "Done from the branch");
+    assert.match(done, /trailer/i);
+    assert.match(done, /reachable from the integration branch/);
+    assert.match(done, /`waiting`/);
+    assert.match(flatMarkdownSection(skill, "Finished run"), /`finished`[\s\S]*change/i);
+    const missing = flatMarkdownSection(skill, "Missing branch");
+    assert.match(missing, /does not resolve/);
+    assert.match(missing, /stop/i);
+  });
 });

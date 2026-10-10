@@ -10,7 +10,7 @@
 
 `implement-tickets` implement spec ที่เผยแพร่แล้วด้วยคำสั่งเดียว โดยทำตาม skill `implement-spec` ของ upstream ที่ติดตั้งไว้ตั้งแต่ต้นจนจบ (integration branch เดียว, implementer หนึ่งตัวต่อ ticket ใน worktree ของตัวเองที่สร้างด้วย `tdd`, merger, `code-review` และ pull request) แล้วเพิ่มเพียง **Run status** ที่เปิดดูได้ทุกเมื่อ
 
-skill นี้ไม่มี planner, script, ticket checker หรือชุด reference ของตัวเอง จึงใช้ได้กับ Tracker ทั้งแบบ local (ไฟล์ markdown) และ remote (เช่น GitHub Issues) และเมื่อ upstream เปลี่ยน skill นี้จะเปลี่ยนตามในการรันครั้งถัดไป skill นี้ครอบคลุมการรันครั้งแรก
+skill นี้ไม่มี planner, script, ticket checker หรือชุด reference ของตัวเอง จึงใช้ได้กับ Tracker ทั้งแบบ local (ไฟล์ markdown) และ remote (เช่น GitHub Issues) และเมื่อ upstream เปลี่ยน skill นี้จะเปลี่ยนตามในการรันครั้งถัดไป ถ้า run หยุดหรือถูกขัดจังหวะ เรียกคำสั่งเดิมซ้ำเพื่อทำต่อ
 
 ---
 
@@ -54,7 +54,22 @@ spec reference คือ path, เลข issue หรือ URL รับเฉ�
 
 ---
 
-## 4. Run status
+## 4. การทำต่อ (Rerun / Continue)
+
+ถ้า run หยุดหรือถูกขัดจังหวะ ให้พิมพ์ `/implement-tickets <spec reference>` เดิมอีกครั้ง (เลข issue กับ URL ของ spec เดียวกันหา Run status อันเดียวกัน)
+
+- **run ที่ `finished` แล้ว:** รายงานว่าจบแล้วและไม่เปลี่ยนอะไร
+- **run ที่ `open` แต่ integration branch ที่บันทึกไว้หาไม่เจอ:** หยุดและรายงาน ไม่รีเซ็ตแถวใด
+- **อ่าน ticket ใหม่:** ticket ใหม่ได้แถวใหม่ แถวของ ticket ที่หายไปถูกลบ (ยกเว้น `done`) ชื่อและ blocker ถูกอัปเดต
+- **ตัดสิน `done` จาก branch:** ticket เป็น `done` เมื่อมี commit ที่ไปถึงได้จาก integration branch ซึ่งมี trailer ของ ticket นั้น (ตั้งช่อง Commit เป็น commit นั้น) แถวอื่นเป็น `waiting` และรายงานความไม่ตรงกันระหว่างไฟล์กับ branch
+- **ทำต่อ:** เริ่มที่ขั้นแจก ticket บน integration branch และ pull request เดิม ไม่สร้าง branch ใหม่และไม่เปิด pull request ที่สอง ticket ที่เคย `stuck` ถูกสร้างใหม่ใน worktree ใหม่ และ worktree ที่เก็บไว้ถูกล้างเมื่อ run จบ
+- **ครบทุก ticket:** เมื่อทุก ticket เป็น `done` ไปต่อที่ `code-review`
+
+**English:** To continue a stopped or interrupted run, type the same `/implement-tickets <spec reference>` again; a number and a URL of the same spec find the same Run status. A `finished` run is reported and nothing changes. An `open` run whose recorded integration branch does not resolve stops with a report and no row is reset. The tickets are read again and the rows updated. A ticket is `done` exactly when a commit reachable from the integration branch carries its trailer, every other row becomes `waiting`, and a disagreement between the file and the branch is reported. The run continues from the step that hands out tickets on the recorded branch and pull request, creates no branch and opens no second pull request, builds a previously `stuck` ticket again in a fresh worktree, and goes on to `code-review` when every ticket is `done`.
+
+---
+
+## 5. Run status
 
 ไฟล์ `status.md` ใน directory ของ feature ใต้ `.scratch/` (local: directory ที่เก็บ spec; remote: directory ที่ตั้งชื่อจาก identifier ของ spec ตามด้วย slug ของชื่อ)
 
@@ -66,7 +81,7 @@ spec reference คือ path, เลข issue หรือ URL รับเฉ�
 
 ---
 
-## 5. ตัวอย่าง
+## 6. ตัวอย่าง
 
 ```text
 /implement-tickets .scratch/saved-searches/spec.md
@@ -74,10 +89,9 @@ spec reference คือ path, เลข issue หรือ URL รับเฉ�
 
 ---
 
-## 6. ข้อควรระวัง
+## 7. ข้อควรระวัง
 
 - **ติดตั้ง skill ของ upstream ให้ครบ:** ขาดตัวใดตัวหนึ่ง Preflight จะหยุดก่อนเริ่มงาน
 - **ต้องมี Tracker doc:** รัน `setup-matt-pocock-skills` ก่อนถ้ายังไม่มี
 - **ความผิดพลาดปรากฏตอน `code-review` ท้ายสุด:** ไม่มี gate หลัง merge แต่ละครั้ง
 - **รันที่บันทึกด้วย `status.md` รูปแบบเดิมจะไม่ถูกทำต่อ:** ไฟล์นั้นถูกปฏิเสธและไม่ถูกแก้
-- **ยังไม่ครอบคลุมการทำต่อ:** คู่มือนี้อธิบายการรันครั้งแรกเท่านั้น

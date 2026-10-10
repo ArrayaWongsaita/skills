@@ -8,7 +8,7 @@
 
 ### มีไว้ทำอะไร
 
-implement spec ที่เผยแพร่แล้วด้วยคำสั่งเดียว โดยทำตาม skill `implement-spec` ของ upstream ที่ติดตั้งไว้ตั้งแต่ต้นจนจบ พร้อมเก็บ **Run status** (`status.md`) ที่เปิดดูได้ทุกเมื่อว่า ticket แต่ละใบอยู่สถานะใด skill นี้ไม่มี planner, script หรือชุด reference ของตัวเอง จึงใช้ได้ทั้ง Tracker แบบ local และ remote เมื่อมี ticket ที่ทำไม่สำเร็จ run จะทำ ticket อิสระต่อไป แล้วหยุดก่อน `code-review` พร้อมบอกว่าอะไรค้างและเพราะอะไร skill นี้ครอบคลุมการรันครั้งแรก
+implement spec ที่เผยแพร่แล้วด้วยคำสั่งเดียว โดยทำตาม skill `implement-spec` ของ upstream ที่ติดตั้งไว้ตั้งแต่ต้นจนจบ พร้อมเก็บ **Run status** (`status.md`) ที่เปิดดูได้ทุกเมื่อว่า ticket แต่ละใบอยู่สถานะใด skill นี้ไม่มี planner, script หรือชุด reference ของตัวเอง จึงใช้ได้ทั้ง Tracker แบบ local และ remote เมื่อมี ticket ที่ทำไม่สำเร็จ run จะทำ ticket อิสระต่อไป แล้วหยุดก่อน `code-review` พร้อมบอกว่าอะไรค้างและเพราะอะไร ถ้า run หยุดหรือถูกขัดจังหวะ เรียกคำสั่งเดิมซ้ำเพื่อทำต่อ
 
 ติดตั้ง:
 
@@ -45,6 +45,8 @@ npx skills add mattpocock/skills --skill code-review
 5. ถ้ามี ticket `stuck` และไม่มีอะไรทำต่อได้ จะหยุดก่อน `code-review` และก่อนปิด ticket ใด ๆ ล้าง worktree ของ ticket ที่ `done` เก็บของ ticket ที่ `stuck` แล้วรายงาน
 6. เมื่อขั้นสุดท้ายของ upstream เสร็จ สถานะ run เป็น `finished`
 
+การเรียกซ้ำด้วย spec เดิมจะทำต่อบน integration branch และ pull request เดิม โดยตัดสินว่า ticket ใด `done` จาก commit ที่มี trailer บน integration branch (ไม่ใช่จากไฟล์) run ที่ `finished` แล้วจะไม่ถูกแก้ไขอะไร
+
 Run status มีคอลัมน์ Ticket, Title, Blocked by, Status, Commit ตามลำดับนี้ และสถานะ `waiting`, `in progress`, `done`, `stuck` ถ้ามี `status.md` ที่หัวตารางไม่ตรง run จะหยุดและไม่แตะไฟล์นั้น
 
 ### ตัวอย่าง prompt
@@ -62,7 +64,7 @@ Run status มีคอลัมน์ Ticket, Title, Blocked by, Status, Commit
 
 ### Purpose
 
-Implement a published spec in one command by following the installed upstream `implement-spec` skill from start to finish, while keeping a **Run status** (`status.md`) you can open at any time to see each ticket's state. The skill owns no planner, script, or reference set, so it works with a local or a remote Tracker. When a ticket cannot be finished the run keeps going on independent tickets, then stops before `code-review` and says what is stuck and why. This skill covers a first run.
+Implement a published spec in one command by following the installed upstream `implement-spec` skill from start to finish, while keeping a **Run status** (`status.md`) you can open at any time to see each ticket's state. The skill owns no planner, script, or reference set, so it works with a local or a remote Tracker. When a ticket cannot be finished the run keeps going on independent tickets, then stops before `code-review` and says what is stuck and why. If a run stops or is interrupted, the same command continues it.
 
 Install:
 
@@ -98,6 +100,8 @@ Call `/implement-tickets <spec reference>` or `$implement-tickets <spec referenc
 4. The merger ends the message of the commit that lands a ticket with a trailer naming that ticket.
 5. When a ticket is `stuck` and nothing more can be done, the run stops before `code-review` and before any ticket is closed, cleans up the worktrees of `done` tickets, keeps the `stuck` ones, and reports.
 6. When upstream's last step completes, the run state becomes `finished`.
+
+A rerun with the same spec continues on the same integration branch and pull request, deciding which tickets are `done` from the commits carrying a trailer on the integration branch, not from the file. A `finished` run is reported and left unchanged.
 
 The Run status table has the columns Ticket, Title, Blocked by, Status, Commit in that order, and the states `waiting`, `in progress`, `done`, `stuck`. A `status.md` with any other table header stops the run and is left as it is.
 

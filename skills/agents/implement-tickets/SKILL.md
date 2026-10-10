@@ -1,6 +1,6 @@
 ---
 name: implement-tickets
-description: Implement a published spec by following the installed upstream implement-spec skill from start to finish, while keeping a Run status file that shows every ticket and its state. Stops before the code review when a ticket is stuck or still waiting.
+description: Implement a published spec by following the installed upstream implement-spec skill from start to finish, while keeping a Run status file that shows every ticket and its state. Stops before the code review when a ticket is stuck or still waiting. The same command continues an interrupted run.
 disable-model-invocation: true
 ---
 
@@ -13,7 +13,8 @@ below placed around their steps. No upstream step is changed.
 
 Invocation: `/implement-tickets <spec reference>` or `$implement-tickets <spec reference>`.
 The reference is a path, an issue number, or a URL. It takes a spec reference and
-nothing else. Start only when the person invokes it. This skill covers a first run.
+nothing else. Start only when the person invokes it. When the spec already has a Run status, the
+command is a rerun and continues that run; see Rerun.
 
 ## Preflight
 
@@ -116,3 +117,38 @@ When no ticket is `in progress`, no ticket can be handed out, and at least one i
 Run the upstream cleanup for the worktrees of `done` tickets and keep each `stuck`
 ticket's worktree. Report the stuck tickets with their reasons, the tickets they
 hold, and anything that could not be removed.
+
+## Rerun
+
+A rerun is the same command with the reference of a spec that already has a Run
+status. Find it by the canonical spec reference, so a number and a URL of the same
+spec find one record and no second one is started. Then, in order:
+
+1. Apply Finished run and Missing branch.
+2. Read the tickets again from the Tracker and bring the rows up to date: a new
+   ticket gets a row, a row whose ticket is gone is removed unless it is `done`,
+   and titles and blockers are refreshed.
+3. Decide every row by Done from the branch.
+4. Continue `implement-spec` from the step that hands out tickets, on the recorded
+   integration branch and with the recorded pull request. Create no branch and
+   open no second pull request.
+5. A ticket that was `stuck` is built again in a fresh worktree. Its kept
+   worktree is removed by the cleanup of the run that finishes.
+6. When every ticket is `done`, go on to `code-review` and finish as in Flow.
+
+## Finished run
+
+When the run state is `finished`, report that the run is finished and change
+nothing: no row, no branch, no pull request, no ticket.
+
+## Missing branch
+
+When the run state is `open` and the recorded integration branch does not resolve,
+stop and report it. Reset no row and start no new branch.
+
+## Done from the branch
+
+On a rerun the integration branch decides, not the file. A ticket is `done`
+exactly when a commit reachable from the integration branch carries that ticket's
+trailer; set its Commit cell to that commit. Every other row becomes `waiting`.
+Report each disagreement between the file and the branch.

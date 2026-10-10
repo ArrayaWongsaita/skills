@@ -51,6 +51,30 @@
         "Leaves the existing file as it is"
       ],
       "files": []
+    },
+    {
+      "id": 5,
+      "name": "a rerun continues an interrupted run",
+      "prompt": "/implement-tickets 42. A Run status for spec 42 exists with state open; its file says ticket 1 is done and ticket 2 is in progress, but the integration branch carries a trailer commit for ticket 2 and none for ticket 1.",
+      "expected_output": "Finds the Run status by the canonical reference, reads the tickets again, decides done from the integration branch (ticket 2 done with its commit, ticket 1 waiting), reports the disagreement, and continues from handing out tickets on the recorded branch and pull request without creating a branch or a second pull request.",
+      "expectations": [
+        "Uses the existing Run status and starts no second record",
+        "Marks done only tickets whose trailer commit is reachable from the integration branch",
+        "Reports the disagreement between the file and the branch",
+        "Creates no branch and opens no second pull request"
+      ],
+      "files": []
+    },
+    {
+      "id": 6,
+      "name": "a finished run is rerun",
+      "prompt": "/implement-tickets 42. The Run status for spec 42 has state finished.",
+      "expected_output": "Reports the run is finished and changes nothing.",
+      "expectations": [
+        "Reports the run as finished",
+        "Changes no row, branch, pull request, or ticket"
+      ],
+      "files": []
     }
   ]
 }
