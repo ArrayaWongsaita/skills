@@ -1,6 +1,6 @@
 # ADR 0017: Drop reuse, and let the user bound the design review
 
-- Status / สถานะ: Accepted / ยอมรับแล้ว
+- Status / สถานะ: Superseded by ADR 0027 / ถูกแทนที่โดย ADR 0027 (was: Accepted / ยอมรับแล้ว)
 - Date / วันที่: 2026-09-29
 - Supersedes / แทนที่: ADR 0008
 - Amends / แก้ไข: ADR 0010 (replaces only its fixed six-cycle bound)

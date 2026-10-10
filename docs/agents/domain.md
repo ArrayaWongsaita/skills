@@ -4,45 +4,28 @@ How the engineering skills should consume this repo's domain documentation when 
 
 ## Before exploring, read these
 
-- **`GLOSSARY.md`** at the repo root, or
-- **`GLOSSARY-MAP.md`** at the repo root if it exists: it points at one `GLOSSARY.md` per context. Read each one relevant to the topic.
-- **`docs/decisions/`**: this repo keeps its ADRs here (not `docs/adr/`), numbered `NNNN-<slug>.md` and bilingual (English / Thai). Read ADRs that touch the area you're about to work in.
-- **`docs/glossary.md`**: the existing glossary. There is no root `GLOSSARY.md` yet; `/domain-modeling` creates one lazily when a term resolves, and it then takes precedence.
-- **`CONTEXT.md`**: the former name of `GLOSSARY.md`. This repo's own skills (`grill-to-tickets` and the `*-implement` family) still write the per-feature glossary to `.scratch/<feature>/CONTEXT.md`; read it when working on that feature.
+- **`docs/glossary.md`**: the glossary, and the one to read and write. It is a bilingual three-column table (Term, ภาษาไทย, Definition / ความหมาย); add a term as a new row in the same form.
+- **`docs/decisions/`**: this repo keeps its ADRs here (not `docs/adr/`), numbered `NNNN-<slug>.md` and bilingual (English / Thai). Read ADRs that touch the area you're about to work in, and write new ones in the same bilingual format.
 
 If any of these files don't exist, **proceed silently**. Don't flag their absence; don't suggest creating them upfront. The `/domain-modeling` skill (reached via `/grill-with-docs` and `/improve-codebase-architecture`) creates them lazily when terms or decisions actually get resolved.
 
 ## File structure
 
-Single-context repo (most repos):
+Single-context repo:
 
 ```
 /
-├── GLOSSARY.md
-├── docs/decisions/
-│   ├── 0001-event-sourced-orders.md
-│   └── 0002-postgres-for-write-model.md
+├── docs/
+│   ├── glossary.md
+│   └── decisions/
+│       ├── 0001-event-sourced-orders.md
+│       └── 0002-postgres-for-write-model.md
 └── src/
-```
-
-Multi-context repo (presence of `GLOSSARY-MAP.md` at the root):
-
-```
-/
-├── GLOSSARY-MAP.md
-├── docs/decisions/                          ← system-wide decisions
-└── src/
-    ├── ordering/
-    │   ├── GLOSSARY.md
-    │   └── docs/decisions/                  ← context-specific decisions
-    └── billing/
-        ├── GLOSSARY.md
-        └── docs/decisions/
 ```
 
 ## Use the glossary's vocabulary
 
-When your output names a domain concept (in an issue title, a refactor proposal, a hypothesis, a test name), use the term as defined in `GLOSSARY.md`. Don't drift to synonyms the glossary explicitly avoids.
+When your output names a domain concept (in an issue title, a refactor proposal, a hypothesis, a test name), use the term as defined in `docs/glossary.md`. Don't drift to synonyms the glossary explicitly avoids.
 
 If the concept you need isn't in the glossary yet, that's a signal: either you're inventing language the project doesn't use (reconsider) or there's a real gap (note it for `/domain-modeling`).
 

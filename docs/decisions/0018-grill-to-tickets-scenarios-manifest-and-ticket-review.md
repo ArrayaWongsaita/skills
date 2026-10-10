@@ -1,6 +1,6 @@
 # ADR 0018: Scenarios, manifest, and ticket review for grill-to-tickets
 
-- Status / สถานะ: Accepted / ยอมรับแล้ว
+- Status / สถานะ: Superseded by ADR 0027 / ถูกแทนที่โดย ADR 0027 (was: Accepted / ยอมรับแล้ว)
 - Date / วันที่: 2026-09-30
 - Amends / แก้ไข: ADR 0014 and ADR 0010 decision 5
 
