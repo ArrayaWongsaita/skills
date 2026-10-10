@@ -217,6 +217,49 @@ describe("personal AI skills repository contract", () => {
     );
   });
 
+  it("names no retired skill outside the historical records", async () => {
+    const retired = [
+      ["review", "to", "pr"],
+      ["agy", "implement"],
+      ["opencode", "implement"],
+      ["retro", "to", "remedies"],
+      ["engineering", "workflow"],
+    ].map((parts) => parts.join("-"));
+    const files = (await Promise.all(["skills", "tests", "docs", "scripts", ".github", ".claude"].map(
+      async (root) => {
+        try {
+          return await textFilesUnder(root);
+        } catch {
+          return [];
+        }
+      },
+    ))).flat();
+    for (const entry of await readdir(".", { withFileTypes: true })) {
+      if (!entry.isFile()) continue;
+      const text = await readTextOrNull(entry.name);
+      if (text !== null) files.push({ file: entry.name, text });
+    }
+
+    // Historical records: every ADR, the retro log, and .scratch (not scanned).
+    const isHistorical = (file) => {
+      const relative = file.split(path.sep).join("/");
+      return /^docs\/decisions\/\d{4}-[^/]+\.md$/.test(relative) || relative === "docs/retro-log.md";
+    };
+    const violations = [];
+    for (const { file, text } of files) {
+      if (isHistorical(file)) continue;
+      text.split("\n").forEach((line, index) => {
+        if (retired.some((name) => line.includes(name))) violations.push(`${file}:${index + 1}: ${line.trim()}`);
+      });
+    }
+
+    assert.equal(
+      violations.length,
+      0,
+      `found ${violations.length} references to a retired skill; first matches:\n${violations.slice(0, 20).join("\n")}`,
+    );
+  });
+
   it("renders repeated skill flags for a multi-skill category", () => {
     const index = renderIndex([
       { category: "demo", name: "first-skill", description: "First skill description" },
@@ -242,32 +285,19 @@ describe("production records and glossary", () => {
     }
     assert.doesNotMatch(tableRow(glossary, "Seam"), /\*\*Seam:\*\*|ticket/i, "Seam is not tied to a ticket field");
 
-    for (const term of ["Budget line", "Scenario", "Manifest", "Ticket review", "Worker", "Wave", "Touch set", "Extra", "Drift", "Integration gate", "Read set", "usage_total"]) {
+    for (const term of ["Workflow Orchestrator", "Stage", "Gate", "Worker", "Wave", "Touch set", "Extra", "Drift", "Integration gate", "External Specialist", "Artifact Reference", "Workflow State", "Read set", "Budget line", "usage_total", "Scenario", "Manifest", "Ticket review", "Retro", "Miss", "Remedy", "Retro Log"]) {
       assert.equal(tableRow(glossary, term), null, `the glossary no longer has a row for ${term}`);
     }
   });
 
-  it("records ADR 0027 and names it in each ADR it has superseded so far", async () => {
+  it("records ADR 0027 and names it in each ADR it supersedes", async () => {
     assert.ok(await readTextOrNull("docs/decisions/0027-grill-to-tickets-and-implement-tickets-follow-upstream.md"), "ADR 0027 exists");
-    const superseded = {
-      "0002": "engineering-workflow-orchestrator",
-      "0003": "grill-to-tickets-standalone-composite",
-      "0006": "review-to-pr-standalone",
-      "0010": "grill-to-tickets-fresh-context-design-review",
-      "0012": "retro-to-remedies-standalone",
-      "0013": "grill-to-tickets-owns-spec-and-ticket-formats",
-      "0014": "measure-tickets-before-limiting-them",
-      "0017": "drop-reuse-and-let-the-user-bound-the-design-review",
-      "0018": "grill-to-tickets-scenarios-manifest-and-ticket-review",
-      "0019": "grill-to-tickets-tiers-parked-questions-and-one-pause",
-      "0016": "restore-skills-retired-by-adr-0015",
-      "0020": "implement-tickets-core",
-      "0021": "touch-set-drift-without-reapproval",
-      "0022": "strict-mode-and-risk-based-verification",
-      "0023": "implement-tickets-minimal-core",
-    };
-    for (const [number, slug] of Object.entries(superseded)) {
-      const doc = await readText(`docs/decisions/${number}-${slug}.md`);
+    const superseded = ["0002", "0003", "0006", "0010", "0012", "0013", "0014", "0016", "0017", "0018", "0019", "0020", "0021", "0022", "0023"];
+    const files = await readdir("docs/decisions");
+    for (const number of superseded) {
+      const file = files.find((name) => name.startsWith(`${number}-`));
+      assert.ok(file, `ADR ${number} exists`);
+      const doc = await readText(`docs/decisions/${file}`);
       assert.match(doc, /Superseded by ADR 0027/, `ADR ${number} names ADR 0027`);
     }
   });
