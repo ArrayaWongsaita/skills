@@ -121,8 +121,12 @@ hold, and anything that could not be removed.
 ## Rerun
 
 A rerun is the same command with the reference of a spec that already has a Run
-status. Find it by the canonical spec reference, so a number and a URL of the same
-spec find one record and no second one is started. Then, in order:
+status. Find it by the canonical spec reference: scan the `status.md` files under
+`.scratch/` and match the spec reference in each header, before deriving any
+directory name, so a number and a URL of the same remote spec find one record and
+no second one is started. A file found this way is a Run status only when its
+table header is exactly the five columns; otherwise stop and leave it as it is.
+Then, in order:
 
 1. Apply Finished run and Missing branch.
 2. Read the tickets again from the Tracker and bring the rows up to date: a new

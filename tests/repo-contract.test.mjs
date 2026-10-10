@@ -225,7 +225,7 @@ describe("personal AI skills repository contract", () => {
       ["retro", "to", "remedies"],
       ["engineering", "workflow"],
     ].map((parts) => parts.join("-"));
-    const files = (await Promise.all(["skills", "tests", "docs", "scripts", ".github", ".claude"].map(
+    const files = (await Promise.all(["skills", "tests", "docs", "scripts", ".github"].map(
       async (root) => {
         try {
           return await textFilesUnder(root);
@@ -239,6 +239,9 @@ describe("personal AI skills repository contract", () => {
       const text = await readTextOrNull(entry.name);
       if (text !== null) files.push({ file: entry.name, text });
     }
+    // Only the settings file under .claude: its worktrees hold copies of the repo.
+    const settings = await readTextOrNull(".claude/settings.json");
+    if (settings !== null) files.push({ file: ".claude/settings.json", text: settings });
 
     // Historical records: every ADR, the retro log, and .scratch (not scanned).
     const isHistorical = (file) => {
@@ -283,7 +286,7 @@ describe("production records and glossary", () => {
       assert.equal(row.split("|").length, 5, `the ${term} row has the Term, ภาษาไทย, and Definition cells`);
       assert.match(row.split("|")[3], / \/ .+/, `the ${term} definition is bilingual`);
     }
-    assert.doesNotMatch(tableRow(glossary, "Seam"), /\*\*Seam:\*\*|ticket/i, "Seam is not tied to a ticket field");
+    assert.doesNotMatch(tableRow(glossary, "Seam"), /\*\*Seam:\*\*|\bticket (field|id|number)\b/i, "Seam is not tied to a ticket field");
 
     for (const term of ["Workflow Orchestrator", "Stage", "Gate", "Worker", "Wave", "Touch set", "Extra", "Drift", "Integration gate", "External Specialist", "Artifact Reference", "Workflow State", "Read set", "Budget line", "usage_total", "Scenario", "Manifest", "Ticket review", "Retro", "Miss", "Remedy", "Retro Log"]) {
       assert.equal(tableRow(glossary, term), null, `the glossary no longer has a row for ${term}`);

@@ -56,9 +56,11 @@ describe("implement-tickets contract", () => {
 
   it("states the trailer rule, the stopping rule, and the refusal of a file that is not a Run status", async () => {
     const skill = await read("SKILL.md");
-    assert.match(flatMarkdownSection(skill, "Trailer"), /trailer/i);
+    const trailer = flatMarkdownSection(skill, "Trailer");
+    assert.match(trailer, /remote Tracker the trailer holds the ticket's Tracker identifier/);
+    assert.match(trailer, /local Tracker it holds the feature directory name and the ticket number/);
     assert.match(flatMarkdownSection(skill, "Stopping rule"), /before `code-review`/);
-    assert.match(flatMarkdownSection(skill, "Run status"), /not a Run status[\s\S]*stop/i);
+    assert.match(flatMarkdownSection(skill, "Run status"), /not a Run status: stop/i);
   });
 
   it("states the rerun rules, each in its own section", async () => {
@@ -67,7 +69,11 @@ describe("implement-tickets contract", () => {
     assert.match(done, /trailer/i);
     assert.match(done, /reachable from the integration branch/);
     assert.match(done, /`waiting`/);
-    assert.match(flatMarkdownSection(skill, "Finished run"), /`finished`[\s\S]*change/i);
+    assert.match(flatMarkdownSection(skill, "Finished run"), /`finished`, report[^.]*finished and change/i);
+    const rerun = flatMarkdownSection(skill, "Rerun");
+    assert.match(rerun, /scan the `status\.md` files under `\.scratch\/`/);
+    assert.match(rerun, /before deriving any directory name/);
+    assert.match(rerun, /exactly the five columns; otherwise stop/);
     const missing = flatMarkdownSection(skill, "Missing branch");
     assert.match(missing, /does not resolve/);
     assert.match(missing, /stop/i);

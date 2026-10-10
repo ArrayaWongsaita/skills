@@ -11,7 +11,7 @@ If any of these files don't exist, **proceed silently**. Don't flag their absenc
 
 ## File structure
 
-Single-context repo:
+Single-context repo (most repos):
 
 ```
 /
@@ -21,6 +21,21 @@ Single-context repo:
 │       ├── 0001-event-sourced-orders.md
 │       └── 0002-postgres-for-write-model.md
 └── src/
+```
+
+Multi-context repo (presence of `GLOSSARY-MAP.md` at the root):
+
+```
+/
+├── GLOSSARY-MAP.md
+├── docs/decisions/                          ← system-wide decisions
+└── src/
+    ├── ordering/
+    │   ├── GLOSSARY.md
+    │   └── docs/decisions/                  ← context-specific decisions
+    └── billing/
+        ├── GLOSSARY.md
+        └── docs/decisions/
 ```
 
 ## Use the glossary's vocabulary
