@@ -2,7 +2,8 @@
 
 - Status / สถานะ: Accepted / ยอมรับแล้ว
 - Date / วันที่: 2026-10-11
-- Supersedes / แทนที่: ADR 0002, 0003, 0006, 0007, 0010, 0012, 0013, 0014, 0016, 0017, 0018, 0019, 0020, 0021, 0022, 0023
+- Supersedes / แทนที่: ADR 0002, 0003, 0006, 0010, 0012, 0013, 0014, 0016, 0017, 0018, 0019, 0020, 0021, 0022, 0023
+- ADR 0004 and 0007 were already superseded by ADR 0020; decision 6 retires the skills they introduced. / ADR 0004 และ 0007 ถูกแทนที่โดย ADR 0020 ไปแล้ว ข้อ 6 เลิกใช้ skill ที่สองฉบับนั้นสร้าง
 
 ## Context / บริบท
 
@@ -47,9 +48,11 @@ checker, บรรทัด Budget, review gate, verifier) ใช้เวลา
      integration branch, the pull request, and one row per ticket with its
      blockers, its state (`waiting`, `in progress`, `done`, `stuck`), and its
      commit;
-   - a rerun of the same command continues the run: it reads the Run status
-     and trusts a `done` row only when that row's commit is on the integration
-     branch;
+   - a rerun of the same command continues the run on the recorded
+     integration branch and pull request: each commit that lands a ticket
+     names that ticket, and a ticket is `done` exactly when such a commit is
+     on the integration branch, whatever the file says; a finished run is
+     reported and left unchanged;
    - the run stops before `code-review` while any ticket is `stuck` or still
      `waiting`.
 4. Both skills work with whichever tracker `docs/agents/issue-tracker.md`
@@ -63,10 +66,14 @@ checker, บรรทัด Budget, review gate, verifier) ใช้เวลา
    `retro-to-remedies`, and `engineering-workflow`, with their guides, skill
    pages, and tests. Each reads a format decision 5 removes. Keep `agy-agent`,
    `tokenme-agent`, and `pr-to-base`.
-7. The contract tests of the two skills pin four things only: the flow order,
-   the upstream skills Preflight requires, the absence of owned format files,
-   and the Run status columns and states.
-8. `docs/glossary.md` is the one glossary. `docs/agents/domain.md` points at it.
+7. The contract tests of the two skills pin only what breaks a skill when it
+   goes missing: the flow order, the upstream skills Preflight requires, the
+   exact files each skill ships, that neither skill can be invoked by a model,
+   the Run status columns and states, and that each skill's own rules (the
+   review stage, the rerun rule, the stopping rule) are present.
+8. `docs/glossary.md` is the one glossary. `docs/agents/domain.md` points at
+   it, and `grill-to-tickets` writes glossary terms and ADRs where that file
+   says, in place of the upstream default locations.
 
 1. `grill-to-tickets` ทำตาม skill ของ upstream ที่ติดตั้งอยู่ ในบริบทเดียว
    ตามลำดับ: `grill-with-docs` (`grilling` กับ `domain-modeling`), `to-spec`,
@@ -79,8 +86,10 @@ checker, บรรทัด Budget, review gate, verifier) ใช้เวลา
    - Run status ที่ `.scratch/<feature-slug>/status.md`: spec, integration branch,
      pull request และหนึ่งแถวต่อ ticket พร้อม blocker, สถานะ (`waiting`,
      `in progress`, `done`, `stuck`) และ commit
-   - รันคำสั่งเดิมซ้ำเพื่อทำต่อ: อ่าน Run status และเชื่อแถว `done`
-     เฉพาะเมื่อ commit ของแถวนั้นอยู่บน integration branch
+   - รันคำสั่งเดิมซ้ำเพื่อทำต่อบน integration branch และ pull request เดิม:
+     commit ที่นำ ticket เข้า integration branch ระบุ ticket นั้น และ ticket เป็น
+     `done` ก็ต่อเมื่อมี commit เช่นนั้นอยู่บน integration branch ไม่ว่าไฟล์จะบอกอย่างไร
+     ส่วนรันที่จบแล้วจะถูกรายงานและไม่ถูกแก้
    - หยุดก่อน `code-review` เมื่อยังมี ticket ที่ `stuck` หรือ `waiting`
 4. ทั้งสอง skill ใช้ได้กับ tracker ที่ `docs/agents/issue-tracker.md` ระบุ
    ทั้ง local และ remote เพราะปล่อยให้ skill ของ upstream อ่านและเขียน tracker
@@ -91,9 +100,13 @@ checker, บรรทัด Budget, review gate, verifier) ใช้เวลา
    `retro-to-remedies` และ `engineering-workflow` พร้อม guide, หน้า skill และ test
    เพราะแต่ละตัวอ่าน format ที่ข้อ 5 ลบ เก็บ `agy-agent`, `tokenme-agent` และ
    `pr-to-base` ไว้
-7. contract test ของสอง skill ตรึงสี่อย่างเท่านั้น: ลำดับ flow, skill ของ upstream
-   ที่ Preflight ต้องการ, การไม่มีไฟล์ format ของตัวเอง และคอลัมน์กับสถานะของ Run status
-8. `docs/glossary.md` เป็น glossary ไฟล์เดียว และ `docs/agents/domain.md` ชี้มาที่ไฟล์นี้
+7. contract test ของสอง skill ตรึงเฉพาะสิ่งที่ถ้าหายแล้ว skill ทำงานผิด: ลำดับ flow,
+   skill ของ upstream ที่ Preflight ต้องการ, รายชื่อไฟล์ที่แต่ละ skill ส่งมอบ,
+   การที่ model เรียก skill เองไม่ได้, คอลัมน์กับสถานะของ Run status และการมีอยู่ของ
+   กฎของแต่ละ skill เอง (ขั้น review, กฎรันซ้ำ, กฎหยุด)
+8. `docs/glossary.md` เป็น glossary ไฟล์เดียว `docs/agents/domain.md` ชี้มาที่ไฟล์นี้
+   และ `grill-to-tickets` เขียนคำใน glossary กับ ADR ตามที่ไฟล์นั้นระบุ
+   แทนตำแหน่งตั้งต้นของ upstream
 
 ## Rejected alternatives / ทางเลือกที่ปฏิเสธ
 
