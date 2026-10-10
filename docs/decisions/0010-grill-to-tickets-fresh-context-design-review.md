@@ -1,6 +1,6 @@
 # ADR 0010: grill-to-tickets reviews the spec in a fresh context
 
-- Status / สถานะ: Accepted / ยอมรับแล้ว
+- Status / สถานะ: Superseded by ADR 0027 / ถูกแทนที่โดย ADR 0027 (was: Accepted / ยอมรับแล้ว)
 - Date / วันที่: 2026-09-24
 - Relates to / เกี่ยวข้องกับ: ADR 0003 (`grill-to-tickets` as a standalone
   composite); replaces that skill's "keep every stage on the main thread" rule

@@ -1,6 +1,6 @@
 # ADR 0016: Restore the skills retired by ADR 0015
 
-- Status / สถานะ: Accepted / ยอมรับแล้ว
+- Status / สถานะ: Superseded by ADR 0027 / ถูกแทนที่โดย ADR 0027 (was: Accepted / ยอมรับแล้ว)
 - Date / วันที่: 2026-09-29
 - Supersedes / แทนที่: ADR 0015
 

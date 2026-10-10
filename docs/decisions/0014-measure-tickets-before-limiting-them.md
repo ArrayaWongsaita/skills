@@ -1,6 +1,6 @@
 # ADR 0014: Measure tickets before limiting them
 
-- Status / สถานะ: Accepted / ยอมรับแล้ว
+- Status / สถานะ: Superseded by ADR 0027 / ถูกแทนที่โดย ADR 0027 (was: Accepted / ยอมรับแล้ว)
 - Date / วันที่: 2026-09-25
 - Amended by / แก้ไขโดย: ADR 0018 lifts only the ambiguity-only ticket review from the readiness dry-run deferral / ADR 0018 ยกเว้นเฉพาะ ticket review ที่ตรวจความกำกวมจากการเลื่อน readiness dry-run
 

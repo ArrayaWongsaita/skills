@@ -3,388 +3,76 @@
   "evals": [
     {
       "id": 1,
-      "name": "plan prints and the run starts without a pause",
-      "prompt": "/implement-tickets .scratch/demo/issues/ with a valid ticket set and no flag.",
-      "expected_output": "Preflight confirms a clean Git working tree, plan.mjs validates the tickets, and the Plan lists every ticket with blockers, touch set, seam, matched agent, and risk. The run starts right after the Plan is printed, with no approval pause.",
+      "name": "missing upstream skill stops the run",
+      "prompt": "/implement-tickets .scratch/saved-searches/spec.md. implement-spec and code-review are not installed anywhere.",
+      "expected_output": "Preflight stops before any work, names implement-spec and code-review, and prints the install line for each, then waits.",
       "expectations": [
-        "Prints the Plan with one row per ticket and the retry budget",
-        "Starts dispatching after the Plan with no approval pause",
-        "Stops before any dispatch on a dirty working tree or a planning error"
+        "Stops before any branch or worktree is created",
+        "Names exactly the missing skills",
+        "Prints each missing skill's install line",
+        "Writes no Run status"
       ],
       "files": []
     },
     {
       "id": 2,
-      "name": "tickets run serially in ascending number",
-      "prompt": "/implement-tickets .scratch/serial-demo/issues/ contains four independent tickets.",
-      "expected_output": "The orchestrator runs one ticket at a time in ascending number: worker, optional verifier, squash-merge, gate, then the next ticket.",
+      "name": "first run on a local Tracker",
+      "prompt": "/implement-tickets .scratch/saved-searches/spec.md. Everything is installed, the Tracker is local markdown, and the spec has three tickets where 03 is blocked by 01.",
+      "expected_output": "Follows implement-spec as written. After the integration branch exists and before any ticket is handed out, writes .scratch/saved-searches/status.md with the canonical spec path, the branch, run state open, and three waiting rows. Gives subagents absolute paths in the main checkout, tells the merger to end each landing commit with a trailer naming the feature directory and ticket number, and sets the run state to finished after the last upstream step.",
       "expectations": [
-        "Dispatches one worker at a time in ascending ticket number",
-        "Starts the next ticket only after the previous gate is green",
-        "Offers no parallel, concurrency, or backend option"
+        "Writes the Run status with every row waiting before any ticket is handed out",
+        "The table has the columns Ticket, Title, Blocked by, Status, Commit in that order",
+        "Subagents get absolute paths in the main checkout",
+        "The merger is told to end the commit message with a trailer naming the ticket",
+        "Sets the run state to finished only after upstream's last step"
       ],
       "files": []
     },
     {
       "id": 3,
-      "name": "ticket Seam and Context become the worker test boundary and read list",
-      "prompt": "/implement-tickets .scratch/context-demo/issues/. Ticket 01 has a Seam and Context field.",
-      "expected_output": "The worker prompt carries the ticket Seam verbatim as the test boundary and the Context paths as the Read, Change, and Create lists.",
+      "name": "a ticket gets stuck",
+      "prompt": "/implement-tickets 42. Ticket 2's implementer ends without a usable result; ticket 3 is blocked by it and ticket 4 is independent.",
+      "expected_output": "Ticket 2 becomes stuck with a one-line reason and its kept worktree location; ticket 3 stays waiting; ticket 4 keeps going. When nothing is in progress and nothing can be handed out, the run stops before code-review, cleans up worktrees of done tickets, keeps the stuck one, and reports the stuck ticket, its reason, and the ticket it holds.",
       "expectations": [
-        "Uses the ticket Seam verbatim as the test seam",
-        "Splits Context into read, change, and create paths in the worker prompt"
+        "Marks ticket 2 stuck with a reason line and its worktree location",
+        "Leaves ticket 3 waiting and still builds ticket 4",
+        "Stops before code-review and closes no ticket",
+        "Keeps the stuck worktree and removes those of done tickets"
       ],
       "files": []
     },
     {
       "id": 4,
-      "name": "first worker command syncs and asserts the integration SHA",
-      "prompt": "/implement-tickets .scratch/sync-demo/issues/. The worker worktree was checked out at the wrong commit.",
-      "expected_output": "The first worker command checks out the worker branch at the integration SHA and asserts HEAD equals it; a mismatch returns failed_infra and counts no ticket attempt.",
+      "name": "a status.md that is not a Run status",
+      "prompt": "/implement-tickets .scratch/saved-searches/spec.md. A status.md already sits in .scratch/saved-searches/ with a different table header.",
+      "expected_output": "The run stops, says the file is not a Run status, and leaves it unchanged.",
       "expectations": [
-        "Runs the sync as the first command, including for ticket 1",
-        "Returns failed_infra on a checkout failure or HEAD mismatch",
-        "Counts no ticket attempt"
+        "Stops before creating any branch",
+        "Leaves the existing file as it is"
       ],
       "files": []
     },
     {
       "id": 5,
-      "name": "verifier runs only for risky tickets",
-      "prompt": "/implement-tickets .scratch/demo/issues/. A worker returns a completed report for a Risk: low ticket with complete evidence and no extras. Decide whether to verify.",
-      "expected_output": "A ticket with no Risk: high, no risk signal, and complete evidence is judged by the orchestrator from the worker evidence and integrated with no verifier. Risk: high, a counted retry, measured extras, an unknown touch set, or incomplete evidence each give a fresh verifier.",
+      "name": "a rerun continues an interrupted run",
+      "prompt": "/implement-tickets 42. A Run status for spec 42 exists with state open; its file says ticket 1 is done and ticket 2 is in progress, but the integration branch carries a trailer commit for ticket 2 and none for ticket 1.",
+      "expected_output": "Finds the Run status by the canonical reference, reads the tickets again, decides done from the integration branch (ticket 2 done with its commit, ticket 1 waiting), reports the disagreement, and continues from handing out tickets on the recorded branch and pull request without creating a branch or a second pull request.",
       "expectations": [
-        "Skips the verifier only when there is no Risk: high, no risk signal, and complete evidence",
-        "Treats a Risk: low or missing field as never lowering a risk signal",
-        "Counts no attempt for incomplete evidence and dispatches a fresh verifier",
-        "Decides after extras are measured and before a verifier would be dispatched"
+        "Uses the existing Run status and starts no second record",
+        "Marks done only tickets whose trailer commit is reachable from the integration branch",
+        "Reports the disagreement between the file and the branch",
+        "Creates no branch and opens no second pull request"
       ],
       "files": []
     },
     {
       "id": 6,
-      "name": "fresh native Explore verifier reproduces red and returns raw evidence without a verdict",
-      "prompt": "/implement-tickets .scratch/verifier-demo/issues/. A risky ticket's worker returns with a shallow report.",
-      "expected_output": "A fresh native Explore verifier reproduces red in a scratch checkout, runs the ticket tests, typecheck, and full suite on the worker branch, checks acceptance coverage, and returns raw evidence with no verdict. The orchestrator judges.",
+      "name": "a finished run is rerun",
+      "prompt": "/implement-tickets 42. The Run status for spec 42 has state finished.",
+      "expected_output": "Reports the run is finished and changes nothing.",
       "expectations": [
-        "Dispatches a fresh Explore verifier, not the orchestrator or the worker",
-        "Reproduces red at the pre-ticket SHA with only the worker's test files",
-        "Returns raw evidence and no verdict",
-        "Falls back to a fresh general-purpose read-only verifier when the report is too shallow"
-      ],
-      "files": []
-    },
-    {
-      "id": 7,
-      "name": "crashes and lost subagents are infra retries outside ticket attempts",
-      "prompt": "/implement-tickets .scratch/infra-demo/issues/. A worker is lost before it returns, then the replacement subagent returns.",
-      "expected_output": "A crash, missing report, or lost subagent is failed_infra and is retried with a fresh child without counting an attempt; after two infra retries the ticket is BLOCKED (TICKET_PROVIDER_FAILED).",
-      "expectations": [
-        "Records failed_infra and retries without counting an attempt",
-        "Blocks the ticket with TICKET_PROVIDER_FAILED after two infra retries"
-      ],
-      "files": []
-    },
-    {
-      "id": 8,
-      "name": "extras that the criteria do not explain are rejected",
-      "prompt": "/implement-tickets .scratch/extras-demo/issues/. A worker for ticket 02 also changed package-lock.json, which the ticket never mentions.",
-      "expected_output": "The orchestrator measures extras from the branch diff, rejects an extra the acceptance criteria do not explain, keeps the worktree and redispatches on a new branch name at the cost of one attempt; an explained extra is accepted, recorded, and makes the ticket risky.",
-      "expectations": [
-        "Measures extras from the git diff, not the worker's list",
-        "Rejects an unexplained extra at the cost of one attempt",
-        "Rejects an unexplained extra, keeps the attempt's worktree, and redispatches on a new branch name",
-        "Accepts an explained extra, records it, and verifies the ticket"
-      ],
-      "files": []
-    },
-    {
-      "id": 9,
-      "name": "integration gate squash-merges one commit per ticket and runs the full checks",
-      "prompt": "/implement-tickets .scratch/gate-demo/issues/. Ticket 01 passed verification.",
-      "expected_output": "The orchestrator squash-merges the ticket as one commit on the integration branch, then runs the full typecheck and the full test suite before the next ticket.",
-      "expectations": [
-        "Creates exactly one commit per ticket",
-        "Runs full typecheck and full test suite after the merge",
-        "Starts the next ticket only after a green gate"
-      ],
-      "files": []
-    },
-    {
-      "id": 10,
-      "name": "a failing gate rewinds and retries the ticket",
-      "prompt": "/implement-tickets .scratch/recovery-demo/issues/. The gate fails after ticket 02 is merged.",
-      "expected_output": "Ticket 02 is the culprit: the integration branch moves back to the last good commit with git checkout -B, and ticket 02 is redispatched with the failing output at the cost of one attempt.",
-      "expectations": [
-        "Rewinds with git checkout -B, not a hard reset",
-        "Redispatches the ticket with the failing output as one attempt",
-        "Records the failing check and last good commit in status.md"
-      ],
-      "files": []
-    },
-    {
-      "id": 11,
-      "name": "blocked ticket holds dependants and independent tickets continue",
-      "prompt": "/implement-tickets .scratch/partial-demo/issues/. Ticket 01 becomes BLOCKED (TICKET_VERIFICATION_FAILED) after three attempts and ticket 03 depends on it.",
-      "expected_output": "Ticket 03 and every transitive dependant are held; independent tickets continue; the report names each blocked and held ticket and the continue command.",
-      "expectations": [
-        "Holds every transitive dependant of the blocked ticket",
-        "Keeps running independent tickets",
-        "Names the blocked tickets, held tickets, and /implement-tickets continue <slug>"
-      ],
-      "files": []
-    },
-    {
-      "id": 12,
-      "name": "continue reconciles Git and restarts unfinished tickets",
-      "prompt": "/implement-tickets continue demo. status.md shows ticket 02 verifying and the integration branch one commit behind the recorded commit.",
-      "expected_output": "continue refuses a status.md without the first line skill: implement-tickets, reconciles recorded commits against Git, rewinds to the last good ticket commit, re-prints the Plan, and restarts ticket 02 from a fresh worker.",
-      "expectations": [
-        "Reconciles recorded commits against Git and rewinds with git checkout -B on drift",
-        "Restarts a verifying or dispatched ticket from a fresh worker",
-        "Does not re-verify an integrated ticket"
-      ],
-      "files": []
-    },
-    {
-      "id": 13,
-      "name": "handoff stops before review and publication",
-      "prompt": "/implement-tickets .scratch/handoff-demo/issues/ has passed the final integration gate.",
-      "expected_output": "The handoff reports the integration branch, review commands, accepted extras, and the tickets that skipped the verifier, then stops before review, push, or pull request creation.",
-      "expectations": [
-        "Does not begin review or publish the branch",
-        "Provides the integration branch and next review commands",
-        "Lists accepted extras and tickets that skipped the verifier"
-      ],
-      "files": []
-    },
-    {
-      "id": 14,
-      "name": "each attempt builds on its own Worker branch",
-      "prompt": "/implement-tickets .scratch/retry-demo/issues/. Attempt 1 of ticket 03 failed its gate and its worktree still exists. Dispatch attempt 2.",
-      "expected_output": "Attempt 1 runs on implement-tickets-work/<slug>/03-a1 and attempt 2 on implement-tickets-work/<slug>/03-a2, so the retry checks out a different branch name from the kept worktree. The worker prompt carries the branch name.",
-      "expectations": [
-        "Names the Worker branch NN-a1 for attempt 1 and NN-a2 for attempt 2 (implement-tickets-work/<slug>/NN-aK)",
-        "Has the retry run git checkout -B on a different branch name from the kept attempt's",
-        "Puts the per-attempt branch name in the worker prompt"
-      ],
-      "files": []
-    },
-    {
-      "id": 15,
-      "name": "infrastructure retries take -iJ branch names and count no attempt",
-      "prompt": "/implement-tickets .scratch/infra-demo/issues/. A worker for ticket 02 attempt 1 crashed and its worktree still holds NN-a1. Retry, and retry again when it crashes again.",
-      "expected_output": "The first infrastructure retry runs on NN-a1-i1 and a further retry on NN-a1-i2, each without counting an attempt; a third failure marks the ticket BLOCKED (TICKET_PROVIDER_FAILED).",
-      "expectations": [
-        "Uses the branch name NN-a1-i1 for the first infrastructure retry",
-        "Uses NN-a1-i2 for a further infrastructure retry",
-        "Counts no attempt for either retry"
-      ],
-      "files": []
-    },
-    {
-      "id": 16,
-      "name": "the Worktree column lists each attempt's path in a fixed grammar",
-      "prompt": "/implement-tickets .scratch/column-demo/issues/. Attempt 2 of ticket 02 returned after an attempt 1 and an infrastructure retry; the harness named a different branch for attempt 2.",
-      "expected_output": "The orchestrator writes the Worktree cell when the worker returns, listing each attempt separated by semicolons: a1: <path> for an attempt, a1-i1: <path> for an infrastructure retry, (harness: <branch>) appended when the harness branch differs from the Worker branch, and `?` for a path it could not identify.",
-      "expectations": [
-        "Writes the Worktree cell when the worker returns, not at integration",
-        "Writes each attempt as a1: <path> and an infrastructure retry as a1-i1: <path>",
-        "Appends (harness: <branch>) when the harness branch differs from the Worker branch",
-        "Writes `?` for a path it could not identify"
-      ],
-      "files": []
-    },
-    {
-      "id": 17,
-      "name": "a crashed worker's worktree is found by its branch name",
-      "prompt": "/implement-tickets .scratch/crash-demo/issues/. A worker for ticket 02 crashed without returning a path.",
-      "expected_output": "The orchestrator reads the worktree list and finds the worktree by matching the attempt's branch name. A crash before the worker created its branch leaves a path it cannot identify, reported as an unknown path in report.md and the handoff.",
-      "expectations": [
-        "Finds the worktree by listing worktrees and matching the attempt's branch name",
-        "Reports a crash before the branch existed as an unknown path in report.md and the handoff",
-        "Falls back to the worktree list whenever the harness result lacks the path or branch name"
-      ],
-      "files": []
-    },
-    {
-      "id": 18,
-      "name": "K and J come from the cell, local branches, and worktree list",
-      "prompt": "/implement-tickets .scratch/derive-demo/issues/. Ticket 03 was reset to Attempts 0 but its Worktree cell lists a1 and a2, and a local branch 03-a3 exists from a crashed worker.",
-      "expected_output": "K for the redispatch is one more than the highest K found in the Worktree cell, the local branches matching implement-tickets-work/<slug>/NN-*, and the worktree list, never from the Attempts column, so the redispatch takes 03-a4. J is derived the same way, and a1-i1 counts as K=1.",
-      "expectations": [
-        "Derives K from the Worktree cell, the local branches, and the worktree list, never from the Attempts column",
-        "Takes 03-a4 although Attempts was reset",
-        "Parses K from the number after a, so a1-i1 counts as K=1",
-        "Derives J the same way"
-      ],
-      "files": []
-    },
-    {
-      "id": 19,
-      "name": "the verifier is given the recorded worktree path",
-      "prompt": "/implement-tickets .scratch/verify-demo/issues/. A risky ticket 02 returned with its worktree recorded in the Worktree cell.",
-      "expected_output": "The orchestrator gives the fresh verifier the recorded worktree path instead of the branch, because Git will not check out a branch that a live worktree holds. The verifier's own scratch checkout at the pre-ticket SHA stays out of Cleanup.",
-      "expectations": [
-        "Passes the verifier the recorded worktree path, not the branch",
-        "Leaves the verifier's scratch checkout out of Cleanup"
-      ],
-      "files": []
-    },
-    {
-      "id": 20,
-      "name": "Cleanup removes the worktree, then the branch, after a green gate",
-      "prompt": "/implement-tickets .scratch/cleanup-demo/issues/. Ticket 02 was squash-merged, its gate is green, and its status.md row is written.",
-      "expected_output": "Cleanup removes the Worker worktree of ticket 02, then the Worker branch, before starting ticket 03. The worktree is removed with the plain form and no force flag; the branch is deleted with the force-delete form because a squash-merge leaves it unmerged.",
-      "expectations": [
-        "Runs Cleanup only after the gate is green and the row is written, before the next ticket starts",
-        "Removes the worktree with git worktree remove <path> and no force flag",
-        "Deletes the Worker branch with git branch -D because a squash-merge leaves it unmerged"
-      ],
-      "files": []
-    },
-    {
-      "id": 21,
-      "name": "Cleanup removes every earlier kept attempt",
-      "prompt": "/implement-tickets .scratch/cleanup-retry-demo/issues/. Attempts 1 and 2 of ticket 03 were kept, attempt 2 also had an infrastructure retry, and attempt 3 integrated.",
-      "expected_output": "Cleanup removes the worktrees and branches of attempts 1, 2 and 3 in the same pass, including the infrastructure-retry attempt, before the next ticket starts.",
-      "expectations": [
-        "Removes the worktrees and branches of attempts 1 and 2 as well as attempt 3",
-        "Includes the infrastructure-retry attempt of attempt 2"
-      ],
-      "files": []
-    },
-    {
-      "id": 22,
-      "name": "Cleanup deletes a differing harness branch",
-      "prompt": "/implement-tickets .scratch/cleanup-harness-demo/issues/. The Worktree cell of integrated ticket 02 records (harness: worktree-x) besides the Worker branch.",
-      "expected_output": "Cleanup deletes the harness branch worktree-x after the worktree is removed, as well as the Worker branch.",
-      "expectations": [
-        "Deletes the recorded harness branch after the worktree is removed",
-        "Deletes the Worker branch too"
-      ],
-      "files": []
-    },
-    {
-      "id": 23,
-      "name": "Cleanup leaves the Branch and Commit columns as history",
-      "prompt": "/implement-tickets .scratch/cleanup-history-demo/issues/. Cleanup just removed the Worker branch of ticket 02.",
-      "expected_output": "status.md still shows the Worker branch and squash commit for ticket 02: the Branch and Commit columns are not edited by Cleanup.",
-      "expectations": [
-        "The Branch and Commit columns of ticket 02 are not edited by Cleanup"
-      ],
-      "files": []
-    },
-    {
-      "id": 24,
-      "name": "an unknown path is looked up, then reported without removal",
-      "prompt": "/implement-tickets .scratch/cleanup-unknown-demo/issues/. An earlier kept attempt of ticket 03 has a recorded path of ? and attempt 3 integrated.",
-      "expected_output": "Because the recorded path is `?`, the orchestrator looks the attempt up by its branch name in the worktree list. When it is still not found, it appends a report entry with Step `cleanup` and nothing is removed for that attempt.",
-      "expectations": [
-        "Looks up an attempt whose path is `?` by branch name in the worktree list",
-        "Appends a report entry with Step `cleanup` when it is still not found",
-        "Removes nothing for that attempt"
-      ],
-      "files": []
-    },
-    {
-      "id": 25,
-      "name": "a failed removal is reported and does not stop the run",
-      "prompt": "/implement-tickets .scratch/cleanup-failure-demo/issues/. The worktree removal for ticket 02 fails because the tree holds untracked files.",
-      "expected_output": "When the worktree removal fails, the orchestrator appends a report entry with Step `cleanup`, still attempts the branch deletion, and starts ticket 03. It does not retry with a force flag.",
-      "expectations": [
-        "Appends a report entry with Step `cleanup`",
-        "Still attempts the branch deletion after the failed worktree removal",
-        "Starts the next ticket and does not force the removal"
-      ],
-      "files": []
-    },
-    {
-      "id": 26,
-      "name": "an already-gone target counts as success",
-      "prompt": "/implement-tickets .scratch/cleanup-gone-demo/issues/. The harness already removed the Worker worktree of ticket 02 before Cleanup ran.",
-      "expected_output": "The worktree is already gone, so it counts as success: no report entry is written and Cleanup continues with the branch and the next ticket.",
-      "expectations": [
-        "Treats an already-gone worktree or branch as success",
-        "Writes no report entry for it"
-      ],
-      "files": []
-    },
-    {
-      "id": 27,
-      "name": "a failed gate keeps the attempt's worktree",
-      "prompt": "/implement-tickets .scratch/keep-gate-demo/issues/. Attempt 1 of ticket 03 failed its gate and the orchestrator rewinds the integration branch.",
-      "expected_output": "The orchestrator rewinds and redispatches ticket 03 with the failing output. The Worker worktree of attempt 1 is not removed, and attempt 2 runs on a new branch name.",
-      "expectations": [
-        "Does not remove the Worker worktree of the attempt that failed its gate",
-        "Redispatches the retry on a new branch name"
-      ],
-      "files": []
-    },
-    {
-      "id": 28,
-      "name": "a verifier rejection keeps the attempt's worktree",
-      "prompt": "/implement-tickets .scratch/keep-verifier-demo/issues/. The verifier returns raw evidence for ticket 03 and the orchestrator judges it insufficient.",
-      "expected_output": "When the orchestrator judges that the verifier rejects ticket 03, it keeps the attempt's worktree and redispatches on a new branch name at the cost of one attempt. Nothing says the branch is discarded.",
-      "expectations": [
-        "Keeps the worktree of the attempt the verifier rejected",
-        "Redispatches on a new branch name and counts one attempt"
-      ],
-      "files": []
-    },
-    {
-      "id": 29,
-      "name": "a non-mechanical merge-conflict redispatch keeps the old worktree",
-      "prompt": "/implement-tickets .scratch/keep-conflict-demo/issues/. Squash-merging ticket 03 hits a merge conflict the orchestrator cannot resolve without changing behavior.",
-      "expected_output": "After a non-mechanical merge conflict, the orchestrator redispatches ticket 03 from the latest integration commit at the cost of one attempt. It keeps the old worktree and the new attempt takes a new branch name.",
-      "expectations": [
-        "Keeps the old attempt's worktree after a non-mechanical merge conflict",
-        "Takes a new branch name for the redispatch"
-      ],
-      "files": []
-    },
-    {
-      "id": 30,
-      "name": "a BLOCKED ticket keeps all its worktrees",
-      "prompt": "/implement-tickets .scratch/keep-blocked-demo/issues/. Ticket 04 exhausted its attempts and became BLOCKED, and the run ends.",
-      "expected_output": "A BLOCKED ticket keeps all its attempts' worktrees. Run end removes none of them; they stay for inspection before continue.",
-      "expectations": [
-        "Keeps every attempt worktree of the BLOCKED ticket",
-        "Removes none of the kept worktrees at run end"
-      ],
-      "files": []
-    },
-    {
-      "id": 31,
-      "name": "the handoff names every leftover worktree",
-      "prompt": "/implement-tickets .scratch/keep-handoff-demo/issues/. One worktree removal failed, ticket 04 is BLOCKED, and one recorded path is unknown.",
-      "expected_output": "The handoff lists every worktree left behind by path: the worktrees of BLOCKED ticket 04, the worktree of the failed removal, and the unknown path (`?`).",
-      "expectations": [
-        "Lists the worktree paths of the BLOCKED ticket and of the failed removal in the handoff",
-        "Includes an unknown path among the leftovers"
-      ],
-      "files": []
-    },
-    {
-      "id": 32,
-      "name": "continue reconciles an integrated row whose Worker branch was removed",
-      "prompt": "/implement-tickets continue demo. status.md shows ticket 01 integrated and its Worker branch implement-tickets-work/demo/01-a1 no longer exists, because Cleanup removed it.",
-      "expected_output": "continue reconciles the integrated ticket 01 only against its squash commit on the integration branch. The removed Worker branch is not drift, so the integration branch does not rewind and the row is not reset.",
-      "expectations": [
-        "Checks the integrated row only against its squash commit on the integration branch",
-        "Does not treat the removed Worker branch as drift and does not rewind"
-      ],
-      "files": []
-    },
-    {
-      "id": 33,
-      "name": "continue restarts a dispatched row whose Worker branch is missing",
-      "prompt": "/implement-tickets continue demo. status.md shows ticket 02 dispatched with the recorded Worker branch implement-tickets-work/demo/02-a1, and that branch is missing.",
-      "expected_output": "continue checks the Worker branch because ticket 02 is not integrated, finds it missing, and restarts ticket 02 from a fresh worker on an infrastructure-retry branch name of the form NN-aK-iJ (implement-tickets-work/demo/02-a1-i1), counting no attempt.",
-      "expectations": [
-        "Checks the Worker branch only because the row is not integrated",
-        "Restarts the dispatched ticket from a fresh worker",
-        "Uses the infrastructure-retry branch name NN-aK-iJ, such as 02-a1-i1, and counts no attempt"
+        "Reports the run as finished",
+        "Changes no row, branch, pull request, or ticket"
       ],
       "files": []
     }
