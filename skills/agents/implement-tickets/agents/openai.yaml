@@ -1,6 +1,6 @@
 interface:
   display_name: "Implement Tickets"
-  short_description: "Plan and implement ticket sets serially with risk-based verification"
-  default_prompt: "Use $implement-tickets to plan this ticket directory, then build and verify each ticket in order: [dir|slug]."
+  short_description: "Implement a published spec by following implement-spec, with a Run status"
+  default_prompt: "Use $implement-tickets to implement this spec by following the upstream implement-spec flow and keeping a Run status: [spec reference]."
 policy:
   allow_implicit_invocation: false

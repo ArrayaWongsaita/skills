@@ -1,86 +1,83 @@
 # คู่มือการติดตั้งและใช้งาน Skill: implement-tickets
 
 - **หมวดหมู่ (Category):** `agents`
+- **แหล่งติดตั้ง (Install Source):** `ArrayaWongsaita/skills`
 - **ไฟล์นิยามหลัก (Definition):** [`skills/agents/implement-tickets/SKILL.md`](../../skills/agents/implement-tickets/SKILL.md)
 
-## ภาษาไทย / Thai
+---
 
-`implement-tickets` นำชุด ticket ที่ publish แล้วไปสู่โค้ดที่ผ่านการตรวจ โดยทำทีละ ticket ตามเลข:
-worker (native subagent) สร้างงานแบบ test-first ใน worktree แยก, verifier ใหม่ตรวจเฉพาะ ticket ที่เสี่ยง,
-แล้ว squash-merge ลง `implement-tickets/<slug>` หลังผ่าน typecheck และ test suite เต็ม
+## 1. implement-tickets คืออะไร
 
-### การเรียกใช้งาน
+`implement-tickets` implement spec ที่เผยแพร่แล้วด้วยคำสั่งเดียว โดยทำตาม skill `implement-spec` ของ upstream ที่ติดตั้งไว้ตั้งแต่ต้นจนจบ (integration branch เดียว, implementer หนึ่งตัวต่อ ticket ใน worktree ของตัวเองที่สร้างด้วย `tdd`, merger, `code-review` และ pull request) แล้วเพิ่มเพียง **Run status** ที่เปิดดูได้ทุกเมื่อ
 
-```text
-/implement-tickets <dir|slug>
-$implement-tickets <dir|slug>
-/implement-tickets continue [slug]
-```
+skill นี้ไม่มี planner, script, ticket checker หรือชุด reference ของตัวเอง จึงใช้ได้กับ Tracker ทั้งแบบ local (ไฟล์ markdown) และ remote (เช่น GitHub Issues) และเมื่อ upstream เปลี่ยน skill นี้จะเปลี่ยนตามในการรันครั้งถัดไป skill นี้ครอบคลุมการรันครั้งแรก
 
-ไม่มี option: ไม่มีโหมดขนาน, ไม่มี adapter และไม่มีการหยุดรออนุมัติ run พิมพ์ Plan แล้วเริ่มทำงาน ดู [ADR 0023](../decisions/0023-implement-tickets-minimal-core.md)
+---
 
-### ติดตั้ง
+## 2. การติดตั้ง
 
 ```bash
+# 1. ติดตั้ง skill หลัก
 npx skills add ArrayaWongsaita/skills --skill implement-tickets
+
+# 2. ติดตั้ง skill ของ upstream ที่ต้องใช้
+npx skills add mattpocock/skills --skill implement-spec
+npx skills add mattpocock/skills --skill tdd
+npx skills add mattpocock/skills --skill code-review
 ```
 
-### ขั้นตอนหลัก
+ตอนเริ่ม skill จะทำ **Preflight** หา `SKILL.md` ของทั้งสามตัวตามลำดับ `.agents/skills/` → `.claude/skills/` → `~/.agents/skills/` → `~/.claude/skills/` ถ้าขาดตัวไหนจะหยุดและพิมพ์คำสั่งติดตั้งของตัวนั้น
 
-1. **Plan:** อ่าน ticket ตรวจด้วย `plan.mjs` แล้วพิมพ์ Plan ตาม [planning reference](../../skills/agents/implement-tickets/references/planning.md)
-2. **Build ทีละ ticket:** [dispatch](../../skills/agents/implement-tickets/references/dispatch-contract.md) ด้วย [prompt scaffold](../../skills/agents/implement-tickets/references/prompt-scaffold.md)
-   แล้ววัด extras และตัดสินใจเรื่อง verifier ตาม [verification](../../skills/agents/implement-tickets/references/verification.md)
-3. **Integrate:** squash-merge และรัน gate ตาม [integration gate](../../skills/agents/implement-tickets/references/integration-gate.md)
-4. **Cleanup:** ลบ worktree ตามด้วย Worker branch ของ ticket (รวมทุก attempt ก่อนหน้า) ทันทีหลัง gate เขียวและบันทึกแถวแล้ว ก่อนเริ่ม ticket ถัดไป ตาม [Cleanup](../../skills/agents/implement-tickets/references/integration-gate.md#cleanup)
-   ไม่ลบ worktree ของ attempt ที่ gate ไม่ผ่าน, verifier หรือ extras ปฏิเสธ, merge conflict ที่ต้องส่งใหม่ และของ ticket ที่ BLOCKED; ถ้าลบไม่สำเร็จจะบันทึกใน `report.md` (Step `cleanup`) แล้วไปต่อ และ handoff จะระบุ worktree ที่เหลือ
-5. **Handoff:** ส่งต่อ integration branch และ review commands แล้วหยุดก่อน review, push หรือเปิด PR
-
-run state, `continue` และ `report.md` (บันทึกปัญหาระหว่าง run เพื่อนำไปปรับปรุง skill) อยู่ใน [status and resume](../../skills/agents/implement-tickets/references/status-and-resume.md)
-extras คือไฟล์ที่ worker แตะนอก touch set: ถ้าเกณฑ์ยอมรับอธิบายไม่ได้ จะถูกปฏิเสธ นอกนั้นรับไว้ ทำให้ ticket เสี่ยง และแสดงใน handoff
-
-### Seam และ Context
-
-รายละเอียดฟิลด์ Seam และ Context อยู่ใน [planning reference](../../skills/agents/implement-tickets/references/planning.md)
-
-## English / ภาษาอังกฤษ
-
-`implement-tickets` takes a published ticket set to verified code, one ticket at a
-time in ticket order: a worker (native subagent) builds the ticket test-first in
-an isolated worktree, a fresh verifier checks only risky tickets, and the work is
-squash-merged onto `implement-tickets/<slug>` behind a green full typecheck and
-test suite.
-
-### Invocation
-
-```text
-/implement-tickets <dir|slug>
-$implement-tickets <dir|slug>
-/implement-tickets continue [slug]
-```
-
-There are no options: no parallel mode, no adapters, and no approval pause. The
-run prints the Plan and starts. See [ADR 0023](../decisions/0023-implement-tickets-minimal-core.md).
-
-### Install
+project ต้องมี Tracker doc (`docs/agents/issue-tracker.md`) ถ้าไม่มี skill จะหยุดและชี้ไปที่ skill ตั้งค่าของ upstream:
 
 ```bash
-npx skills add ArrayaWongsaita/skills --skill implement-tickets
+npx skills add mattpocock/skills --skill setup-matt-pocock-skills
 ```
 
-### Main workflow
+---
 
-1. **Plan:** read the tickets, validate them with `plan.mjs`, and print the Plan per the [planning reference](../../skills/agents/implement-tickets/references/planning.md).
-2. **Build each ticket:** [dispatch](../../skills/agents/implement-tickets/references/dispatch-contract.md) a worker with the [prompt scaffold](../../skills/agents/implement-tickets/references/prompt-scaffold.md), measure extras, and decide on a verifier per the [verification contract](../../skills/agents/implement-tickets/references/verification.md).
-3. **Integrate:** squash-merge and run the gate per the [integration gate](../../skills/agents/implement-tickets/references/integration-gate.md).
-4. **Cleanup:** after a green gate and a written row, remove the ticket's worktree, then the Worker branch (every earlier kept attempt too), before the next ticket starts, per [Cleanup](../../skills/agents/implement-tickets/references/integration-gate.md#cleanup).
-   The worktree of an attempt that failed the gate, was rejected by the verifier or for extras, or was redispatched after a merge conflict is kept, as is every worktree of a BLOCKED ticket. A failed removal is noted in `report.md` (Step `cleanup`) and the run continues; the handoff names each leftover worktree.
-5. **Handoff:** print the integration branch and review commands, then stop before review, push, or a pull request.
+## 3. วิธีใช้งาน
 
-The run record, `continue`, and `report.md` (problems noted during the run, for improving the skill) are in [status and resume](../../skills/agents/implement-tickets/references/status-and-resume.md).
-Extras are files a worker changed beyond its touch set: one the acceptance
-criteria do not explain is rejected; otherwise it is accepted, makes the ticket
-risky, and is listed in the handoff.
+- Slash command: `/implement-tickets <spec reference>`
+- Codex command: `$implement-tickets <spec reference>`
 
-### Seam and Context
+spec reference คือ path, เลข issue หรือ URL รับเฉพาะ reference ไม่มี flag และจะเริ่มเมื่อผู้ใช้เรียกเท่านั้น (ปิด model invocation ใน frontmatter และปิด implicit invocation ใน metadata ของ Codex)
 
-See the [planning reference](../../skills/agents/implement-tickets/references/planning.md) for the ticket's Seam and Context fields.
+### ลำดับการทำงาน
+
+1. **Reference:** แปลง argument เป็น spec reference แบบ canonical (path จาก root ของ repository สำหรับ local, identifier ของ Tracker สำหรับ remote) ก่อนค้นหาสิ่งใด
+2. **Implement:** ทำตาม `implement-spec` ตามที่เป็น โดยไม่เปลี่ยนขั้นใดของ upstream
+3. **Run status:** เขียน `status.md` หลังสร้าง integration branch และก่อนแจก ticket แรก แล้วอัปเดตทุกเหตุการณ์
+4. **Trailer:** ให้ merger ปิดข้อความ commit ที่นำ ticket เข้า integration branch ด้วย trailer ที่ระบุ ticket (identifier ของ Tracker สำหรับ remote; ชื่อ directory ของ feature กับเลข ticket สำหรับ local)
+5. **หยุดก่อนรีวิว:** ถ้าไม่มี ticket `in progress` แจกต่อไม่ได้ และมี ticket `stuck` หรือ `waiting` จะหยุดก่อน `code-review` และก่อนปิด ticket ล้าง worktree ของ ticket ที่ `done` เก็บของ ticket ที่ `stuck` แล้วรายงานเหตุผลและ ticket ที่ถูกรั้งไว้
+6. **จบ:** เมื่อขั้นสุดท้ายของ upstream เสร็จ สถานะ run เป็น `finished`
+
+---
+
+## 4. Run status
+
+ไฟล์ `status.md` ใน directory ของ feature ใต้ `.scratch/` (local: directory ที่เก็บ spec; remote: directory ที่ตั้งชื่อจาก identifier ของ spec ตามด้วย slug ของชื่อ)
+
+- **ส่วนหัว:** spec reference แบบ canonical, integration branch, pull request (เมื่อมี), สถานะ run (`open` หรือ `finished`) และเวลาที่อัปเดตล่าสุด
+- **ตาราง:** หนึ่งแถวต่อ ticket คอลัมน์ Ticket, Title, Blocked by, Status, Commit ตามลำดับนี้
+- **สถานะ:** `waiting` (ยังไม่แจก), `in progress` (แจกแล้วยังไม่ merge), `done` (merge เข้า integration branch แล้ว), `stuck` (implementer หรือ merger ทำไม่สำเร็จหรือจบโดยไม่มีผลที่ใช้ได้)
+- **ticket ที่ `stuck`:** มีหนึ่งบรรทัดใต้ตารางบอกเหตุผลและตำแหน่ง worktree ที่เก็บไว้ ส่วน ticket ที่ถูกรั้งไว้ยังเป็น `waiting` ขณะที่ ticket อิสระทำต่อ
+- **การป้องกัน:** ถ้าไฟล์ยังไม่ถูก git ignore จะเพิ่ม local exclude ให้ไฟล์นั้นก่อนเขียนครั้งแรกและบอกผู้ใช้ ถ้ามี `status.md` ที่หัวตารางไม่ตรงห้าคอลัมน์ run จะหยุดและไม่แตะไฟล์
+
+---
+
+## 5. ตัวอย่าง
+
+```text
+/implement-tickets .scratch/saved-searches/spec.md
+```
+
+---
+
+## 6. ข้อควรระวัง
+
+- **ติดตั้ง skill ของ upstream ให้ครบ:** ขาดตัวใดตัวหนึ่ง Preflight จะหยุดก่อนเริ่มงาน
+- **ต้องมี Tracker doc:** รัน `setup-matt-pocock-skills` ก่อนถ้ายังไม่มี
+- **ความผิดพลาดปรากฏตอน `code-review` ท้ายสุด:** ไม่มี gate หลัง merge แต่ละครั้ง
+- **รันที่บันทึกด้วย `status.md` รูปแบบเดิมจะไม่ถูกทำต่อ:** ไฟล์นั้นถูกปฏิเสธและไม่ถูกแก้
+- **ยังไม่ครอบคลุมการทำต่อ:** คู่มือนี้อธิบายการรันครั้งแรกเท่านั้น

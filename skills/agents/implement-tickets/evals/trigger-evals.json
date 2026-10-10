@@ -1,10 +1,10 @@
 [
   {
-    "query": "/implement-tickets .scratch/feature/issues/",
+    "query": "/implement-tickets .scratch/feature/spec.md",
     "should_trigger": true
   },
   {
-    "query": "Please run $implement-tickets on feature",
+    "query": "Please run $implement-tickets on issue 42",
     "should_trigger": true
   },
   {

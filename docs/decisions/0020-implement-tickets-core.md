@@ -1,6 +1,6 @@
 # ADR 0020: Implement Tickets is the one core for the implement family
 
-- Status / สถานะ: Accepted / ยอมรับแล้ว
+- Status / สถานะ: Superseded by ADR 0027 / ถูกแทนที่โดย ADR 0027 (was: Accepted / ยอมรับแล้ว)
 - Date / วันที่: 2026-09-30
 - Supersedes / แทนที่: ADR 0004, ADR 0005, and ADR 0007 for the implement family
 - Narrowed by / ถูกจำกัดโดย: ADR 0021 narrows decision 1 (Plan approval no longer covers touch-set extras) / ADR 0021 จำกัดข้อ 1 (การอนุมัติ Plan ไม่ครอบคลุม touch-set extras)

@@ -4,7 +4,6 @@ import { access, readFile, readdir } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
 import { discoverSkills, renderIndex } from "../scripts/generate-skill-index.mjs";
-import { assertAbsentFromMarkdownSections, markdownHeaderBlock, markdownSection } from "./helpers/markdown-contract.mjs";
 
 async function fileExists(path) {
   await access(path, constants.R_OK);
@@ -93,33 +92,6 @@ function numberedMarkdownItem(section, number) {
 function paragraphOf(section, start) {
   if (!section) return null;
   return section.split(/\n\s*\n/).find((paragraph) => paragraph.startsWith(start)) ?? null;
-}
-
-const englishProseMarkers = new Set([
-  "a", "an", "and", "are", "as", "because", "but", "by", "for", "from", "has", "have", "in", "into", "is",
-  "it", "its", "of", "on", "or", "the", "their", "they", "this", "to", "until", "was", "were", "when", "while",
-  "with", "without", "would",
-]);
-
-function markdownProse(body) {
-  return body
-    .replace(/```[\s\S]*?```|~~~[\s\S]*?~~~/g, " ")
-    .replace(/^\s{0,3}#{1,6}(?:\s+|$).*$/gm, " ")
-    .replace(/`+[^`]*`+/g, " ");
-}
-
-function hasThaiProse(body) {
-  return /[\u0e00-\u0e7f]{8,}/.test(markdownProse(body));
-}
-
-function hasEnglishProse(body) {
-  const prose = markdownProse(body);
-  return prose.split(/[.!?]\s+/).some((sentence) => {
-    const words = sentence.match(/\b[a-z]{2,}\b/gi) ?? [];
-    const proseWords = words.filter((word) => englishProseMarkers.has(word.toLowerCase()));
-    const contentWords = words.filter((word) => !englishProseMarkers.has(word.toLowerCase()));
-    return words.length >= 8 && proseWords.length >= 2 && contentWords.length >= 4;
-  });
 }
 
 // The glossary table row whose Term cell is `term`, backticks aside.
@@ -258,95 +230,6 @@ describe("personal AI skills repository contract", () => {
 });
 
 describe("production records and glossary", () => {
-  it("records ADR 0020 as the implement-family core and supersedes the standalone statuses", async () => {
-    const doc = await readTextOrNull("docs/decisions/0020-implement-tickets-core.md");
-    assert.ok(doc, "ADR 0020 exists under docs/decisions/");
-    const header = markdownHeaderBlock(doc);
-    assert.match(header, /^# ADR 0020: Implement Tickets is the one core for the implement family$/m, "ADR 0020 has its expected header");
-    for (const heading of ["Context / บริบท", "Decision / การตัดสินใจ", "Consequences / ผลที่ตามมา", "Rejected alternatives / ทางเลือกที่ไม่เลือก"]) {
-      const section = markdownSection(doc, heading);
-      const body = section?.split(/\r?\n/).slice(1).join("\n") ?? "";
-      assert.ok(body && hasThaiProse(body), `ADR 0020 has Thai prose in ${heading}`);
-      assert.ok(hasEnglishProse(body), `ADR 0020 has English prose in ${heading}`);
-    }
-
-    const decision = markdownSection(doc, "Decision / การตัดสินใจ");
-    assert.ok(decision, "ADR 0020 has a bilingual Decision section");
-    assert.ok(/defaults\s+to native subagents[\s\S]*parallel waves/i.test(decision), "the core defaults to native workers and parallel waves");
-    assert.ok(/`implement-tickets-<backend>`[\s\S]*`--with <backend>`/.test(decision), "separate adapters are selected with --with");
-    assert.ok(/retire(?:d)? the prior standalone core[\s\S]*no alias/i.test(decision), "the prior standalone core is retired without an alias");
-    assert.ok(/`agy-implement`[\s\S]*`opencode-implement`[\s\S]*until their adapters ship/i.test(decision), "agy and opencode remain until adapters ship");
-    assert.ok(/parallel readiness[\s\S]*recorded human validation/i.test(decision), "parallel readiness depends on a recorded human run");
-    const validationRecord = markdownSection(doc, "Parallel validation record / บันทึกผล parallel validation");
-    assert.ok(validationRecord, "ADR 0020 has a parallel validation record");
-    assert.match(validationRecord, /Status: awaiting human validation/i, "the parallel-validation state is explicit");
-    assert.match(validationRecord, /status: not validated/i, "the marker stays pending until the record is complete");
-    assertAbsentFromMarkdownSections(doc, /26\.8%/, "the unverified conflict figure is not cited");
-
-    const expectedStatusLine = "- Status / สถานะ: Superseded by ADR 0020 / ถูกแทนที่โดย ADR 0020, for the implement family (was: Accepted / ยอมรับแล้ว)";
-    for (const file of [
-      "docs/decisions/0004-agy-implement-standalone.md",
-      `docs/decisions/0005-${["subagent", "implement"].join("-")}-standalone.md`,
-      "docs/decisions/0007-opencode-implement-standalone.md",
-    ]) {
-      const previous = await readTextOrNull(file);
-      assert.ok(previous, `${file} exists`);
-      const statusBlock = file.includes("0007-")
-        ? markdownSection(previous, "Status / สถานะ")
-        : markdownHeaderBlock(previous);
-      assert.ok(statusBlock, `${file} has a status metadata block`);
-      const status = statusBlock.split("\n").find((line) => line.startsWith("- Status / สถานะ:"));
-      assert.equal(status, expectedStatusLine, `${file} has the exact bilingual superseded status`);
-    }
-  });
-
-  it("rejects ADR language evidence found only in inline code or Markdown headings", () => {
-    const thaiInCode = "`ข้อความภาษาไทย`";
-    const thaiInHeading = "### ภาษาไทยที่เป็นเพียงหัวข้อ";
-    const repeatedFunctionWords = "the the the the the the the the.";
-
-    assert.equal(hasThaiProse(thaiInCode), false, "Thai in inline code is not prose evidence");
-    assert.equal(hasThaiProse(thaiInHeading), false, "Thai in a Markdown heading is not prose evidence");
-    assert.equal(hasThaiProse("ก"), false, "one Thai codepoint is too short to count as prose");
-    assert.equal(hasEnglishProse(repeatedFunctionWords), false, "repeated English function words are not prose evidence");
-    assert.equal(hasThaiProse("นี่คือข้อความภาษาไทยที่เป็นเนื้อหาจริง"), true, "Thai prose is accepted");
-    assert.equal(
-      hasEnglishProse("The adapter remains ready while workers can complete the review."),
-      true,
-      "English prose with content words is accepted",
-    );
-  });
-
-  it("defines implement-tickets vocabulary and both Worker senses in bilingual glossary rows", async () => {
-    const glossary = await readTextOrNull("docs/glossary.md");
-    assert.ok(glossary, "the glossary exists");
-
-    const terms = ["Wave", "Touch set", "Integration gate"];
-    const rows = Object.fromEntries(terms.map((term) => [term, tableRow(glossary, term)]));
-    const meanings = {
-      Wave: /group of tickets[\s\S]*run together/i,
-      "Touch set": /paths?[\s\S]*\(edit from NN\)[\s\S]*extras/i,
-      "Integration gate": /typecheck[\s\S]*full test suite[\s\S]*squash-merged/i,
-    };
-    for (const [term, row] of Object.entries(rows)) {
-      assert.ok(row, `the glossary has a row for ${term}`);
-      assert.equal(row.split("|").length, 5, `the ${term} row has the Term, ภาษาไทย, and Definition cells`);
-      assert.ok(row.split("|")[2].trim(), `the ${term} row has a Thai term`);
-      assert.match(row.split("|")[3], / \/ .+/, `the ${term} definition is bilingual`);
-      assert.match(row.split("|")[3], meanings[term], `the ${term} definition describes its implement-tickets meaning`);
-    }
-
-    const worker = tableRow(glossary, "Worker");
-    assert.ok(worker, "the glossary keeps a Worker row");
-    assert.match(worker, /engineering-workflow[\s\S]*external specialist/i, "Worker retains its engineering-workflow meaning");
-    assert.match(worker, /`implement-tickets`[\s\S]*subagent[\s\S]*one ticket/i, "Worker adds the implement-tickets subagent meaning");
-    assert.match(worker, /ใน `engineering-workflow`[\s\S]*external specialist[\s\S]*ใน `implement-tickets`[\s\S]*ticket/, "Worker distinguishes both senses in Thai too");
-
-    const usage = tableRow(glossary, "usage_total");
-    assert.ok(usage, "the usage_total row exists");
-    assert.doesNotMatch(usage, /`implement-tickets`/, "usage_total no longer names implement-tickets, which tracks no usage");
-  });
-
   it("keeps the glossary to terms in use, with the Seam, Tracker, and Run status rows", async () => {
     const glossary = await readTextOrNull("docs/glossary.md");
     assert.ok(glossary, "the glossary exists");
@@ -359,7 +242,7 @@ describe("production records and glossary", () => {
     }
     assert.doesNotMatch(tableRow(glossary, "Seam"), /\*\*Seam:\*\*|ticket/i, "Seam is not tied to a ticket field");
 
-    for (const term of ["Budget line", "Scenario", "Manifest", "Ticket review"]) {
+    for (const term of ["Budget line", "Scenario", "Manifest", "Ticket review", "Worker", "Wave", "Touch set", "Extra", "Drift", "Integration gate", "Read set", "usage_total"]) {
       assert.equal(tableRow(glossary, term), null, `the glossary no longer has a row for ${term}`);
     }
   });
@@ -377,6 +260,11 @@ describe("production records and glossary", () => {
       "0017": "drop-reuse-and-let-the-user-bound-the-design-review",
       "0018": "grill-to-tickets-scenarios-manifest-and-ticket-review",
       "0019": "grill-to-tickets-tiers-parked-questions-and-one-pause",
+      "0016": "restore-skills-retired-by-adr-0015",
+      "0020": "implement-tickets-core",
+      "0021": "touch-set-drift-without-reapproval",
+      "0022": "strict-mode-and-risk-based-verification",
+      "0023": "implement-tickets-minimal-core",
     };
     for (const [number, slug] of Object.entries(superseded)) {
       const doc = await readText(`docs/decisions/${number}-${slug}.md`);
