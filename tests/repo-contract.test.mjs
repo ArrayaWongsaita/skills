@@ -235,7 +235,8 @@ describe("personal AI skills repository contract", () => {
       },
     ))).flat();
     for (const entry of await readdir(".", { withFileTypes: true })) {
-      if (!entry.isFile()) continue;
+      // skills-lock.json is a gitignored, locally generated install lock, not a repository file.
+      if (!entry.isFile() || entry.name === "skills-lock.json") continue;
       const text = await readTextOrNull(entry.name);
       if (text !== null) files.push({ file: entry.name, text });
     }
