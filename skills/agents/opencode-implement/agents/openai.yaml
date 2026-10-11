@@ -1,6 +1,0 @@
-interface:
-  display_name: "opencode Implement"
-  short_description: "Implement a grill-to-tickets ticket set on a local opencode model, decompose to fit its context, auto-fall-back to a subagent, integrate one commit per ticket, stop before review"
-  default_prompt: "Use $opencode-implement to plan this ticket directory, decompose each ticket into criterion-level sub-steps, dispatch one local opencode worker per sub-step test-first, verify every result, fall back to a native subagent for any ticket the local model cannot deliver, integrate one commit per ticket, and stop before review: [dir|slug]."
-policy:
-  allow_implicit_invocation: false

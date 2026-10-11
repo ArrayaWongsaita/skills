@@ -1,6 +1,6 @@
 # ADR 0019: grill-to-tickets tiers, parked questions, and one pause
 
-- Status / สถานะ: Accepted / ยอมรับแล้ว
+- Status / สถานะ: Superseded by ADR 0027 / ถูกแทนที่โดย ADR 0027 (was: Accepted / ยอมรับแล้ว)
 - Date / วันที่: 2026-09-30
 - Amends / แก้ไข: ADR 0013 decision 3 and ADR 0017 decision 3
 

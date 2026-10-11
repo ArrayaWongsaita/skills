@@ -1,10 +1,10 @@
 [
   {
-    "query": "/implement-tickets .scratch/feature/issues/",
+    "query": "/implement-tickets .scratch/feature/spec.md",
     "should_trigger": true
   },
   {
-    "query": "Please run $implement-tickets on feature",
+    "query": "Please run $implement-tickets on issue 42",
     "should_trigger": true
   },
   {
@@ -12,7 +12,7 @@
     "should_trigger": false
   },
   {
-    "query": "Use agy-implement to spread these tickets across providers.",
+    "query": "Use agy-agent to spread these tickets across providers.",
     "should_trigger": false
   },
   {

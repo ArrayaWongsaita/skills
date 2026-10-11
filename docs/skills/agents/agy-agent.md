@@ -10,7 +10,7 @@
 
 เปิดทางให้ AI harness ตัวอื่น (เช่น Claude Code, Cursor, Codex CLI, OpenCode, Aider ฯลฯ) สามารถสั่งงานและส่งต่อ (delegate) ภารกิจไปยัง **Antigravity CLI (`agy`)** เพื่อทำงานแบบ headless subagent ได้อย่างราบรื่น
 
-การทำงานใช้สถาปัตยกรรม **Zero External Dependencies** ตามแนวทางของ `agy-implement` ทำงานผ่าน native shell และโปรโตคอล **File-Based I/O** โดยไม่ต้องติดตั้ง Python หรือ runtime เสริมใดๆ ช่วยประหยัด token/quota ของโมเดลหลัก และรองรับการเลือกโมเดล (Model Selection) ให้เหมาะกับแต่ละงาน พร้อมปลดล็อก **Context Window ขนาด 1,000,000+ tokens** ของ Gemini บน `agy`
+การทำงานใช้สถาปัตยกรรม **Zero External Dependencies** ทำงานผ่าน native shell และโปรโตคอล **File-Based I/O** โดยไม่ต้องติดตั้ง Python หรือ runtime เสริมใดๆ ช่วยประหยัด token/quota ของโมเดลหลัก และรองรับการเลือกโมเดล (Model Selection) ให้เหมาะกับแต่ละงาน พร้อมปลดล็อก **Context Window ขนาด 1,000,000+ tokens** ของ Gemini บน `agy`
 
 Reference contract อ้างอิงจากเอกสารทางการ: <https://antigravity.google/docs/cli/headless/>
 
@@ -54,7 +54,6 @@ Reasoning tier เป็นส่วนหนึ่งของ model slug (`-hi
 - งานที่ต้องถามคำถามเจาะลึกเพื่อขอการตัดสินใจจากผู้ใช้โดยตรง (Interactive clarifications)
 - งานแก้โค้ดเพียง 1-2 บรรทัดที่ harness หลักสามารถใช้เครื่องมือแก้ไขไฟล์ได้ในทันที (overhead จากการเปิด subagent จะช้ากว่า)
 - งานที่ต้องอาศัยบริบทการสนทนาอย่างลึกซึ้งจากบทสนทนาก่อนหน้าในแชทหลัก โดยที่บริบทนั้นไม่ได้ถูกบันทึกไว้ในไฟล์หรือ prompt
-- งานรัน execution waves ของ tracer-bullet tickets จาก `grill-to-tickets` (กรณีนี้ให้ใช้ `agy-implement` แทน)
 
 ### วิธีทำงานหลัก (File-Based I/O Protocol)
 
@@ -106,7 +105,7 @@ Reasoning tier เป็นส่วนหนึ่งของ model slug (`-hi
 
 Enable other AI harnesses (such as Claude Code, Cursor, Codex CLI, OpenCode, Aider, etc.) to seamlessly delegate tasks to a Google Antigravity subagent via the headless `agy` CLI.
 
-Following the zero-dependency architecture of `agy-implement`, it relies solely on native POSIX shell and the **File-Based I/O Protocol** without external language runtimes. It preserves the host agent's context while enabling task-aware model routing and unlocking Gemini's massive **1M+ token context window**. Contract details follow the official reference: <https://antigravity.google/docs/cli/headless/>.
+It relies solely on native POSIX shell and the **File-Based I/O Protocol** without external language runtimes. It preserves the host agent's context while enabling task-aware model routing and unlocking Gemini's massive **1M+ token context window**. Contract details follow the official reference: <https://antigravity.google/docs/cli/headless/>.
 
 Install with:
 
@@ -148,7 +147,6 @@ The reasoning tier is part of the model slug (`-high` / `-medium` / `-low`). Pas
 - The task requires interactive clarification or dialogue with the human user.
 - Trivial 1-2 line edits where calling an external CLI incurs more overhead than executing directly in the host harness.
 - Tasks requiring subtle conversational context accumulated across numerous prior turns that are not captured in the filesystem.
-- Multi-ticket wave execution from `grill-to-tickets` (use `agy-implement` instead).
 
 ### Core Workflow (File-Based I/O Protocol)
 

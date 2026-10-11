@@ -90,9 +90,7 @@ gate reads it as a failure.
 
 - **Default for this skill: `--dangerously-skip-permissions`.** `agy-agent` is
   dispatched only on an explicit human ask, and its tasks routinely run
-  tests / builds / tooling, so blanket approval is the pragmatic choice. This is
-  a deliberate divergence from `agy-implement`, which defaults to the sandbox
-  because it dispatches workers unattended.
+  tests / builds / tooling, so blanket approval is the pragmatic choice.
 - **Alternative: `--sandbox --mode accept-edits`.** Terminal commands stay
   sandboxed while file edits are still auto-accepted. Reach for this when the
   task is read-only analysis, or when you do not fully trust the scope the

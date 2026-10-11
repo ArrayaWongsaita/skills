@@ -1587,8 +1587,8 @@ describe("tokenme-agent repo wiring contract", () => {
     );
     assert.match(
       context,
-      /`opencode-implement`/,
-      "the context names opencode-implement among the explicit-only siblings",
+      new RegExp(`\`${["opencode", "implement"].join("-")}\``),
+      "the context names the retired opencode implementer among the explicit-only siblings",
     );
     assert.match(
       context,

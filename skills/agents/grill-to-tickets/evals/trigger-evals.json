@@ -4,11 +4,7 @@
     "should_trigger": true
   },
   {
-    "query": "$grill-to-tickets carry the shareable-report-link idea from interview through spec and design review to published tickets",
-    "should_trigger": true
-  },
-  {
-    "query": "/grill-to-tickets continue subtitle-preferences",
+    "query": "$grill-to-tickets carry the shareable-report-link idea from interview through spec and review to published tickets",
     "should_trigger": true
   },
   {

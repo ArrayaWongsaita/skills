@@ -24,9 +24,6 @@ tool approval, so it runs when the human asks for it by name:
 - Natural language: "use agy", "delegate this to agy", "run this in agy",
   "ask antigravity to …"
 
-For an autonomous execution wave over a directory of `grill-to-tickets` tickets,
-use `agy-implement` instead.
-
 ---
 
 ## Core Operating Workflow

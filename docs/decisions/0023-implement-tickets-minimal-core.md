@@ -1,6 +1,6 @@
 # ADR 0023: Implement Tickets is a minimal serial core
 
-- Status / สถานะ: Accepted / ยอมรับแล้ว
+- Status / สถานะ: Superseded by ADR 0027 / ถูกแทนที่โดย ADR 0027 (was: Accepted / ยอมรับแล้ว)
 - Date / วันที่: 2026-10-02
 - Supersedes / แทนที่: ADR 0020 decisions 2 and 4 (adapters and the parallel validation gate); ADR 0021 in full (touch-set drift, drain rounds, parked tickets, serial-by-default); ADR 0022 decision 1 (`--strict`) / ADR 0020 ข้อ 2 และ 4 (adapter และ gate การ validate parallel), ADR 0021 ทั้งฉบับ (touch-set drift, drain round, ticket ที่พักไว้, serial เป็นค่าเริ่มต้น) และ ADR 0022 ข้อ 1 (`--strict`)
 - Keeps / คงไว้: ADR 0020 decisions 1 and 3 (one core, retire the standalone core), ADR 0022 decisions 2–4 (risk-based verification, worker evidence, `Risk: high` in tickets)
