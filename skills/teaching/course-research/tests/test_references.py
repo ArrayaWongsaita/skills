@@ -44,3 +44,29 @@ def test_overview_skeleton_matches_contract(skill_dir):
 @pytest.mark.parametrize("needle", ["init_chat_model", 'skip="', '"responses"', "results.json", "check_code.py", "InMemoryVectorStore", "response_format"])
 def test_code_check_doc_names_conventions(skill_dir, needle):
     assert needle in read(skill_dir, "code-check.md")
+
+
+def test_scope_interview_covers_scope_keys(skill_dir):
+    from contract import SCOPE_KEYS
+
+    text = read(skill_dir, "scope-interview.md")
+    assert [key for key in SCOPE_KEYS if f"`{key}`" not in text] == []
+
+
+@pytest.mark.parametrize("needle", ["Beginner", "Practitioner", "Teacher", "Existing curricula", "Current state", "Takeaway", "Cited findings", "Inferences", "Gaps"])
+def test_researcher_perspectives_and_format(skill_dir, needle):
+    assert needle in read(skill_dir, "researcher.md")
+
+
+@pytest.mark.parametrize("needle", ["Strong", "Supporting", "Inferred", "| Term | Meaning | English term |"])
+def test_outline_evidence_tags(skill_dir, needle):
+    assert needle in read(skill_dir, "outline.md")
+
+
+@pytest.mark.parametrize("needle", ["part-template.md", "code-check.md", "_work/code-check/fixtures/"])
+def test_writer_links_contracts(skill_dir, needle):
+    assert needle in read(skill_dir, "part-writer.md")
+
+
+def test_review_output_format(skill_dir):
+    assert "part-NN | heading | problem | suggested fix" in read(skill_dir, "consistency-review.md")
