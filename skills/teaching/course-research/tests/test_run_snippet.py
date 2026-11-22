@@ -36,7 +36,7 @@ def test_ok_snippet_verified(run):
 def test_exception_failed(run):
     result, _ = run('raise ValueError("boom")')
     assert result["status"] == "failed"
-    assert result["reason"] == "ValueError: boom"
+    assert result["reason"] == "ValueError: boom (line 1)"
 
 
 def test_sys_exit_zero_is_fine(run):
@@ -99,3 +99,19 @@ def test_bad_fixture_reported_as_failure(run):
     result, _ = run("print(1)", fixture={"responses": [{}]})
     assert result["status"] == "failed"
     assert result["reason"].startswith("FixtureError: ")
+
+
+def test_beta_warning_is_not_a_deprecation(run):
+    result, _ = run(
+        """
+        import warnings
+        from langchain_core._api.beta_decorator import LangChainBetaWarning
+        warnings.warn("x is in beta", LangChainBetaWarning)
+        """
+    )
+    assert result["status"] == "verified", result
+
+
+def test_failure_reason_names_the_snippet_line(run):
+    result, _ = run("x = 1\n\nraise ValueError('boom')\n")
+    assert result["reason"] == "ValueError: boom (line 3)"

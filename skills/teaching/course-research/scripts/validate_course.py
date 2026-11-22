@@ -290,9 +290,23 @@ def snippet_markers(doc: Doc) -> list[tuple[int, dict, Block | None]]:
     return found
 
 
-def _check_code(doc: Doc, number, technical: bool, self_paced: bool, error) -> list[dict]:
+def expected_output(doc: Doc, block: Block) -> Block | None:
+    """The block under the Expected output label after a code block (past any Unverified line), if any."""
     lines = doc.lines
-    starts = {block.start: block for block in doc.blocks}
+    after = _skip_blank(lines, block.end + 1)
+    if after < len(lines) and lines[after].startswith(UNVERIFIED_PREFIX):
+        after = _skip_blank(lines, after + 1)
+    if after >= len(lines) or lines[after].strip() != EXPECTED_OUTPUT_LABEL:
+        return None
+    return {b.start: b for b in doc.blocks}.get(_skip_blank(lines, after + 1))
+
+
+def _under_misconceptions(doc: Doc, line: int) -> bool:
+    above = [heading for heading in doc.headings if heading.line < line]
+    return bool(above) and above[-1].level == 4 and above[-1].text == "Misconceptions"
+
+
+def _check_code(doc: Doc, number, technical: bool, self_paced: bool, error) -> list[dict]:
     markers: list[dict] = []
     attached: set[int] = set()
     for _index, marker, block in snippet_markers(doc):
@@ -309,16 +323,12 @@ def _check_code(doc: Doc, number, technical: bool, self_paced: bool, error) -> l
             error(label, f"id must look like '{number}.<k>-<x>'")
         if block.lang not in PYTHON_LANGS and "skip" not in marker:
             error(label, 'non-Python snippet needs skip="<reason>"')
-        if self_paced:
-            after = _skip_blank(lines, block.end + 1)
-            if after < len(lines) and lines[after].startswith(UNVERIFIED_PREFIX):
-                after = _skip_blank(lines, after + 1)
-            label_ok = after < len(lines) and lines[after].strip() == EXPECTED_OUTPUT_LABEL
-            if not label_ok or _skip_blank(lines, after + 1) not in starts:
-                error(label, f"missing '{EXPECTED_OUTPUT_LABEL}' block after the code")
+        if self_paced and expected_output(doc, block) is None:
+            error(label, f"missing '{EXPECTED_OUTPUT_LABEL}' block after the code")
     if technical:
         for block in doc.blocks:
-            if block.lang in CODE_LANGS and block.start not in attached:
+            # Outdated code shown for recognition under Misconceptions is never run.
+            if block.lang in CODE_LANGS and block.start not in attached and not _under_misconceptions(doc, block.start):
                 error(f"line {block.start + 1}", "code block without a snippet marker")
     return markers
 

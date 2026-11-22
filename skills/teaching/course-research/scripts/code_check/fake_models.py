@@ -24,13 +24,15 @@ import importlib
 import json
 import math
 import os
+import re
 import sys
 from pathlib import Path
 from typing import Iterator
 
 from langchain_core.embeddings import Embeddings
 from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, AIMessageChunk
+from langchain_core.outputs import ChatGenerationChunk
 from langchain_core.runnables import Runnable, RunnableLambda
 from pydantic import BaseModel
 
@@ -38,6 +40,8 @@ DEFAULT_RESPONSE = "This is a scripted reply from the course-research fake model
 FAKE_KEY = "fake-key"
 KEY_VARIABLES = ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY", "GROQ_API_KEY", "MISTRAL_API_KEY", "TAVILY_API_KEY")
 ENTRY_KEYS = {"content", "tool_calls", "structured"}
+# input() answers "Hello" once, then "quit", so a chat loop runs one turn and ends.
+FIRST_INPUT, LATER_INPUT = "Hello", "quit"
 EMBEDDING_SIZE = 256
 
 
@@ -153,6 +157,26 @@ def make_queue(entries: list[dict] | None) -> Iterator[AIMessage]:
 class ScriptedChatModel(GenericFakeChatModel):
     """GenericFakeChatModel that also accepts tools and structured output."""
 
+    def _stream(self, messages, stop=None, run_manager=None, **kwargs) -> Iterator[ChatGenerationChunk]:
+        # The parent streams content only, so a tool-call reply streamed to nothing.
+        message = self._generate(messages, stop=stop, run_manager=run_manager, **kwargs).generations[0].message
+        text = message.content if isinstance(message.content, str) else ""
+        chunks = [AIMessageChunk(content=token, id=message.id) for token in re.split(r"(\s)", text) if token]
+        if message.tool_calls:
+            calls = [
+                {"name": call["name"], "args": json.dumps(call["args"], ensure_ascii=False), "id": call["id"], "index": index, "type": "tool_call_chunk"}
+                for index, call in enumerate(message.tool_calls)
+            ]
+            chunks.append(AIMessageChunk(content="", id=message.id, tool_call_chunks=calls))
+        if not chunks:
+            chunks.append(AIMessageChunk(content="", id=message.id))
+        chunks[-1].chunk_position = "last"
+        for chunk in chunks:
+            generation = ChatGenerationChunk(message=chunk)
+            if run_manager:
+                run_manager.on_llm_new_token(chunk.content, chunk=generation)
+            yield generation
+
     def bind_tools(self, tools, **kwargs) -> "ScriptedChatModel":
         return self
 
@@ -186,6 +210,20 @@ def _swap(original, replacement) -> int:
     return replaced
 
 
+def _require_provider_package(base_module: str, resolve: str, creator: str, provider_at: int, *args, **kwargs) -> None:
+    """Raise what the real factory raises when the provider's package is missing or unknown.
+
+    Uses LangChain's own provider table, so `init_chat_model("openai:...")`
+    fails the check exactly when it would fail for a learner without
+    langchain-openai. Skipped if a future LangChain renames these internals.
+    """
+    base = sys.modules.get(base_module)
+    resolve_fn, creator_fn = getattr(base, resolve, None), getattr(base, creator, None)
+    if resolve_fn is None or creator_fn is None:
+        return
+    creator_fn(resolve_fn(*args, **kwargs)[provider_at])
+
+
 def install_fakes(entries: list[dict] | None) -> int:
     for name in ("langchain.chat_models", "langchain.agents", "langchain.embeddings"):
         try:
@@ -194,10 +232,14 @@ def install_fakes(entries: list[dict] | None) -> int:
             pass
     queue = make_queue(entries)
 
-    def fake_init_chat_model(*args, **kwargs) -> ScriptedChatModel:
+    def fake_init_chat_model(model=None, *args, model_provider=None, **kwargs) -> ScriptedChatModel:
+        if isinstance(model, str):
+            _require_provider_package("langchain.chat_models.base", "_parse_model", "_get_chat_model_creator", 1, model, model_provider)
         return build_model(None, queue)
 
-    def fake_init_embeddings(*args, **kwargs) -> HashEmbeddings:
+    def fake_init_embeddings(model=None, *args, provider=None, **kwargs) -> HashEmbeddings:
+        if isinstance(model, str):
+            _require_provider_package("langchain.embeddings.base", "_infer_model_and_provider", "_get_embeddings_class_creator", 0, model, provider=provider)
         return HashEmbeddings(size=EMBEDDING_SIZE)
 
     replaced = 0
@@ -209,7 +251,8 @@ def install_fakes(entries: list[dict] | None) -> int:
         replaced += _swap(embeddings.init_embeddings, fake_init_embeddings)
 
     for variable in KEY_VARIABLES:
-        os.environ.setdefault(variable, FAKE_KEY)
+        os.environ[variable] = FAKE_KEY  # a real key in the environment must never reach a snippet
     getpass.getpass = lambda *args, **kwargs: FAKE_KEY
-    builtins.input = lambda *args, **kwargs: ""
+    answers = iter([FIRST_INPUT])
+    builtins.input = lambda *args, **kwargs: next(answers, LATER_INPUT)
     return replaced

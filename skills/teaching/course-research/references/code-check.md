@@ -7,11 +7,13 @@ v1 checks Python. Other languages are marked unverified.
 ## What a snippet must look like
 
 - **Standalone.** Each snippet runs top to bottom in a fresh interpreter, with its own imports and setup. Repeat setup lines rather than relying on an earlier snippet.
-- **Models through the factory.** Get chat models with `init_chat_model("openai:gpt-5")`, or pass a model string: `create_agent(model="openai:gpt-5", tools=[...])`. Provider classes such as `ChatOpenAI` or `ChatAnthropic` fail the check by design. Their packages are not installed in the check environment, and LangChain 1.x documentation leads with `init_chat_model`.
+- **Models through the factory.** Get chat models with `init_chat_model("openai:gpt-5")`, or pass a model string: `create_agent(model="openai:gpt-5", tools=[...])`. The fake factory first checks that the provider package is installed, as the real one does: `"openai:…"` needs `langchain-openai`. So pin the provider package in scope and list it in the Part's `Prerequisites and setup`. Provider classes such as `ChatOpenAI` are not replaced: they call the real API with a fake key and fail. LangChain 1.x documentation leads with `init_chat_model` anyway.
 - **Embeddings and stores.** Use `init_embeddings("openai:text-embedding-3-small")`, which returns deterministic 256-dimension fake vectors during the check. Use `InMemoryVectorStore` from `langchain_core.vectorstores` for vector-store examples.
-- **API keys.** A snippet may read `os.environ["OPENAI_API_KEY"]` or ask with `getpass.getpass(...)`. During the check both return `"fake-key"`.
+- **API keys.** A snippet may read `os.environ["OPENAI_API_KEY"]` or ask with `getpass.getpass(...)`. During the check both return `"fake-key"`. The user's real keys and tokens never reach a snippet: the check removes them, and every `LANGSMITH_*` / `LANGCHAIN_*` variable, from the environment, and turns tracing off.
+- **User input.** `input()` returns `"Hello"` the first time and `"quit"` after that. Write chat loops that end when the user types `quit`.
 - **No real network services.** Web loaders, search tools, databases and hosted services get `skip="<what real service it needs>"` on the marker, for example `<!-- snippet id="2.3-a" skip="needs a Tavily API key and network access" -->`.
-- **Current APIs only.** A deprecation warning raised by the snippet, or by LangChain or LangGraph, fails the check.
+- **Current APIs only.** A deprecation warning raised by the snippet, or by LangChain or LangGraph, fails the check. Beta warnings (`LangChainBetaWarning`) are not deprecations and pass.
+- **Expected output.** An exact ```` ```text ```` Expected output block must match what the snippet prints under the fake model, ignoring trailing spaces and surrounding blank lines. Otherwise the snippet is unverified with reason `expected output differs …`. LLM text goes in a ```` ```text illustrative ```` block, which is not compared.
 - **Fast.** Each snippet has 60 seconds by default.
 
 ## Scripting the fake model
@@ -59,14 +61,16 @@ It rewrites each marker with `status`, `reason` and `checked`, adds a visible `>
 
 ## Reading `results.json`
 
-`_work/code-check/results.json` maps each snippet id to `{"status", "reason", "stdout"}`, merged across runs. `stdout` is what the snippet printed under the fake model. Use it for the exact Expected output of deterministic results. LLM text stays labelled illustrative.
+`_work/code-check/results.json` maps each snippet id to `{"status", "reason", "stdout"}`, merged across runs. `stdout` is what the snippet printed under the fake model. Use it for the exact Expected output of deterministic results. LLM text stays labelled illustrative. A failure reason ends with the snippet line that raised it, e.g. `KeyError: 'messages' (line 12)`.
 
 Common reasons and their fixes:
 
 | Reason | Fix |
 |---|---|
 | `deprecated: …` | Rewrite with the current API named in the warning and the migration guide. |
-| `ModuleNotFoundError: No module named 'langchain_openai'` | Use `init_chat_model("openai:…")` or a model string instead of the provider class. |
+| `expected output differs …` | Copy the snippet's `stdout` into the exact block, or mark the block `text illustrative` if it is LLM text. |
+| `ImportError: Initializing ChatOpenAI requires the langchain-openai package …` | Pin the provider package in scope, rerun `setup_env.py`, and list the package in `Prerequisites and setup`. |
+| `AuthenticationError` or `APIConnectionError` | The snippet uses a provider class such as `ChatOpenAI`. Use `init_chat_model("openai:…")` or a model string. |
 | `FixtureExhausted: …` | Add responses to the fixture for every model call the snippet makes. |
 | `timeout after 60s` | The snippet waits on the network or loops. Add `skip="…"` or fix the loop. |
 | `runner crashed: …` | The environment is broken. Rerun `setup_env.py`. |

@@ -31,7 +31,8 @@ The prompt gives you absolute paths to:
 
 - Write each example to the conventions in `code-check.md`, with a snippet marker above it.
 - When an example needs scripted model replies (tool calls, structured output, several turns), write its fixture to `_work/code-check/fixtures/<snippet-id>.json`.
-- In self-paced courses, add the `**Expected output:**` block, labelling LLM-generated output as illustrative.
+- In self-paced courses, add the `**Expected output:**` block: a ```` ```text ```` block, shown exactly, for deterministic output; a ```` ```text illustrative ```` block for LLM-generated output.
+- Outdated code shown under `Misconceptions` takes no snippet marker. It is never run.
 
 ## Frontmatter
 
@@ -44,7 +45,7 @@ The prompt gives you absolute paths to:
 Sometimes the prompt gives you a list of issues instead of a fresh Part. They come from the validator, the code check, or the consistency review.
 
 - Fix exactly those issues. Leave everything else in the file as it is.
-- For code failures, use the reason table in `code-check.md`, and rewrite the fixture when the snippet's model calls changed.
+- For code failures, use the reason table in `code-check.md`, and rewrite the fixture when the snippet's model calls changed. For `expected output differs`, the prompt includes the actual output.
 - Never add `status`, `reason` or `checked` attributes, or `> ⚠️ Unverified:` lines. The check writes those.
 
 ## When you finish

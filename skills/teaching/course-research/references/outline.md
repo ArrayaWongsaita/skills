@@ -21,7 +21,7 @@ The coordinator builds the outline itself, from `_work/scope.md` and the broad n
 
 ## Pins (technical topics)
 
-Before the gate, take the current stable versions from the Current state notes and write exact `==` pins into `packages` in `_work/scope.md`, for example `["langchain==1.5.2", "langgraph==1.2.24"]`. Pin packages that must move together (langchain and langgraph) from the same release window. Show the pins at the gate.
+Before the gate, take the current stable versions from the Current state notes and write exact `==` pins into `packages` in `_work/scope.md`, for example `["langchain==1.5.2", "langgraph==1.2.24"]`. Pin packages that must move together (langchain and langgraph) from the same release window. Also pin the provider package for the model provider the examples use, such as `langchain-openai` for `"openai:…"` models: learners must install it, and the code check fails without it, as a real run would. Show the pins at the gate.
 
 ## `_work/outline.md` layout
 
@@ -31,6 +31,7 @@ Before the gate, take the current stable versions from the Current state notes a
 ## Parts
 
 ### Part 1: <title>
+- File: `part-01-<slug>.md` (fixed here; every writer and revision uses this name)
 - Outcomes: O1, O3
 - Prerequisite parts: —
 - Real-world task: <one line>
@@ -59,7 +60,7 @@ Before the gate, take the current stable versions from the Current state notes a
 - <leftover topic>: [link](URL)
 
 ## Pins
-langchain==1.5.2, langgraph==1.2.24 (from the Current state notes, YYYY-MM-DD)
+langchain==1.5.2, langgraph==1.2.24, langchain-openai==1.8.5 (from the Current state notes, YYYY-MM-DD)
 ```
 
 ## Presenting at the gate

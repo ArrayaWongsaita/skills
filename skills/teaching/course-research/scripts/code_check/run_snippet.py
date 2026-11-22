@@ -18,19 +18,30 @@ import json
 import os
 import runpy
 import sys
+import traceback
 import warnings
 from pathlib import Path
 
 DEPRECATION_CATEGORIES = (DeprecationWarning, PendingDeprecationWarning)
 FLAGGED_PACKAGES = ("langchain", "langgraph")
+# LangChain marks beta APIs with a DeprecationWarning subclass; beta is not deprecated.
+NOT_DEPRECATIONS = ("LangChainBetaWarning",)
 
 
 def _is_flagged(record: warnings.WarningMessage, snippet: Path) -> bool:
     if not issubclass(record.category, DEPRECATION_CATEGORIES):
         return False
+    if any(cls.__name__ in NOT_DEPRECATIONS for cls in record.category.__mro__):
+        return False
     from_snippet = os.path.realpath(record.filename) == os.path.realpath(snippet)
     from_framework = record.category.__module__.startswith(FLAGGED_PACKAGES)
     return from_snippet or from_framework
+
+
+def _failure(error: BaseException, snippet: Path) -> str:
+    lines = [frame.lineno for frame in traceback.extract_tb(error.__traceback__) if os.path.realpath(frame.filename) == os.path.realpath(snippet)]
+    where = f" (line {lines[-1]})" if lines else ""
+    return f"{type(error).__name__}: {error}{where}"
 
 
 def run(snippet: Path, fixture: Path | None) -> dict:
@@ -47,7 +58,7 @@ def run(snippet: Path, fixture: Path | None) -> dict:
             if stop.code not in (None, 0):
                 return {"status": "failed", "reason": f"SystemExit: {stop.code}", "deprecations": []}
         except BaseException as error:  # noqa: BLE001 - the snippet's failure is the result
-            return {"status": "failed", "reason": f"{type(error).__name__}: {error}", "deprecations": []}
+            return {"status": "failed", "reason": _failure(error, snippet), "deprecations": []}
     deprecations = [str(record.message) for record in records if _is_flagged(record, snippet)]
     if deprecations:
         return {"status": "failed", "reason": f"deprecated: {deprecations[0]}", "deprecations": deprecations}

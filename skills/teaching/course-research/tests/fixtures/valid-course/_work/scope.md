@@ -6,7 +6,7 @@ delivery_mode: "self-paced"
 technical: true
 runtime: "python"
 python: "3.12"
-packages: ["langchain==1.5.2", "langgraph==1.2.24"]
+packages: ["langchain==1.5.2", "langgraph==1.2.24", "langchain-openai==1.8.5"]
 size: "small"
 outcomes: {"O1": "สร้าง agent ที่เรียกใช้ tool ได้ด้วย create_agent", "O2": "สร้าง StateGraph ที่มี node และ edge ได้", "O3": "แยกโค้ดแบบเก่าก่อน 1.0 ออกจากแบบปัจจุบันได้"}
 ---

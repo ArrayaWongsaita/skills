@@ -19,6 +19,7 @@ harness error. Stdlib only.
 import argparse
 import datetime
 import json
+import os
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -27,14 +28,19 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import frontmatter  # noqa: E402
-from contract import PART_FILE_RE, PYTHON_LANGS, SNIPPET_ID_RE, UNVERIFIED_PREFIX  # noqa: E402
-from validate_course import computed_code_status, scan, snippet_markers  # noqa: E402
+from contract import ILLUSTRATIVE_TAG, PART_FILE_RE, PYTHON_LANGS, SNIPPET_ID_RE, UNVERIFIED_PREFIX  # noqa: E402
+from validate_course import computed_code_status, expected_output, scan, snippet_markers  # noqa: E402
 
 RUNNER = Path(__file__).resolve().parent / "run_snippet.py"
 WORK_DIR = Path("_work/code-check")
 DEFAULT_PYTHON = WORK_DIR / ".venv" / "bin" / "python"
 MAX_STDOUT = 4000
 MAX_REASON = 300
+OUTPUT_DIFFERS = "expected output differs from what the code prints; see its stdout in results.json"
+# Snippets come from the web: they never see the user's secrets or send LangSmith traces.
+SECRET_WORDS = ("KEY", "TOKEN", "SECRET", "PASSWORD", "CREDENTIAL")
+TRACING_PREFIXES = ("LANGSMITH_", "LANGCHAIN_")
+TRACING_OFF = {"LANGSMITH_TRACING": "false", "LANGCHAIN_TRACING_V2": "false"}
 
 
 class HarnessError(RuntimeError):
@@ -50,6 +56,7 @@ class Snippet:
     skip: str | None
     marker_line: int
     fence_end_line: int
+    expected: str | None = None  # exact Expected output; None when absent or illustrative
 
 
 @dataclass(frozen=True)
@@ -72,6 +79,13 @@ def _attached(doc) -> list[tuple[int, dict, object]]:
     return [(index, attrs, block) for index, attrs, block in snippet_markers(doc) if block is not None]
 
 
+def _exact_expected(doc, block) -> str | None:
+    output = expected_output(doc, block)
+    if output is None or ILLUSTRATIVE_TAG in doc.lines[output.start].strip().lstrip("`~").split()[1:]:
+        return None
+    return doc.text(output.start, output.end)
+
+
 def extract_snippets(part_path: Path) -> list[Snippet]:
     _, body = frontmatter.parse(part_path.read_text(encoding="utf-8"))
     doc = scan(body)
@@ -87,6 +101,7 @@ def extract_snippets(part_path: Path) -> list[Snippet]:
                 skip=attrs.get("skip"),
                 marker_line=index,
                 fence_end_line=block.end,
+                expected=_exact_expected(doc, block),
             )
         )
     return snippets
@@ -95,6 +110,20 @@ def extract_snippets(part_path: Path) -> list[Snippet]:
 def _one_line(text: str) -> str:
     flat = " ".join(text.split()).replace("-->", "—>")
     return flat if len(flat) <= MAX_REASON else flat[: MAX_REASON - 1] + "…"
+
+
+def snippet_env(environ: dict[str, str]) -> dict[str, str]:
+    env = {
+        name: value
+        for name, value in environ.items()
+        if not any(word in name.upper() for word in SECRET_WORDS) and not name.upper().startswith(TRACING_PREFIXES)
+    }
+    env.update(TRACING_OFF)
+    return env
+
+
+def _normalized(text: str) -> str:
+    return "\n".join(line.rstrip() for line in text.strip().splitlines())
 
 
 def run_one(snippet: Snippet, python: Path, work_dir: Path, timeout: int = 60) -> Result:
@@ -113,7 +142,7 @@ def run_one(snippet: Snippet, python: Path, work_dir: Path, timeout: int = 60) -
     if fixture.exists():
         command += ["--fixture", str(fixture)]
     try:
-        done = subprocess.run(command, cwd=snippets_dir, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=timeout)
+        done = subprocess.run(command, cwd=snippets_dir, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=timeout, env=snippet_env(dict(os.environ)))
     except subprocess.TimeoutExpired as expired:
         output = expired.stdout.decode("utf-8", "replace") if isinstance(expired.stdout, bytes) else (expired.stdout or "")
         return Result(snippet.id, "unverified", f"timeout after {timeout}s", output[-MAX_STDOUT:])
@@ -123,6 +152,8 @@ def run_one(snippet: Snippet, python: Path, work_dir: Path, timeout: int = 60) -
         return Result(snippet.id, "unverified", _one_line(f"runner crashed: {last}"), stdout)
     outcome = json.loads(result_file.read_text(encoding="utf-8"))
     if outcome["status"] == "verified":
+        if snippet.expected is not None and _normalized(snippet.expected) != _normalized(done.stdout):
+            return Result(snippet.id, "unverified", OUTPUT_DIFFERS, stdout)
         return Result(snippet.id, "verified", None, stdout)
     return Result(snippet.id, "unverified", _one_line(outcome.get("reason") or "failed"), stdout)
 

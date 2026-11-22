@@ -28,3 +28,12 @@ def test_mentions_every_script_cli(skill_md, script):
 def test_mentions_every_stage(skill_md):
     assert [stage for stage in STAGES if f"`{stage}`" not in skill_md and f" {stage}" not in skill_md] == []
     assert "scope-confirmed" in skill_md and "outline-approved" in skill_md
+
+
+@pytest.mark.parametrize("needle", ["renumbered", "dropped", "not yet checked", "part-*.md"])
+def test_resume_paths_cover_stale_parts(skill_md, needle):
+    assert needle in skill_md
+
+
+def test_part_slugs_fixed_in_outline(skill_dir):
+    assert "part-01-<slug>.md" in (skill_dir / "references" / "outline.md").read_text(encoding="utf-8")

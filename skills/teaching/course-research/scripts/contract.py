@@ -52,4 +52,6 @@ SNIPPET_ID_RE = re.compile(r"^(?P<part>\d+)\.(?P<sub>\d+)-[a-z0-9]+$")
 
 EMPTY_SLOT = "_None._"
 EXPECTED_OUTPUT_LABEL = "**Expected output:**"
+# Info-string word marking an Expected output block as LLM text that the check does not compare.
+ILLUSTRATIVE_TAG = "illustrative"
 UNVERIFIED_PREFIX = "> ⚠️ Unverified:"

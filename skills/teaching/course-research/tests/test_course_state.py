@@ -130,3 +130,11 @@ def test_cli_rejects_skipping_the_gate(skill_dir, tmp_path):
     result = run_cli(skill_dir, "set-stage", tmp_path, "deep-research")
     assert result.returncode == 1
     assert json.loads(run_cli(skill_dir, "show", tmp_path).stdout)["stage"] == "scope"
+
+
+def test_restart_clears_parts():
+    assert transition(state("done", {"1": "checked", "2": "checked"}), "scope")["parts"] == {}
+
+
+def test_next_action_broad_research_checks_for_missing_notes():
+    assert "missing" in next_action(state("broad-research"))

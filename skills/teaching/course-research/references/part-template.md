@@ -58,7 +58,7 @@ generated: "2026-11-22"
 <For each outcome served: "O1: after this Part the learner can <observable verb> …". Never "understand".>
 
 ## Prerequisites and setup
-<Exact knowledge and setup steps needed before starting: installs with pinned versions, accounts, API keys and where to get them.>
+<Exact knowledge and setup steps needed before starting: installs with pinned versions, including the provider package for the model (e.g. `langchain-openai`), accounts, API keys and where to get them.>
 
 ## Key terms
 <Each new term with a one-line meaning, before the sub-topics use it. Use the glossary's wording.>
@@ -128,9 +128,9 @@ generated: "2026-11-22"
 
 Self-paced learners will find old tutorials. Teach them to recognise old code under `Misconceptions`:
 
-> Outdated: `from langgraph.prebuilt import create_react_agent` (before LangGraph 1.0). How to recognise it: imports from `langgraph.prebuilt`. Current: `from langchain.agents import create_agent` ([Source](https://docs.langchain.com/oss/python/migrate/langgraph-v1)).
+> Outdated: `from langgraph.prebuilt import create_react_agent` (before LangGraph 1.0). How to recognise it: `create_react_agent` imported from `langgraph.prebuilt`. Other `langgraph.prebuilt` imports, such as `ToolNode` and `tools_condition`, are still current. Current: `from langchain.agents import create_agent` ([Source](https://docs.langchain.com/oss/python/migrate/langgraph-v1)).
 
-Outdated code never appears in a `Worked example`.
+Outdated code never appears in a `Worked example`. A code block of outdated code under `Misconceptions` takes no snippet marker and no Expected output: it is shown for recognition and never run.
 
 ## Code examples
 
@@ -142,8 +142,9 @@ Follow `references/code-check.md` for what the code must look like. In the Part 
 - A snippet that cannot run without a real external service gets a reason:
   `<!-- snippet id="1.2-b" skip="needs a running Postgres server" -->`
   A non-Python snippet always needs `skip`.
-- In self-paced courses, after the closing fence write the line `**Expected output:**` and then a ```` ```text ```` block.
-- Output that comes from an LLM call starts with `(illustrative — a real LLM's wording will differ)`. Deterministic output (state, graph structure, computed values) is shown exactly.
+- In self-paced courses, after the closing fence write the line `**Expected output:**` and then the output block:
+  - Deterministic output (state, graph structure, computed values) goes in a ```` ```text ```` block, shown exactly. The check compares it with what the code prints.
+  - Output that comes from an LLM call goes in a ```` ```text illustrative ```` block whose first line says, in the output language, that a real LLM's wording will differ, e.g. `(illustrative — a real LLM's wording will differ)`. The check does not compare it.
 - Never write `status`, `reason` or `checked` attributes, or `> ⚠️ Unverified:` lines. `check_code.py` writes those.
 
 ## Overview skeleton

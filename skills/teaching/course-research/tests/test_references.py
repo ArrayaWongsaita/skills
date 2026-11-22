@@ -70,3 +70,22 @@ def test_writer_links_contracts(skill_dir, needle):
 
 def test_review_output_format(skill_dir):
     assert "part-NN | heading | problem | suggested fix" in read(skill_dir, "consistency-review.md")
+
+
+@pytest.mark.parametrize("name", ["part-template.md", "code-check.md", "outline.md"])
+def test_provider_package_is_pinned_and_installed(skill_dir, name):
+    assert "provider package" in read(skill_dir, name)
+
+
+@pytest.mark.parametrize("needle", ["text illustrative", "no snippet marker"])
+def test_part_template_code_rules(skill_dir, needle):
+    assert needle in read(skill_dir, "part-template.md")
+
+
+def test_part_template_does_not_call_all_prebuilt_outdated(skill_dir):
+    assert "imports from `langgraph.prebuilt`" not in read(skill_dir, "part-template.md")
+
+
+@pytest.mark.parametrize("needle", ["expected output differs", "quit", "LangChainBetaWarning"])
+def test_code_check_doc_names_new_rules(skill_dir, needle):
+    assert needle in read(skill_dir, "code-check.md")

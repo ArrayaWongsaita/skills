@@ -117,7 +117,7 @@ def test_init_chat_model_returns_fake(skill_dir):
         import fake_models
         patched = fake_models.install_fakes(None)
         from langchain.chat_models import init_chat_model
-        print(json.dumps({"type": type(init_chat_model("anthropic:x")).__name__, "patched": patched}))
+        print(json.dumps({"type": type(init_chat_model("openai:x")).__name__, "patched": patched}))
         """,
     )
     assert out["type"] == "ScriptedChatModel"
@@ -149,4 +149,87 @@ def test_install_fakes_answers_key_prompts(skill_dir):
         print(json.dumps({"getpass": getpass.getpass("key: "), "input": input("name: "), "env": os.environ["OPENAI_API_KEY"]}))
         """,
     )
-    assert out == {"getpass": "fake-key", "input": "", "env": "fake-key"}
+    assert out == {"getpass": "fake-key", "input": "Hello", "env": "fake-key"}
+
+
+WEATHER_CALL = {"tool_calls": [{"name": "get_weather", "args": {"city": "Bangkok"}}]}
+
+
+def merged(chunks):
+    total = chunks[0]
+    for chunk in chunks[1:]:
+        total += chunk
+    return total
+
+
+def test_stream_with_tool_calls_yields_tool_call_chunks():
+    chunks = list(build_model([WEATHER_CALL]).bind_tools([]).stream("x"))
+    assert merged(chunks).tool_calls == [{"name": "get_weather", "args": {"city": "Bangkok"}, "id": "call_1", "type": "tool_call"}]
+
+
+def test_stream_empty_reply_yields_one_chunk():
+    chunks = list(build_model([{"content": ""}]).stream("x"))
+    assert [chunk.content for chunk in chunks] == [""]
+
+
+def test_astream_with_tool_calls():
+    import asyncio
+
+    async def collect():
+        return [chunk async for chunk in build_model([WEATHER_CALL]).astream("x")]
+
+    assert merged(asyncio.run(collect())).tool_calls[0]["name"] == "get_weather"
+
+
+def test_agent_stream_messages_mode_with_tool_call():
+    from langchain.agents import create_agent
+    from langchain.tools import tool
+
+    @tool
+    def get_weather(city: str) -> str:
+        """Get the weather for a city."""
+        return f"sunny in {city}"
+
+    agent = create_agent(model=build_model([WEATHER_CALL, {"content": "It is sunny."}]), tools=[get_weather])
+    events = list(agent.stream({"messages": [{"role": "user", "content": "weather?"}]}, stream_mode="messages"))
+    model_text = "".join(chunk.content for chunk, meta in events if meta["langgraph_node"] == "model")
+    assert model_text == "It is sunny."
+    assert any(getattr(chunk, "tool_call_chunks", None) for chunk, _ in events)
+
+
+@pytest.mark.parametrize(
+    ("call", "package"),
+    [
+        ('from langchain.chat_models import init_chat_model\ninit_chat_model("mistralai:mistral-large-latest")', "langchain-mistralai"),
+        ('from langchain.embeddings import init_embeddings\ninit_embeddings("cohere:embed-english-v3.0")', "langchain-cohere"),
+    ],
+)
+def test_factories_require_the_provider_package(skill_dir, call, package):
+    out = run_isolated(
+        skill_dir,
+        f"""
+        import json
+        import fake_models
+        fake_models.install_fakes(None)
+        try:
+            exec({call!r})
+            print(json.dumps({{"error": None}}))
+        except ImportError as error:
+            print(json.dumps({{"error": str(error)}}))
+        """,
+    )
+    assert out["error"] and package in out["error"]
+
+
+def test_install_fakes_overrides_real_keys_and_scripts_input(skill_dir):
+    out = run_isolated(
+        skill_dir,
+        """
+        import json, os
+        os.environ["OPENAI_API_KEY"] = "sk-real"
+        import fake_models
+        fake_models.install_fakes(None)
+        print(json.dumps({"env": os.environ["OPENAI_API_KEY"], "inputs": [input(), input(), input()]}))
+        """,
+    )
+    assert out == {"env": "fake-key", "inputs": ["Hello", "quit", "quit"]}

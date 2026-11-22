@@ -172,3 +172,8 @@ def test_cli_exit_codes(course, skill_dir):
     bad = subprocess.run([sys.executable, str(script), str(course)], capture_output=True, text=True)
     assert bad.returncode == 1
     assert bad.stdout.startswith("ERROR ")
+
+
+def test_outdated_code_under_misconceptions_needs_no_marker(course):
+    edit(course / PART1, "#### Misconceptions\n\n- เรียก", "#### Misconceptions\n\n```python\nfrom langgraph.prebuilt import create_react_agent\n```\n\n- เรียก")
+    assert errors(course) == []

@@ -22,7 +22,7 @@ generated: "2026-11-22"
 
 ## Prerequisites and setup
 
-- Python 3.12 และ `pip install langchain==1.5.2 langgraph==1.2.24`
+- Python 3.12 และ `pip install langchain==1.5.2 langgraph==1.2.24 langchain-openai==1.8.5`
 
 ## Key terms
 
@@ -56,7 +56,7 @@ print(model.invoke("สวัสดี").content)
 ```
 
 **Expected output:**
-```text
+```text illustrative
 (ตัวอย่าง คำตอบจริงจาก LLM จะต่างไป) สวัสดีครับ
 ```
 
@@ -106,7 +106,7 @@ print(result["messages"][-1].content)
 ```
 
 **Expected output:**
-```text
+```text illustrative
 (ตัวอย่าง คำตอบจริงจาก LLM จะต่างไป) วันนี้แดดออกที่กรุงเทพ
 ```
 

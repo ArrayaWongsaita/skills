@@ -40,8 +40,8 @@ Everything else runs without stopping to ask.
 - **The folder exists:** run `show`, tell the user where the run stands, and offer one of:
   - **continue** from `next_action`
   - **redo Part(s)**: `reset-parts <course_dir> <N…>`, then `set-stage <course_dir> deep-research`, and run Stages 4–5 for those Parts only (`check_code.py --part N`), still validating and reviewing the whole course
-  - **change the outline**: `set-stage <course_dir> outline-draft`, then back through the Stage 3 gate. Afterwards `reset-parts` only the Parts the change affects.
-  - **restart**: `set-stage <course_dir> scope`, overwriting the old files as you go
+  - **change the outline**: `set-stage <course_dir> outline-draft`, then back through the Stage 3 gate. A Part is affected when it is new or renumbered, or its title or sub-topics changed. After `set-parts`, run `reset-parts` on every affected Part before `set-stage <course_dir> deep-research`; otherwise a new Part 2 inherits the old Part 2's status. For each dropped or renumbered Part, delete its old `part-NN-*.md`, `_work/research/parts/part-NN.md` and the fixtures named after its snippet ids, because those ids carry the old number.
+  - **restart**: once the user confirms, delete `part-*.md`, `00-overview.md`, `_work/outline.md`, `_work/research/` and everything in `_work/code-check/` except `.venv`. Then run `set-stage <course_dir> scope`, which also clears the Part statuses.
 
 ## Stage 1: scope
 
@@ -116,7 +116,7 @@ Run `set-part <course_dir> <N> researched` as each one finishes. When all are re
 Write Part <N> of the course in <course_dir>.
 
 Inputs: <course_dir>/_work/scope.md, <course_dir>/_work/outline.md, <course_dir>/_work/research/parts/part-<NN>.md, <course_dir>/_work/research/broad/ (Teacher and Current state at least), <course_dir>/_work/code-check/env.json (technical topics)
-Output: <course_dir>/part-<NN>-<slug>.md
+Output: <course_dir>/part-<NN>-<slug>.md   (the file name the outline fixed)
 Today: <YYYY-MM-DD>
 
 As a first step, read <skill>/references/part-writer.md and follow it.
@@ -124,10 +124,10 @@ As a first step, read <skill>/references/part-writer.md and follow it.
 
    Run `set-part <course_dir> <N> written` as each one finishes.
 3. **Overview.** Write `<course_dir>/00-overview.md` yourself, from the overview skeleton in `references/part-template.md`. Set `research_date` to today and `versions` to `resolved` from `_work/code-check/env.json` (`{}` when not technical). The Part map titles must match the Part files exactly.
-4. **Code check.** Run `set-stage <course_dir> verifying`, then `python3 <skill>/scripts/code_check/check_code.py <course_dir>`. For each unverified snippet that has no `skip`, send its reason to the Part's writer in revision mode (the same prompt, plus "Revision mode. Fix only these issues: …"). Rerun with `--part N`. Allow at most 2 rounds per snippet; whatever still fails stays marked unverified. The rules are in `references/code-check.md`.
+4. **Code check.** Run `set-stage <course_dir> verifying`, then `python3 <skill>/scripts/code_check/check_code.py <course_dir>`. For each unverified snippet that has no `skip`, send its reason (and, for `expected output differs`, its `stdout` from `_work/code-check/results.json`) to the Part's writer in revision mode (the same prompt, plus "Revision mode. Fix only these issues: …"). Rerun with `--part N`. Allow at most 2 rounds per snippet; whatever still fails stays marked unverified. The rules are in `references/code-check.md`.
 5. **Structure.** Run `python3 <skill>/scripts/validate_course.py <course_dir>`. Send its errors to the writers in revision mode, and fix overview errors yourself, until it exits 0.
 6. **Consistency.** Dispatch one reviewer: "Review the course in `<course_dir>`. As a first step, read `<skill>/references/consistency-review.md` and follow it." Send its issues to the writers in revision mode, then run `validate_course.py` again. Rerun `check_code.py --part N` for any Part whose code changed.
-7. **Close.** Run `set-part <course_dir> <N> checked` for each Part, then `set-stage <course_dir> done`.
+7. **Close.** Run `set-part <course_dir> <N> checked` for each Part not yet checked, then `set-stage <course_dir> done`.
 
 ## Stage 6: report
 

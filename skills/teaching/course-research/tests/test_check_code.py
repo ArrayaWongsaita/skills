@@ -31,8 +31,8 @@ print(agent.invoke({"messages": [{"role": "user", "content": "อากาศ?"}
 ```
 
 **Expected output:**
-```text
-แดดออก
+```text illustrative
+(ตัวอย่าง คำตอบจริงจาก LLM จะต่างไป) แดดออก
 ```
 
 <!-- snippet id="1.1-b" -->
@@ -187,3 +187,43 @@ def test_missing_python_is_harness_error(skill_dir, tmp_path):
     run = subprocess.run([sys.executable, str(script), str(tmp_path)], capture_output=True, text=True)
     assert run.returncode == 1
     assert "setup_env.py" in run.stderr
+
+
+def one_snippet_course(tmp_path, code: str, expected: str | None = None, info: str = "text") -> Path:
+    body = f'# Part 1: t\n\n<!-- snippet id="1.1-a" -->\n```python\n{code}\n```\n'
+    if expected is not None:
+        body += f"\n**Expected output:**\n```{info}\n{expected}\n```\n"
+    write_part(tmp_path, "part-01-t.md", 1, body)
+    return tmp_path
+
+
+def test_secrets_and_tracing_do_not_reach_snippets(skill_dir, tmp_path, monkeypatch):
+    for name, value in {"OPENAI_API_KEY": "sk-real", "LANGSMITH_API_KEY": "ls-real", "LANGSMITH_TRACING": "true",
+                        "LANGCHAIN_TRACING_V2": "true", "MY_SERVICE_TOKEN": "t-real"}.items():
+        monkeypatch.setenv(name, value)
+    code = ("import os\n"
+            "seen = {k: os.environ.get(k) for k in ('OPENAI_API_KEY', 'LANGSMITH_API_KEY', 'LANGSMITH_TRACING', 'LANGCHAIN_TRACING_V2', 'MY_SERVICE_TOKEN')}\n"
+            "assert seen == {'OPENAI_API_KEY': 'fake-key', 'LANGSMITH_API_KEY': None, 'LANGSMITH_TRACING': 'false', "
+            "'LANGCHAIN_TRACING_V2': 'false', 'MY_SERVICE_TOKEN': None}, seen")
+    run = check(skill_dir, one_snippet_course(tmp_path, code))
+    assert results(tmp_path)["1.1-a"]["status"] == "verified", results(tmp_path)["1.1-a"]
+    assert run.returncode == 0
+
+
+def test_exact_expected_output_must_match(skill_dir, tmp_path):
+    run = check(skill_dir, one_snippet_course(tmp_path, 'print("HELLO")', "{'text': 'HELLO'}"))
+    found = results(tmp_path)["1.1-a"]
+    assert found["status"] == "unverified"
+    assert found["reason"].startswith("expected output differs")
+    assert run.returncode == 2
+
+
+def test_matching_expected_output_is_verified(skill_dir, tmp_path):
+    check(skill_dir, one_snippet_course(tmp_path, 'print("HELLO")  ', "HELLO  \n"))
+    assert results(tmp_path)["1.1-a"]["status"] == "verified"
+
+
+def test_illustrative_expected_output_is_not_compared(skill_dir, tmp_path):
+    check(skill_dir, one_snippet_course(tmp_path, 'print("fake")', "(ตัวอย่าง) คำตอบจริง", info="text illustrative"))
+    assert results(tmp_path)["1.1-a"]["status"] == "verified"
+

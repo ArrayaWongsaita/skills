@@ -34,7 +34,7 @@ ENTRY_REQUIREMENTS = {"writing": "researched", "verifying": "written", "done": "
 STAGE_WORK = {
     "scope": "interview the user and write _work/scope.md",
     "scope-confirmed": "dispatch the broad researchers",
-    "broad-research": "build the outline from the broad research notes",
+    "broad-research": "re-dispatch any missing broad research notes, then build the outline from them",
     "outline-draft": "present the outline and get the user's approval",
     "outline-approved": "set the parts and start deep research",
 }
@@ -103,7 +103,9 @@ def transition(state: dict, new_stage: str) -> dict:
                 raise StateError(f"cannot enter {new_stage}: parts {', '.join(behind)} are not {needed} yet")
         return _touched(state, stage=new_stage)
     if there < here and new_stage in BACKWARD_TARGETS:
-        return _touched(state, stage=new_stage)
+        # A restart writes a new outline, so no old part status may carry over.
+        cleared = {"parts": {}} if new_stage == "scope" else {}
+        return _touched(state, stage=new_stage, **cleared)
     if new_stage == "deep-research" and current in REDO_SOURCES:
         if not any(s == "pending" for s in parts.values()):
             raise StateError("redo needs at least one pending part: run reset-parts first")
