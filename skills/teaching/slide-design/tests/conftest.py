@@ -52,3 +52,45 @@ def assembled(course) -> Path:
     from assemble_deck import assemble
 
     return assemble(course, 1, today="2026-11-30")
+
+
+def _find_slide(path: Path, slide_id: str):
+    from deck import parse_deck
+
+    return next(s for s in parse_deck(path.read_text(encoding="utf-8")).slides() if s.id == slide_id)
+
+
+def _replace_lines(path: Path, first: int, last: int, new: list[str]) -> None:
+    """Replace 1-based lines first..last (inclusive) of the file."""
+    lines = path.read_text(encoding="utf-8").split("\n")
+    lines[first - 1:last] = new
+    path.write_text("\n".join(lines), encoding="utf-8")
+
+
+def set_field(path: Path, slide_id: str, field: str, value: str) -> None:
+    current = _find_slide(path, slide_id).fields[field]
+    assert "\n" not in current.text, "set_field handles one-line fields only"
+    _replace_lines(path, current.line, current.line, [f"**{field}:** {value}"])
+
+
+def add_field(path: Path, slide_id: str, field: str, value: str) -> None:
+    title = _find_slide(path, slide_id).fields["Title"]
+    _replace_lines(path, title.line, title.line - 1, [f"**{field}:** {value}", ""])
+
+
+def set_meta(path: Path, slide_id: str, key: str, value) -> None:
+    from deck import meta_block
+
+    slide = _find_slide(path, slide_id)
+    first, last = slide.meta_lines
+    _replace_lines(path, first, last, meta_block({**slide.meta, key: value}).split("\n"))
+
+
+def set_visual(path: Path, slide_id: str, visual: dict) -> None:
+    import json
+
+    slide = _find_slide(path, slide_id)
+    old = json.dumps(slide.visual, ensure_ascii=False)
+    lines = path.read_text(encoding="utf-8").split("\n")
+    index = next(i for i in range(slide.line, len(lines)) if lines[i] == old)
+    _replace_lines(path, index + 1, index + 1, [json.dumps(visual, ensure_ascii=False)])
