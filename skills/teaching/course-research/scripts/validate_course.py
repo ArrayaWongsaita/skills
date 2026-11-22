@@ -276,22 +276,28 @@ def _check_subtopics(doc: Doc, number, self_paced: bool, error) -> None:
                 error(where, "needs at least one http(s) URL")
 
 
+def snippet_markers(doc: Doc) -> list[tuple[int, dict, Block | None]]:
+    """(line, attrs, block) for every snippet marker outside code; block is None when no code block follows."""
+    starts = {block.start: block for block in doc.blocks}
+    inside = {i for block in doc.blocks for i in range(block.start, block.end + 1)}
+    found = []
+    for index, line in enumerate(doc.lines):
+        if index in inside:
+            continue
+        attrs = parse_marker(line)
+        if attrs is not None:
+            found.append((index, attrs, starts.get(_skip_blank(doc.lines, index + 1))))
+    return found
+
+
 def _check_code(doc: Doc, number, technical: bool, self_paced: bool, error) -> list[dict]:
     lines = doc.lines
     starts = {block.start: block for block in doc.blocks}
-    inside = {i for block in doc.blocks for i in range(block.start, block.end + 1)}
     markers: list[dict] = []
     attached: set[int] = set()
-    for index, line in enumerate(lines):
-        if index in inside:
-            continue
-        marker = parse_marker(line)
-        if marker is None:
-            continue
+    for _index, marker, block in snippet_markers(doc):
         markers.append(marker)
         label = f"snippet {marker.get('id', '?')}"
-        following = _skip_blank(lines, index + 1)
-        block = starts.get(following)
         if block is None:
             error(label, "marker is not followed by a code block")
             continue
