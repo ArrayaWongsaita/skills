@@ -1,0 +1,30 @@
+import pytest
+
+import frontmatter
+from contract import STAGES
+
+
+@pytest.fixture
+def skill_md(skill_dir) -> str:
+    return (skill_dir / "SKILL.md").read_text(encoding="utf-8")
+
+
+def test_frontmatter_name_matches_dir(skill_dir, skill_md):
+    data, _ = frontmatter.parse(skill_md)
+    assert data["name"] == "course-research" == skill_dir.name
+    assert 0 < len(data["description"]) <= 1024
+
+
+def test_links_every_reference(skill_dir, skill_md):
+    missing = [p.name for p in sorted((skill_dir / "references").glob("*.md")) if f"references/{p.name}" not in skill_md]
+    assert missing == []
+
+
+@pytest.mark.parametrize("script", ["scripts/course_state.py", "scripts/validate_course.py", "scripts/code_check/setup_env.py", "scripts/code_check/check_code.py"])
+def test_mentions_every_script_cli(skill_md, script):
+    assert script in skill_md
+
+
+def test_mentions_every_stage(skill_md):
+    assert [stage for stage in STAGES if f"`{stage}`" not in skill_md and f" {stage}" not in skill_md] == []
+    assert "scope-confirmed" in skill_md and "outline-approved" in skill_md
