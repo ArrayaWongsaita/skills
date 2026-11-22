@@ -37,3 +37,18 @@ def edit(path: Path, old: str, new: str, first: bool = False) -> None:
     else:
         assert count == 1, f"{old!r} occurs {count} times in {path.name}"
     path.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+
+def drop_slide(text: str, slide_id: str) -> str:
+    """Remove one slide (its ### heading up to the next ### or ## heading) from deck or draft text."""
+    lines = text.split("\n")
+    start = next(i for i, line in enumerate(lines) if line.startswith(f"### {slide_id} · "))
+    end = next((i for i in range(start + 1, len(lines)) if lines[i].startswith(("### ", "## "))), len(lines))
+    return "\n".join(lines[:start] + lines[end:])
+
+
+@pytest.fixture
+def assembled(course) -> Path:
+    from assemble_deck import assemble
+
+    return assemble(course, 1, today="2026-11-30")
