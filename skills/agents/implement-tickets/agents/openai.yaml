@@ -1,6 +1,0 @@
-interface:
-  display_name: "Implement Tickets"
-  short_description: "Plan and implement ticket sets serially with risk-based verification"
-  default_prompt: "Use $implement-tickets to plan this ticket directory, then build and verify each ticket in order: [dir|slug]."
-policy:
-  allow_implicit_invocation: false

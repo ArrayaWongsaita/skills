@@ -1,6 +1,0 @@
-interface:
-  display_name: "Technical Teaching Storytelling"
-  short_description: "Teach technical mechanisms and engineering reasoning"
-  default_prompt: "Use $technical-teaching-storytelling to teach [topic] to [audience] in Thai, choosing the structure from the learning objective and prior knowledge."
-policy:
-  allow_implicit_invocation: true
