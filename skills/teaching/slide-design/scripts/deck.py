@@ -1,10 +1,11 @@
-"""Parse deck files (slide-design/deck@1), section drafts and diagram files.
+"""Parse deck files (slide-design/deck@1 and deck@2), section drafts and diagram files.
 
 A slide is a `### <id> · <layout>` block: a ```slide JSON block, labelled
 fields (`**Title:** …`), an optional ```visual JSON block and content
 blocks (code, output, panels). Parsing never raises on bad content: every
 problem becomes an error with its 1-based file line, for the validator to
-report. Stdlib only.
+report. A deck@2 deck also carries its unit map in a `## Units` section,
+and `slide_units` tells which unit each slide belongs to. Stdlib only.
 """
 
 import json
@@ -16,7 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import frontmatter  # noqa: E402
-from contract import CLOSING, DIAGRAMS_HEADING, FIELD_RE, FIELDS, LISTINGS_HEADING, NOTES_HEADING, OPENING, SLIDE_HEADING_RE  # noqa: E402
+from contract import CLOSING, DIAGRAMS_HEADING, FIELD_RE, FIELDS, LISTINGS_HEADING, NOTES_HEADING, OPENING, SLIDE_HEADING_RE, UNITS_HEADING  # noqa: E402
 from mdtext import Doc, scan  # noqa: E402
 
 SUBTOPIC_HEADING_RE = re.compile(r"^(?P<key>\d+\.\d+) .+$")
@@ -83,6 +84,7 @@ class Deck:
     listings: dict[str, Listing]
     headings: list[str]
     errors: Errors
+    units: dict | None = None  # the `## Units` map; None when the deck has no such section
 
     def slides(self) -> list[Slide]:
         return [slide for section in self.sections for slide in section.slides]
@@ -237,6 +239,37 @@ def _diagrams(doc: Doc, start: int, end: int, first_line: int) -> tuple[dict[str
     return diagrams, raw, errors
 
 
+def _units(doc: Doc, heading, first_line: int, errors: Errors) -> dict | None:
+    end = doc.end_of(heading)
+    block = next((b for b in doc.blocks if heading.line < b.start < end and b.lang == "units"), None)
+    if block is None:
+        errors.append((heading.line + first_line, "Units: missing the units block"))
+        return None
+    value, error = _json(doc.block_text(block))
+    if error:
+        errors.append((block.start + first_line, f"Units: the units block is not valid JSON ({error})"))
+        return None
+    if not isinstance(value, dict):
+        errors.append((block.start + first_line, "Units: the units block is not a JSON object"))
+        return None
+    return value
+
+
+def slide_units(sections: list[Section]) -> dict[str, str | None]:
+    """Each slide's unit: the nearest `topic` slide before it in its section, reset by an `assemble` slide."""
+    units: dict[str, str | None] = {}
+    for section in sections:
+        current = None
+        for slide in section.slides:
+            if slide.layout == "topic":
+                unit = slide.meta.get("unit")
+                current = unit if isinstance(unit, str) else None
+            elif slide.layout == "assemble":
+                current = None
+            units[slide.id] = current
+    return units
+
+
 def parse_diagrams(text: str, first_line: int = 1) -> tuple[dict[str, dict], list[str], Errors]:
     doc = scan(text)
     return _diagrams(doc, 0, len(doc.lines), first_line)
@@ -289,6 +322,8 @@ def parse_deck(text: str) -> Deck:
             errors += found
         elif heading.text == LISTINGS_HEADING:
             deck.listings.update(_listings(doc, heading, first_line, errors))
+        elif heading.text == UNITS_HEADING:
+            deck.units = _units(doc, heading, first_line, errors)
         elif section_key(heading.text) is not None:
             deck.sections.append(_section(doc, heading, first_line, errors))
         else:

@@ -56,6 +56,7 @@ SNIPPET_STATUSES = ("verified", "unverified", "skipped")
 # --- output: files ---------------------------------------------------------
 
 DECK_TEMPLATE_ID = "slide-design/deck@1"
+DECK_TEMPLATE_IDS = ("slide-design/deck@1", "slide-design/deck@2")  # every deck template a reader accepts
 VOCABULARY_TEMPLATE_ID = "slide-design/vocabulary@1"
 SLIDES_DIR = "slides"
 VOCABULARY_FILE = "visual-vocabulary.md"
@@ -79,6 +80,7 @@ DECK_FRONTMATTER_KEYS = (
 VOCABULARY_FRONTMATTER_KEYS = ("template", "course", "version", "updated")
 
 NOTES_HEADING, DIAGRAMS_HEADING, LISTINGS_HEADING = "Deck notes", "Diagrams", "Code listings"
+UNITS_HEADING = "Units"  # deck@2: the unit map, as one ```units JSON block
 OPENING, CLOSING = "Opening", "Closing"
 
 # --- output: unit map ------------------------------------------------------

@@ -268,8 +268,9 @@ def _diagram(diagram: dict) -> list[str]:
 def render_errors(d: deckmod.Deck, part: int) -> list[str]:
     errors = [f"line {line}: {message}" for line, message in d.errors]
     template = d.meta.get("template")
-    if template != contract.DECK_TEMPLATE_ID:
-        return errors + [f"line 1: template is {template!r}, expected {contract.DECK_TEMPLATE_ID!r}"]
+    if template not in contract.DECK_TEMPLATE_IDS:
+        accepted = " or ".join(repr(known) for known in contract.DECK_TEMPLATE_IDS)
+        return errors + [f"line 1: template is {template!r}, expected {accepted}"]
     if d.meta.get("part") != part:
         errors.append(f"line 1: part is {d.meta.get('part')!r}, expected {part}")
     slides = d.slides()

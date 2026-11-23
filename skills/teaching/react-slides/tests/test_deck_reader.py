@@ -24,10 +24,16 @@ def test_stale_and_missing_part_file(course):
     assert deck_reader.load(course, 1).stale is None
 
 
+PART2 = "slides/part-02-graphs.md"
+
+
 def test_wrong_templates_are_refused(course):
-    replace(_deck(course), '"slide-design/deck@1"', '"slide-design/deck@2"')
-    with pytest.raises(deck_reader.DeckError, match="slide-design/deck@2"):
-        deck_reader.load(course, 1)
+    assert deck_reader.load(course, 2).deck.meta["template"] == "slide-design/deck@1"
+    replace(course / PART2, '"slide-design/deck@1"', '"slide-design/deck@9"')
+    with pytest.raises(deck_reader.DeckError) as raised:
+        deck_reader.load(course, 2)
+    assert "slide-design/deck@9" in str(raised.value)
+    assert "slide-design/deck@1" in str(raised.value) and "slide-design/deck@2" in str(raised.value)
 
 
 def test_vocabulary_template_is_checked(course):
