@@ -317,3 +317,102 @@ a {
   background: var(--rs-paper);
   border-top: 1px solid var(--rs-line);
 }
+
+/* Layouts */
+.rs-field p {
+  margin: 0 0 0.6em;
+}
+
+.rs-field ol,
+.rs-field ul,
+.rs-items {
+  margin: 0;
+  padding-left: 1.4em;
+}
+
+.rs-items > li {
+  margin: 0 0 0.45em;
+}
+
+.rs-steps > li::marker {
+  font-weight: 600;
+  color: var(--rs-accent);
+}
+
+.rs-choices {
+  list-style: lower-alpha;
+}
+
+.rs-code-inline {
+  font-size: 0.88em;
+  padding: 0.05em 0.35em;
+  border-radius: 6px;
+  background: #f3f1ec;
+}
+
+.rs-cover {
+  justify-content: center;
+}
+
+.rs-cover .rs-title {
+  font-size: 2.5em;
+}
+
+.rs-focus .rs-title {
+  font-size: 2em;
+}
+
+.rs-compare {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.4em;
+}
+
+.rs-phone .rs-compare {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.rs-panel {
+  min-width: 0;
+  padding: 0.8em 1em;
+  border: 1.5px dashed var(--rs-line);
+  border-radius: 14px;
+}
+
+.rs-takeaway {
+  margin-top: 1em;
+  font-weight: 600;
+}
+
+.rs-label {
+  color: var(--rs-muted);
+  font-size: 0.8em;
+}
+
+.rs-labelled {
+  margin-bottom: 0.7em;
+}
+
+.rs-notice {
+  margin: 0.6em 0;
+  padding: 0.4em 0.8em;
+  border-left: 4px solid #c9971c;
+  background: #fbf6e8;
+  font-size: 0.85em;
+}
+
+.rs-hint {
+  color: var(--rs-muted);
+  margin-top: 0.8em;
+}
+
+.rs-revisit {
+  display: inline-block;
+  margin-top: 0.8em;
+}
+
+.rs-solution summary {
+  cursor: pointer;
+  color: var(--rs-accent);
+  margin-top: 0.8em;
+}

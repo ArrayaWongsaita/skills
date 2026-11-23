@@ -14,6 +14,9 @@ type Props = {
   wide?: boolean;
   /** The sources slide lists its sources itself. */
   hideSources?: boolean;
+  /** The field the heading shows: `question` and `answer` slides have no title. */
+  titleField?: string;
+  className?: string;
 };
 
 function sectionLabel(language: string, section: string): string {
@@ -22,17 +25,17 @@ function sectionLabel(language: string, section: string): string {
   return section;
 }
 
-export function SlideFrame({ slide, title, children, visual, wide, hideSources }: Props) {
+export function SlideFrame({ slide, title, children, visual, wide, hideSources, titleField = 'title', className }: Props) {
   const { meta, frame } = useDeck();
   const ref = useRef<HTMLElement>(null);
   useAutoFit(ref, frame === 'desktop');
   return (
-    <section ref={ref} className={`rs-slide${wide ? ' rs-wide' : ''}${visual ? ' rs-has-visual' : ''}`} data-slide={slide.id} aria-roledescription="slide">
+    <section ref={ref} className={`rs-slide${wide ? ' rs-wide' : ''}${visual ? ' rs-has-visual' : ''}${className ? ` ${className}` : ''}`} data-slide={slide.id} aria-roledescription="slide">
       <a className="rs-topline" href={formatRoute({ name: 'home' })}>
         Part {meta.part} · {sectionLabel(meta.language, slide.section)}
       </a>
       {title !== undefined ? (
-        <h2 className="rs-title" data-field="title">
+        <h2 className="rs-title" data-field={titleField}>
           {title}
         </h2>
       ) : null}

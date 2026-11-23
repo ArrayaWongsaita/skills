@@ -18,6 +18,12 @@ const en = {
   opening: 'Opening',
   closing: 'Closing',
   sources: 'Sources',
+  symptom: 'Symptom',
+  cause: 'Cause',
+  fix: 'Fix',
+  why: 'Why',
+  hints: 'Hints',
+  solution: 'Show the solution',
 };
 
 export type StringKey = keyof typeof en;
@@ -41,6 +47,12 @@ const th: Record<StringKey, string> = {
   opening: 'เปิดบท',
   closing: 'ปิดบท',
   sources: 'แหล่งที่มา',
+  symptom: 'อาการ',
+  cause: 'สาเหตุ',
+  fix: 'วิธีแก้',
+  why: 'เพราะ',
+  hints: 'คำใบ้',
+  solution: 'ดูเฉลย',
 };
 
 const languages: Record<string, Record<StringKey, string>> = { en, th };
