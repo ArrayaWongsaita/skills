@@ -1,0 +1,163 @@
+@import '@fontsource/mali/400.css';
+@import '@fontsource/mali/600.css';
+@import '@fontsource/jetbrains-mono/400.css';
+
+:root {
+  --rs-ink: #2b2b2b;
+  --rs-muted: #646464; /* 5.9:1 on white: WCAG AA for small text */
+  --rs-paper: #ffffff;
+  --rs-line: #d8d8d8;
+  --rs-accent: #4a86c5;
+  --rs-font: 'Mali', system-ui, sans-serif;
+  --rs-mono: 'JetBrains Mono', ui-monospace, monospace;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--rs-paper);
+  color: var(--rs-ink);
+  font-family: var(--rs-font);
+  line-height: 1.6;
+  word-break: normal;
+}
+
+code,
+pre,
+.rs-mono {
+  font-family: var(--rs-mono);
+}
+
+code,
+a {
+  overflow-wrap: anywhere;
+}
+
+a {
+  color: var(--rs-accent);
+}
+
+:focus-visible {
+  outline: 3px solid var(--rs-accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.rs-muted {
+  color: var(--rs-muted);
+}
+
+/* Build-step animation: strokes draw in, labels fade in after them. */
+.rs-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: rs-draw 700ms ease-out forwards;
+}
+
+@keyframes rs-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.rs-fade {
+  opacity: 0;
+  animation: rs-fade 300ms ease-out 600ms forwards;
+}
+
+@keyframes rs-fade {
+  to {
+    opacity: 1;
+  }
+}
+
+.rs-fade-slide {
+  animation: rs-fade-slide 180ms ease-out;
+}
+
+@keyframes rs-fade-slide {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rs-draw,
+  .rs-fade,
+  .rs-fade-slide {
+    animation: none;
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+/* Home */
+.rs-home {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 48px 16px 64px;
+}
+
+.rs-home h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  font-weight: 600;
+}
+
+.rs-cards {
+  list-style: none;
+  margin: 32px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 24px;
+}
+
+.rs-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 170px;
+  padding: 22px 24px;
+  color: var(--rs-ink);
+  text-decoration: none;
+}
+
+.rs-card-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.rs-card-frame path {
+  vector-effect: non-scaling-stroke;
+}
+
+.rs-card:hover .rs-card-title {
+  text-decoration: underline;
+}
+
+.rs-card-kicker {
+  color: var(--rs-muted);
+  font-size: 0.9rem;
+}
+
+.rs-card-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.rs-card-progress {
+  width: 100%;
+  height: 8px;
+  margin-top: auto;
+}
