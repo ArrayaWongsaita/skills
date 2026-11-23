@@ -1,3 +1,5 @@
+import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -60,3 +62,53 @@ ENTRY = {"kind": "bug", "title": "validate_deck counts the newline in Items", "w
          "evidence": [{"label": "validator output", "text": "error: 1-006: too long"}],
          "suggested_fix": "Measure items without the newline.", "harness": "Claude Code", "model": "claude-opus-5-5"}
 TODAY = "2026-11-23"
+
+
+FAKE_GH = """#!{python}
+import json, os, sys
+args = sys.argv[1:]
+stdin = sys.stdin.buffer.read().decode("utf-8") if sys.stdin and not sys.stdin.isatty() else ""
+with open(os.environ["FAKE_GH_LOG"], "a", encoding="utf-8") as log:
+    log.write(json.dumps({{"args": args, "stdin": stdin}}) + "\\n")
+rules = []
+if os.path.exists(os.environ["FAKE_GH_RULES"]):
+    with open(os.environ["FAKE_GH_RULES"], encoding="utf-8") as handle:
+        rules = json.load(handle)
+for rule in rules:
+    if args[:len(rule["match"])] == rule["match"]:
+        sys.stdout.write(rule["stdout"])
+        sys.stderr.write(rule["stderr"])
+        sys.exit(rule["code"])
+"""
+
+
+class FakeGh:
+    """Records every call; answers with the first rule whose `match` is a prefix of the args (default: exit 0, no output)."""
+
+    def __init__(self, root: Path):
+        self.log = root / "gh-calls.jsonl"
+        self.rules_file = root / "gh-rules.json"
+        self.rules: list[dict] = []
+
+    def rule(self, match: list[str], stdout: str = "", stderr: str = "", code: int = 0) -> None:
+        self.rules.append({"match": match, "stdout": stdout, "stderr": stderr, "code": code})
+        self.rules_file.write_text(json.dumps(self.rules), encoding="utf-8")
+
+    def calls(self) -> list[dict]:
+        if not self.log.exists():
+            return []
+        return [json.loads(line) for line in self.log.read_text(encoding="utf-8").splitlines()]
+
+
+@pytest.fixture
+def fake_gh(tmp_path, monkeypatch) -> FakeGh:
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    gh = bin_dir / "gh"
+    gh.write_text(FAKE_GH.format(python=sys.executable), encoding="utf-8")
+    gh.chmod(0o755)
+    fake = FakeGh(tmp_path)
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+    monkeypatch.setenv("FAKE_GH_LOG", str(fake.log))
+    monkeypatch.setenv("FAKE_GH_RULES", str(fake.rules_file))
+    return fake
