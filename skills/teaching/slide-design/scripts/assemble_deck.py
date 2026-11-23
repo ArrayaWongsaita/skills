@@ -36,7 +36,7 @@ from contract import (  # noqa: E402
 from deck import Section, meta_block, parse_diagrams, parse_sections  # noqa: E402
 from deck_state import StateError, load_state  # noqa: E402
 from mdtext import scan  # noqa: E402
-from part_reader import Part, PartError, find_part, read_part  # noqa: E402
+from part_reader import Part, PartError, digest, find_part, read_part  # noqa: E402
 from vocabulary import VocabularyError  # noqa: E402
 from vocabulary import load as load_vocabulary  # noqa: E402
 
@@ -188,6 +188,7 @@ def assemble(course_dir: Path, part: int, today: str | None = None) -> Path:
         "title": source.title,
         "source_file": source.path.name,
         "source_generated": source.meta.get("generated"),
+        "source_sha256": digest(source.path),
         "language": state["language"],
         "vocabulary": VOCABULARY_FILE,
         "vocabulary_version": vocabulary.version,

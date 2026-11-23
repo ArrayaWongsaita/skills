@@ -35,7 +35,7 @@ There is one user gate: **storyboard approval**, at Stage 2. **Never dispatch wr
 - **State exists** (`init` says so): run `show`, tell the user where the run stands, and offer one of:
   - **continue** from `next_action`
   - **redo a section:** `reset-sections <course_dir> <N> <key>`, then `set-stage <course_dir> <N> writing`, and run Stages 3–5 for that section, still assembling, validating and reviewing the whole deck
-  - **redo the storyboard:** `set-stage <course_dir> <N> storyboard`, then `reset-sections <course_dir> <N> --all`
+  - **redo the storyboard:** `set-stage <course_dir> <N> storyboard`. It re-reads the Part, so the sections match it again, and sets every section back to `pending`.
 - **A deck exists:** run `python3 <skill>/scripts/validate_deck.py <course_dir> <N>`. When it reports `stale`, the Part changed after the deck was made: tell the user and offer to redo the storyboard.
 
 ## Stage 1: storyboard

@@ -86,6 +86,12 @@ def test_stale_part(course, assembled):
     assert any("stale: the Part changed after this deck (Part generated 2026-12-01)" in e for e in errors(course))
 
 
+def test_stale_when_the_part_text_changes_on_the_same_day(course, assembled):
+    edit(find_part(course, 1), "## Practice material\n", "## Practice material\n\nแก้ไขเพิ่มเติม\n")
+    assert errors(course) == ["frontmatter: stale: the Part changed after this deck (Part generated 2026-11-22, but its text changed); "
+                              "redo the storyboard and assemble again"]
+
+
 def test_inline_code_not_in_part(course, assembled):
     from deck import parse_deck
 

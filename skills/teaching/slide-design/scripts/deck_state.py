@@ -80,10 +80,13 @@ def _touched(state: dict, **changes) -> dict:
     return result
 
 
-def transition(state: dict, new_stage: str) -> dict:
+def transition(state: dict, new_stage: str, sections: list[str] | None = None) -> dict:
+    """Move to new_stage. Back to storyboard with the Part's section keys, every section restarts as pending."""
     if new_stage not in STAGES:
         raise StateError(f"unknown stage {new_stage!r}")
     current = state["stage"]
+    if new_stage == "storyboard" and sections is not None:
+        return _touched(state, stage=new_stage, sections=dict.fromkeys(sections, "pending"))
     if new_stage == current:
         return copy.deepcopy(state)
     here, there = STAGES.index(current), STAGES.index(new_stage)
@@ -157,7 +160,8 @@ def _cli(argv: list[str]) -> int:
         print(json.dumps(shown, ensure_ascii=False))
         return 0
     if command == "set-stage" and len(args) == 1:
-        state = transition(state, args[0])
+        sections = read_part(find_part(course_dir, part)).section_keys() if args[0] == "storyboard" else None
+        state = transition(state, args[0], sections)
     elif command == "set-section" and len(args) == 2:
         state = set_section(state, args[0], args[1])
     elif command == "reset-sections" and args:

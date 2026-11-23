@@ -6,6 +6,7 @@ sections and sub-topic slots, its snippets with their check status and
 expected output, and every URL it cites. Stdlib only.
 """
 
+import hashlib
 import re
 import sys
 from dataclasses import dataclass
@@ -112,6 +113,11 @@ def _skip_blank(lines: list[str], index: int) -> int:
     return index
 
 
+def digest(path: Path) -> str:
+    """SHA-256 of a Part file, so an edit that keeps its generated date still shows."""
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
 def find_part(course_dir: Path, number: int) -> Path:
     matches = sorted(p for p in Path(course_dir).glob(f"part-{number:02d}-*.md") if PART_FILE_RE.match(p.name))
     if not matches:
@@ -139,10 +145,10 @@ def _snippets(doc: Doc) -> dict[str, Snippet]:
         if heading and heading.level == 3 and SUBTOPIC_RE.match(heading.text):
             subtopic = SUBTOPIC_RE.match(heading.text).group("key")
         match = SNIPPET_MARKER_RE.match(line.strip())
-        block = doc.block_at(index + 1) if match else None
+        block = doc.block_at(_skip_blank(doc.lines, index + 1)) if match else None
         if not block:
             continue
-        attrs = dict(ATTR_RE.findall(match.group("attrs")))
+        attrs = {key: value.replace("&quot;", '"') for key, value in ATTR_RE.findall(match.group("attrs"))}
         if attrs.get("skip"):
             status, reason = "skipped", attrs["skip"]
         elif attrs.get("status"):

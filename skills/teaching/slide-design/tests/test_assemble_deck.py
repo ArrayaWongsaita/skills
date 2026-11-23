@@ -1,3 +1,5 @@
+import hashlib
+
 import pytest
 
 import frontmatter
@@ -12,9 +14,10 @@ DRAFTS = "slides/_work/part-01/sections"
 
 def test_frontmatter(assembled):
     meta, _ = frontmatter.parse(assembled.read_text(encoding="utf-8"))
+    digest = hashlib.sha256((assembled.parents[1] / "part-01-first-agent.md").read_bytes()).hexdigest()
     assert list(meta) == list(DECK_FRONTMATTER_KEYS)
     assert meta == {"template": "slide-design/deck@1", "course": "langchain-langgraph", "part": 1, "title": "Agent ตัวแรกด้วย create_agent",
-                    "source_file": "part-01-first-agent.md", "source_generated": "2026-11-22", "language": "th",
+                    "source_file": "part-01-first-agent.md", "source_generated": "2026-11-22", "source_sha256": digest, "language": "th",
                     "vocabulary": "visual-vocabulary.md", "vocabulary_version": 1, "slide_count": 29, "code_status": "verified", "generated": "2026-11-30"}
 
 

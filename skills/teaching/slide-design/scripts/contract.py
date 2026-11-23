@@ -68,6 +68,7 @@ DECK_FRONTMATTER_KEYS = (
     "title",
     "source_file",
     "source_generated",
+    "source_sha256",
     "language",
     "vocabulary",
     "vocabulary_version",

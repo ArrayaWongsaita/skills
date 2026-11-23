@@ -45,7 +45,7 @@ from contract import (  # noqa: E402
 from deck import Deck, Slide, parse_deck, parse_diagrams  # noqa: E402
 from diagram_checks import check_diagram, check_states  # noqa: E402
 from mdtext import inline_code, urls, visible_length  # noqa: E402
-from part_reader import Part, PartError, find_part, read_part  # noqa: E402
+from part_reader import Part, PartError, digest, find_part, read_part  # noqa: E402
 from vocabulary import Vocabulary, VocabularyError, add_concepts, init_vocabulary, vocabulary_path  # noqa: E402
 from vocabulary import load as load_vocabulary  # noqa: E402
 
@@ -66,6 +66,16 @@ def _work(course_dir: Path, part: int) -> Path:
 
 
 # --- deck-level checks -----------------------------------------------------
+
+
+def _stale(deck: Deck, source: Part) -> str:
+    """Why the deck no longer matches its Part, or "" when it does."""
+    generated = source.meta.get("generated")
+    if deck.meta.get("source_generated") != generated:
+        return f"Part generated {generated}"
+    if deck.meta.get("source_sha256") != digest(source.path):
+        return f"Part generated {generated}, but its text changed"
+    return ""
 
 
 def _frontmatter(deck: Deck, source: Part, vocab: Vocabulary | None) -> list[Issue]:
@@ -358,9 +368,9 @@ def validate(course_dir: Path, part: int) -> list[Issue]:
         issues.append(_error("vocabulary", str(error)))
     deck = parse_deck(deck_path.read_text(encoding="utf-8"))
     issues += [_error(f"line {line}", message) for line, message in deck.errors]
-    if deck.meta.get("source_generated") != source.meta.get("generated"):
-        issues.append(_error("frontmatter", f"stale: the Part changed after this deck (Part generated {source.meta.get('generated')}); "
-                                            "re-plan the changed sections and assemble again"))
+    stale = _stale(deck, source)
+    if stale:
+        issues.append(_error("frontmatter", f"stale: the Part changed after this deck ({stale}); redo the storyboard and assemble again"))
         return issues
     issues += _frontmatter(deck, source, vocab)
     issues += _headings(deck, source)

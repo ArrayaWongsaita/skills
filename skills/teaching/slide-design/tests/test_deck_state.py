@@ -4,7 +4,9 @@ import sys
 
 import pytest
 
+from conftest import edit
 from deck_state import StateError, new_state, next_action, reset_sections, set_section, state_path, transition
+from part_reader import find_part
 
 SCRIPT = str(__import__("pathlib").Path(__file__).resolve().parents[1] / "scripts" / "deck_state.py")
 
@@ -87,6 +89,20 @@ def test_redo_a_section_and_back_to_storyboard():
     redo = transition(reset_sections(state, ["1.1"]), "writing")
     assert redo["sections"] == {"opening": "checked", "1.1": "pending"}
     assert transition(state, "storyboard")["sections"] == state["sections"]
+
+
+def test_back_to_storyboard_takes_the_parts_sections():
+    keys = ["opening", "1.1", "1.3", "closing"]
+    state = done_state(["opening", "1.1", "1.2", "closing"])
+    assert transition(state, "storyboard", sections=keys)["sections"] == dict.fromkeys(keys, "pending")
+    fresh = new_state(["opening", "closing"], "th")
+    assert transition(fresh, "storyboard", sections=keys)["sections"] == dict.fromkeys(keys, "pending")
+
+
+def test_cli_storyboard_resyncs_sections_with_the_part(course):
+    edit(find_part(course, 1), "### 1.2 ", "### 1.3 ")
+    run_cli("set-stage", course, "1", "storyboard")
+    assert json.loads(run_cli("show", course, "1").stdout)["sections"] == dict.fromkeys(["opening", "1.1", "1.3", "closing"], "pending")
 
 
 def test_next_action_lists_pending_sections():

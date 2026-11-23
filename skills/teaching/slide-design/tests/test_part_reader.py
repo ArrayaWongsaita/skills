@@ -30,12 +30,22 @@ def test_snippet_code_status_and_expected_output(course):
     ('<!-- snippet id="1.1-a" status="unverified" reason="boom" -->', "unverified", "boom"),
     ('<!-- snippet id="1.1-a" skip="needs a key" -->', "skipped", "needs a key"),
     ('<!-- snippet id="1.1-a" -->', "unverified", "not checked"),
+    ('<!-- snippet id="1.1-a" status="unverified" reason="needs &quot;OPENAI_API_KEY&quot;" -->', "unverified", 'needs "OPENAI_API_KEY"'),
 ])
 def test_snippet_status_mapping(course, marker, status, reason):
     path = find_part(course, 1)
     edit(path, '<!-- snippet id="1.1-a" status="verified" checked="2026-11-22" -->', marker)
     snippet = read_part(path).snippets["1.1-a"]
     assert (snippet.status, snippet.reason) == (status, reason)
+
+
+def test_blank_line_between_marker_and_fence(course):
+    path = find_part(course, 1)
+    marker = '<!-- snippet id="1.1-a" status="verified" checked="2026-11-22" -->'
+    edit(path, marker, marker + "\n")
+    snippets = read_part(path).snippets
+    assert sorted(snippets) == ["1.1-a", "1.2-a"]
+    assert snippets["1.1-a"].code.splitlines()[0] == "from langchain.chat_models import init_chat_model"
 
 
 def test_expected_output_after_an_unverified_line(course):

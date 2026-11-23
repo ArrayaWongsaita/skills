@@ -37,6 +37,7 @@ One `key: value` per line. Every value is a JSON literal. Keys, in this order:
 | `title` | the Part title, identical to the Part file |
 | `source_file` | the Part file name |
 | `source_generated` | the Part's `generated` date; a later Part date means the deck is stale |
+| `source_sha256` | the SHA-256 of the Part file, in hex; when it no longer matches the Part file, the deck is stale |
 | `language` | the slide text language, such as `"th"` |
 | `vocabulary` | `"visual-vocabulary.md"` |
 | `vocabulary_version` | the vocabulary's `version` when the deck was assembled |

@@ -1,11 +1,16 @@
 import pytest
 
-from contract import DECK_TEMPLATE_ID, FIELD_LIMITS, FIELDS, LAYOUTS, SHAPES, VISUAL_KINDS, VOCABULARY_TEMPLATE_ID
+from contract import DECK_FRONTMATTER_KEYS, DECK_TEMPLATE_ID, FIELD_LIMITS, FIELDS, LAYOUTS, SHAPES, VISUAL_KINDS, VOCABULARY_TEMPLATE_ID
 from deck import parse_sections
 
 
 def read(skill_dir, name):
     return (skill_dir / "references" / name).read_text(encoding="utf-8")
+
+
+def test_deck_template_lists_every_frontmatter_key_in_order(skill_dir):
+    section = read(skill_dir, "deck-template.md").split("\n## Frontmatter\n", 1)[1].split("\n## ", 1)[0]
+    assert [line.split("`")[1] for line in section.splitlines() if line.startswith("| `")] == list(DECK_FRONTMATTER_KEYS)
 
 
 def test_deck_template_names_the_whole_contract(skill_dir):
