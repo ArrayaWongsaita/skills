@@ -138,3 +138,9 @@ def test_assemble_snippets_are_listed(course):
     path.write_text(text.replace('"assembles": "1.2", "snippet": "1.1-a"', '"assembles": "1.2", "snippet": "1.2-a"'), encoding="utf-8")
     deck = parse_deck(assemble(course, 1, today="2026-11-30").read_text(encoding="utf-8"))
     assert list(deck.listings) == ["1.1-a", "1.2-a"]
+
+
+def test_invalid_unit_map_is_refused(course):
+    edit(course / WORK / "units.json", '"title": "สร้างโมเดลจากชื่อ", ', "")
+    with pytest.raises(AssembleError, match=r"units.json: unit u-init-model: missing title.*--plan"):
+        assemble(course, 1, today="2026-11-30")

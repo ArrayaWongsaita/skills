@@ -42,7 +42,7 @@ from deck import Section, meta_block, parse_diagrams, parse_sections  # noqa: E4
 from deck_state import StateError, load_state  # noqa: E402
 from mdtext import scan  # noqa: E402
 from part_reader import Part, PartError, digest, find_part, read_part  # noqa: E402
-from units import UnitsError, chapter_units, chapter_list, load_units  # noqa: E402
+from units import UnitsError, chapter_list, chapter_units, check_units, load_units  # noqa: E402
 from vocabulary import VocabularyError  # noqa: E402
 from vocabulary import load as load_vocabulary  # noqa: E402
 
@@ -156,6 +156,9 @@ def assemble(course_dir: Path, part: int, today: str | None = None) -> Path:
         units = load_units(work / UNITS_FILE)
     except UnitsError as error:
         raise AssembleError(str(error)) from None
+    problems = check_units(units, [s.key for s in source.subtopics])
+    if problems:
+        raise AssembleError(f"{UNITS_FILE}: " + "; ".join(problems) + f"; fix it and run validate_deck.py <course_dir> {source.number} --plan")
 
     drafts = _read_drafts(work, source)
     mapping = renumber([section for _, _, section in drafts], part)

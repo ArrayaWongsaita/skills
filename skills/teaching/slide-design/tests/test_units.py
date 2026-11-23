@@ -43,6 +43,11 @@ def test_valid_map_has_no_errors():
         (lambda d: d["chapters"][0]["units"][0].update(reason="r"), "unit u-init-model: reason is only for a moved unit"),
         (lambda d: d["chapters"][0].update(colour="red"), "chapter 1.1: unknown key 'colour'"),
         (lambda d: d.update(chapters=[]), "the unit map has no chapters"),
+        (lambda d: d["chapters"][0].update(section=["1.1"]), "chapter 1.1: section ['1.1'] is not a sub-topic of this Part"),
+        (lambda d: d["chapters"][0]["units"][0].update(moved_from=["1.2"], reason="r"), "unit u-init-model: moved_from must be a later sub-topic than 1.1"),
+        (lambda d: d["chapters"][1]["units"][0].update(title="ประกาศ `@tool`"), "unit u-tool: title must be plain text, without Markdown"),
+        (lambda d: d["chapters"][1]["units"][1].update(title="ต่อ **tool**"), "unit u-agent: title must be plain text, without Markdown"),
+        (lambda d: d["chapters"][1].update(title="สร้าง [agent](https://example.com)"), "chapter 1.2: title must be plain text, without Markdown"),
     ],
 )
 def test_bad_maps_are_caught(change, message):
@@ -94,3 +99,8 @@ def test_helpers():
     assert unit_chapters(VALID) == {"u-init-model": "1.1", "u-tool": "1.2", "u-agent": "1.2"}
     assert list(units_by_id(VALID)) == ["u-init-model", "u-tool", "u-agent"]
     assert [c["id"] for c in chapter_list(VALID)] == ["1.1", "1.2"]
+
+
+def test_helpers_skip_ids_that_are_not_text():
+    data = mutate(lambda d: d["chapters"][1]["units"][1].update(id=["u-agent"]))
+    assert list(units_by_id(data)) == ["u-init-model", "u-tool"] and list(unit_chapters(data)) == ["u-init-model", "u-tool"]

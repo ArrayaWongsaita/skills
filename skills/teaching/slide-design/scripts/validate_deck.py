@@ -335,7 +335,8 @@ def _slides(deck: Deck, source: Part, vocab: Vocabulary | None) -> tuple[list[Is
     if [slide.id for slide in slides] != expected_ids:
         issues.append(_error("deck", f"slide ids must be sequential from {source.number}-001"))
     earlier: set[str] = set()
-    unit_of, by_id = slide_units(deck.sections), units_by_id(deck.units or {})
+    valid = deck.units is not None and not check_units(deck.units, [s.key for s in source.subtopics])
+    unit_of, by_id = slide_units(deck.sections), (units_by_id(deck.units) if valid else {})
     for slide in slides:
         layout = slide.meta.get("layout")
         moved_from = (by_id.get(unit_of.get(slide.id)) or {}).get("moved_from")

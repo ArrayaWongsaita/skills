@@ -167,8 +167,8 @@ A `topic` Body equals its unit's `goal`, so its limit is the goal's, 120. (The d
 ]}
 ```
 
-- **Chapter:** `id` is the sub-topic key (`1.2`), or the key plus a letter (`1.2a`, `1.2b`, …) when a sub-topic is split into chapters. `section` is the sub-topic key. A chapter holds 1 to 6 units.
-- **Unit:** `id` looks like `u-<words>` and is unique in the Part. `title` is at most 40 characters and `goal` at most 120. `needs` names earlier units only. `moved_from` and `reason` mark a unit taught in an earlier sub-topic than the Part put it, for a prerequisite reason.
+- **Chapter:** `id` is the sub-topic key (`1.2`), or the key plus a letter (`1.2a`, `1.2b`, …) when a sub-topic is split into chapters. `section` is the sub-topic key. `title` is plain text. A chapter holds 1 to 6 units.
+- **Unit:** `id` looks like `u-<words>` and is unique in the Part. `title` is plain text, without Markdown (the header, the map and the legend show it as written), and at most 40 characters; `goal` is at most 120. `needs` names earlier units only. `moved_from` and `reason` mark a unit taught in an earlier sub-topic than the Part put it, for a prerequisite reason.
 - **A slide's unit:** the nearest `topic` slide before it in its section. An `assemble` slide ends the unit: the slides after it, up to the next `topic`, belong to the chapter as a whole.
 - **`topic`:** `unit` names the unit it opens. Its Title equals the unit's `title` and its Body equals the unit's `goal`.
 - **`assemble`:** `assembles` is the chapter id, or `"part"` for the closing's assembly of the whole Part. `labels` numbers the pieces, in order:

@@ -15,8 +15,8 @@ Plan in this order: the unit map (`units.json`), then the diagrams, then the sto
 
 A Part explained as one long story loses the learner: they stop knowing what they are learning right now. So each sub-topic is cut into small **units**, one thing to understand or do, small enough to explain around one concept. The learner meets them one at a time, each opened by a divider, and sees them put back together at the end of the chapter.
 
-- **Unit:** an id `u-<words>` (lowercase ASCII, hyphens), unique in the Part; a `title` of at most 40 visible characters, because the slide header shows it; a `goal` of at most 120, with an observable verb ("build", "tell apart", "fix"), never "understand"; `needs`, the ids of the units it relies on.
-- **Chapter:** a run of units that ends in an assembly. A sub-topic is one chapter by default, with the sub-topic key as its id (`1.2`). A sub-topic split into chapters gives them letters, in order: `1.2a`, `1.2b`.
+- **Unit:** an id `u-<words>` (lowercase ASCII, hyphens), unique in the Part; a `title` of at most 40 visible characters, in plain text (no backticks, bold, italics or links), because the slide header, the map and the assembly legend show it as written; a `goal` of at most 120, with an observable verb ("build", "tell apart", "fix"), never "understand"; `needs`, the ids of the units it relies on.
+- **Chapter:** a run of units that ends in an assembly, with a plain-text `title`. A sub-topic is one chapter by default, with the sub-topic key as its id (`1.2`). A sub-topic split into chapters gives them letters, in order: `1.2a`, `1.2b`.
 
 **Finding the units:**
 - List what a learner must grasp to follow the sub-topic's Core knowledge and Worked example: each concept, each part of the program, each step the learner performs.

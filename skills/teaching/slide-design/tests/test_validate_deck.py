@@ -246,3 +246,8 @@ def test_assemble_snippet_counts_as_covered(course):
     path.write_text(text.replace('"assembles": "1.2", "snippet": "1.1-a"', '"assembles": "1.2", "snippet": "1.2-a"'), encoding="utf-8")
     assemble(course, 1)
     assert not any("not covered: snippet 1.2-a" in e or e.startswith("listings: code listings must be") for e in errors(course)), errors(course)
+
+
+def test_unit_id_that_is_not_text_is_reported(course, assembled):
+    edit(assembled, '"id": "u-agent"', '"id": ["u-agent"]')
+    assert "units: unit ['u-agent']: id must look like u-<words>" in errors(course)

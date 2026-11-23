@@ -47,10 +47,11 @@ def _slide(slide_id, row):
 
 def deck_sections(rows, *, chapters=None, opening=None, closing=None):
     """Opening (1-001 map), `## 1.2 T` (rows from 1-100) and Closing (1-201, a Part assembly of `chapters`)."""
-    if chapters is None:
-        chapters = list(dict.fromkeys(row[1]["assembles"] for row in rows if row[0] == "assemble" and row[1].get("assembles") != "part")) or ["1.2"]
+    if closing is None:
+        if chapters is None:
+            chapters = list(dict.fromkeys(row[1]["assembles"] for row in rows if row[0] == "assemble" and row[1].get("assembles") != "part")) or ["1.2"]
+        closing = [part_assembly(chapters)]
     opening = [MAP] if opening is None else opening
-    closing = [part_assembly(chapters)] if closing is None else closing
     text = "\n\n".join([
         "## Opening", *[_slide(f"1-{n:03d}", row) for n, row in enumerate(opening, start=1)],
         "## 1.2 T", *[_slide(f"1-{n}", row) for n, row in enumerate(rows, start=100)],
@@ -198,3 +199,21 @@ def test_part_assembly_must_label_every_chapter():
 def test_part_assembly_belongs_in_the_closing():
     rows = [*VALID, part_assembly(["1.2"])]
     assert ("1-103", "a Part assembly belongs in the closing") in check_structure(deck_sections(rows), TWO)
+
+
+def test_values_that_are_not_text_are_reported():
+    rows = [("topic", {"unit": ["u-a"]}, {"Title": "u-a", "Body": "g"}, ()), topic("u-b"),
+            ("assemble", {"assembles": ["1.2"], "snippet": "s", "lines": [[1, 6]],
+                          "labels": [{"unit": ["u-a", "u-b"], "lines": [[1, 2]]}]}, {"Title": "t", "Body": "b"}, ("code",))]
+    closing = [("assemble", {"assembles": "part", "labels": [{"chapter": ["1.2"], "elements": [["n-one"]]}]}, {"Title": "t", "Body": "b"}, ("visual",))]
+    found = check_structure(deck_sections(rows, closing=closing), TWO)
+    assert ("1-100", "expected unit u-a here, in unit-map order") in found
+    assert ("1-102", "assembles ['1.2'], but the current chapter is 1.2") in found
+    assert ("1-102", "a chapter assembly label names a unit of the unit map, not ['u-a', 'u-b']") in found
+    assert ("1-201", "a Part assembly label names a chapter of the unit map") in found
+    assert ("1-201", "label elements must be shown") in found
+
+
+def test_part_assembly_takes_no_code_block():
+    closing = [("assemble", {"assembles": "part", "labels": [{"chapter": "1.2", "elements": ["n-one"]}]}, {"Title": "t", "Body": "b"}, ("visual", "code"))]
+    assert ("1-201", "an assemble slide shows code or a diagram, not both") in check_structure(deck_sections(VALID, closing=closing), TWO)

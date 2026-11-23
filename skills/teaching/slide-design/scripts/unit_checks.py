@@ -24,6 +24,11 @@ OPENING_KEY, CLOSING_KEY = "opening", "closing"
 Problem = tuple[str, str]  # (slide id or "deck", message)
 
 
+def _text(value) -> str | None:
+    """The value when it is a string, else None: slide-block values come from JSON and may be any type."""
+    return value if isinstance(value, str) else None
+
+
 def _field(slide: Slide, name: str) -> str:
     field = slide.fields.get(name)
     return field.text.strip() if field else ""
@@ -84,7 +89,8 @@ def _code_labels(slide: Slide, labels: list[dict]) -> list[str]:
 
 
 def _diagram_labels(slide: Slide, labels: list[dict]) -> list[str]:
-    shown = set(slide.visual.get("show") or []) if _shows_diagram(slide) else set()
+    show = slide.visual.get("show") if _shows_diagram(slide) else None
+    shown = {element for element in show if isinstance(element, str)} if isinstance(show, list) else set()
     for label in labels:
         elements = label.get("elements")
         if not isinstance(elements, list) or not elements or not all(isinstance(e, str) and e in shown for e in elements):
@@ -98,8 +104,8 @@ class _Checker:
         self.chapters = chapter_list(units)
         self.by_id = units_by_id(units)
         self.chapter_of = unit_chapters(units)
-        self.section_of = {chapter.get("id"): chapter.get("section") for chapter in self.chapters}
-        self.position = {chapter.get("id"): index for index, chapter in enumerate(self.chapters)}
+        self.section_of = {chapter["id"]: chapter.get("section") for chapter in self.chapters if _text(chapter.get("id"))}
+        self.position = {chapter["id"]: index for index, chapter in enumerate(self.chapters) if _text(chapter.get("id"))}
         self.found: list[Problem] = []
         self.labelled: dict[str, set[str]] = {}  # chapter id -> unit ids its assemblies label
         self.assemblies: dict[str, list[str]] = {}  # chapter id -> its assemble slide ids
@@ -144,13 +150,15 @@ class _Checker:
         named: set[str] = set()
         for slide in parts:
             messages = [] if _shows_diagram(slide) and "snippet" not in slide.meta else ["the Part assembly shows a diagram"]
+            messages += _shape(slide)
             labels = _labels(slide)
             if labels is None:
                 messages.append("labels must be a non-empty list of objects")
             else:
-                if any(label.get("chapter") not in self.position for label in labels):
+                chapters = [_text(label.get("chapter")) for label in labels]
+                if any(chapter not in self.position for chapter in chapters):
                     messages.append("a Part assembly label names a chapter of the unit map")
-                named |= {label.get("chapter") for label in labels}
+                named |= {chapter for chapter in chapters if chapter}
                 messages += _diagram_labels(slide, labels)
             self.add(slide.id, messages)
         self.add(parts[-1].id, [f"the Part assembly does not label chapter {chapter.get('id')}" for chapter in self.chapters if chapter.get("id") not in named])
@@ -176,20 +184,21 @@ class _Checker:
             if slide.layout == "topic":
                 self._topic(slide, expected, count, closed)
                 count += 1
-                current = self.chapter_of.get(slide.meta.get("unit"))
+                current = self.chapter_of.get(_text(slide.meta.get("unit")))
             elif slide.layout == "assemble" and slide.meta.get("assembles") != PART_ASSEMBLY:
                 self._assembly(slide, current)
-                closed.add(slide.meta.get("assembles"))
+                if _text(slide.meta.get("assembles")):
+                    closed.add(slide.meta["assembles"])
 
     def _topic(self, slide: Slide, expected: list[str], count: int, closed: set) -> None:
-        uid = slide.meta.get("unit")
-        if isinstance(uid, str):
+        uid = _text(slide.meta.get("unit"))
+        if uid:
             self.topics.add(uid)
         if count >= len(expected):
             self.add(slide.id, [f"this section has {len(expected)} units in the unit map; this topic slide is one too many"])
-        elif uid != expected[count]:
+        elif slide.meta.get("unit") != expected[count]:
             self.add(slide.id, [f"expected unit {expected[count]} here, in unit-map order"])
-        unit = self.by_id.get(uid)
+        unit = self.by_id.get(uid) if uid else None
         if unit is None:
             return
         messages = []
@@ -206,7 +215,9 @@ class _Checker:
         messages = []
         if chapter != current:
             messages.append(f"assembles {chapter}, but the current chapter is {current or 'none'}")
-        self.assemblies.setdefault(chapter, []).append(slide.id)
+        chapter = _text(chapter)
+        if chapter:
+            self.assemblies.setdefault(chapter, []).append(slide.id)
         messages += _shape(slide)
         labels = _labels(slide)
         if labels is None:
@@ -214,8 +225,10 @@ class _Checker:
             return
         for label in labels:
             uid = label.get("unit")
-            if uid not in self.by_id:
+            if not _text(uid) or uid not in self.by_id:
                 messages.append(f"a chapter assembly label names a unit of the unit map, not {uid!r}")
+                continue
+            if not chapter:
                 continue
             home = self.chapter_of[uid]
             if self.section_of.get(home) != self.section_of.get(chapter):
