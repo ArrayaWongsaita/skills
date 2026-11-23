@@ -33,13 +33,17 @@ def test_deck_template_example_parses(skill_dir):
     example = example.split("````markdown\n", 1)[1].rsplit("````", 1)[0]
     sections, errors = parse_sections(example)
     assert errors == [] and len({s.layout for s in sections[0].slides}) >= 3
+    assert "topic" in {s.layout for s in sections[0].slides}
 
 
 @pytest.mark.parametrize("name,needles", [
-    ("storyboard.md", ["prior knowledge", "Part gap", "at most 5 terms", "_None._", "diagrams.md", "new-concepts.json", "deck-notes.md", "--diagrams"]),
-    ("visuals.md", [*SHAPES, *VISUAL_KINDS, "fallback", "Mermaid", "build step", "highlight"]),
-    ("section-writer.md", ["Revision mode", "sections/<key>.md", "1-007a", "Notice", "no new facts", "needs a `Symptom` or an error block"]),
-    ("learner-review.md", ["Blocking", "Minor", "Round 2", "Part gap", "review.md", "prior knowledge"]),
+    ("storyboard.md", ["prior knowledge", "Part gap", "at most 5 terms", "_None._", "diagrams.md", "new-concepts.json", "deck-notes.md", "--diagrams",
+                       "units.json", "--plan", "moved_from", "two to six units", "Part ordering problems", "`topic`", "`assemble`", "`map`", "needs"]),
+    ("visuals.md", [*SHAPES, *VISUAL_KINDS, "fallback", "Mermaid", "build step", "highlight", "decorative", "sketchable", "assemble", "one diagram per chapter"]),
+    ("section-writer.md", ["Revision mode", "sections/<key>.md", "1-007a", "Notice", "no new facts", "needs a `Symptom` or an error block",
+                           "within a unit", "never reorder units", "`topic`", "`assemble`", "moved unit"]),
+    ("learner-review.md", ["Blocking", "Minor", "Round 2", "Part gap", "review.md", "prior knowledge",
+                           "unsure which unit", "assembly that introduces", "decorative", "far from its explanation"]),
 ])
 def test_briefs_carry_their_rules(skill_dir, name, needles):
     text = read(skill_dir, name)

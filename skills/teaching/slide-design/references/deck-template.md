@@ -110,7 +110,7 @@ A closed set. Lengths count visible characters: Thai vowel and tone marks, and e
 | `topic` (deck@2) | the divider that opens a unit; Title is the unit's title and Body its goal, verbatim | Title, Body | | optional, a diagram | none |
 | `assemble` (deck@2) | puts a chapter's units, or the whole Part's chapters, back together | Title, Body | Notice | optional, a diagram | exactly one when it shows code: the excerpt |
 
-Titles are at most 70 characters. A `Notice` is at most 150 and is required on `code` and `output` slides whose snippet is not verified. The other limits, per item for Items:
+Titles are at most 70 characters. A `Notice` is at most 150 and is required on `code`, `output` and code `assemble` slides whose snippet is not verified. The other limits, per item for Items:
 
 | Layout | Field | Limit |
 |---|---|---|
@@ -142,6 +142,8 @@ Titles are at most 70 characters. A `Notice` is at most 150 and is required on `
 | `map` | Body | 120 |
 | `topic` | Body | 120 |
 | `assemble` | Body | 300 |
+
+A `topic` Body equals its unit's `goal`, so its limit is the goal's, 120. (The design suggested 160; a longer Body could never match the goal.)
 
 ### Code, output and other blocks
 
@@ -243,19 +245,15 @@ A section draft, as a writer writes it to `sections/1.2.md`:
 ````markdown
 ## 1.2 สร้าง agent ที่เรียก tool
 
-### 1-015 · explain
+### 1-016 · topic
 
 ```slide
-{"layout": "explain", "purpose": "เห็นว่า create_agent ต่อ tool เข้ากับ model", "from": ["1.2/Core knowledge"], "sources": ["https://docs.langchain.com/oss/python/langchain/agents"]}
+{"layout": "topic", "purpose": "เปิดเรื่องแรกของบท: ประกาศ tool ให้โมเดลเรียกได้", "from": ["1.2/Worked example"], "sources": [], "unit": "u-tool"}
 ```
 
-**Title:** `create_agent` ต่อ tool เข้ากับ model
+**Title:** ประกาศ tool
 
-**Body:** `create_agent` รับโมเดลและรายการ tool เมื่อโมเดลตัดสินใจว่าต้องใช้ tool ก็จะส่ง tool call ออกไป
-
-```visual
-{"kind": "diagram", "diagram": "d-agent-loop", "show": ["n-user", "n-model", "e-ask", "e-answer", "n-tool", "e-call"], "new": ["n-tool", "e-call"], "highlight": [], "dim": []}
-```
+**Body:** เปลี่ยนฟังก์ชันธรรมดาเป็น tool ด้วย @tool
 
 ### 1-017 · code
 
@@ -274,7 +272,53 @@ def get_weather(city: str) -> str:
     return f"แดดออกที่ {city}"
 ```
 
-### 1-023 · question
+### 1-019 · topic
+
+```slide
+{"layout": "topic", "purpose": "เปิดเรื่องที่สองของบท: ต่อ tool เข้ากับ agent", "from": ["1.2/Core knowledge"], "sources": [], "unit": "u-agent"}
+```
+
+**Title:** ต่อ tool เข้ากับ agent
+
+**Body:** สร้าง agent จากโมเดลกับ tool แล้วส่งคำถาม
+
+### 1-021 · explain
+
+```slide
+{"layout": "explain", "purpose": "เห็นว่า create_agent ต่อ tool เข้ากับ model", "from": ["1.2/Core knowledge"], "sources": ["https://docs.langchain.com/oss/python/langchain/agents"]}
+```
+
+**Title:** `create_agent` ต่อ tool เข้ากับ model
+
+**Body:** `create_agent` รับโมเดลและรายการ tool เมื่อโมเดลตัดสินใจว่าต้องใช้ tool ก็จะส่ง tool call ออกไป
+
+```visual
+{"kind": "diagram", "diagram": "d-agent-loop", "show": ["n-user", "n-model", "e-ask", "e-answer", "n-tool", "e-call"], "new": ["n-tool", "e-call"], "highlight": [], "dim": []}
+```
+
+### 1-025 · assemble
+
+```slide
+{"layout": "assemble", "purpose": "เห็นว่าสองเรื่องของบทนี้ประกอบกันเป็นโปรแกรมเดียว", "from": ["1.2/Worked example"], "sources": [], "assembles": "1.2", "snippet": "1.2-a", "lines": [[5, 13]], "labels": [{"unit": "u-tool", "lines": [[5, 8]]}, {"unit": "u-agent", "lines": [[11, 13]]}]}
+```
+
+**Title:** ประกอบร่าง: tool กับ agent
+
+**Body:** เลข 1 คือส่วนที่ประกาศ tool เลข 2 คือส่วนที่สร้าง agent แล้วถาม
+
+```python
+@tool
+def get_weather(city: str) -> str:
+    """Get the weather for a city."""
+    return f"แดดออกที่ {city}"
+
+
+agent = create_agent(model="openai:gpt-5", tools=[get_weather])
+result = agent.invoke({"messages": [{"role": "user", "content": "อากาศที่กรุงเทพ?"}]})
+print(result["messages"][-1].content)
+```
+
+### 1-028 · question
 
 ```slide
 {"layout": "question", "purpose": "ทบทวนว่า agent เลือก tool อย่างไร", "from": ["1.2/Self-check"], "sources": []}
@@ -284,7 +328,7 @@ def get_weather(city: str) -> str:
 
 **Body:** ลองตอบในใจก่อน แล้วค่อยไปหน้าถัดไป
 
-### 1-024 · answer
+### 1-029 · answer
 
 ```slide
 {"layout": "answer", "purpose": "ยืนยันคำตอบและโยงกลับไปที่โค้ดประกาศ tool", "from": ["1.2/Self-check"], "sources": [], "revisit": "1-017"}

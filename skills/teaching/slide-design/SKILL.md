@@ -1,11 +1,11 @@
 ---
 name: slide-design
-description: Use after course-research, one Part at a time, to design the slides for a Part that learners will read on their own. It plans a storyboard the user approves (slide order, layouts, diagrams built up step by step), has writers turn the Part into slide-sized text and visuals, checks the result against the Part, reviews it as the learner, and writes a tool-neutral deck file plus a course-wide visual vocabulary for a later skill to build in Google Slides or React. Do not use to make the slide files themselves, for narration or audio, or to research a topic (use course-research).
+description: Use after course-research, one Part at a time, to design the slides for a Part that learners will read on their own. It cuts the Part into a unit map of small learning units, ordered by what each needs and from simple to hard, each opened by a divider slide and put back together at the end of its chapter, and plans a storyboard the user approves with it (slide order, layouts, diagrams built up step by step). It has writers turn the Part into slide-sized text and visuals, checks the result against the Part, reviews it as the learner, and writes a tool-neutral deck file plus a course-wide visual vocabulary for a later skill to build in Google Slides or React. Do not use to make the slide files themselves, for narration or audio, or to research a topic (use course-research).
 ---
 
 # Slide design
 
-You are the **coordinator**. You talk with the user, keep the run state, plan the storyboard, dispatch section writers and a reviewer, and run the scripts. Talk with the user in their language. Repository-facing text (headings, field labels, JSON keys) stays as `references/deck-template.md` defines it.
+You are the **coordinator**. You talk with the user, keep the run state, plan the unit map and the storyboard, dispatch section writers and a reviewer, and run the scripts. Talk with the user in their language. Repository-facing text (headings, field labels, JSON keys) stays as `references/deck-template.md` defines it.
 
 The input is a `course-research` course folder: `00-overview.md` and `part-NN-<slug>.md` files (`course-research/part@1`). The output, per Part, is one deck file a downstream skill builds from without ever opening the Part.
 
@@ -25,7 +25,7 @@ Stages, in order: `storyboard` → `storyboard-approved` → `writing` → `chec
 
 The script refuses to skip a stage. That is how the gate holds: writing cannot start before the storyboard is approved. When a run is interrupted, trust `show` over your memory.
 
-There is one user gate: **storyboard approval**, at Stage 2. **Never dispatch writers before the user approves the storyboard.** Everything else runs without stopping to ask.
+There is one user gate: **storyboard approval**, at Stage 2, which approves the unit map and the storyboard together. **Never dispatch writers before the user approves the storyboard.** Everything else runs without stopping to ask.
 
 ## Stage 0: start or resume
 
@@ -37,20 +37,22 @@ There is one user gate: **storyboard approval**, at Stage 2. **Never dispatch wr
   - **redo a section:** `reset-sections <course_dir> <N> <key>`, then `set-stage <course_dir> <N> writing`, and run Stages 3–5 for that section, still assembling, validating and reviewing the whole deck
   - **redo the storyboard:** `set-stage <course_dir> <N> storyboard`. It re-reads the Part, so the sections match it again, and sets every section back to `pending`.
 - **A deck exists:** run `python3 <skill>/scripts/validate_deck.py <course_dir> <N>`. When it reports `stale`, the Part changed after the deck was made: tell the user and offer to redo the storyboard.
+- **A run from before the unit map** (`<work>` has no `units.json`, or the deck is `slide-design/deck@1`): the scripts say so. Offer to redo the storyboard; continuing is not possible.
 
 ## Stage 1: storyboard
 
-Follow `references/storyboard.md`, with `references/visuals.md` for the visuals. Write to `<work>`:
-- `storyboard.md`: every slide, by section
+Follow `references/storyboard.md`, with `references/visuals.md` for the visuals. Write to `<work>`, the unit map first:
+- `units.json`: the unit map: each sub-topic's chapters and their small units, in the order the learner needs them, with any unit moved to an earlier sub-topic and why
+- `storyboard.md`: every slide, by section, each sub-topic slide with its unit
 - `diagrams.md`: every diagram, fully defined
 - `new-concepts.json`: the concepts this Part adds to the vocabulary
 - `deck-notes.md`: the learner profile, that the deck is read alone, and the Part gaps
 
-Then run `python3 <skill>/scripts/validate_deck.py <course_dir> <N> --diagrams` and fix every error.
+Then run `python3 <skill>/scripts/validate_deck.py <course_dir> <N> --plan` and fix every error. It checks the unit map and the diagrams; `--diagrams` checks the diagrams alone. When the map moves a unit, append the one `skill-problems.md` line for the moves (see Reporting problems).
 
 ## Stage 2: the gate
 
-Present the storyboard as `references/storyboard.md` describes, in the user's language. Warn when the Part's `code_status` is `"unverified"`. Loop on the user's changes, re-running `--diagrams`, until they approve. Then:
+Present the unit map first, then the storyboard, as `references/storyboard.md` describes, in the user's language: every chapter's units with their goals and needs, every split chapter and every moved unit with its reason. Warn when the Part's `code_status` is `"unverified"`. Loop on the user's changes, re-running `--plan`, until they approve both. Then:
 
 1. On the course's first Part only, create the vocabulary with the approved illustration style:
    `python3 <skill>/scripts/vocabulary.py init <course_dir> --course <slug> --style "<sentence>"`
@@ -64,7 +66,7 @@ Dispatch one writer per pending section, at most 5 in one turn, with `subagent_t
 ```
 Write section <key> of the slide deck for Part <N> of the course in <course_dir>.
 
-Inputs: <course_dir>/00-overview.md, <course_dir>/<part file>, <work>/storyboard.md, <work>/diagrams.md, <course_dir>/slides/visual-vocabulary.md
+Inputs: <course_dir>/00-overview.md, <course_dir>/<part file>, <work>/units.json, <work>/storyboard.md, <work>/diagrams.md, <course_dir>/slides/visual-vocabulary.md
 Your slides: <storyboard ids for this section>
 Output: <work>/sections/<key>.md
 
@@ -75,6 +77,7 @@ Run `set-section <course_dir> <N> <key> written` as each one finishes. Keep ever
 - **A diagram change:** edit `diagrams.md` yourself and re-run `--diagrams`.
 - **A missing concept:** append it to `new-concepts.json` and run `vocabulary.py add` again.
 - **A Part gap:** add it to `deck-notes.md`. No writer fills it.
+- **A unit to split, merge, reorder or move:** follow "Changing the unit map after the gate" below.
 - **A skill problem:** append the writer's `Skill problem:` line to `<work>/skill-problems.md`.
 
 ## Stage 4: assemble and check
@@ -105,6 +108,13 @@ As a first step, read <skill>/references/learner-review.md and follow it.
 - Round 2 rechecks only the revised slides. After it, stop: Blocking issues still open are listed in the report as unresolved.
 - Run `set-section <course_dir> <N> <key> checked` for every section, then `set-stage <course_dir> <N> done`.
 
+## Changing the unit map after the gate
+
+The gate fixes the plan; the user sees every deviation in the report. During Stages 3–5, a writer's report, a validator error or a Blocking review issue may need the unit map to change.
+- **Allowed without asking, inside one chapter:** add, split, merge or reorder that chapter's units, keeping every `needs` pointing backwards. Edit `units.json` (and the storyboard rows), re-run `--plan`, `reset-sections <course_dir> <N> <keys>` for the affected sections, `set-stage <course_dir> <N> writing`, and re-dispatch their writers in revision mode with the change. This counts within the two revision rounds.
+- **Across sub-topics or chapters, never after the gate:** moving a unit across sub-topics, or splitting or merging chapters. When an issue needs that, list it in the report as unresolved, with the suggested change.
+- Keep a list of every unit-map change for the report.
+
 ## Stage 6: report
 
 Tell the user, briefly and in their language:
@@ -113,7 +123,8 @@ Tell the user, briefly and in their language:
 - the illustrations to generate and the screenshots to capture (the deck notes list them)
 - unverified code
 - the Part gaps
-- every change from the approved storyboard
+- every change from the approved storyboard, and every change to the unit map
+- the Part ordering problems: every unit moved to an earlier sub-topic, with its reason (the deck notes list them)
 - any validator error or review issue still open
 
 Point to the files. Do not paste the deck.
@@ -128,12 +139,12 @@ When something in this skill goes wrong or does not fit (a script error, a valid
 
 `- <bug|improvement|docs> · <what happened> · <where: the script, brief or rule> · <stage>`
 
-A subagent's `Skill problem:` line goes in too. On resume, read the file first. At the end of the run, if any line has no ` → ` mark yet, offer once to report them with the `report-skill-issue` skill, or at once if a problem stops the run. Then mark each line the offer covered: ` → <issue URL>` once reported, or ` → not reported (<date>)` if the user declined or dropped it. A marked line is never offered again. If `report-skill-issue` is not installed, list the unmarked lines in your final report instead.
+A subagent's `Skill problem:` line goes in too. When the run moves at least one unit to an earlier sub-topic, append one line for all the moves together: `- improvement · Part N sub-topic order: <the moves, in short> · course-research outline · storyboard`. On resume, read the file first. At the end of the run, if any line has no ` → ` mark yet, offer once to report them with the `report-skill-issue` skill, or at once if a problem stops the run. Then mark each line the offer covered: ` → <issue URL>` once reported, or ` → not reported (<date>)` if the user declined or dropped it. A marked line is never offered again. If `report-skill-issue` is not installed, list the unmarked lines in your final report instead.
 
 ## References
 
 - `references/deck-template.md`: the deck and vocabulary contract the downstream skill relies on, with a filled example
-- `references/storyboard.md`: planning the storyboard and diagrams, the term rule, and the gate presentation
+- `references/storyboard.md`: planning the unit map, the storyboard and diagrams, the term rule, and the gate presentation
 - `references/visuals.md`: choosing visual kinds, laying out diagrams, build steps, illustrations and screenshots
 - `references/section-writer.md`: the brief every writer reads, including revision mode
 - `references/learner-review.md`: the brief for the learner reviewer
