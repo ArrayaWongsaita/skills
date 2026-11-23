@@ -72,7 +72,8 @@ export const MIN_FIT = 0.85;
 
 /**
  * Shrinks prose (the --fit custom property) in steps of 0.05, down to MIN_FIT, while the element overflows.
- * The value used is left in data-fit, where the check page reads it.
+ * The value used is left in data-fit, where the check page reads it. When 85 % is still too big, data-overflow is
+ * true and the slide scrolls instead of clipping. It runs again when a <details> inside opens or closes.
  */
 export function useAutoFit(ref: RefObject<HTMLElement | null>, enabled: boolean): void {
   useLayoutEffect(() => {
@@ -87,14 +88,17 @@ export function useAutoFit(ref: RefObject<HTMLElement | null>, enabled: boolean)
         element.style.setProperty('--fit', String(value));
       }
       element.dataset.fit = String(value);
+      element.dataset.overflow = String(enabled && overflows());
     };
     fit();
+    element.addEventListener('toggle', fit, true);
     let cancelled = false;
     document.fonts?.ready.then(() => !cancelled && fit());
     const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(() => fit()) : null;
     observer?.observe(element);
     return () => {
       cancelled = true;
+      element.removeEventListener('toggle', fit, true);
       observer?.disconnect();
     };
   }, [ref, enabled]);

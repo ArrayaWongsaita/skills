@@ -187,6 +187,11 @@ a {
   font-size: calc(1.75cqw * var(--fit, 1));
 }
 
+/* Last resort: content still too big at 85 % scrolls rather than being cut off. */
+.rs-desktop .rs-slide[data-overflow='true'] {
+  overflow-y: auto;
+}
+
 .rs-slide {
   position: relative;
   display: flex;

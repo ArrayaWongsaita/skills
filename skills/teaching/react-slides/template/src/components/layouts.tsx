@@ -1,10 +1,10 @@
 // One component per deck layout. Props are named after the deck's fields: required fields are required props.
 // The component API is additive within a major template version: props may be added, never renamed or removed.
-import type { ReactNode } from 'react';
+import { type ReactNode, useContext } from 'react';
 import { formatRoute } from '../router';
 import { slideNumber, t } from '../strings';
 import { BlockList, CodeBlock, OutputBlock } from './code';
-import { useDeck } from './Deck';
+import { DeckModeContext, useDeck } from './Deck';
 import { SlideFrame } from './SlideFrame';
 import type { Base, Block, Range, Rich, Visual } from './types';
 import { VisualSlot } from './Visual';
@@ -203,6 +203,8 @@ export function Answer(props: Base & { answer: Rich; why: Rich; revisit: string;
 
 export function Practice(props: Base & { title: Rich; task: Rich; items?: Rich[]; solution?: Rich; visual?: Visual }) {
   const { meta } = useDeck();
+  // The check page measures the slide with its solution open, the biggest it gets.
+  const checking = useContext(DeckModeContext) === 'check';
   return (
     <SlideFrame slide={props} title={props.title} visual={slot(props.visual)}>
       <Field name="task">{props.task}</Field>
@@ -213,7 +215,7 @@ export function Practice(props: Base & { title: Rich; task: Rich; items?: Rich[]
         </div>
       ) : null}
       {props.solution !== undefined ? (
-        <details className="rs-solution">
+        <details className="rs-solution" open={checking || undefined}>
           <summary>{t(meta.language, 'solution')}</summary>
           <Field name="solution">{props.solution}</Field>
         </details>

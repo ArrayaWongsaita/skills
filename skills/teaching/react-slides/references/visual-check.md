@@ -21,7 +21,7 @@ The check page is in every build but linked from nowhere.
 
 | Kind | Level | Means | What to do |
 |---|---|---|---|
-| `prose-overflow` (desktop) | problem | The slide's content is still bigger than the 16:9 frame with the text shrunk to 85 %. | A template defect. Never shorten the text. Record it in `skill-problems.md` with the slide id and the detail, and list it in the report. |
+| `prose-overflow` (desktop) | problem | The slide's content is still bigger than the 16:9 frame with the text shrunk to 85 %, so learners have to scroll the slide. A Practice slide is measured with its solution open. | A template defect. Never shorten the text. Record it in `skill-problems.md` with the slide id and the detail, and list it in the report. |
 | `prose-overflow` (phone) | problem | Something is wider than the phone screen. | Find the element in a screenshot. When it is an illustration, fix the illustration. Otherwise it is a template defect: record it as above. |
 | `scrolling-block` | note | A code or output block is taller than its box, so it scrolls with a fade at the bottom. | Nothing: this is how long code is shown. |
 | `out-of-canvas` | problem | A diagram in the deck puts a node outside its canvas. | A deck problem. List it in the report, and point the user to `slide-design`. |

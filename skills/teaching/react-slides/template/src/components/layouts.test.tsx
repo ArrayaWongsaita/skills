@@ -77,3 +77,12 @@ test('a notice is shown when given', () => {
   render(<DeckFixture><Code {...base('1-022')} title={<>t</>} body={<>b</>} notice={<>ยังไม่ได้ทดสอบ</>} snippet="s-new" lines={[[1, 1]]} highlight={[]} /></DeckFixture>);
   expect(screen.getByText('ยังไม่ได้ทดสอบ')).toBeInTheDocument();
 });
+
+test('the check page measures a practice slide with its solution open', () => {
+  const { container } = render(
+    <DeckFixture>
+      <Practice id="1-001" section="s" purpose="p" from={[]} sources={[]} title={<>t</>} task={<>งาน</>} solution={<>เฉลย</>} />
+    </DeckFixture>,
+  );
+  expect(container.querySelector('details')).toHaveAttribute('open');
+});
