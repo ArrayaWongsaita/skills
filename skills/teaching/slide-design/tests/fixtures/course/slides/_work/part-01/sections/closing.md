@@ -1,6 +1,20 @@
 ## Closing
 
-### 1-025 · summary
+### 1-030 · assemble
+
+```slide
+{"layout": "assemble", "purpose": "เห็นภาพรวมทั้ง Part: แต่ละบทเติมส่วนไหนของ agent", "from": ["Core mental model"], "sources": [], "assembles": "part", "labels": [{"chapter": "1.1", "elements": ["n-model"]}, {"chapter": "1.2", "elements": ["n-tool", "e-call", "e-result"]}]}
+```
+
+**Title:** ประกอบร่างทั้ง Part
+
+**Body:** บทแรกให้โมเดล บทที่สองเพิ่ม tool กับวงรอบเรียก tool ทั้งหมดรวมกันเป็น agent ตัวแรกของเรา
+
+```visual
+{"kind": "diagram", "diagram": "d-agent-loop", "show": ["n-user", "n-model", "n-tool", "e-ask", "e-call", "e-result", "e-answer", "g-agent"], "new": [], "highlight": [], "dim": []}
+```
+
+### 1-031 · summary
 
 ```slide
 {"layout": "summary", "purpose": "ทบทวนภาพรวมทั้ง Part ในภาพเดียว", "from": ["Core mental model"], "sources": []}
@@ -16,7 +30,7 @@
 {"kind": "diagram", "diagram": "d-agent-loop", "show": ["n-user", "n-model", "e-ask", "e-answer", "n-tool", "e-call", "e-result", "g-agent"], "new": [], "highlight": [], "dim": []}
 ```
 
-### 1-026 · practice
+### 1-032 · practice
 
 ```slide
 {"layout": "practice", "purpose": "ลองต่อยอด agent ด้วยตัวเอง", "from": ["Practice material"], "sources": []}
@@ -31,7 +45,7 @@
 - อย่าลืมใส่ docstring
 - ใส่ tool ใหม่ในรายการ `tools`
 
-### 1-027 · focus
+### 1-033 · focus
 
 ```slide
 {"layout": "focus", "purpose": "เชื่อมไป Part 2 ที่จะเปิดดูข้างใน agent", "from": ["Bridge to next part"], "sources": []}
@@ -45,7 +59,7 @@
 {"kind": "diagram", "diagram": "d-agent-loop", "show": ["n-user", "n-model", "e-ask", "e-answer", "n-tool", "e-call", "e-result", "g-agent"], "new": [], "highlight": ["g-agent"], "dim": []}
 ```
 
-### 1-028 · sources
+### 1-034 · sources
 
 ```slide
 {"layout": "sources", "purpose": "บอกแหล่งอ่านต่อและแหล่งอ้างอิงของ Part นี้", "from": ["Further reading", "Sources"], "sources": ["https://docs.langchain.com/oss/python/releases/langchain-v1", "https://docs.langchain.com/oss/python/langchain/overview"]}

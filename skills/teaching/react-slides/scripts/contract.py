@@ -55,7 +55,7 @@ SNIPPET_STATUSES = ("verified", "unverified", "skipped")
 
 # --- output: files ---------------------------------------------------------
 
-DECK_TEMPLATE_ID = "slide-design/deck@1"
+DECK_TEMPLATE_ID = "slide-design/deck@2"
 DECK_TEMPLATE_IDS = ("slide-design/deck@1", "slide-design/deck@2")  # every deck template a reader accepts
 VOCABULARY_TEMPLATE_ID = "slide-design/vocabulary@1"
 SLIDES_DIR = "slides"

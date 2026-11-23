@@ -40,6 +40,7 @@ from contract import (  # noqa: E402
     SLIDES_DIR,
     TITLE_LIMIT,
     UNITS_FILE,
+    UNITS_HEADING,
     VISUAL_KINDS,
     VOCABULARY_FILE,
     WORK_DIR,
@@ -110,7 +111,7 @@ def _frontmatter(deck: Deck, source: Part, vocab: Vocabulary | None) -> list[Iss
 
 def _headings(deck: Deck, source: Part) -> list[Issue]:
     issues = []
-    expected = [NOTES_HEADING, OPENING, *[f"{s.key} {s.title}" for s in source.subtopics], CLOSING, DIAGRAMS_HEADING, LISTINGS_HEADING]
+    expected = [NOTES_HEADING, OPENING, *[f"{s.key} {s.title}" for s in source.subtopics], CLOSING, UNITS_HEADING, DIAGRAMS_HEADING, LISTINGS_HEADING]
     if deck.headings != expected:
         issues.append(_error("deck", f"sections must be: {', '.join(expected)}"))
     if not deck.notes.split("\n### ", 1)[0].strip() or deck.notes.startswith("### "):

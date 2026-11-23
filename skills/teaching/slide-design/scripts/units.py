@@ -50,17 +50,17 @@ def chapter_list(data: dict) -> list[dict]:
     return [chapter for chapter in chapters if isinstance(chapter, dict)] if isinstance(chapters, list) else []
 
 
-def _units_of(chapter: dict) -> list[dict]:
+def chapter_units(chapter: dict) -> list[dict]:
     units = chapter.get("units")
     return [unit for unit in units if isinstance(unit, dict)] if isinstance(units, list) else []
 
 
 def units_by_id(data: dict) -> dict[str, dict]:
-    return {unit.get("id"): unit for chapter in chapter_list(data) for unit in _units_of(chapter)}
+    return {unit.get("id"): unit for chapter in chapter_list(data) for unit in chapter_units(chapter)}
 
 
 def unit_chapters(data: dict) -> dict[str, str]:
-    return {unit.get("id"): chapter.get("id") for chapter in chapter_list(data) for unit in _units_of(chapter)}
+    return {unit.get("id"): chapter.get("id") for chapter in chapter_list(data) for unit in chapter_units(chapter)}
 
 
 def _text(value) -> bool:

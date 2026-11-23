@@ -1,4 +1,4 @@
-# The deck contract (`slide-design/deck@1`)
+# The deck contract (`slide-design/deck@2`)
 
 Three readers use this file:
 - **The coordinator**, at Stages 1 and 4, to plan slides and read validator messages.
@@ -31,7 +31,7 @@ One `key: value` per line. Every value is a JSON literal. Keys, in this order:
 
 | Key | Value |
 |---|---|
-| `template` | `"slide-design/deck@1"` |
+| `template` | `"slide-design/deck@2"` |
 | `course` | the course slug |
 | `part` | the Part number |
 | `title` | the Part title, identical to the Part file |
@@ -48,9 +48,9 @@ One `key: value` per line. Every value is a JSON literal. Keys, in this order:
 ## Body, in order
 
 1. `# Part N: <title>`
-2. `## Deck notes`: the learner profile, that the deck is read without narration, and Part gaps. Then two generated lists: `### Visuals to produce` (each illustration to generate and screenshot to capture, by slide id) and `### Code status` (each snippet that is not verified, with its reason).
+2. `## Deck notes`: the learner profile, that the deck is read without narration, and Part gaps. Then three generated lists: `### Visuals to produce` (each illustration to generate and screenshot to capture, by slide id), `### Code status` (each snippet that is not verified, with its reason) and `### Part ordering problems` (each unit the unit map moved to an earlier sub-topic, as `- <unit id> (<unit title>): from <moved_from> to <chapter id>: <reason>`, or `_None._`).
 3. One `##` section per deck section: `## Opening`, then `## N.k <sub-topic title>` for each sub-topic in Part order, then `## Closing`.
-4. `## Units` (deck@2): the Part's unit map, as one ```` ```units ```` JSON block (see Units below).
+4. `## Units`: the Part's unit map, as one ```` ```units ```` JSON block (see Units below).
 5. `## Diagrams`: one ```` ```diagram ```` JSON block per diagram.
 6. `## Code listings`: one `### <snippet id>` per snippet the slides show. Each holds a ```` ```listing ```` JSON block `{"snippet", "status", "reason"}`, then the complete snippet, verbatim, in a fence of its language. A slide shows an excerpt; the learner needs the whole program to run it.
 
@@ -233,7 +233,7 @@ The file is append-only. `vocabulary.py add` adds concepts and bumps `version`; 
 
 ## Versioning
 
-Renaming a heading, a field label or a JSON key, or changing what one means, is a breaking change: bump `deck@1` to `deck@2` in `contract.py` and here. Adding an optional key that builders may ignore is not.
+Renaming a heading, a field label or a JSON key, or changing what one means, is a breaking change: bump the version (now `deck@2`) in `contract.py` and here. Adding an optional key that builders may ignore is not. `deck@2` added `## Units`, `### Part ordering problems` and the `map`, `topic` and `assemble` layouts to `deck@1`; a builder still reads a `deck@1` deck, which has none of them.
 
 ## A filled example
 

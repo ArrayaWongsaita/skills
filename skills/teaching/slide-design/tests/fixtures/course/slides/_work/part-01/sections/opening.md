@@ -24,7 +24,15 @@
 {"kind": "diagram", "diagram": "d-agent-loop", "show": ["n-user", "n-model", "e-ask", "e-answer"], "new": ["n-user", "n-model", "e-ask", "e-answer"], "highlight": [], "dim": []}
 ```
 
-### 1-003 · objectives
+### 1-003 · map
+
+```slide
+{"layout": "map", "purpose": "เห็นเส้นทางของ Part ก่อนเริ่ม: มีบทไหน แต่ละบทมีเรื่องอะไร", "from": ["Objectives"], "sources": []}
+```
+
+**Title:** เส้นทางของ Part นี้
+
+### 1-004 · objectives
 
 ```slide
 {"layout": "objectives", "purpose": "รู้ว่าจบ Part นี้แล้วจะทำอะไรได้", "from": ["Objectives"], "sources": []}
@@ -36,7 +44,7 @@
 1. สร้าง agent ที่เรียกใช้ tool ได้
 2. บอกได้ว่าโค้ดไหนเป็นแบบก่อน 1.0
 
-### 1-004 · setup
+### 1-005 · setup
 
 ```slide
 {"layout": "setup", "purpose": "เตรียมเครื่องให้พร้อมรันโค้ดใน Part นี้", "from": ["Prerequisites and setup"], "sources": []}
@@ -52,7 +60,7 @@
 pip install langchain==1.5.2 langgraph==1.2.24 langchain-openai==1.8.5
 ```
 
-### 1-005 · terms
+### 1-006 · terms
 
 ```slide
 {"layout": "terms", "purpose": "รู้จักคำว่า Agent ก่อนใช้ในสไลด์ถัดไป", "from": ["Key terms"], "sources": []}
@@ -63,7 +71,7 @@ pip install langchain==1.5.2 langgraph==1.2.24 langchain-openai==1.8.5
 **Items:**
 - Agent (เอเจนต์): โมเดลที่ตัดสินใจเรียก tool เองเป็นวงรอบ
 
-### 1-006 · steps
+### 1-007 · steps
 
 ```slide
 {"layout": "steps", "purpose": "เห็นวงรอบของ agent ครบทั้งสามขั้น", "from": ["Core mental model"], "sources": []}
