@@ -128,7 +128,7 @@ When something in this skill goes wrong or does not fit (a script error, a valid
 
 `- <bug|improvement|docs> · <what happened> · <where: the script, brief or rule> · <stage>`
 
-A subagent's `Skill problem:` line goes in too. On resume, read the file first. At the end of the run, if any line is not yet reported, offer once to report them with the `report-skill-issue` skill, or at once if a problem stops the run. After a report, add ` → <issue URL>` to each line it covered. If `report-skill-issue` is not installed, list the open lines in your final report instead.
+A subagent's `Skill problem:` line goes in too. On resume, read the file first. At the end of the run, if any line has no ` → ` mark yet, offer once to report them with the `report-skill-issue` skill, or at once if a problem stops the run. Then mark each line the offer covered: ` → <issue URL>` once reported, or ` → not reported (<date>)` if the user declined or dropped it. A marked line is never offered again. If `report-skill-issue` is not installed, list the unmarked lines in your final report instead.
 
 ## References
 

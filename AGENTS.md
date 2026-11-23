@@ -46,7 +46,7 @@ When something in this skill goes wrong or does not fit (a script error, a valid
 
 `- <bug|improvement|docs> · <what happened> · <where: the script, brief or rule> · <stage>`
 
-A subagent's `Skill problem:` line goes in too. On resume, read the file first. At the end of the run, if any line is not yet reported, offer once to report them with the `report-skill-issue` skill, or at once if a problem stops the run. After a report, add ` → <issue URL>` to each line it covered. If `report-skill-issue` is not installed, list the open lines in your final report instead.
+A subagent's `Skill problem:` line goes in too. On resume, read the file first. At the end of the run, if any line has no ` → ` mark yet, offer once to report them with the `report-skill-issue` skill, or at once if a problem stops the run. Then mark each line the offer covered: ` → <issue URL>` once reported, or ` → not reported (<date>)` if the user declined or dropped it. A marked line is never offered again. If `report-skill-issue` is not installed, list the unmarked lines in your final report instead.
 ```
 
 Each subagent brief asks for a `Skill problem: <what got in the way, and where>` line in its reply, when something in the brief, a script or a template got in the subagent's way.
@@ -80,7 +80,7 @@ The `report-skill-issue` skill files these issues. Each one names the skill, the
 
    3. Comment on the issue with what is missing.
 
-4. **Fix it** on a branch named `fix/<skill>-<slug>`, and run the skill's test command.
+4. **Fix it** on a branch named `fix/<skill>-<slug>`, with a slug in your own words, and run the skill's test command.
 
 5. **Open a PR to `main`** whose description says `Closes ArrayaWongsaita/skills-issues#<n>`.
 
@@ -96,7 +96,7 @@ The `report-skill-issue` skill files these issues. Each one names the skill, the
    gh issue close <n> -R ArrayaWongsaita/skills-issues --comment "Fixed in <PR URL>"
    ```
 
-**Privacy:** This repo is public: never copy an issue's paths, logs, course content or project code into a commit, a PR or a test fixture.
+**Privacy:** This repo is public: never copy an issue's paths, logs, course content or project code into a branch name, a commit, a PR or a test fixture.
 - Write a minimal, made-up reproduction instead.
 - Describe the problem in your own words.
 - Refer to the issue only by its number.

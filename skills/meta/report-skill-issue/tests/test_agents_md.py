@@ -1,6 +1,7 @@
 import pytest
 
-PRIVACY = "This repo is public: never copy an issue's paths, logs, course content or project code into a commit, a PR or a test fixture."
+PRIVACY = ("This repo is public: never copy an issue's paths, logs, course content or project code into a branch name, "
+           "a commit, a PR or a test fixture.")
 
 
 @pytest.fixture
@@ -19,7 +20,7 @@ def test_claude_md_imports_agents_md(root):
 
 @pytest.mark.parametrize("needle", ["gh issue view <n> -R ArrayaWongsaita/skills-issues", "Closes ArrayaWongsaita/skills-issues#<n>",
                                     "fix/<skill>-<slug>", "needs-info", "gh issue close <n> -R ArrayaWongsaita/skills-issues",
-                                    "## Reporting problems with this skill", "skill-problems.md", PRIVACY])
+                                    "## Reporting problems with this skill", "skill-problems.md", " → not reported (<date>)", PRIVACY])
 def test_agents_md_covers_the_fixing_workflow(agents_md, needle):
     assert needle in agents_md
 

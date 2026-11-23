@@ -16,7 +16,17 @@ SECRET_NAME_WORDS = ("KEY", "TOKEN", "SECRET", "PASSWORD", "CREDENTIAL")
 MIN_SECRET_LENGTH = 8
 
 _START = r"(?<![A-Za-z0-9])"
-_SECRET_NAME = r"(?:api[_-]?key|access[_-]?key|private[_-]?key|secret|token|password|passwd|credential)"
+_IDENT = r"[A-Za-z0-9_-]"
+# A secret's name is a whole identifier that ENDS in one of these words, so `tokenizer`, `token_counter`,
+# `max_tokens`, `secret_name` and `monkey` are not names. Each lookbehind has a fixed width, as `re` needs.
+_SECRET_ENDINGS = (r"\bkey", "_key", "apikey", "accesskey", "privatekey", "secretkey", "token", "secret",
+                   "password", "passwd", "passphrase", "credential", "credentials")
+_SECRET_TAIL = "(?:" + "|".join(f"(?<={ending})" for ending in _SECRET_ENDINGS) + ")"
+_SECRET_NAME = rf"(?<!{_IDENT}){_IDENT}*+{_SECRET_TAIL}"  # possessive, from the identifier's start: linear time
+# A value: printable ASCII without spaces, quotes, backticks, commas, semicolons or parentheses (so prose,
+# Thai text and code calls are not values), 8 or more characters, with a digit unless 16 or more long.
+_V = r"[!#-&*+\--:<-_a-~]"
+_SECRET_VALUE = rf"(?!\[REDACTED:)(?={_V}*?\d|{_V}{{16}}){_V}{{8,}}"
 
 # Whole-match kinds: the match is replaced. Order matters: anthropic-key before openai-key.
 TOKEN_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
@@ -26,15 +36,18 @@ TOKEN_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("aws-access-key-id", re.compile(_START + r"(?:AKIA|ASIA)[0-9A-Z]{16}(?![0-9A-Z])")),
     ("google-api-key", re.compile(_START + r"AIza[0-9A-Za-z_-]{35}")),
     ("slack-token", re.compile(_START + r"xox[abprs]-[A-Za-z0-9-]{10,}")),
-    ("private-key", re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----", re.S)),
+    # Through its END line, or, for a truncated excerpt, up to a blank line, a code fence or the end of the text.
+    ("private-key", re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----(?:.*?-----END [A-Z ]*PRIVATE KEY-----"
+                               r"|.*?(?=\n[ \t]*\n|\n[ \t]*```|\Z))", re.S)),
     ("jwt", re.compile(r"(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}")),
 )
 
 # Value kinds: group 1 (the name) is kept and only group 2 (the value) is replaced.
 VALUE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("bearer-token", re.compile(r"(?i)(\bbearer\s+)([A-Za-z0-9._~+/-]{16,}=*)")),
-    ("assignment", re.compile(r"(?i)(\b[A-Za-z0-9_-]*?" + _SECRET_NAME + r"[A-Za-z0-9_-]*[\"']?\s*[:=]\s*[\"']?)"
-                              r"(?!\[REDACTED:)([^\s\"',;]{8,})")),
+    ("assignment", re.compile(rf"(?i)({_SECRET_NAME}[\"']?[ \t]*[:=][ \t]*[\"']?)({_SECRET_VALUE})")),
+    ("flag", re.compile(rf"(?i)((?<!{_IDENT})--{_IDENT}*+{_SECRET_TAIL}[ \t]+)({_SECRET_VALUE})")),
+    ("url-password", re.compile(r"(?i)((?<![A-Za-z0-9+.-])[a-z][a-z0-9+.-]*://[^\s:/@]+:)((?!\[REDACTED:)[^\s@/]+)(?=@)")),
 )
 
 

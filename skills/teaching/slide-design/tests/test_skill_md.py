@@ -49,3 +49,4 @@ def test_acceptance_lists_the_spec_checks(skill_dir):
 def test_reporting_hook(skill_md):
     section = skill_md.split("## Reporting problems with this skill", 1)[1]
     assert "<work>/skill-problems.md" in section and "report-skill-issue" in section and "Skill problem:" in section
+    assert " → not reported (<date>)" in section

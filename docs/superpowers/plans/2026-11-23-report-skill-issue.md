@@ -73,7 +73,7 @@
 
 1. **A redacted draft must post.** `[REDACTED:…]` must not itself match a pattern on the rescan at `post`.
 2. **Ordinary text that only looks like a secret stays untouched:** `task-…`, `max_tokens = 1000`, prose about tokens in Thai or English.
-3. **The home path is replaced only at a path boundary.** With home `/Users/non`, `/Users/nonsense` stays. A skill reached through a symlinked parent (macOS `/var` vs `/private/var`) still gives the right path inside the repo.
+3. **The home path is replaced only at a path boundary.** With home `/Users/alice`, `/Users/alicenot` stays. A skill reached through a symlinked parent (macOS `/var` vs `/private/var`) still gives the right path inside the repo.
 4. **This repo's origin URL is recognised in every form,** HTTPS or SSH, with or without `.git`, in any letter case. Look-alikes are refused: `skills-issues`, `skills2`, another owner, another host.
 5. **Awkward input stays intact:**
    - Evidence that contains triple backticks keeps its fence.
@@ -142,9 +142,9 @@ def test_reporters_own_secret_values_are_redacted():
 
 
 def test_home_path_becomes_tilde_only_on_a_boundary():  # Review Focus 3
-    env = {"HOME": "/Users/non"}
-    assert scrub("/Users/non/proj, /Users/nonsense, /Users/non-old and /Users/non.", env)[0] == \
-        "~/proj, /Users/nonsense, /Users/non-old and ~."
+    env = {"HOME": "/Users/alice"}
+    assert scrub("/Users/alice/proj, /Users/alicenot, /Users/alice-old and /Users/alice.", env)[0] == \
+        "~/proj, /Users/alicenot, /Users/alice-old and ~."
     assert scrub("/x", {"HOME": "/"})[0] == "/x"
 
 
@@ -157,7 +157,7 @@ def test_scrubbed_text_scans_clean():  # Review Focus 1
 
 def test_ordinary_text_is_untouched():  # Review Focus 2
     text = "task-abcdefghijklmnopqrstuvwxyz1234 risk-free max_tokens = 1000, a token budget, ใช้ token น้อยลง"
-    assert scrub(text, {"HOME": "/Users/non"}) == (text, [])
+    assert scrub(text, {"HOME": "/Users/alice"}) == (text, [])
     assert scan(text, {}) == []
 
 
@@ -460,8 +460,8 @@ def test_entry_is_validated():
 
 def test_draft_is_scrubbed_and_hashed(entry, drafts):
     leaky = {**entry, "title": "token ghp_" + "c" * 36,
-             "evidence": [{"text": "key sk-proj-" + "b" * 40 + " at /Users/non/proj"}]}
-    out = make_draft(leaky, {"HOME": "/Users/non"}, today=TODAY)
+             "evidence": [{"text": "key sk-proj-" + "b" * 40 + " at /Users/alice/proj"}]}
+    out = make_draft(leaky, {"HOME": "/Users/alice"}, today=TODAY)
     path = Path(out["draft"])
     assert path.parent == drafts and out["sha256"] == hashlib.sha256(path.read_bytes()).hexdigest()
     assert out["redacted"] == ["github-token", "openai-key"]

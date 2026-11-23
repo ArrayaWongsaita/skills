@@ -18,7 +18,7 @@ Run the scripts with `python3` (3.11 or later). Posting needs the GitHub CLI `gh
 ## The procedure
 
 1. **Collect.** Write one entry per distinct problem, as in [The entry](#the-entry). The problems come from:
-   - the lines of the run's `skill-problems.md` that are not yet marked with ` → <issue URL>`
+   - the lines of the run's `skill-problems.md` that have no ` → ` mark yet
    - what you saw yourself
    - what the user tells you
 
@@ -89,7 +89,11 @@ Run the scripts with `python3` (3.11 or later). Posting needs the GitHub CLI `gh
 
 7. **Report back.**
    - Give the user the URLs.
-   - In the run's `skill-problems.md`, add ` → <issue URL>` to each line that the issue covers, so a resumed run does not offer it again.
+   - In the run's `skill-problems.md`, mark each line the offer covered:
+     - ` → <issue URL>` for a line that an issue or a comment covers
+     - ` → not reported (<date>)` for a line whose report the user declined, or whose draft they dropped
+
+     A resumed run never offers a marked line again.
    - If posting failed, give the reason and the draft path. The draft is kept, and `post` can run again once the cause is fixed.
 
 ## The entry

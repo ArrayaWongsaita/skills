@@ -33,6 +33,10 @@ def test_entry_example_is_valid(skill_md):
     validate_entry(json.loads(re.search(r"```json\n(.*?)\n```", section, re.S).group(1)))
 
 
+def test_declined_reports_are_marked(skill_md):
+    assert " → not reported (<date>)" in skill_md
+
+
 def test_has_its_own_hook(skill_md):
     assert "## Reporting problems with this skill" in skill_md
 

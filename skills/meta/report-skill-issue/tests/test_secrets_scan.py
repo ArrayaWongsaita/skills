@@ -1,3 +1,5 @@
+import time
+
 import pytest
 
 from secrets_scan import scan, scrub
@@ -39,23 +41,71 @@ def test_reporters_own_secret_values_are_redacted():
 
 
 def test_home_path_becomes_tilde_only_on_a_boundary():  # Review Focus 3
-    env = {"HOME": "/Users/non"}
-    assert scrub("/Users/non/proj, /Users/nonsense, /Users/non-old and /Users/non.", env)[0] == \
-        "~/proj, /Users/nonsense, /Users/non-old and ~."
+    env = {"HOME": "/Users/alice"}
+    assert scrub("/Users/alice/proj, /Users/alicesense, /Users/alice-old and /Users/alice.", env)[0] == \
+        "~/proj, /Users/alicesense, /Users/alice-old and ~."
     assert scrub("/x", {"HOME": "/"})[0] == "/x"
 
 
 def test_scrubbed_text_scans_clean():  # Review Focus 1
     env = {"MY_TOKEN": "zq-custom-value-77"}
-    raw = "\n".join([*FAKE.values(), 'token = "abcdefgh12345"', "Bearer abcdefghijklmnop1234", "zq-custom-value-77"])
+    raw = "\n".join([*FAKE.values(), *SHAPELESS, 'token = "abcdefgh12345"', "Bearer abcdefghijklmnop1234",
+                     "zq-custom-value-77", "-----BEGIN RSA PRIVATE KEY-----\nMIIE", ""])
     text, _ = scrub(raw, env)
     assert scan(text, env) == []
 
 
-def test_ordinary_text_is_untouched():  # Review Focus 2
-    text = "task-abcdefghijklmnopqrstuvwxyz1234 risk-free max_tokens = 1000, a token budget, ใช้ token น้อยลง"
-    assert scrub(text, {"HOME": "/Users/non"}) == (text, [])
+ORDINARY = [
+    "task-abcdefghijklmnopqrstuvwxyz1234 risk-free max_tokens = 1000, a token budget, ใช้ token น้อยลง",
+    "- Token: หน่วยย่อยของข้อความที่โมเดลอ่าน",
+    "Tokens: approximately 4000 per call",
+    "Token: approximately",
+    "trim_messages(messages, token_counter=count_tokens_approximately)",
+    "num_tokens = len(encoding.encode(text))",
+    "tokenizer = AutoTokenizer.from_pretrained(name)",
+    '"tokenizer": "cl100k_base"',
+    "secret_name: course-research-demo",
+    "credentials_path: ./secrets/sa.json",
+    'monkey = "bananas-forever"',
+    '"key": "section-intro"',
+    "--max-tokens 4000",
+]
+
+
+@pytest.mark.parametrize("text", ORDINARY)
+def test_ordinary_text_is_untouched(text):  # Review Focus 2
+    assert scrub(text, {"HOME": "/Users/alice"}) == (text, [])
     assert scan(text, {}) == []
+
+
+SHAPELESS = {
+    "AZURE_OPENAI_KEY=0123456789abcdef0123456789abcdef": "AZURE_OPENAI_KEY=[REDACTED:assignment]",
+    "SUPABASE_KEY=sbp_0123456789abcdef": "SUPABASE_KEY=[REDACTED:assignment]",
+    "key = 'abcdef0123456789'": "key = '[REDACTED:assignment]'",
+    "clientSecret: correcthorsebatterystaple": "clientSecret: [REDACTED:assignment]",
+    "postgresql://admin:S3cretPassw0rd@db.internal:5432/app": "postgresql://admin:[REDACTED:url-password]@db.internal:5432/app",
+    "--api-key 9f8e7d6c5b4a39281706": "--api-key [REDACTED:flag]",
+    "--password correcthorsebatterystaple": "--password [REDACTED:flag]",
+}
+
+
+@pytest.mark.parametrize("raw,expected", SHAPELESS.items())
+def test_secrets_without_a_known_shape_are_redacted(raw, expected):
+    assert scrub(raw, {})[0] == expected
+
+
+def test_a_truncated_private_key_is_redacted_up_to_the_block_end():
+    head = "-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA\nqwerty"
+    assert scrub(f"{head}\n\nafter", {})[0] == "[REDACTED:private-key]\n\nafter"
+    assert scrub(f"```\n{head}\n```\nnext", {})[0] == "```\n[REDACTED:private-key]\n```\nnext"
+    assert scrub(f"x {head}", {})[0] == "x [REDACTED:private-key]"
+
+
+def test_long_identifier_runs_scan_quickly():
+    started = time.monotonic()
+    scrub("a-" * 16000, {})
+    scan("a-" * 16000 + "=", {})
+    assert time.monotonic() - started < 2
 
 
 def test_scan_reports_each_kind_once_in_order():

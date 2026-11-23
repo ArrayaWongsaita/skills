@@ -42,3 +42,9 @@ def test_part_slugs_fixed_in_outline(skill_dir):
 def test_reporting_hook(skill_md):
     section = skill_md.split("## Reporting problems with this skill", 1)[1]
     assert "<course_dir>/_work/skill-problems.md" in section and "report-skill-issue" in section and "Skill problem:" in section
+    assert " → not reported (<date>)" in section
+
+
+def test_consistency_skill_rows_go_to_the_problems_file(skill_md):
+    stage5 = skill_md.split("## Stage 5", 1)[1].split("\n## ", 1)[0]
+    assert "`skill |` rows" in stage5 and "_work/skill-problems.md" in stage5

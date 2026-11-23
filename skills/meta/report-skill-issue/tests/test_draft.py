@@ -73,8 +73,8 @@ def test_entry_is_validated():
 
 def test_draft_is_scrubbed_and_hashed(entry, drafts):
     leaky = {**entry, "title": "token ghp_" + "c" * 36,
-             "evidence": [{"text": "key sk-proj-" + "b" * 40 + " at /Users/non/proj"}]}
-    out = make_draft(leaky, {"HOME": "/Users/non"}, today=TODAY)
+             "evidence": [{"text": "key sk-proj-" + "b" * 40 + " at /Users/alice/proj"}]}
+    out = make_draft(leaky, {"HOME": "/Users/alice"}, today=TODAY)
     path = Path(out["draft"])
     assert path.parent == drafts and out["sha256"] == hashlib.sha256(path.read_bytes()).hexdigest()
     assert out["redacted"] == ["github-token", "openai-key"]
