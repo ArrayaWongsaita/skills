@@ -31,10 +31,12 @@ def _ok(cmd: list[str], cwd: Path) -> str:
 def _write_expected(course: Path, web: Path) -> int:
     slides = []
     for slide in deck_reader.load(course, 1).deck.slides():
-        fields = {}
+        fields, raw = {}, {}
         for name, field in slide.fields.items():
-            fields[name.lower()] = [inline.visible_text(item) for item in field.items] if name == "Items" else inline.visible_text(field.text)
-        slides.append({"id": slide.id, "fields": fields})
+            items = inline.parse_items(field.text)[0] if name == "Items" else None
+            fields[name.lower()] = [inline.visible_text(item) for item in items] if items is not None else inline.visible_text(field.text)
+            raw[name.lower()] = field.text
+        slides.append({"id": slide.id, "fields": fields, "raw": raw})
     (web / "src" / "expected.json").write_text(json.dumps(slides, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return len(slides)
 

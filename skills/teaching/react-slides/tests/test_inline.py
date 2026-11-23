@@ -67,3 +67,10 @@ def test_unsupported_is_literal_and_reported():
 
 def test_markup_inside_code_is_not_reported():
     assert inline.unsupported("ใช้ `<div>` และ `~~`") == []
+
+
+def test_items_join_wrapped_lines_and_report_stray_text():
+    assert inline.parse_items("1. one\n   more of one\n2. two") == (["one more of one", "two"], [])
+    assert inline.parse_items("- a\nlazy line\n- b") == (["a lazy line", "b"], [])
+    assert inline.parse_items("intro line:\n1. one\n\nafter a gap\n2. two") == (["one", "two"], ["intro line:", "after a gap"])
+    assert inline.parse_items("") == ([], [])

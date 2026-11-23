@@ -168,6 +168,29 @@ def parse_field(text: str) -> list:
     return blocks
 
 
+def parse_items(text: str) -> tuple[list[str], list[str]]:
+    """An Items field as its list items, and the lines that belong to no item.
+
+    A line right after an item, with no blank line between, continues that item
+    (Markdown's lazy continuation) and joins it with a space. Any other line that is
+    not an item, such as an intro before the list, is stray: no layout can show it.
+    """
+    items, stray, previous_blank = [], [], True
+    for line in text.split("\n"):
+        if not line.strip():
+            previous_blank = True
+            continue
+        match = ITEM_RE.match(line.strip())
+        if match:
+            items.append(match.group(2).strip())
+        elif items and not previous_blank:
+            items[-1] = f"{items[-1]} {line.strip()}"
+        else:
+            stray.append(line.strip())
+        previous_blank = False
+    return items, stray
+
+
 def _text(nodes) -> str:
     parts = []
     for node in nodes:

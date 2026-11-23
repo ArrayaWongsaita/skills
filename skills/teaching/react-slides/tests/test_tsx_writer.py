@@ -103,3 +103,7 @@ def test_vocabulary_and_course_ts(course):
     out = tsx_writer.vocabulary_ts(vocabulary)
     assert "export const vocabulary: Vocabulary = " in out and '"icon": "bot"' in out and "added_in" not in out
     assert tsx_writer.course_ts("c", 'ชื่อ "x"') .endswith('export const course = { slug: "c", title: "ชื่อ \\"x\\"" };\n')
+
+
+def test_wrapped_item_keeps_its_second_line(course):
+    assert "<>agent คือ model ที่เรียก tool เป็นวงรอบ</>" in tsx_writer.part_tsx(deck_reader.load(course, 1), 1)

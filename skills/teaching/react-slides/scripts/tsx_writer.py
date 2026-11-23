@@ -17,7 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import contract  # noqa: E402
-from inline import Bold, Break, Code, Italic, Link, ListBlock, Para, Text, parse_field, parse_inline  # noqa: E402
+from inline import Bold, Break, Code, Italic, Link, ListBlock, Para, Text, parse_field, parse_inline, parse_items  # noqa: E402
 
 GENERATOR_VERSION = 1
 COMPONENTS = {layout: "".join(word.capitalize() for word in layout.split("-")) for layout in contract.LAYOUTS}
@@ -143,7 +143,7 @@ def _slide(slide, heading: str, emit: _Emitter) -> str:
         "sources={" + _js(list(slide.meta.get("sources", []))) + "}",
     ]
     for name, field in slide.fields.items():
-        value = emit.rich_items(field.items) if name == "Items" else emit.rich(field.text)
+        value = emit.rich_items(parse_items(field.text)[0]) if name == "Items" else emit.rich(field.text)
         props.append(f"{name.lower()}={{{value}}}")
     if slide.layout == "code":
         props += [_attr("snippet", slide.meta["snippet"]), "lines={" + _js(slide.meta["lines"]) + "}",

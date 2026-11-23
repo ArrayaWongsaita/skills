@@ -31,7 +31,16 @@ function domText(node: Node): string {
   return out.join('').replace(/\n+/g, '\n').trim();
 }
 
-type Slide = { id: string; fields: Record<string, string | string[]> };
+/** The deck's characters without markup, spacing or list markers: an independent check that nothing is dropped. */
+const MARKUP = /[\s*_`\[\]\\~]/g;
+const bareDeck = (raw: string) =>
+  raw
+    .replace(/^\s*(?:\d+\.|-)\s+/gm, '')
+    .replace(/\]\(https?:\/\/[^\s)]*\)/g, ']')
+    .replace(MARKUP, '');
+const barePage = (text: string) => text.replace(MARKUP, '');
+
+type Slide = { id: string; fields: Record<string, string | string[]>; raw: Record<string, string> };
 
 test.each((expected as unknown as Slide[]).map((slide) => [slide.id, slide] as const))('%s shows every field verbatim', (id, slide) => {
   const { container } = render(
@@ -48,5 +57,6 @@ test.each((expected as unknown as Slide[]).map((slide) => [slide.id, slide] as c
     expect(field, `${id} has a [data-field="${name}"]`).not.toBeNull();
     const got = Array.isArray(want) ? [...field!.querySelectorAll('[data-item]')].map(domText) : domText(field!);
     expect(got, `${id} ${name}`).toEqual(want);
+    expect(barePage(domText(field!)), `${id} ${name}: every character of the deck`).toBe(bareDeck(slide.raw[name]));
   }
 });

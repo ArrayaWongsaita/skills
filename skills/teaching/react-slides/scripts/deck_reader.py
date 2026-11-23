@@ -18,7 +18,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import contract  # noqa: E402
 import deck as deckmod  # noqa: E402
 import frontmatter  # noqa: E402
+import inline  # noqa: E402
 from mdtext import scan  # noqa: E402
+
+# Layouts that show slide-level content blocks; on the others a block would be dropped.
+BLOCK_CONTENT = ("code", "output", "error", "setup")
 
 
 class DeckError(Exception):
@@ -223,8 +227,17 @@ def _slide(slide: deckmod.Slide, d: deckmod.Deck, ids: set[str]) -> list[str]:
     errors += [f"missing field {name}" for name in layout.required if name not in slide.fields]
     allowed = set(layout.required) | set(layout.optional)
     errors += [f"field {name} does not belong on a {slide.layout} slide" for name in slide.fields if name not in allowed]
-    if "Items" in slide.fields and not slide.fields["Items"].items:
-        errors.append("Items has no list items (use '1. ' or '- ')")
+    if "Items" in slide.fields:
+        items, stray = inline.parse_items(slide.fields["Items"].text)
+        if not items:
+            errors.append("Items has no list items (use '1. ' or '- ')")
+        errors += [f"Items has text outside its list items, which no layout can show: {line!r} "
+                   "(make it an item, or move it to another field)" for line in stray]
+    if slide.blocks and layout.content not in BLOCK_CONTENT:
+        errors.append(f"a {slide.layout} slide has no place for a content block outside its fields "
+                      f"({len(slide.blocks)} found); on a compare slide a block goes right after **Left:** or **Right:**"
+                      if layout.content == "panels" else
+                      f"a {slide.layout} slide has no place for a content block ({len(slide.blocks)} found)")
     errors += _visual(slide, layout, d.diagrams)
     if layout.content in ("code", "output"):
         errors += _code(slide, d.listings)

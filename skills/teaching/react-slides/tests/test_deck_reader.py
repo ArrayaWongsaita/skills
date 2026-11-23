@@ -111,3 +111,22 @@ def test_course_title_and_parts(course):
     assert deck_reader.deck_parts(course) == [1, 2]
     (course / "00-overview.md").unlink()
     assert deck_reader.read_course_title(course) == "langchain-agents"
+
+
+def test_text_outside_items_is_refused(course):
+    deck = course / "slides/part-01-first-agent.md"
+    replace(deck, "**Items:**\n- agent คือ model", "**Items:**\nสิ่งที่ได้เรียน:\n- agent คือ model")
+    with pytest.raises(deck_reader.DeckError) as caught:
+        deck_reader.load(course, 1)
+    assert any("1-018" in e and "outside its list items" in e and "สิ่งที่ได้เรียน:" in e for e in caught.value.errors)
+
+
+def test_block_with_no_place_on_its_layout_is_refused(course):
+    deck = course / "slides/part-01-first-agent.md"
+    replace(deck, "**Left:**", "```text\nstray\n```\n\n**Left:**")
+    replace(deck, "**Title:** สรุป\n", "**Title:** สรุป\n\n```bash\necho hi\n```\n")
+    with pytest.raises(deck_reader.DeckError) as caught:
+        deck_reader.load(course, 1)
+    errors = caught.value.errors
+    assert any("1-008" in e and "content block" in e for e in errors)
+    assert any("1-018" in e and "content block" in e for e in errors)

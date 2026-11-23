@@ -112,7 +112,7 @@ pip install -U langchain langgraph
 **Title:** Model ขอให้เรียก tool ได้
 
 **Body:** เมื่อคำถามต้องใช้ข้อมูลจริง model จะส่ง **tool call** ออกไป
-ผลลัพธ์จาก tool กลับมาให้ model อ่านต่อ *ทุกครั้ง* (ดู [เอกสาร](https://docs.langchain.com/oss/python/langchain/agents))
+ผลลัพธ์จาก tool กลับมาให้ model อ่านต่อ *ทุกครั้ง* (ดู [เอกสาร {หลัก}](https://docs.langchain.com/oss/python/langchain/agents) และ **<คู่มือ>**)
 
 ```visual
 {"kind": "diagram", "diagram": "d-agent-loop", "show": ["n-user", "n-model", "e-ask", "e-answer", "n-tool", "e-call", "e-result", "g-agent"], "new": ["n-tool", "e-call", "e-result", "g-agent"], "highlight": ["n-model"], "dim": []}
@@ -308,7 +308,8 @@ openai.AuthenticationError: Error code: 401 - {'error': {'message': 'Incorrect A
 **Title:** สรุป
 
 **Items:**
-- agent คือ model ที่เรียก tool เป็นวงรอบ
+- agent คือ model ที่เรียก tool
+  เป็นวงรอบ
 - `@tool` เปลี่ยนฟังก์ชันให้เป็น tool ✅
 - `create_agent` ทำวงรอบให้เรา
 
