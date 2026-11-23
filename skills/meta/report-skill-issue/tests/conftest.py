@@ -53,3 +53,10 @@ def installed(tmp_path, checkout) -> Path:
     link.parent.mkdir()
     link.symlink_to(checkout / "skills" / "teaching" / "demo", target_is_directory=True)
     return link
+
+
+ENTRY = {"kind": "bug", "title": "validate_deck counts the newline in Items", "what_happened": "A 2-item list failed the limit.",
+         "expected": "Each item is measured on its own.", "steps": ["Assemble the deck", "Run validate_deck.py"],
+         "evidence": [{"label": "validator output", "text": "error: 1-006: too long"}],
+         "suggested_fix": "Measure items without the newline.", "harness": "Claude Code", "model": "claude-opus-5-5"}
+TODAY = "2026-11-23"
