@@ -32,6 +32,18 @@ test('the top line names the Part and the section', () => {
   expect(screen.getByText(/Part 1 · 1\.1 หัวข้อ/)).toBeInTheDocument();
 });
 
+test('a slide in a unit names the unit in the top line', () => {
+  route.current = { name: 'part', part: 1, slide: '1-002' };
+  const { container } = render(<MiniPart />);
+  expect(container.querySelector('.rs-topline')).toHaveTextContent('Part 1 · 1.1 หัวข้อ · เรื่อง 1/2 เรื่องแรก');
+});
+
+test('a slide outside a unit keeps the plain top line', () => {
+  route.current = { name: 'part', part: 1, slide: '1-003' };
+  const { container } = render(<MiniPart />);
+  expect(container.querySelector('.rs-topline')?.textContent).toBe('Part 1 · ปิดบท');
+});
+
 test('opening and closing sections use the interface language', () => {
   route.current = { name: 'part', part: 1, slide: '1-001' };
   render(<MiniPart />);

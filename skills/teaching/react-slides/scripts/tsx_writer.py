@@ -4,8 +4,8 @@
 component library in the template (`src/components`). Text becomes JSX:
 inline markup maps to the text components, and any character JSX would
 read becomes a string expression, so the page shows exactly the deck's
-text. Code, output, diagrams and listings go to `part_data_ts` as JSON.
-Stdlib only.
+text. Code, output, diagrams, listings and the unit map go to
+`part_data_ts` as JSON; each slide names its unit by id. Stdlib only.
 """
 
 import hashlib
@@ -17,10 +17,13 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import contract  # noqa: E402
+import deck as deckmod  # noqa: E402
 from inline import Bold, Break, Code, Italic, Link, ListBlock, Para, Text, parse_field, parse_inline, parse_items  # noqa: E402
 
-GENERATOR_VERSION = 1
-COMPONENTS = {layout: "".join(word.capitalize() for word in layout.split("-")) for layout in contract.LAYOUTS}
+GENERATOR_VERSION = 2
+# `map` would shadow JavaScript's Map, so its component is MapSlide.
+COMPONENTS = {layout: "".join(word.capitalize() for word in layout.split("-")) for layout in contract.LAYOUTS} | {"map": "MapSlide"}
+LABEL_KEYS = ("unit", "chapter", "lines", "elements")
 TEXT_COMPONENTS = ("C", "A", "B", "I", "P", "Ol", "Ul", "Li")
 PLAIN_JSX_RE = re.compile(r"^[^{}<>&\s](?:[^{}<>&\n]*[^{}<>&\s])?$")
 INLINE_JSX_RE = re.compile(r"^[^{}<>&\n]*$")
@@ -134,7 +137,7 @@ def _sections(d) -> dict[str, str]:
     return {slide.id: section.heading for section in d.sections for slide in section.slides}
 
 
-def _slide(slide, heading: str, emit: _Emitter) -> str:
+def _slide(slide, heading: str, unit: str | None, emit: _Emitter) -> str:
     props = [
         _attr("id", slide.id),
         _attr("section", heading),
@@ -142,6 +145,8 @@ def _slide(slide, heading: str, emit: _Emitter) -> str:
         "from={" + _js(list(slide.meta.get("from", []))) + "}",
         "sources={" + _js(list(slide.meta.get("sources", []))) + "}",
     ]
+    if unit is not None:
+        props.append(_attr("unit", unit))
     for name, field in slide.fields.items():
         value = emit.rich_items(parse_items(field.text)[0]) if name == "Items" else emit.rich(field.text)
         props.append(f"{name.lower()}={{{value}}}")
@@ -152,6 +157,11 @@ def _slide(slide, heading: str, emit: _Emitter) -> str:
         props.append(_attr("snippet", slide.meta["snippet"]))
     elif slide.layout == "answer":
         props.append(_attr("revisit", slide.meta["revisit"]))
+    elif slide.layout == "assemble":
+        labels = [{key: label[key] for key in LABEL_KEYS if key in label} for label in slide.meta["labels"]]
+        props += [_attr("assembles", slide.meta["assembles"]), "labels={" + _js(labels) + "}"]
+        if "snippet" in slide.meta:
+            props += [_attr("snippet", slide.meta["snippet"]), "lines={" + _js(slide.meta["lines"]) + "}"]
     if slide.layout == "compare":
         for name in ("Left", "Right"):
             if slide.fields[name].blocks:
@@ -170,17 +180,17 @@ def _header(loaded, source: str) -> str:
 
 def part_tsx(loaded, part: int) -> str:
     d, slug, emit = loaded.deck, part_slug(part), _Emitter()
-    headings = _sections(d)
-    slides = "\n".join(_slide(slide, headings[slide.id], emit) for slide in d.slides())
+    headings, units = _sections(d), deckmod.slide_units(d.sections)
+    slides = "\n".join(_slide(slide, headings[slide.id], units[slide.id], emit) for slide in d.slides())
     layouts = list(dict.fromkeys(COMPONENTS[slide.layout] for slide in d.slides()))
     names = ["Deck"] + layouts + [name for name in TEXT_COMPONENTS if name in emit.used]
     return (
         _header(loaded, f"{contract.SLIDES_DIR}/{loaded.path.name}")
         + f"import {{ {', '.join(names)} }} from '../components';\n"
-        + f"import {{ meta, diagrams, listings, outputs }} from './{slug}.data';\n\n"
+        + f"import {{ meta, diagrams, listings, outputs, units }} from './{slug}.data';\n\n"
         + f"export default function Part{part:02d}() {{\n"
         + "  return (\n"
-        + "    <Deck meta={meta} diagrams={diagrams} listings={listings} outputs={outputs}>\n"
+        + "    <Deck meta={meta} diagrams={diagrams} listings={listings} outputs={outputs} units={units}>\n"
         + slides + "\n"
         + "    </Deck>\n"
         + "  );\n"
@@ -206,6 +216,15 @@ def _diagram(value: dict) -> dict:
     }
 
 
+def _units(units: dict | None) -> dict:
+    """The unit map as the components read it; a deck@1 deck has none."""
+    chapters = (units or {}).get("chapters", [])
+    return {"chapters": [{"id": c.get("id"), "section": c.get("section"), "title": c.get("title", ""),
+                          "units": [{"id": u.get("id"), "title": u.get("title", ""), "goal": u.get("goal", ""), "needs": list(u.get("needs", []))}
+                                    for u in c.get("units", [])]}
+                         for c in chapters]}
+
+
 def part_data_ts(loaded, part: int) -> str:
     d = loaded.deck
     meta = {"course": d.meta.get("course", ""), "part": part, "slug": part_slug(part), "title": d.meta.get("title", ""),
@@ -220,11 +239,12 @@ def part_data_ts(loaded, part: int) -> str:
 
     return (
         _header(loaded, f"{contract.SLIDES_DIR}/{loaded.path.name}")
-        + "import type { Block, DiagramDef, Listing, PartMeta } from '../components/types';\n\n"
+        + "import type { Block, DiagramDef, Listing, PartMeta, Units } from '../components/types';\n\n"
         + const("meta", "PartMeta", meta) + "\n"
         + const("diagrams", "Record<string, DiagramDef>", diagrams) + "\n"
         + const("listings", "Record<string, Listing>", listings) + "\n"
-        + const("outputs", "Record<string, Block>", outputs)
+        + const("outputs", "Record<string, Block>", outputs) + "\n"
+        + const("units", "Units", _units(d.units))
     )
 
 

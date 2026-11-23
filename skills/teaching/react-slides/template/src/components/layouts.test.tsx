@@ -3,8 +3,8 @@ import type { ReactElement } from 'react';
 import { expect, test } from 'vitest';
 import { DeckFixture } from '../__fixtures__/DeckFixture';
 import {
-  A, Answer, C, Code, Compare, Cover, Error as ErrorSlide, Explain, Focus, Objectives, Output, Practice, Question, Setup, Sources, Steps,
-  Summary, Terms,
+  A, Answer, Assemble, C, Code, Compare, Cover, Error as ErrorSlide, Explain, Focus, MapSlide, Objectives, Output, Practice, Question, Setup,
+  Sources, Steps, Summary, Terms, Topic,
 } from './index';
 import type { Visual } from './types';
 
@@ -29,10 +29,18 @@ const LAYOUT_CASES: [string, ReactElement, string[]][] = [
   ['Practice', <Practice {...base('1-014')} title={<>ฝึก</>} task={<>งานที่ทำ</>} items={[<>คำใบ้</>]} solution={<>เฉลยงาน</>} />, ['งานที่ทำ', 'เฉลยงาน']],
   ['Summary', <Summary {...base('1-015')} title={<>สรุป</>} items={[<>ข้อสรุป</>]} />, ['ข้อสรุป']],
   ['Sources', <Sources {...base('1-016')} title={<>อ่านต่อ</>} items={[<A href="https://a.b">ลิงก์อ่านต่อ</A>]} />, ['ลิงก์อ่านต่อ']],
+  ['MapSlide', <MapSlide {...base('1-017')} title={<>เส้นทางของบท</>} body={<>เรียนทีละเรื่อง</>} />, ['เส้นทางของบท', 'เรียนทีละเรื่อง', 'บทแรก', 'เรื่องสาม', 'บทสอง', 'เรื่องสี่']],
+  ['Topic', <Topic {...base('1-018')} unit="u-b" title={<>หัวเรื่องที่สอง</>} body={<>ทำสิ่งที่สองได้</>} visual={visual} />, ['หัวเรื่องที่สอง', 'ทำสิ่งที่สองได้']],
+  ['Assemble', (
+    <Assemble
+      {...base('1-019')} title={<>ประกอบร่าง</>} body={<>รวมสองเรื่อง</>} notice={<>ยังไม่ได้ทดสอบ</>} assembles="1.1"
+      labels={[{ unit: 'u-a', lines: [[5, 8]] }, { unit: 'u-b', lines: [[10, 12]] }]} snippet="s-long" lines={[[1, 12]]}
+    />
+  ), ['ประกอบร่าง', 'รวมสองเรื่อง', 'ยังไม่ได้ทดสอบ']],
 ];
 
 test('there is one case per layout', () => {
-  expect(new Set(LAYOUT_CASES.map(([name]) => name)).size).toBe(16);
+  expect(new Set(LAYOUT_CASES.map(([name]) => name)).size).toBe(19);
 });
 
 test.each(LAYOUT_CASES)('%s renders its fields', (_name, element, texts) => {
@@ -85,4 +93,58 @@ test('the check page measures a practice slide with its solution open', () => {
     </DeckFixture>,
   );
   expect(container.querySelector('details')).toHaveAttribute('open');
+});
+
+const caseOf = (name: string) => LAYOUT_CASES.find(([n]) => n === name)![1];
+
+test('topic shows its position and marks units done, current and to come', () => {
+  const { container } = render(<DeckFixture>{caseOf('Topic')}</DeckFixture>);
+  expect(screen.getByText('เรื่อง 2/3')).toBeInTheDocument();
+  expect(container.querySelector('.rs-topline')).toHaveTextContent('เรื่อง 2/3 เรื่องสอง');
+  const states = [...container.querySelectorAll('[data-unit-state]')].map((li) => li.getAttribute('data-unit-state'));
+  expect(states).toEqual(['done', 'current', 'todo']);
+  expect(container.querySelector('[data-unit-state="current"]')).toHaveTextContent('เรื่องสอง');
+});
+
+test('generated chrome carries no data-field, so the verbatim check sees only deck text', () => {
+  for (const name of ['MapSlide', 'Topic', 'Assemble']) {
+    const { container, unmount } = render(<DeckFixture>{caseOf(name)}</DeckFixture>);
+    const fields = [...container.querySelectorAll('[data-field]')].map((el) => el.getAttribute('data-field'));
+    expect(fields.every((field) => ['title', 'body', 'notice', 'items'].includes(field!)), name).toBe(true);
+    expect(container.querySelector('.rs-unit-map [data-field], .rs-topic-units [data-field], .rs-assembly-legend [data-field]')).toBeNull();
+    unmount();
+  }
+});
+
+test('assemble labels its code lines and lists the units', () => {
+  const { container } = render(<DeckFixture>{caseOf('Assemble')}</DeckFixture>);
+  const group = (n: number) => container.querySelector(`[data-line="${n}"]`)?.getAttribute('data-group') ?? null;
+  expect([5, 6, 7, 8].map(group)).toEqual(['1', '1', '1', '1']);
+  expect([10, 11, 12].map(group)).toEqual(['2', '2', '2']);
+  expect([1, 4, 9].map(group)).toEqual([null, null, null]);
+  const legend = [...container.querySelectorAll('.rs-assembly-legend li')];
+  expect(legend.map((li) => li.querySelector('.rs-assembly-name')?.textContent)).toEqual(['เรื่องหนึ่ง', 'เรื่องสอง']);
+  expect(legend.map((li) => li.getAttribute('data-label'))).toEqual(['1', '2']);
+});
+
+test('a part assembly lists chapter titles and labels the diagram', () => {
+  const full: Visual = { kind: 'diagram', diagram: 'd-loop', show: ['n-user', 'n-model', 'n-tool', 'e-ask', 'e-call'], new: [], highlight: [], dim: [] };
+  const { container } = render(
+    <DeckFixture>
+      <Assemble
+        {...base('1-020')} title={<>ภาพรวม</>} body={<>ทั้งบท</>} assembles="part" visual={full}
+        labels={[{ chapter: '1.1', elements: ['n-user', 'e-ask'] }, { chapter: '1.2', elements: ['n-tool'] }]}
+      />
+    </DeckFixture>,
+  );
+  expect([...container.querySelectorAll('.rs-assembly-name')].map((el) => el.textContent)).toEqual(['บทแรก', 'บทสอง']);
+  expect(container.querySelector('[data-el="n-user"]')).toHaveAttribute('data-label', '1');
+  expect(container.querySelector('[data-el="n-tool"]')).toHaveAttribute('data-label', '2');
+  expect(container.querySelector('[data-el="n-model"]')).not.toHaveAttribute('data-label');
+  expect(container.querySelector('.rs-codeblock')).toBeNull();
+});
+
+test('a map with no units still renders its fields', () => {
+  render(<DeckFixture units={{ chapters: [] }}>{caseOf('MapSlide')}</DeckFixture>);
+  expect(screen.getByText('เส้นทางของบท')).toBeInTheDocument();
 });

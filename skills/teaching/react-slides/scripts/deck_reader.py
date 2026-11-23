@@ -4,7 +4,9 @@
 hash, and refuses a deck that cannot be rendered: every problem is
 reported at once, each as `line N: <slide id>: <message>`. Content rules
 (lengths, fidelity to the Part) are slide-design's job; this module checks
-only what the React build relies on. Stdlib only.
+only what the React build relies on. A slide-design/deck@2 deck also
+carries its unit map; a deck@1 deck renders as before, with no units. Stdlib
+only.
 """
 
 import hashlib
@@ -22,7 +24,8 @@ import inline  # noqa: E402
 from mdtext import scan  # noqa: E402
 
 # Layouts that show slide-level content blocks; on the others a block would be dropped.
-BLOCK_CONTENT = ("code", "output", "error", "setup")
+BLOCK_CONTENT = ("code", "output", "error", "setup", "assembly")
+DECK_AT_1 = contract.DECK_TEMPLATE_IDS[0]  # the deck template with no unit map
 
 
 class DeckError(Exception):
@@ -184,6 +187,15 @@ def _visual(slide: deckmod.Slide, layout: contract.Layout, diagrams: dict) -> li
     return errors + _fallback(visual.get("fallback"), diagrams)
 
 
+def _shown_lines(slide: deckmod.Slide, listings: dict) -> set[int] | None:
+    """The snippet lines a code or code assembly slide shows, or None when its ranges are not valid."""
+    listing = listings.get(slide.meta.get("snippet"))
+    if listing is None or listing.code is None:
+        return None
+    lines = _ranges(slide.meta.get("lines"), len(listing.code.text.split("\n")))
+    return None if lines is None else {n for first, last in lines for n in range(first, last + 1)}
+
+
 def _code(slide: deckmod.Slide, listings: dict) -> list[str]:
     errors, snippet = [], slide.meta.get("snippet")
     listing = listings.get(snippet)
@@ -191,7 +203,7 @@ def _code(slide: deckmod.Slide, listings: dict) -> list[str]:
         errors.append(f"snippet {snippet!r} is not in {contract.LISTINGS_HEADING}")
     if len(slide.blocks) != 1:
         errors.append(f"a {slide.layout} slide needs exactly one content block, found {len(slide.blocks)}")
-    if slide.layout != "code" or listing is None or listing.code is None:
+    if slide.layout not in ("code", "assemble") or listing is None or listing.code is None:
         return errors
     code, size = listing.code.text, len(listing.code.text.split("\n"))
     lines = _ranges(slide.meta.get("lines"), size)
@@ -219,6 +231,75 @@ def _meta(slide: deckmod.Slide) -> list[str]:
     return errors
 
 
+def _unit_ids(units: dict) -> tuple[set, set]:
+    chapters = [c for c in units.get("chapters", []) if isinstance(c, dict)]
+    unit_ids = {u.get("id") for c in chapters for u in c.get("units", []) if isinstance(u, dict)}
+    return unit_ids, {c.get("id") for c in chapters}
+
+
+def _assembly(slide: deckmod.Slide, d: deckmod.Deck, unit_ids: set, chapter_ids: set) -> list[str]:
+    errors, meta = [], slide.meta
+    assembles = meta.get("assembles")
+    if assembles != contract.PART_ASSEMBLY and assembles not in chapter_ids:
+        errors.append(f"assembles {assembles!r} is not a chapter in {contract.UNITS_HEADING}")
+    labels = meta.get("labels")
+    if not (isinstance(labels, list) and labels and all(isinstance(label, dict) for label in labels)):
+        return errors + ["labels must be a non-empty list of objects"]
+    for label in labels:
+        if "unit" in label:
+            if label["unit"] not in unit_ids:
+                errors.append(f"label names unknown unit {label['unit']!r}")
+        elif "chapter" in label:
+            if label["chapter"] not in chapter_ids:
+                errors.append(f"label names unknown chapter {label['chapter']!r}")
+        else:
+            errors.append("a label names a unit or a chapter")
+    visual = slide.visual
+    if "snippet" in meta:
+        if visual is not None:
+            return errors + ["an assemble slide shows code or a diagram, not both"]
+        errors += _code(slide, d.listings)
+        shown = _shown_lines(slide, d.listings)
+        if shown is not None:
+            for label in labels:
+                ranges = _ranges(label.get("lines"), max(shown))
+                if ranges is None or any(n not in shown for first, last in ranges for n in range(first, last + 1)):
+                    errors.append(f"label lines {label.get('lines')!r} are not inside the shown lines")
+        return errors
+    if slide.blocks:
+        errors.append(f"an assemble slide without a snippet has no place for a content block ({len(slide.blocks)} found)")
+    if visual is None or visual.get("kind") != "diagram":
+        return errors + ["an assemble slide without a snippet needs a diagram visual"]
+    diagram = d.diagrams.get(visual.get("diagram"))
+    if diagram is not None:
+        known = _element_ids(diagram)
+        for label in labels:
+            elements = label.get("elements")
+            if not (isinstance(elements, list) and elements):
+                errors.append(f"label {label.get('unit') or label.get('chapter')!r} has no elements")
+                continue
+            unknown = [element for element in elements if element not in known]
+            if unknown:
+                errors.append(f"label elements of {diagram.get('id')} are unknown: {', '.join(map(str, unknown))}")
+    return errors
+
+
+def _units(slide: deckmod.Slide, d: deckmod.Deck, template: str) -> list[str]:
+    """What a slide's units rely on: a deck@2 deck and, there, units the unit map names."""
+    if slide.layout not in contract.UNIT_LAYOUTS:
+        return []
+    if template == DECK_AT_1:
+        return [f"a {slide.layout} slide needs {contract.DECK_TEMPLATE_IDS[1]}"]
+    if not isinstance(d.units, dict):
+        return []  # reported once for the deck
+    unit_ids, chapter_ids = _unit_ids(d.units)
+    if slide.layout == "topic" and slide.meta.get("unit") not in unit_ids:
+        return [f"topic unit {slide.meta.get('unit')!r} is not in {contract.UNITS_HEADING}"]
+    if slide.layout == "assemble":
+        return _assembly(slide, d, unit_ids, chapter_ids)
+    return []
+
+
 def _slide(slide: deckmod.Slide, d: deckmod.Deck, ids: set[str]) -> list[str]:
     layout = contract.LAYOUTS.get(slide.layout)
     if layout is None:
@@ -241,6 +322,7 @@ def _slide(slide: deckmod.Slide, d: deckmod.Deck, ids: set[str]) -> list[str]:
     errors += _visual(slide, layout, d.diagrams)
     if layout.content in ("code", "output"):
         errors += _code(slide, d.listings)
+    errors += _units(slide, d, d.meta.get("template"))
     if slide.layout == "answer" and slide.meta.get("revisit") not in ids:
         errors.append(f"revisit {slide.meta.get('revisit')!r} is not a slide in this deck")
     return errors
@@ -273,6 +355,8 @@ def render_errors(d: deckmod.Deck, part: int) -> list[str]:
         return errors + [f"line 1: template is {template!r}, expected {accepted}"]
     if d.meta.get("part") != part:
         errors.append(f"line 1: part is {d.meta.get('part')!r}, expected {part}")
+    if template != DECK_AT_1 and d.units is None and contract.UNITS_HEADING not in d.headings:
+        errors.append(f"{contract.UNITS_HEADING}: a deck@2 deck needs its unit map (a ## {contract.UNITS_HEADING} section)")
     slides = d.slides()
     ids = {slide.id for slide in slides}
     for slide in slides:

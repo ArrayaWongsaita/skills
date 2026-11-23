@@ -1,13 +1,28 @@
 // Renders slides through Deck in check mode (every slide, no router), with a small data set.
 import type { ReactNode } from 'react';
 import { Deck, DeckContext, DeckModeContext, FrameContext } from '../components/Deck';
-import type { Block, DiagramDef, Listing, PartMeta } from '../components/types';
+import type { Block, DiagramDef, Listing, PartMeta, Units } from '../components/types';
 
 export const fixtureMeta: PartMeta = { course: 'c', part: 1, slug: 'part-01', title: 'Fixture', language: 'th', slideCount: 20 };
 
 export const fixtureListings: Record<string, Listing> = {
   's-ok': { lang: 'python', status: 'verified', reason: '', code: 'a = 1\nb = 2\nc = 3\nd = 4\ne = 5\nf = 6' },
   's-new': { lang: 'python', status: 'unverified', reason: 'needs a key', code: 'print("hi")' },
+  's-long': { lang: 'python', status: 'verified', reason: '', code: Array.from({ length: 12 }, (_, i) => `l${i + 1} = ${i + 1}`).join('\n') },
+};
+
+export const fixtureUnits: Units = {
+  chapters: [
+    {
+      id: '1.1', section: '1.1', title: 'บทแรก',
+      units: [
+        { id: 'u-a', title: 'เรื่องหนึ่ง', goal: 'ทำข้อหนึ่งได้', needs: [] },
+        { id: 'u-b', title: 'เรื่องสอง', goal: 'ทำข้อสองได้', needs: ['u-a'] },
+        { id: 'u-c', title: 'เรื่องสาม', goal: 'ทำข้อสามได้', needs: ['u-b'] },
+      ],
+    },
+    { id: '1.2', section: '1.2', title: 'บทสอง', units: [{ id: 'u-d', title: 'เรื่องสี่', goal: 'ทำข้อสี่ได้', needs: [] }] },
+  ],
 };
 
 export const fixtureOutputs: Record<string, Block> = {
@@ -36,11 +51,11 @@ export const fixtureDiagrams: Record<string, DiagramDef> = {
   },
 };
 
-export function DeckFixture({ children, frame = 'desktop' }: { children: ReactNode; frame?: 'desktop' | 'phone' }) {
+export function DeckFixture({ children, frame = 'desktop', units = fixtureUnits }: { children: ReactNode; frame?: 'desktop' | 'phone'; units?: Units }) {
   return (
     <DeckModeContext.Provider value="check">
       <FrameContext.Provider value={frame}>
-        <Deck meta={fixtureMeta} diagrams={fixtureDiagrams} listings={fixtureListings} outputs={fixtureOutputs}>
+        <Deck meta={fixtureMeta} diagrams={fixtureDiagrams} listings={fixtureListings} outputs={fixtureOutputs} units={units}>
           {children}
         </Deck>
       </FrameContext.Provider>
@@ -52,7 +67,7 @@ export function DeckFixture({ children, frame = 'desktop' }: { children: ReactNo
 export function DeckValue({ children, direction = 'none', reducedMotion = false }: { children: ReactNode; direction?: 'forward' | 'back' | 'none'; reducedMotion?: boolean }) {
   return (
     <DeckContext.Provider
-      value={{ meta: fixtureMeta, diagrams: fixtureDiagrams, listings: fixtureListings, outputs: fixtureOutputs, current: '1-001', direction, reducedMotion, frame: 'desktop', ids: ['1-001'] }}
+      value={{ meta: fixtureMeta, diagrams: fixtureDiagrams, listings: fixtureListings, outputs: fixtureOutputs, units: fixtureUnits, current: '1-001', direction, reducedMotion, frame: 'desktop', ids: ['1-001'] }}
     >
       {children}
     </DeckContext.Provider>

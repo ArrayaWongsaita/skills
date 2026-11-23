@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 import deck_reader
@@ -14,7 +16,7 @@ def test_load_fixture_part_one(course):
     assert loaded.vocabulary.style.startswith("Hand-drawn")
     assert loaded.vocabulary.roles["primary"] == "#1A73E8"
     assert {c["id"] for c in loaded.vocabulary.concepts} >= {"user", "model", "tool"}
-    assert len(loaded.deck.slides()) == loaded.deck.meta["slide_count"] == 19
+    assert len(loaded.deck.slides()) == loaded.deck.meta["slide_count"] == 25
     assert len(loaded.sha256) == 64
 
 
@@ -48,8 +50,8 @@ def test_missing_deck_is_named(course):
 
 
 @pytest.mark.parametrize("old,new,message", [
-    ("### 1-006 · explain", "### 1-006 · fancy", "unknown layout fancy"),
-    ('"revisit": "1-011"', '"revisit": "9-911"', "revisit"),
+    ("### 1-008 · explain", "### 1-008 · fancy", "unknown layout fancy"),
+    ('"revisit": "1-014"', '"revisit": "9-911"', "revisit"),
     ('"diagram": "d-agent-loop", "show": ["n-user", "n-model", "e-ask", "e-answer"], "new"', '"diagram": "d-missing", "show": ["n-user"], "new"', "d-missing"),
     ('"snippet": "1.2-a", "lines"', '"snippet": "nope", "lines"', "nope"),
     ('"lines": [[1, 2], [5, 6]]', '"lines": [[5, 6], [1, 2]]', "lines"),
@@ -66,10 +68,10 @@ def test_render_errors_name_the_problem(course, old, new, message):
 
 
 def test_error_lines_name_the_line_and_slide(course):
-    replace(_deck(course), '"revisit": "1-011"', '"revisit": "9-911"')
+    replace(_deck(course), '"revisit": "1-014"', '"revisit": "9-911"')
     with pytest.raises(deck_reader.DeckError) as info:
         deck_reader.load(course, 1)
-    assert any(error.startswith("line ") and ": 1-016: " in error for error in info.value.errors)
+    assert any(error.startswith("line ") and ": 1-021: " in error for error in info.value.errors)
 
 
 def test_excerpt_differing_from_snippet_is_refused(course):
@@ -100,8 +102,8 @@ def test_missing_required_visual_is_refused(course):
 
 
 def test_every_error_is_reported(course):
-    replace(_deck(course), "### 1-006 · explain", "### 1-006 · fancy")
-    replace(_deck(course), '"revisit": "1-011"', '"revisit": "9-911"')
+    replace(_deck(course), "### 1-008 · explain", "### 1-008 · fancy")
+    replace(_deck(course), '"revisit": "1-014"', '"revisit": "9-911"')
     with pytest.raises(deck_reader.DeckError) as info:
         deck_reader.load(course, 1)
     assert len(info.value.errors) >= 2
@@ -124,7 +126,7 @@ def test_text_outside_items_is_refused(course):
     replace(deck, "**Items:**\n- agent คือ model", "**Items:**\nสิ่งที่ได้เรียน:\n- agent คือ model")
     with pytest.raises(deck_reader.DeckError) as caught:
         deck_reader.load(course, 1)
-    assert any("1-018" in e and "outside its list items" in e and "สิ่งที่ได้เรียน:" in e for e in caught.value.errors)
+    assert any("1-024" in e and "outside its list items" in e and "สิ่งที่ได้เรียน:" in e for e in caught.value.errors)
 
 
 def test_block_with_no_place_on_its_layout_is_refused(course):
@@ -134,5 +136,58 @@ def test_block_with_no_place_on_its_layout_is_refused(course):
     with pytest.raises(deck_reader.DeckError) as caught:
         deck_reader.load(course, 1)
     errors = caught.value.errors
-    assert any("1-008" in e and "content block" in e for e in errors)
-    assert any("1-018" in e and "content block" in e for e in errors)
+    assert any("1-010" in e and "content block" in e for e in errors)
+    assert any("1-024" in e and "content block" in e for e in errors)
+
+
+def test_deck_at_1_loads_without_units(course):  # Review Focus 1
+    assert deck_reader.load(course, 2).deck.units is None
+
+
+def test_deck_at_1_refuses_new_layouts(course):  # Review Focus 1
+    text = (course / PART2).read_text(encoding="utf-8")
+    head = text.index("### 2-002 · explain")
+    rest = text[head:].replace("### 2-002 · explain", "### 2-002 · topic", 1).replace('"layout": "explain"', '"layout": "topic", "unit": "u-x"', 1)
+    (course / PART2).write_text(text[:head] + rest, encoding="utf-8")
+    with pytest.raises(deck_reader.DeckError, match="a topic slide needs slide-design/deck@2") as info:
+        deck_reader.load(course, 2)
+    assert "Units" not in str(info.value)
+
+
+def test_deck_at_2_needs_units(course):
+    replace(course / PART2, '"slide-design/deck@1"', '"slide-design/deck@2"')
+    with pytest.raises(deck_reader.DeckError, match="Units: a deck@2 deck needs its unit map"):
+        deck_reader.load(course, 2)
+
+
+@pytest.mark.parametrize("old,new,message", [
+    ('"unit": "u-what-agent"}', '"unit": "u-nope"}', "topic unit 'u-nope' is not in Units"),
+    ('"assembles": "part"', '"assembles": "9.9"', "assembles '9.9' is not a chapter in Units"),
+    ('"lines": [[10, 11]]}', '"lines": [[90, 91]]}', "label lines [[90, 91]] are not inside the shown lines"),
+    ('{"unit": "u-run-agent", "lines"', '{"unit": "u-gone", "lines"', "label names unknown unit 'u-gone'"),
+    ('{"chapter": "1.2", "elements"', '{"chapter": "7.7", "elements"', "label names unknown chapter '7.7'"),
+    ('"elements": ["n-tool", "e-call", "e-result"]', '"elements": ["n-tool", "n-ghost"]', "label elements of d-agent-loop are unknown: n-ghost"),
+    ('"labels": [{"unit": "u-declare-tool", "lines": [[4, 8]]}, {"unit": "u-run-agent", "lines": [[10, 11]]}]', '"labels": []', "labels must be a non-empty list of objects"),
+    ('"lines": [[1, 11]]}', '"lines": [[1, 10]]}', "the code block is not the excerpt of 1.2-a"),
+])
+def test_unit_render_errors(course, old, new, message):
+    replace(_deck(course), old, new)
+    with pytest.raises(deck_reader.DeckError, match=re.escape(message)):
+        deck_reader.load(course, 1)
+
+
+def test_assembly_shows_code_or_a_diagram_not_both(course):
+    visual = '```visual\n{"kind": "diagram", "diagram": "d-init", "show": ["n-start"], "new": [], "highlight": [], "dim": []}\n```'
+    replace(_deck(course), "### 1-018 · output", visual + "\n\n### 1-018 · output")
+    with pytest.raises(deck_reader.DeckError, match="an assemble slide shows code or a diagram, not both"):
+        deck_reader.load(course, 1)
+
+
+def test_assembly_without_code_needs_a_diagram(course):
+    text = _deck(course).read_text(encoding="utf-8")
+    head = text.index("### 1-022 · assemble")
+    start = text.index("```visual", head)
+    end = text.index("```\n", start + 10) + 4
+    _deck(course).write_text(text[:start] + text[end:], encoding="utf-8")
+    with pytest.raises(deck_reader.DeckError, match="an assemble slide without a snippet needs a diagram visual"):
+        deck_reader.load(course, 1)

@@ -700,3 +700,117 @@ a {
   min-height: 844px;
   outline: 1px solid var(--rs-line);
 }
+
+/* deck@2: the Part map, a unit's divider and an assembly. Generated chrome; the deck's fields keep their own styles. */
+.rs-kicker {
+  color: var(--rs-accent);
+  font-size: 0.85em;
+  font-weight: 600;
+}
+
+.rs-unit-map {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14em, 1fr));
+  gap: 1em;
+  margin: 1em 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rs-map-chapter {
+  padding: 0.7em 1em;
+  border: 1.5px dashed var(--rs-line);
+  border-radius: 14px;
+}
+
+.rs-map-chapter-title {
+  font-weight: 600;
+}
+
+.rs-map-n,
+.rs-assembly-n {
+  display: inline-grid;
+  place-items: center;
+  width: 1.6em;
+  height: 1.6em;
+  margin-right: 0.5em;
+  border-radius: 50%;
+  background: var(--rs-accent);
+  color: var(--rs-paper);
+  font-size: 0.8em;
+  font-weight: 600;
+}
+
+.rs-map-units {
+  margin: 0.4em 0 0;
+  padding-left: 1.4em;
+}
+
+.rs-topic .rs-title {
+  font-size: 2.1em;
+}
+
+.rs-topic-units {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em 0.8em;
+  margin: 1.2em 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85em;
+}
+
+.rs-topic-units > li {
+  padding: 0.15em 0.7em;
+  border: 1.5px dashed var(--rs-line);
+  border-radius: 999px;
+  color: var(--rs-muted);
+}
+
+.rs-topic-units > li[data-unit-state='done']::before {
+  content: '✓ ';
+}
+
+.rs-topic-units > li[data-unit-state='current'] {
+  border-style: solid;
+  border-color: var(--rs-accent);
+  color: var(--rs-ink);
+  font-weight: 600;
+}
+
+.rs-assembly-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em 1.2em;
+  margin: 0.8em 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rs-group-n {
+  display: inline-grid;
+  place-items: center;
+  width: 1.5em;
+  height: 1.5em;
+  margin-left: -1.7em;
+  margin-right: 0.2em;
+  border-radius: 50%;
+  background: var(--rs-accent);
+  color: var(--rs-paper);
+  font-size: 0.8em;
+  user-select: none;
+}
+
+/* In an assembly every row makes room for the group numbers, so the line numbers stay in one column. */
+.rs-code:has([data-group]) .rs-row {
+  padding-left: 1.7em;
+  border-left: 3px solid transparent;
+}
+
+.rs-code:has([data-group]) .rs-row[data-group] {
+  border-left-color: var(--rs-accent);
+}
+
+.rs-label-tag text {
+  pointer-events: none;
+}

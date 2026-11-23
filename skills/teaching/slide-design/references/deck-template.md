@@ -50,8 +50,9 @@ One `key: value` per line. Every value is a JSON literal. Keys, in this order:
 1. `# Part N: <title>`
 2. `## Deck notes`: the learner profile, that the deck is read without narration, and Part gaps. Then two generated lists: `### Visuals to produce` (each illustration to generate and screenshot to capture, by slide id) and `### Code status` (each snippet that is not verified, with its reason).
 3. One `##` section per deck section: `## Opening`, then `## N.k <sub-topic title>` for each sub-topic in Part order, then `## Closing`.
-4. `## Diagrams`: one ```` ```diagram ```` JSON block per diagram.
-5. `## Code listings`: one `### <snippet id>` per snippet the slides show. Each holds a ```` ```listing ```` JSON block `{"snippet", "status", "reason"}`, then the complete snippet, verbatim, in a fence of its language. A slide shows an excerpt; the learner needs the whole program to run it.
+4. `## Units` (deck@2): the Part's unit map, as one ```` ```units ```` JSON block (see Units below).
+5. `## Diagrams`: one ```` ```diagram ```` JSON block per diagram.
+6. `## Code listings`: one `### <snippet id>` per snippet the slides show. Each holds a ```` ```listing ```` JSON block `{"snippet", "status", "reason"}`, then the complete snippet, verbatim, in a fence of its language. A slide shows an excerpt; the learner needs the whole program to run it.
 
 ## A slide
 
@@ -77,7 +78,7 @@ One `key: value` per line. Every value is a JSON literal. Keys, in this order:
   - `purpose`: the single new thing the learner gains, at most 120 characters
   - `from`: Part refs this slide's content comes from: a Part section (`"Core mental model"`) or a sub-topic slot (`"1.2/Core knowledge"`). A sub-topic ref belongs only in that sub-topic's section.
   - `sources`: the URLs this slide's claims rely on, taken from the Part
-  - layout keys: `code` takes `snippet`, `lines` and `highlight`; `output` takes `snippet`; `answer` takes `revisit`
+  - layout keys: `code` takes `snippet`, `lines` and `highlight`; `output` takes `snippet`; `answer` takes `revisit`; `topic` takes `unit`; `assemble` takes `assembles` and `labels`, plus `snippet` and `lines` when it shows code
 - **Fields:** a line that starts with a bold label. The text runs to the next label, block or heading. Lists inside a field use `1. ` or `- `. The labels are fixed:
   `**Title:**`, `**Body:**`, `**Items:**`, `**Left:**`, `**Right:**`, `**Takeaway:**`, `**Question:**`, `**Answer:**`, `**Why:**`, `**Symptom:**`, `**Cause:**`, `**Fix:**`, `**Task:**`, `**Solution:**`, `**Notice:**`
 - **Visual block:** at most one ```` ```visual ```` JSON block (see Visuals below).
@@ -105,6 +106,9 @@ A closed set. Lengths count visible characters: Thai vowel and tone marks, and e
 | `practice` | practice | Title, Task | Items (hints), Solution (only when the Part gives one) | optional | none |
 | `summary` | recap, back to the core mental model | Title, Items | | optional | none |
 | `sources` | further reading and sources as links | Title, Items | | none | none |
+| `map` (deck@2) | the Part's units, chapter by chapter, drawn from `## Units`; once, in the opening | Title | Body | none | none |
+| `topic` (deck@2) | the divider that opens a unit; Title is the unit's title and Body its goal, verbatim | Title, Body | | optional, a diagram | none |
+| `assemble` (deck@2) | puts a chapter's units, or the whole Part's chapters, back together | Title, Body | Notice | optional, a diagram | exactly one when it shows code: the excerpt |
 
 Titles are at most 70 characters. A `Notice` is at most 150 and is required on `code` and `output` slides whose snippet is not verified. The other limits, per item for Items:
 
@@ -135,6 +139,9 @@ Titles are at most 70 characters. A `Notice` is at most 150 and is required on `
 | `practice` | Solution | 300 |
 | `summary` | Items | 100 |
 | `sources` | Items | 200 |
+| `map` | Body | 120 |
+| `topic` | Body | 120 |
+| `assemble` | Body | 300 |
 
 ### Code, output and other blocks
 
@@ -143,6 +150,30 @@ Titles are at most 70 characters. A `Notice` is at most 150 and is required on `
 - **`setup`, `error`, `compare` blocks:** text that appears verbatim in the Part. Nothing is invented.
 - **Inline code** in any field appears verbatim in the Part.
 - **`answer`:** `revisit` is the id of an earlier slide the learner can go back to.
+- **`assemble` with code:** `snippet` and `lines` work as on `code`, with no `highlight`. The block holds exactly those lines.
+
+### Units (deck@2)
+
+`## Units` holds one ```` ```units ```` block: the unit map approved at the gate (`_work/part-NN/units.json`), copied as it is.
+
+```json
+{"chapters": [
+  {"id": "1.2", "section": "1.2", "title": "<chapter title>", "units": [
+    {"id": "u-message-roles", "title": "<unit title>", "goal": "<what the learner can do>", "needs": []},
+    {"id": "u-invoke", "title": "…", "goal": "…", "needs": ["u-message-roles"]},
+    {"id": "u-sample", "title": "…", "goal": "…", "needs": [], "moved_from": "1.3", "reason": "<why it comes first>"}]}
+]}
+```
+
+- **Chapter:** `id` is the sub-topic key (`1.2`), or the key plus a letter (`1.2a`, `1.2b`, …) when a sub-topic is split into chapters. `section` is the sub-topic key. A chapter holds 1 to 6 units.
+- **Unit:** `id` looks like `u-<words>` and is unique in the Part. `title` is at most 40 characters and `goal` at most 120. `needs` names earlier units only. `moved_from` and `reason` mark a unit taught in an earlier sub-topic than the Part put it, for a prerequisite reason.
+- **A slide's unit:** the nearest `topic` slide before it in its section. An `assemble` slide ends the unit: the slides after it, up to the next `topic`, belong to the chapter as a whole.
+- **`topic`:** `unit` names the unit it opens. Its Title equals the unit's `title` and its Body equals the unit's `goal`.
+- **`assemble`:** `assembles` is the chapter id, or `"part"` for the closing's assembly of the whole Part. `labels` numbers the pieces, in order:
+  - on code, `[{"unit": "<unit id>", "lines": [[first, last], …]}, …]`, each range inside the shown `lines`, not overlapping;
+  - on a diagram, `[{"unit": "<unit id>", "elements": ["<element id>", …]}, …]`, each element shown;
+  - on the Part's assembly, `[{"chapter": "<chapter id>", "elements": [...]}, …]`.
+  A chapter's assembly may label units of this chapter and of earlier chapters of the same sub-topic, never a later chapter's. It shows code or a diagram, not both.
 
 ## Visuals
 

@@ -102,7 +102,7 @@ SLIDE_HEADING_RE = re.compile(r"^### (?P<id>\S+) · (?P<layout>[a-z]+)\s*$")
 FIELD_RE = re.compile(r"^\*\*(?P<name>[A-Z][a-z]+):\*\*\s?(?P<rest>.*)$")
 FIELDS = ("Title", "Body", "Items", "Left", "Right", "Takeaway", "Question", "Answer", "Why", "Symptom", "Cause", "Fix", "Task", "Solution", "Notice")
 
-# visual: required | optional | none.  content: none | code | output | error | setup | panels.
+# visual: required | optional | none.  content: none | code | output | error | setup | panels | assembly.
 Layout = namedtuple("Layout", "required optional visual content")
 LAYOUTS = {
     "cover": Layout(("Title",), ("Body",), "optional", "none"),
@@ -121,9 +121,20 @@ LAYOUTS = {
     "practice": Layout(("Title", "Task"), ("Items", "Solution"), "optional", "none"),
     "summary": Layout(("Title", "Items"), (), "optional", "none"),
     "sources": Layout(("Title", "Items"), (), "none", "none"),
+    # deck@2: the unit map, a unit's divider, and the assembly of a chapter or of the whole Part
+    "map": Layout(("Title",), ("Body",), "none", "none"),
+    "topic": Layout(("Title", "Body"), (), "optional", "none"),
+    "assemble": Layout(("Title", "Body"), ("Notice",), "optional", "assembly"),
 }
+UNIT_LAYOUTS = ("map", "topic", "assemble")  # the layouts a deck@1 deck cannot hold
 META_KEYS = ("layout", "purpose", "from", "sources")
-LAYOUT_META_KEYS = {"code": ("snippet", "lines", "highlight"), "output": ("snippet",), "answer": ("revisit",)}
+LAYOUT_META_KEYS = {
+    "code": ("snippet", "lines", "highlight"),
+    "output": ("snippet",),
+    "answer": ("revisit",),
+    "topic": ("unit",),
+    "assemble": ("assembles", "labels", "snippet", "lines"),
+}
 ITEM_COUNTS = {"steps": (2, 6), "terms": (1, 5)}
 
 # --- output: visuals -------------------------------------------------------
@@ -174,6 +185,9 @@ FIELD_LIMITS = {  # (layout, field) -> limit; for Items the limit applies to eac
     ("practice", "Solution"): 300,
     ("summary", "Items"): 100,
     ("sources", "Items"): 200,
+    ("map", "Body"): 120,
+    ("topic", "Body"): 120,  # the Body is the unit's goal, itself at most UNIT_GOAL_LIMIT
+    ("assemble", "Body"): 300,
 }
 
 # --- run state -------------------------------------------------------------

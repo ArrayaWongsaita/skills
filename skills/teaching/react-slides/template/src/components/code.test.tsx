@@ -109,3 +109,15 @@ test('setup slides use the block list', () => {
   );
   expect(screen.getByRole('button', { name: 'คัดลอก' })).toBeInTheDocument();
 });
+
+test('without groups no row carries a group', () => {
+  const { container } = render(<CodeBlock listing={listing} lines={[[1, 6]]} highlight={[]} language="th" />);
+  expect(container.querySelector('[data-group]')).toBeNull();
+  expect(container.querySelector('.rs-group-n')).toBeNull();
+});
+
+test('groups mark their rows and number their first row', () => {
+  const { container } = render(<CodeBlock listing={listing} lines={[[1, 6]]} highlight={[]} language="th" groups={[{ n: 1, lines: [[2, 3]] }, { n: 2, lines: [[5, 6]] }]} />);
+  expect([...container.querySelectorAll('[data-group]')].map((row) => `${row.getAttribute('data-line')}:${row.getAttribute('data-group')}`)).toEqual(['2:1', '3:1', '5:2', '6:2']);
+  expect([...container.querySelectorAll('.rs-group-n')].map((mark) => mark.textContent)).toEqual(['1', '2']);
+});
