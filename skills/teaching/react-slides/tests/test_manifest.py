@@ -53,6 +53,16 @@ def test_force_overwrites(tmp_path):
     assert manifest.status(tmp_path, "a.tsx", m) == "unedited"
 
 
+def test_forcing_one_member_forces_the_group(tmp_path):
+    m = manifest.Manifest()
+    _write(tmp_path, {"src/parts/part-01.tsx": "t1", "src/parts/part-01.data.ts": "d1"}, m)
+    (tmp_path / "src/parts/part-01.data.ts").write_text("mine", encoding="utf-8")
+    new = {"src/parts/part-01.tsx": "t2", "src/parts/part-01.data.ts": "d2"}
+    assert _write(tmp_path, new, m, force=frozenset({"src/parts/part-01.tsx"})) == {
+        "src/parts/part-01.tsx": "written", "src/parts/part-01.data.ts": "forced"}
+    assert (tmp_path / "src/parts/part-01.data.ts").read_text(encoding="utf-8") == "d2"
+
+
 def test_untracked_existing_file_counts_as_edited(tmp_path):
     m = manifest.Manifest()
     (tmp_path / "a.tsx").write_text("user file", encoding="utf-8")

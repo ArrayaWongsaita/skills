@@ -140,6 +140,17 @@ def test_force_path_is_normalised_or_refused(course, fake_template):  # Review F
     assert report["forced"] == ["src/parts/part-01.tsx"] and tsx.read_text(encoding="utf-8").startswith("// Generated")
 
 
+def test_force_on_the_unedited_member_overwrites_the_pair(course, fake_template):
+    _run(course, [1], fake_template)
+    data = course / "web/src/parts/part-01.data.ts"
+    data.write_text("// mine\n", encoding="utf-8")
+    replace(course / "slides/part-01-first-agent.md", "**Title:** สรุป", "**Title:** สรุปทั้งหมด")
+    report = _run(course, [1], fake_template, force=frozenset({"src/parts/part-01.tsx"}))
+    assert report["forced"] == ["src/parts/part-01.data.ts"] and report["skipped"] == []
+    assert data.read_text(encoding="utf-8").startswith("// Generated")
+    assert "สรุปทั้งหมด" in (course / "web/src/parts/part-01.tsx").read_text(encoding="utf-8")
+
+
 def test_all_converts_every_deck_and_reports_bad_ones(course, fake_template):
     replace(course / "slides/part-02-graphs.md", "### 2-002 · explain", "### 2-002 · fancy")
     report = _run(course, None, fake_template)

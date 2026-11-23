@@ -56,9 +56,12 @@ def _write(path: Path, text: str) -> None:
 
 def write_group(web: Path, files: dict[str, str], m: Manifest, *, kind: str, generator: int | None = None,
                 force: frozenset[str] = frozenset()) -> dict[str, str]:
-    """Write files that must change together; if any is edited and not forced, skip them all."""
+    """Write files that must change together; if any is edited, skip them all unless one of them is forced.
+
+    Forcing any member forces the whole group, so a pair never ends up half the skill's and half the user's.
+    """
     states = {rel: status(web, rel, m) for rel in files}
-    if any(state == "edited" and rel not in force for rel, state in states.items()):
+    if "edited" in states.values() and not force & set(files):
         return {rel: "skipped" for rel in files}
     outcomes = {}
     for rel, text in files.items():
