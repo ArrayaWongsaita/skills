@@ -1,0 +1,7 @@
+{"chapters": [
+  {"id": "1.1", "section": "1.1", "title": "เรียกโมเดลด้วย init_chat_model", "units": [
+    {"id": "u-init-model", "title": "สร้างโมเดลจากชื่อ", "goal": "สร้างโมเดลจากชื่อแบบ provider:model แล้วส่งคำถามแรก", "needs": []}]},
+  {"id": "1.2", "section": "1.2", "title": "สร้าง agent ที่เรียก tool", "units": [
+    {"id": "u-tool", "title": "ประกาศ tool", "goal": "เปลี่ยนฟังก์ชันธรรมดาเป็น tool ด้วย @tool", "needs": []},
+    {"id": "u-agent", "title": "ต่อ tool เข้ากับ agent", "goal": "สร้าง agent จากโมเดลกับ tool แล้วส่งคำถาม", "needs": ["u-tool"]}]}
+]}

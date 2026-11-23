@@ -81,6 +81,17 @@ VOCABULARY_FRONTMATTER_KEYS = ("template", "course", "version", "updated")
 NOTES_HEADING, DIAGRAMS_HEADING, LISTINGS_HEADING = "Deck notes", "Diagrams", "Code listings"
 OPENING, CLOSING = "Opening", "Closing"
 
+# --- output: unit map ------------------------------------------------------
+
+# _work/part-NN/units.json splits each sub-topic into chapters of small units.
+UNITS_FILE = "units.json"
+UNIT_ID_RE = re.compile(r"^u-[a-z0-9]+(?:-[a-z0-9]+)*$")
+CHAPTER_ID_RE = re.compile(r"^(?P<section>\d+\.\d+)(?P<letter>[a-z]?)$")  # 1.2, or 1.2a, 1.2b, ... when split
+UNIT_TITLE_LIMIT, UNIT_GOAL_LIMIT, CHAPTER_UNITS_MAX = 40, 120, 6
+PART_ASSEMBLY = "part"  # the `assembles` value of the closing's assembly of the whole Part
+CHAPTER_KEYS = ("id", "section", "title", "units")
+UNIT_KEYS = ("id", "title", "goal", "needs", "moved_from", "reason")
+
 # --- output: slides --------------------------------------------------------
 
 SLIDE_ID_RE = re.compile(r"^(?P<part>\d+)-(?P<n>\d{3})$")

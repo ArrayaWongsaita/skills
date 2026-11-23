@@ -8,7 +8,7 @@ import pytest
 from assemble_deck import assemble
 from conftest import add_field, drop_slide, edit, set_field, set_meta, set_visual
 from part_reader import find_part
-from validate_deck import validate, validate_diagrams
+from validate_deck import validate, validate_diagrams, validate_plan
 
 SCRIPT = str(Path(__file__).resolve().parents[1] / "scripts" / "validate_deck.py")
 WORK = "slides/_work/part-01"
@@ -179,3 +179,28 @@ def test_cli_exit_codes(course, assembled):
     assert broken.returncode == 1 and "error: d-agent-loop: nodes overlap: n-model, n-tool" in broken.stdout
     listed = json.loads(run_cli(course, 1, "--json").stdout)
     assert {"level": "error", "where": "d-agent-loop", "message": "nodes overlap: n-model, n-tool"} in listed
+
+
+def test_plan_mode(course):
+    assert [i for i in validate_plan(course, 1) if i.level == "error"] == []
+
+
+def test_plan_without_units_file(course):  # Review Focus 2
+    (course / WORK / "units.json").unlink()
+    assert any("no unit map" in i.message and i.where == "units.json" for i in validate_plan(course, 1))
+
+
+def test_plan_reports_unit_errors(course):
+    edit(course / WORK / "units.json", '"needs": ["u-tool"]', '"needs": ["u-nope"]')
+    assert any("needs must name earlier units, not u-nope" in i.message for i in validate_plan(course, 1))
+
+
+def test_plan_reports_diagram_errors_too(course):
+    edit(course / WORK / "diagrams.md", '"d-init"', '"d-Init"', first=True)
+    assert any(i.where != "units.json" for i in validate_plan(course, 1) if i.level == "error")
+
+
+def test_cli_plan_flag(course):
+    assert run_cli(course, 1, "--plan").returncode == 0
+    (course / WORK / "units.json").unlink()
+    assert run_cli(course, 1, "--plan").returncode == 1

@@ -4,11 +4,12 @@ Checks structure, text lengths, visuals, diagrams and their build states,
 coverage of every filled Part slot and snippet, and fidelity: code, output,
 commands, error messages, inline code and URLs must come from the Part
 verbatim. A deck whose Part changed after assembly is reported as stale and
-checked no further. `--diagrams` checks only the storyboard's diagrams
-(_work/part-NN/diagrams.md) before the gate.
+checked no further. `--plan` checks the storyboard before the gate: its
+diagrams (_work/part-NN/diagrams.md) and its unit map (_work/part-NN/units.json).
+`--diagrams` checks the diagrams alone.
 
 CLI:
-    python3 validate_deck.py <course_dir> <part> [--diagrams] [--json]
+    python3 validate_deck.py <course_dir> <part> [--plan | --diagrams] [--json]
 Exit 1 if any error, else 0.
 """
 
@@ -38,6 +39,7 @@ from contract import (  # noqa: E402
     PURPOSE_LIMIT,
     SLIDES_DIR,
     TITLE_LIMIT,
+    UNITS_FILE,
     VISUAL_KINDS,
     VOCABULARY_FILE,
     WORK_DIR,
@@ -46,6 +48,7 @@ from deck import Deck, Slide, parse_deck, parse_diagrams  # noqa: E402
 from diagram_checks import check_diagram, check_states  # noqa: E402
 from mdtext import inline_code, urls, visible_length  # noqa: E402
 from part_reader import Part, PartError, digest, find_part, read_part  # noqa: E402
+from units import UnitsError, check_units, load_units  # noqa: E402
 from vocabulary import Vocabulary, VocabularyError, add_concepts, init_vocabulary, vocabulary_path  # noqa: E402
 from vocabulary import load as load_vocabulary  # noqa: E402
 
@@ -406,14 +409,32 @@ def validate_diagrams(course_dir: Path, part: int) -> list[Issue]:
     return issues
 
 
+def validate_plan(course_dir: Path, part: int) -> list[Issue]:
+    """The storyboard's diagrams and unit map, before the gate."""
+    issues = validate_diagrams(course_dir, part)
+    try:
+        data = load_units(_work(course_dir, part) / UNITS_FILE)
+        source = read_part(find_part(Path(course_dir), part))
+    except UnitsError as error:
+        return issues + [_error(UNITS_FILE, str(error))]
+    except PartError as error:
+        return issues + [_error("part", str(error))]
+    return issues + [_error(UNITS_FILE, message) for message in check_units(data, [sub.key for sub in source.subtopics])]
+
+
 def main(argv: list[str]) -> int:
     flags = {arg for arg in argv if arg.startswith("--")}
     args = [arg for arg in argv if not arg.startswith("--")]
-    if len(args) != 2 or flags - {"--diagrams", "--json"}:
-        print("usage: validate_deck.py <course_dir> <part> [--diagrams] [--json]", file=sys.stderr)
+    if len(args) != 2 or flags - {"--plan", "--diagrams", "--json"} or {"--plan", "--diagrams"} <= flags:
+        print("usage: validate_deck.py <course_dir> <part> [--plan | --diagrams] [--json]", file=sys.stderr)
         return 2
     course_dir, part = Path(args[0]), int(args[1])
-    issues = validate_diagrams(course_dir, part) if "--diagrams" in flags else validate(course_dir, part)
+    if "--plan" in flags:
+        issues = validate_plan(course_dir, part)
+    elif "--diagrams" in flags:
+        issues = validate_diagrams(course_dir, part)
+    else:
+        issues = validate(course_dir, part)
     if "--json" in flags:
         print(json.dumps([asdict(issue) for issue in issues], ensure_ascii=False))
     else:
