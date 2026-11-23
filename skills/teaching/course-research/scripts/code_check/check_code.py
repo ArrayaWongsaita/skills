@@ -22,6 +22,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -41,6 +42,10 @@ OUTPUT_DIFFERS = "expected output differs from what the code prints; see its std
 SECRET_WORDS = ("KEY", "TOKEN", "SECRET", "PASSWORD", "CREDENTIAL")
 TRACING_PREFIXES = ("LANGSMITH_", "LANGCHAIN_")
 TRACING_OFF = {"LANGSMITH_TRACING": "false", "LANGCHAIN_TRACING_V2": "false"}
+# Agents that sign or authenticate with the user's real keys.
+AGENT_SOCKETS = ("SSH_AUTH_SOCK", "GPG_AGENT_INFO")
+# Stop AWS and Google SDKs from fetching credentials from a cloud VM's metadata service.
+CLOUD_METADATA_OFF = {"AWS_EC2_METADATA_DISABLED": "true", "NO_GCE_CHECK": "true"}
 
 
 class HarnessError(RuntimeError):
@@ -112,13 +117,31 @@ def _one_line(text: str) -> str:
     return flat if len(flat) <= MAX_REASON else flat[: MAX_REASON - 1] + "…"
 
 
-def snippet_env(environ: dict[str, str]) -> dict[str, str]:
+def _points_into(value: str, home: str) -> bool:
+    return any(part == home or part.startswith(home + os.sep) for part in value.split(os.pathsep))
+
+
+def snippet_env(environ: dict[str, str], home: Path) -> dict[str, str]:
+    """The environment a snippet runs in: no secrets, no tracing, and an empty home of its own.
+
+    Credentials also live in files (~/.aws, ~/.config/gcloud, ~/.netrc) and behind
+    variables that point at them, so HOME is replaced, XDG directories and agent
+    sockets are dropped, and so is any variable that points into the real home
+    (PATH excepted: it names programs, not credentials).
+    """
+    real_home = environ.get("HOME", "").rstrip(os.sep)
     env = {
         name: value
         for name, value in environ.items()
-        if not any(word in name.upper() for word in SECRET_WORDS) and not name.upper().startswith(TRACING_PREFIXES)
+        if not any(word in name.upper() for word in SECRET_WORDS)
+        and not name.upper().startswith(TRACING_PREFIXES)
+        and not name.startswith("XDG_")
+        and name not in AGENT_SOCKETS
+        and (name == "PATH" or not real_home or not _points_into(value, real_home))
     }
     env.update(TRACING_OFF)
+    env.update(CLOUD_METADATA_OFF)
+    env["HOME"] = str(home)
     return env
 
 
@@ -142,7 +165,9 @@ def run_one(snippet: Snippet, python: Path, work_dir: Path, timeout: int = 60) -
     if fixture.exists():
         command += ["--fixture", str(fixture)]
     try:
-        done = subprocess.run(command, cwd=snippets_dir, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=timeout, env=snippet_env(dict(os.environ)))
+        with tempfile.TemporaryDirectory(prefix="snippet-home-") as home:
+            done = subprocess.run(command, cwd=snippets_dir, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=timeout,
+                                  env=snippet_env(dict(os.environ), Path(home)))
     except subprocess.TimeoutExpired as expired:
         output = expired.stdout.decode("utf-8", "replace") if isinstance(expired.stdout, bytes) else (expired.stdout or "")
         return Result(snippet.id, "unverified", f"timeout after {timeout}s", output[-MAX_STDOUT:])

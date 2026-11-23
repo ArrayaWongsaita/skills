@@ -44,8 +44,31 @@ def _failure(error: BaseException, snippet: Path) -> str:
     return f"{type(error).__name__}: {error}{where}"
 
 
+def guard_dotenv(folder: Path) -> None:
+    """Let python-dotenv find a .env only in the snippet's own folder, never in a folder above it.
+
+    A .env above the course (in the project or the home directory) can hold real
+    keys, and load_dotenv() searches upward for one by default.
+    """
+    if importlib.util.find_spec("dotenv") is None:
+        return
+    import dotenv
+    import dotenv.main
+
+    def find_here(filename: str = ".env", raise_error_if_not_found: bool = False, usecwd: bool = False) -> str:
+        path = folder / filename
+        if path.is_file():
+            return str(path)
+        if raise_error_if_not_found:
+            raise OSError("File not found")
+        return ""
+
+    dotenv.find_dotenv = dotenv.main.find_dotenv = find_here
+
+
 def run(snippet: Path, fixture: Path | None) -> dict:
     sys.path.insert(0, str(snippet.parent))
+    guard_dotenv(snippet.parent)
     with warnings.catch_warnings(record=True) as records:
         warnings.simplefilter("always")
         try:

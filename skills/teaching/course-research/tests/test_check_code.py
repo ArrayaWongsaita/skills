@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import subprocess
 import sys
@@ -208,6 +209,48 @@ def test_secrets_and_tracing_do_not_reach_snippets(skill_dir, tmp_path, monkeypa
     run = check(skill_dir, one_snippet_course(tmp_path, code))
     assert results(tmp_path)["1.1-a"]["status"] == "verified", results(tmp_path)["1.1-a"]
     assert run.returncode == 0
+
+
+def test_snippets_get_an_empty_home_and_no_pointers_into_the_real_one(skill_dir, tmp_path, monkeypatch):
+    real_home = tmp_path / "real-home"
+    (real_home / ".aws").mkdir(parents=True)
+    (real_home / ".aws" / "credentials").write_text("[default]\naws_access_key_id = AKIAREAL\n", encoding="utf-8")
+    path = f"{real_home / 'bin'}{os.pathsep}{os.environ['PATH']}"
+    for name, value in {"HOME": str(real_home), "PATH": path, "XDG_CONFIG_HOME": str(real_home / ".config"),
+                        "AWS_CONFIG_FILE": str(real_home / ".aws" / "config"), "SSH_AUTH_SOCK": "/private/tmp/agent.sock"}.items():
+        monkeypatch.setenv(name, value)
+    course = tmp_path / "course"
+    course.mkdir()
+    code = ("import os\nfrom pathlib import Path\n"
+            "home = Path.home()\n"
+            f"assert home != Path({str(real_home)!r}) and list(home.iterdir()) == [], home\n"
+            "Path('home-was.txt').write_text(str(home))\n"
+            "seen = {k: os.environ.get(k) for k in ('XDG_CONFIG_HOME', 'AWS_CONFIG_FILE', 'SSH_AUTH_SOCK', 'AWS_EC2_METADATA_DISABLED', 'NO_GCE_CHECK')}\n"
+            "assert seen == {'XDG_CONFIG_HOME': None, 'AWS_CONFIG_FILE': None, 'SSH_AUTH_SOCK': None, "
+            "'AWS_EC2_METADATA_DISABLED': 'true', 'NO_GCE_CHECK': 'true'}, seen\n"
+            f"assert os.environ['PATH'] == {path!r}\n")
+    check(skill_dir, one_snippet_course(course, code))
+    assert results(course)["1.1-a"]["status"] == "verified", results(course)["1.1-a"]
+    assert not Path((course / "_work" / "code-check" / "snippets" / "home-was.txt").read_text()).exists()
+
+
+def test_snippets_do_not_load_a_dotenv_above_them(skill_dir, tmp_path):
+    pytest.importorskip("dotenv", reason="needs python-dotenv in the test environment")
+    (tmp_path / ".env").write_text("OPENAI_API_KEY=sk-real\nAWS_ACCESS_KEY_ID=AKIAREAL\n", encoding="utf-8")
+    code = ("import os\nfrom dotenv import dotenv_values, find_dotenv, load_dotenv\n"
+            "assert find_dotenv() == '' and dotenv_values() == {} and load_dotenv(override=True) is False\n"
+            "assert (os.environ.get('OPENAI_API_KEY'), os.environ.get('AWS_ACCESS_KEY_ID')) == ('fake-key', None)\n")
+    check(skill_dir, one_snippet_course(tmp_path, code))
+    assert results(tmp_path)["1.1-a"]["status"] == "verified", results(tmp_path)["1.1-a"]
+
+
+def test_snippets_can_load_a_dotenv_they_write_themselves(skill_dir, tmp_path):
+    pytest.importorskip("dotenv", reason="needs python-dotenv in the test environment")
+    code = ("import os\nfrom pathlib import Path\nfrom dotenv import load_dotenv\n"
+            "Path('.env').write_text('DEMO_VALUE=hello\\n')\n"
+            "assert load_dotenv() is True and os.environ['DEMO_VALUE'] == 'hello'\n")
+    check(skill_dir, one_snippet_course(tmp_path, code))
+    assert results(tmp_path)["1.1-a"]["status"] == "verified", results(tmp_path)["1.1-a"]
 
 
 def test_exact_expected_output_must_match(skill_dir, tmp_path):
