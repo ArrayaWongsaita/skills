@@ -1,6 +1,6 @@
 // Renders slides through Deck in check mode (every slide, no router), with a small data set.
 import type { ReactNode } from 'react';
-import { Deck, DeckModeContext, FrameContext } from '../components/Deck';
+import { Deck, DeckContext, DeckModeContext, FrameContext } from '../components/Deck';
 import type { Block, DiagramDef, Listing, PartMeta } from '../components/types';
 
 export const fixtureMeta: PartMeta = { course: 'c', part: 1, slug: 'part-01', title: 'Fixture', language: 'th', slideCount: 20 };
@@ -45,5 +45,16 @@ export function DeckFixture({ children, frame = 'desktop' }: { children: ReactNo
         </Deck>
       </FrameContext.Provider>
     </DeckModeContext.Provider>
+  );
+}
+
+/** Provides a Deck value directly, to test one component outside a slide list. */
+export function DeckValue({ children, direction = 'none', reducedMotion = false }: { children: ReactNode; direction?: 'forward' | 'back' | 'none'; reducedMotion?: boolean }) {
+  return (
+    <DeckContext.Provider
+      value={{ meta: fixtureMeta, diagrams: fixtureDiagrams, listings: fixtureListings, outputs: fixtureOutputs, current: '1-001', direction, reducedMotion, frame: 'desktop', ids: ['1-001'] }}
+    >
+      {children}
+    </DeckContext.Provider>
   );
 }

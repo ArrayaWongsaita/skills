@@ -589,3 +589,53 @@ a {
   stroke-width: 5px;
   stroke-linejoin: round;
 }
+
+/* Illustrations, screenshots and fallbacks */
+.rs-illustration {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rs-illustration > svg {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+}
+
+.rs-illustration.rs-draw-in path[pathLength] {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: rs-draw 1100ms ease-out forwards;
+}
+
+.rs-image {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border: 1.5px solid var(--rs-line);
+  border-radius: 10px;
+}
+
+.rs-fallback-diagram {
+  width: 100%;
+  height: 100%;
+}
+
+.rs-fallback-text {
+  padding: 0.9em 1.1em;
+  border: 1.5px dashed var(--rs-line);
+  border-radius: 14px;
+  color: var(--rs-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rs-illustration.rs-draw-in path[pathLength] {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
