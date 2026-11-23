@@ -150,6 +150,19 @@ def _install(web: Path, needed: bool, skip: bool) -> str:
     return "ran"
 
 
+def _remove_dropped(web: Path, m: manifest.Manifest, template: set[str], report: dict) -> None:
+    """Delete template files the template no longer has; one the user edited stays and is listed as dropped."""
+    for rel in sorted(rel for rel, entry in m.files.items() if entry.get("kind") == "template" and rel not in template):
+        state = manifest.status(web, rel, m)
+        if state == "edited":
+            report["dropped"].append(rel)
+            continue
+        if state == "unedited":
+            (web / rel).unlink()
+            report["removed"].append(rel)
+        del m.files[rel]
+
+
 def run(course_dir: Path, parts: list[int] | None, *, template_dir: Path = TEMPLATE_DIR, force: frozenset[str] = frozenset(),
         skip_install: bool = False) -> dict:
     course_dir = Path(course_dir)
@@ -165,14 +178,15 @@ def run(course_dir: Path, parts: list[int] | None, *, template_dir: Path = TEMPL
         loaded = {}
     elif m.template_version and _major(m.template_version) != _major(version):
         _load(course_dir, deck_reader.deck_parts(course_dir), loaded, errors)
-    report = {"web": str(web), "parts": sorted(loaded), "written": [], "unchanged": [], "kept": [], "skipped": [], "forced": [],
+    report = {"web": str(web), "parts": sorted(loaded), "written": [], "unchanged": [], "kept": [], "skipped": [], "forced": [], "removed": [], "dropped": [],
               "diffs": {}, "warnings": [], "stale": [], "visuals": [], "unused": [], "older_parts": [],
               "template_version": version, "install": "not-needed", "errors": errors}
     if not loaded:
         return report
 
     generator = tsx_writer.GENERATOR_VERSION
-    groups = [({rel: text}, "template", None) for rel, text in template_files(template_dir).items()]
+    template = template_files(template_dir)
+    groups = [({rel: text}, "template", None) for rel, text in template.items()]
     groups.append(({"src/vocabulary.ts": tsx_writer.vocabulary_ts(next(iter(loaded.values())).vocabulary)}, "generated", generator))
     for part, item in sorted(loaded.items()):
         slug = tsx_writer.part_slug(part)
@@ -189,6 +203,7 @@ def run(course_dir: Path, parts: list[int] | None, *, template_dir: Path = TEMPL
             report[outcome].append(rel)
             if outcome == "skipped":
                 report["diffs"][rel] = _diff(web, rel, files[rel])
+    _remove_dropped(web, m, set(template), report)
     if manifest.write_once(web, "src/course.ts", tsx_writer.course_ts(course_dir.name, deck_reader.read_course_title(course_dir))):
         report["written"].append("src/course.ts")
     m.template_version = version

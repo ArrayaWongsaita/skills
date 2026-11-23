@@ -181,6 +181,20 @@ def test_template_upgrade_replaces_only_unedited_files(course, fake_template):
     assert manifest.load(course / "web").template_version == "1.1.0"
 
 
+def test_template_upgrade_removes_files_the_template_dropped(course, fake_template):
+    (fake_template / "src/components/old.ts").write_text("export const old = 1;\n", encoding="utf-8")
+    (fake_template / "src/components/mine.ts").write_text("export const m = 1;\n", encoding="utf-8")
+    _run(course, [1], fake_template)
+    (course / "web/src/components/mine.ts").write_text("export const m = 'mine';\n", encoding="utf-8")
+    _bump(fake_template, "1.1.0")
+    (fake_template / "src/components/old.ts").unlink()
+    (fake_template / "src/components/mine.ts").unlink()
+    report = _run(course, [1], fake_template)
+    assert report["removed"] == ["src/components/old.ts"] and not (course / "web/src/components/old.ts").exists()
+    assert report["dropped"] == ["src/components/mine.ts"] and (course / "web/src/components/mine.ts").exists()
+    assert "src/components/old.ts" not in manifest.load(course / "web").files
+
+
 def test_major_upgrade_regenerates_every_part(course, fake_template):
     _run(course, None, fake_template)
     _bump(fake_template, "2.0.0")
