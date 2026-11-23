@@ -169,6 +169,12 @@ def test_deck_at_2_needs_units(course):
     ('"elements": ["n-tool", "e-call", "e-result"]', '"elements": ["n-tool", "n-ghost"]', "label elements of d-agent-loop are unknown: n-ghost"),
     ('"labels": [{"unit": "u-declare-tool", "lines": [[4, 8]]}, {"unit": "u-run-agent", "lines": [[10, 11]]}]', '"labels": []', "labels must be a non-empty list of objects"),
     ('"lines": [[1, 11]]}', '"lines": [[1, 10]]}', "the code block is not the excerpt of 1.2-a"),
+    ('"unit": "u-what-agent"}', '"unit": ["u-what-agent"]}', "topic unit ['u-what-agent'] is not in Units"),
+    ('"assembles": "part"', '"assembles": ["part"]', "assembles ['part'] is not a chapter in Units"),
+    ('{"unit": "u-run-agent", "lines"', '{"unit": ["u-run-agent"], "lines"', "label names unknown unit ['u-run-agent']"),
+    ('{"chapter": "1.2", "elements"', '{"chapter": ["1.2"], "elements"', "label names unknown chapter ['1.2']"),
+    ('"elements": ["n-tool", "e-call", "e-result"]', '"elements": [["n-tool"]]', "label elements of d-agent-loop are unknown: ['n-tool']"),
+    ('"id": "1.1"', '"id": ["1.1"]', "label names unknown chapter '1.1'"),
 ])
 def test_unit_render_errors(course, old, new, message):
     replace(_deck(course), old, new)

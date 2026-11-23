@@ -232,25 +232,33 @@ def _meta(slide: deckmod.Slide) -> list[str]:
 
 
 def _unit_ids(units: dict) -> tuple[set, set]:
-    chapters = [c for c in units.get("chapters", []) if isinstance(c, dict)]
-    unit_ids = {u.get("id") for c in chapters for u in c.get("units", []) if isinstance(u, dict)}
-    return unit_ids, {c.get("id") for c in chapters}
+    """The unit and chapter ids of the unit map; ids that are not strings are left out."""
+    chapters = units.get("chapters")
+    chapters = [c for c in chapters if isinstance(c, dict)] if isinstance(chapters, list) else []
+    unit_ids = {u["id"] for c in chapters if isinstance(c.get("units"), list) for u in c["units"]
+                if isinstance(u, dict) and isinstance(u.get("id"), str)}
+    return unit_ids, {c["id"] for c in chapters if isinstance(c.get("id"), str)}
+
+
+def _known(value, ids: set) -> bool:
+    """Membership for a value read from JSON, which may be a list or an object."""
+    return isinstance(value, str) and value in ids
 
 
 def _assembly(slide: deckmod.Slide, d: deckmod.Deck, unit_ids: set, chapter_ids: set) -> list[str]:
     errors, meta = [], slide.meta
     assembles = meta.get("assembles")
-    if assembles != contract.PART_ASSEMBLY and assembles not in chapter_ids:
+    if assembles != contract.PART_ASSEMBLY and not _known(assembles, chapter_ids):
         errors.append(f"assembles {assembles!r} is not a chapter in {contract.UNITS_HEADING}")
     labels = meta.get("labels")
     if not (isinstance(labels, list) and labels and all(isinstance(label, dict) for label in labels)):
         return errors + ["labels must be a non-empty list of objects"]
     for label in labels:
         if "unit" in label:
-            if label["unit"] not in unit_ids:
+            if not _known(label["unit"], unit_ids):
                 errors.append(f"label names unknown unit {label['unit']!r}")
         elif "chapter" in label:
-            if label["chapter"] not in chapter_ids:
+            if not _known(label["chapter"], chapter_ids):
                 errors.append(f"label names unknown chapter {label['chapter']!r}")
         else:
             errors.append("a label names a unit or a chapter")
@@ -278,7 +286,7 @@ def _assembly(slide: deckmod.Slide, d: deckmod.Deck, unit_ids: set, chapter_ids:
             if not (isinstance(elements, list) and elements):
                 errors.append(f"label {label.get('unit') or label.get('chapter')!r} has no elements")
                 continue
-            unknown = [element for element in elements if element not in known]
+            unknown = [element for element in elements if not _known(element, known)]
             if unknown:
                 errors.append(f"label elements of {diagram.get('id')} are unknown: {', '.join(map(str, unknown))}")
     return errors
@@ -293,7 +301,7 @@ def _units(slide: deckmod.Slide, d: deckmod.Deck, template: str) -> list[str]:
     if not isinstance(d.units, dict):
         return []  # reported once for the deck
     unit_ids, chapter_ids = _unit_ids(d.units)
-    if slide.layout == "topic" and slide.meta.get("unit") not in unit_ids:
+    if slide.layout == "topic" and not _known(slide.meta.get("unit"), unit_ids):
         return [f"topic unit {slide.meta.get('unit')!r} is not in {contract.UNITS_HEADING}"]
     if slide.layout == "assemble":
         return _assembly(slide, d, unit_ids, chapter_ids)
