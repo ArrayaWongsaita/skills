@@ -204,3 +204,45 @@ def test_cli_plan_flag(course):
     assert run_cli(course, 1, "--plan").returncode == 0
     (course / WORK / "units.json").unlink()
     assert run_cli(course, 1, "--plan").returncode == 1
+
+
+@pytest.mark.parametrize("old,new,message", [
+    ('"assembles": "1.2", ', '"assembles": "1.1", ', "1-026: assembles 1.1, but the current chapter is 1.2"),
+    ('"lines": [[5, 8]]', '"lines": [[5, 12]]', "1-026: label ranges overlap"),
+    ('"lines": [[1, 13]], "labels"', '"lines": [[1, 9]], "labels"', "1-026: code excerpt differs from snippet 1.2-a"),
+    ('"title": "ประกาศ tool"', '"title": "ประกาศ tools"', "1-017: topic title must equal the unit title"),
+])
+def test_unit_mutations_are_caught(course, assembled, old, new, message):
+    edit(assembled, old, new, first=True)
+    assert any(message in e for e in errors(course)), errors(course)
+
+
+def test_missing_units_section(course, assembled):
+    text = assembled.read_text(encoding="utf-8")
+    start, end = text.index("## Units"), text.index("## Diagrams")
+    assembled.write_text(text[:start] + text[end:], encoding="utf-8")
+    assert any("deck: a deck@2 deck needs its Units section" in e for e in errors(course))
+
+
+def test_broken_unit_map_is_reported_as_units(course, assembled):
+    edit(assembled, '"id": "u-tool"', '"id": "tool"')
+    assert any(e.startswith("units: ") for e in errors(course)), errors(course)
+
+
+def test_moved_unit_may_use_its_origin_refs(course, assembled):
+    edit(assembled, '"needs": []', '"needs": [],\n      "moved_from": "1.2",\n      "reason": "r"', first=True)  # u-init-model
+    set_meta(assembled, "1-009", "from", ["1.2/Core knowledge"])
+    assert not any("content from 1.2 in section 1.1" in e for e in errors(course))
+
+
+def test_origin_refs_without_a_move_are_refused(course, assembled):
+    set_meta(assembled, "1-009", "from", ["1.2/Core knowledge"])
+    assert any("1-009: content from 1.2 in section 1.1" in e for e in errors(course))
+
+
+def test_assemble_snippet_counts_as_covered(course):
+    path = course / WORK / "sections/1.2.md"
+    text = path.read_text(encoding="utf-8").replace('"snippet": "1.2-a"', '"snippet": "1.1-a"')
+    path.write_text(text.replace('"assembles": "1.2", "snippet": "1.1-a"', '"assembles": "1.2", "snippet": "1.2-a"'), encoding="utf-8")
+    assemble(course, 1)
+    assert not any("not covered: snippet 1.2-a" in e or e.startswith("listings: code listings must be") for e in errors(course)), errors(course)

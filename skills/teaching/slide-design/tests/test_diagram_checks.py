@@ -146,3 +146,22 @@ def test_fallback_does_not_count_as_previous(diagrams):
     slides = slides_with([("explain", fallback, ""), ("explain", show(["n-model"]), "same")])
     assert check_states(slides, diagrams) == []
     assert slides[1].visual["new"] == ["n-model"]
+
+
+EPITOME = ["n-user", "n-model", "e-ask", "e-answer"]
+
+
+def test_epitome_in_the_opening_needs_no_new(diagrams):
+    slides = slides_with([("focus", show(EPITOME, new=[], dim=EPITOME), ""), ("explain", show(EPITOME, new=[]), "")])
+    assert check_states(slides, diagrams) == []
+
+
+def test_epitome_outside_the_opening_is_refused(diagrams):
+    slides = slides_with([("focus", show(EPITOME, new=[], dim=EPITOME), "")])
+    slides[0].section = "1.1"
+    assert check_states(slides, diagrams) == [("1-001", "`new` does not match what this slide adds: expected [e-answer, e-ask, n-model, n-user]")]
+
+
+def test_first_appearance_not_all_dimmed_needs_new(diagrams):
+    slides = slides_with([("focus", show(EPITOME, new=[], dim=["n-user"]), "")])
+    assert check_states(slides, diagrams) == [("1-001", "`new` does not match what this slide adds: expected [e-answer, e-ask, n-model, n-user]")]
