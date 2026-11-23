@@ -125,6 +125,9 @@ def test_edited_part_is_skipped_and_reported(course, fake_template):
     tsx = course / "web/src/parts/part-01.tsx"
     tsx.write_text(tsx.read_text(encoding="utf-8") + "// mine\n", encoding="utf-8")
     report = _run(course, [1], fake_template)
+    assert report["kept"] == ["src/parts/part-01.tsx"] and report["skipped"] == [] and report["diffs"] == {}
+    replace(course / "slides/part-01-first-agent.md", "**Title:** สรุป", "**Title:** สรุปทั้งหมด")
+    report = _run(course, [1], fake_template)
     assert set(report["skipped"]) == {"src/parts/part-01.tsx", "src/parts/part-01.data.ts"}
     assert "// mine" in tsx.read_text(encoding="utf-8")
     assert "-// mine" in report["diffs"]["src/parts/part-01.tsx"]
@@ -134,7 +137,7 @@ def test_force_path_is_normalised_or_refused(course, fake_template):  # Review F
     _run(course, [1], fake_template)
     tsx = course / "web/src/parts/part-01.tsx"
     tsx.write_text("// mine\n", encoding="utf-8")
-    with pytest.raises(build_part.BuildError, match="skipped files: src/parts/part-01.data.ts, src/parts/part-01.tsx"):
+    with pytest.raises(build_part.BuildError, match="edited files: src/parts/part-01.data.ts, src/parts/part-01.tsx"):
         _run(course, [1], fake_template, force=frozenset({"src/nope.ts"}))
     report = _run(course, [1], fake_template, force=frozenset({"web\\src\\parts\\part-01.tsx"}))
     assert report["forced"] == ["src/parts/part-01.tsx"] and tsx.read_text(encoding="utf-8").startswith("// Generated")
@@ -167,6 +170,8 @@ def test_a_bad_deck_writes_nothing(course, fake_template):
 def test_template_upgrade_replaces_only_unedited_files(course, fake_template):
     _run(course, [1], fake_template)
     (course / "web/src/components/x.ts").write_text("export const x = 'mine';\n", encoding="utf-8")
+    report = _run(course, [1], fake_template)
+    assert "src/components/x.ts" in report["kept"] and report["skipped"] == [] and report["diffs"] == {}
     _bump(fake_template, "1.1.0")
     (fake_template / "src/components/x.ts").write_text("export const x = 2;\n", encoding="utf-8")
     (fake_template / "src/components/y.ts").write_text("export const y = 1;\n", encoding="utf-8")

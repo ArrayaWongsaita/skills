@@ -63,6 +63,17 @@ def test_forcing_one_member_forces_the_group(tmp_path):
     assert (tmp_path / "src/parts/part-01.data.ts").read_text(encoding="utf-8") == "d2"
 
 
+def test_edited_file_with_nothing_new_is_kept(tmp_path):
+    m = manifest.Manifest()
+    pair = {"src/parts/part-01.tsx": "t1", "src/parts/part-01.data.ts": "d1"}
+    _write(tmp_path, pair, m)
+    (tmp_path / "src/parts/part-01.tsx").write_text("mine", encoding="utf-8")
+    assert _write(tmp_path, pair, m) == {"src/parts/part-01.tsx": "kept", "src/parts/part-01.data.ts": "unchanged"}
+    assert (tmp_path / "src/parts/part-01.tsx").read_text(encoding="utf-8") == "mine"
+    new = {"src/parts/part-01.tsx": "t1", "src/parts/part-01.data.ts": "d2"}
+    assert _write(tmp_path, new, m) == {"src/parts/part-01.tsx": "skipped", "src/parts/part-01.data.ts": "skipped"}
+
+
 def test_untracked_existing_file_counts_as_edited(tmp_path):
     m = manifest.Manifest()
     (tmp_path / "a.tsx").write_text("user file", encoding="utf-8")

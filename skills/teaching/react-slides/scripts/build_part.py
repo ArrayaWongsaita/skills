@@ -165,7 +165,7 @@ def run(course_dir: Path, parts: list[int] | None, *, template_dir: Path = TEMPL
         loaded = {}
     elif m.template_version and _major(m.template_version) != _major(version):
         _load(course_dir, deck_reader.deck_parts(course_dir), loaded, errors)
-    report = {"web": str(web), "parts": sorted(loaded), "written": [], "unchanged": [], "skipped": [], "forced": [],
+    report = {"web": str(web), "parts": sorted(loaded), "written": [], "unchanged": [], "kept": [], "skipped": [], "forced": [],
               "diffs": {}, "warnings": [], "stale": [], "visuals": [], "unused": [], "older_parts": [],
               "template_version": version, "install": "not-needed", "errors": errors}
     if not loaded:
@@ -182,7 +182,7 @@ def run(course_dir: Path, parts: list[int] | None, *, template_dir: Path = TEMPL
     force = frozenset(_normalise(path) for path in force)
     blocked = sorted(rel for files, _, _ in groups if any(manifest.status(web, r, m) == "edited" for r in files) for rel in files)
     for path in sorted(force - set(blocked)):
-        raise BuildError(f"--force {path} was not skipped; skipped files: {', '.join(blocked) or 'none'}")
+        raise BuildError(f"--force {path} is not a file you edited; edited files: {', '.join(blocked) or 'none'}")
 
     for files, kind, gen in groups:
         for rel, outcome in manifest.write_group(web, files, m, kind=kind, generator=gen, force=force).items():

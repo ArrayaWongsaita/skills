@@ -49,6 +49,13 @@ def status(web: Path, rel: str, m: Manifest) -> str:
     return "unedited" if hashlib.sha256(path.read_bytes()).hexdigest() == entry["sha256"] else "edited"
 
 
+def _nothing_new(web: Path, rel: str, text: str, state: str, m: Manifest) -> bool:
+    """True when the skill would write what it wrote last time: an edit then has nothing to be weighed against."""
+    if state == "edited":
+        return rel in m.files and m.files[rel]["sha256"] == sha256_text(text)
+    return state == "unedited" and (web / rel).read_bytes() == text.encode("utf-8")
+
+
 def _write(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(text.encode("utf-8"))
@@ -62,6 +69,8 @@ def write_group(web: Path, files: dict[str, str], m: Manifest, *, kind: str, gen
     """
     states = {rel: status(web, rel, m) for rel in files}
     if "edited" in states.values() and not force & set(files):
+        if all(_nothing_new(web, rel, text, states[rel], m) for rel, text in files.items()):
+            return {rel: "kept" if states[rel] == "edited" else "unchanged" for rel, text in files.items()}
         return {rel: "skipped" for rel in files}
     outcomes = {}
     for rel, text in files.items():

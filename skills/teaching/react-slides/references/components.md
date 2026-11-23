@@ -134,7 +134,7 @@ function Spotlight(props: ComponentProps<typeof Explain>) {
 
 Put your own components and styles in folders the skill does not write to, such as `src/my/`.
 
-**What happens on the next run:** the skill records the hash of every file it writes. A file that no longer matches is yours: it is skipped from then on and listed in the report with what the new version would change. A Part's `.tsx` and `.data.ts` are skipped together, so the code shown never drifts from the deck. To take the skill's version again, run `build_part.py` with `--force <path>`. `src/course.ts` is written once and never touched again. Template files (`src/components/`, `src/theme/`) follow the same rule: an edit is kept, and the report lists it when an upgrade would change that file.
+**What happens on the next run:** the skill records the hash of every file it writes. A file that no longer matches is yours from then on. While the skill has nothing new for it, the report lists it under `kept`. When a changed deck or a template upgrade would change it, it is skipped and listed with what the new version would change. A Part's `.tsx` and `.data.ts` are skipped together, so the code shown never drifts from the deck. To take the skill's version again, run `build_part.py` with `--force <path>`. `src/course.ts` is written once and never touched again. Template files (`src/components/`, `src/theme/`) follow the same rule: an edit is kept, and it is skipped, with a diff, only when an upgrade would change that file.
 
 The component API only grows within a template major version: props may be added, never renamed or removed.
 
