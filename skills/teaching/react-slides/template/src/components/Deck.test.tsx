@@ -103,6 +103,18 @@ test('vertical swipe does not navigate', () => {
   expect(lastNavigation()).toEqual({ name: 'part', part: 1, slide: '1-003' });
 });
 
+test('a swipe that starts on a block that scrolls sideways is left to the block', () => {
+  route.current = { name: 'part', part: 1, slide: '1-002' };
+  const { container } = render(<MiniPart />);
+  const wide = container.querySelector('[data-direction]') as HTMLElement;
+  wide.style.overflowX = 'auto';
+  Object.defineProperty(wide, 'scrollWidth', { configurable: true, value: 800 });
+  Object.defineProperty(wide, 'clientWidth', { configurable: true, value: 300 });
+  fireEvent.touchStart(wide, { touches: [{ clientX: 200, clientY: 0 }] });
+  fireEvent.touchEnd(wide, { changedTouches: [{ clientX: 20, clientY: 10 }] });
+  expect(navigate).not.toHaveBeenCalled();
+});
+
 test('direction', () => {
   route.current = { name: 'part', part: 1, slide: '1-001' };
   const { rerender } = render(<MiniPart />);

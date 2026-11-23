@@ -30,7 +30,16 @@ export function useMediaQuery(query: string): boolean {
   );
 }
 
-/** Calls onLeft or onRight for a horizontal swipe; a vertical scroll never counts. */
+/** True when the touch starts inside something that scrolls sideways, such as a long code line: the swipe is that box's. */
+function startsInSidewaysScroller(target: EventTarget | null, root: HTMLElement): boolean {
+  for (let node = target instanceof Element ? target : null; node && node !== root; node = node.parentElement) {
+    const overflow = getComputedStyle(node).overflowX;
+    if ((overflow === 'auto' || overflow === 'scroll') && node.scrollWidth > node.clientWidth + 1) return true;
+  }
+  return false;
+}
+
+/** Calls onLeft or onRight for a horizontal swipe; a vertical scroll, or a sideways scroll of a code block, never counts. */
 export function useSwipe(ref: RefObject<HTMLElement | null>, handlers: { onLeft: () => void; onRight: () => void }): void {
   const latest = useRef(handlers);
   latest.current = handlers;
@@ -40,7 +49,7 @@ export function useSwipe(ref: RefObject<HTMLElement | null>, handlers: { onLeft:
     let start: { x: number; y: number } | null = null;
     const down = (event: TouchEvent) => {
       const touch = event.touches[0];
-      start = touch ? { x: touch.clientX, y: touch.clientY } : null;
+      start = touch && !startsInSidewaysScroller(event.target, element) ? { x: touch.clientX, y: touch.clientY } : null;
     };
     const up = (event: TouchEvent) => {
       const touch = event.changedTouches[0];
