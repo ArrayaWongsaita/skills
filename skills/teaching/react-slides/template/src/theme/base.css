@@ -643,3 +643,55 @@ a {
     stroke-dashoffset: 0;
   }
 }
+
+/* The check page (#/check/part-NN): fixed frames, so measurements do not depend on the window. */
+.rs-check {
+  padding: 24px;
+}
+
+.rs-check-table {
+  border-collapse: collapse;
+  margin-bottom: 32px;
+  font-size: 14px;
+}
+
+.rs-check-table th,
+.rs-check-table td {
+  border: 1px solid var(--rs-line);
+  padding: 4px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.rs-check-table tr[data-level='problem'] td:nth-child(4) {
+  color: #c0392b;
+}
+
+.rs-check-frames {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 48px;
+  align-items: flex-start;
+}
+
+.rs-check-frame .rs-deck {
+  min-height: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.rs-check-frame[data-frame='desktop'] .rs-stage {
+  width: 1280px;
+  height: 720px;
+  aspect-ratio: auto;
+  outline: 1px solid var(--rs-line);
+}
+
+.rs-check-frame[data-frame='phone'] .rs-stage {
+  width: 390px;
+  min-height: 844px;
+  outline: 1px solid var(--rs-line);
+}
