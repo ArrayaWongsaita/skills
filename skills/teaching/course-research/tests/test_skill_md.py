@@ -37,3 +37,8 @@ def test_resume_paths_cover_stale_parts(skill_md, needle):
 
 def test_part_slugs_fixed_in_outline(skill_dir):
     assert "part-01-<slug>.md" in (skill_dir / "references" / "outline.md").read_text(encoding="utf-8")
+
+
+def test_reporting_hook(skill_md):
+    section = skill_md.split("## Reporting problems with this skill", 1)[1]
+    assert "<course_dir>/_work/skill-problems.md" in section and "report-skill-issue" in section and "Skill problem:" in section

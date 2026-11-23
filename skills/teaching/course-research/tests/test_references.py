@@ -89,3 +89,12 @@ def test_part_template_does_not_call_all_prebuilt_outdated(skill_dir):
 @pytest.mark.parametrize("needle", ["expected output differs", "quit", "LangChainBetaWarning"])
 def test_code_check_doc_names_new_rules(skill_dir, needle):
     assert needle in read(skill_dir, "code-check.md")
+
+
+@pytest.mark.parametrize("brief", ["researcher.md", "part-writer.md"])
+def test_briefs_let_subagents_report_skill_problems(skill_dir, brief):
+    assert "Skill problem:" in read(skill_dir, brief)
+
+
+def test_consistency_review_has_a_skill_row(skill_dir):
+    assert "skill | <brief or script> | <problem> | <suggested fix>" in read(skill_dir, "consistency-review.md")

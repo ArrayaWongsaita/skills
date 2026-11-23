@@ -63,3 +63,4 @@ Reply in three to six lines with:
 - the file path and the number of slides
 - every change from the storyboard: splits, added build steps, reorders
 - anything you need from the coordinator: a diagram change, a missing concept, a Part gap
+- `Skill problem: <what got in the way, and where>`, one line each, only when this brief, a script or a template got in your way

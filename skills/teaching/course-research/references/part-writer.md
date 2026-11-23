@@ -54,3 +54,4 @@ Reply in three to five lines with:
 - the file path and the number of sub-topics
 - the snippets and fixtures you wrote
 - any slot that is thin because the notes had a gap
+- `Skill problem: <what got in the way, and where>`, one line each, only when this brief, a script or a template got in your way

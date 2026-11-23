@@ -44,3 +44,8 @@ def test_prompts_point_at_their_briefs(skill_md):
 def test_acceptance_lists_the_spec_checks(skill_dir):
     text = (skill_dir / "evals" / "acceptance.md").read_text(encoding="utf-8")
     assert [n for n in ("exit 0", "overlapping node", "unknown concept", "missing slot", "`new`", "over its limit", "reuses the vocabulary", "learner pass") if n not in text] == []
+
+
+def test_reporting_hook(skill_md):
+    section = skill_md.split("## Reporting problems with this skill", 1)[1]
+    assert "<work>/skill-problems.md" in section and "report-skill-issue" in section and "Skill problem:" in section

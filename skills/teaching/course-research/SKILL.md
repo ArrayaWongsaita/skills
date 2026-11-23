@@ -148,6 +148,14 @@ When there is no Agent tool, do every role inline, in sequence, writing exactly 
 
 Keep each note to about 8 tool calls. The gates, the scripts and the templates stay the same.
 
+## Reporting problems with this skill
+
+When something in this skill goes wrong or does not fit (a script error, a validator error that was wrong, a brief that misled a subagent, a limit or rule that did not fit real content), append one line to `<course_dir>/_work/skill-problems.md` as soon as you see it:
+
+`- <bug|improvement|docs> · <what happened> · <where: the script, brief or rule> · <stage>`
+
+A subagent's `Skill problem:` line goes in too. On resume, read the file first. At the end of the run, if any line is not yet reported, offer once to report them with the `report-skill-issue` skill, or at once if a problem stops the run. After a report, add ` → <issue URL>` to each line it covered. If `report-skill-issue` is not installed, list the open lines in your final report instead.
+
 ## References
 
 - `references/scope-interview.md`: the Stage 1 questions and the `_work/scope.md` layout

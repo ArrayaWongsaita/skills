@@ -28,4 +28,5 @@ part-NN | heading | problem | suggested fix
 
 - `heading` is the section or slot, e.g. `1.2 / Misconceptions` or `Bridge to next part`.
 - Use `overview` instead of `part-NN` for problems in `00-overview.md`.
+- A problem with this brief or a script, not with the course, goes on its own row: `skill | <brief or script> | <problem> | <suggested fix>`.
 - If there are no problems, reply `No issues`.

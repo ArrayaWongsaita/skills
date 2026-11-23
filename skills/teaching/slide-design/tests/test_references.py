@@ -46,3 +46,8 @@ def test_briefs_link_only_existing_references(skill_dir, name):
 
     linked = set(re.findall(r"references/([a-z-]+\.md)", read(skill_dir, name)))
     assert [n for n in linked if not (skill_dir / "references" / n).exists()] == []
+
+
+@pytest.mark.parametrize("brief", ["section-writer.md", "learner-review.md"])
+def test_briefs_let_subagents_report_skill_problems(skill_dir, brief):
+    assert "Skill problem:" in read(skill_dir, brief)
