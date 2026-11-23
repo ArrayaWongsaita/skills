@@ -1,7 +1,7 @@
 # Design: `report-skill-issue` skill
 
 - Date: 2026-11-23
-- Status: Draft, awaiting approval
+- Status: Approved 2026-11-23
 - Location of the skill: `skills/meta/report-skill-issue/` (my call: `meta` is for skills about this repo's skills)
 - Issue tracker: a new private repository, `ArrayaWongsaita/skills-issues`
 - Touches:
