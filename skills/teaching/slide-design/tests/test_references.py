@@ -21,6 +21,12 @@ def test_deck_template_names_the_whole_contract(skill_dir):
     assert [key for key, value in FIELD_LIMITS.items() if f"| `{key[0]}` | {key[1]} | {value} |" not in text] == []
 
 
+def test_deck_template_requires_an_error_slide_to_have_a_symptom_or_a_block(skill_dir):
+    row = next(line for line in read(skill_dir, "deck-template.md").splitlines() if line.startswith("| `error` |"))
+    required = row.split(" | ")[2]
+    assert "Symptom or an error block" in required
+
+
 def test_deck_template_example_parses(skill_dir):
     text = read(skill_dir, "deck-template.md")
     example = text.split("<!-- example:deck -->")[1].split("<!-- /example:deck -->")[0]
@@ -32,7 +38,7 @@ def test_deck_template_example_parses(skill_dir):
 @pytest.mark.parametrize("name,needles", [
     ("storyboard.md", ["prior knowledge", "Part gap", "at most 5 terms", "_None._", "diagrams.md", "new-concepts.json", "deck-notes.md", "--diagrams"]),
     ("visuals.md", [*SHAPES, *VISUAL_KINDS, "fallback", "Mermaid", "build step", "highlight"]),
-    ("section-writer.md", ["Revision mode", "sections/<key>.md", "1-007a", "Notice", "no new facts"]),
+    ("section-writer.md", ["Revision mode", "sections/<key>.md", "1-007a", "Notice", "no new facts", "needs a `Symptom` or an error block"]),
     ("learner-review.md", ["Blocking", "Minor", "Round 2", "Part gap", "review.md", "prior knowledge"]),
 ])
 def test_briefs_carry_their_rules(skill_dir, name, needles):

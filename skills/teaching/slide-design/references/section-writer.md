@@ -32,7 +32,7 @@ The prompt gives you absolute paths to:
 
 - A `code` slide shows an excerpt of one snippet. Set `lines` to the shown ranges and `highlight` to the lines the Body explains. The block holds exactly those lines, copied from the Part.
 - An `output` slide copies the snippet's expected output exactly, with the same info string. When it is illustrative, say in the Body that real output will differ.
-- An `error` slide uses the error text the Part gives, as a block, or a `Symptom` when the Part describes one.
+- An `error` slide needs a `Symptom` or an error block, or both. The block holds the error text the Part gives, verbatim. When the Part gives no error text, the `Symptom` says what the learner sees, in the Part's words.
 - When a snippet's status is not `verified`, add a `**Notice:**` field to its `code` and `output` slides saying, in the slide language, that the code has not been run.
 
 ## Visuals
