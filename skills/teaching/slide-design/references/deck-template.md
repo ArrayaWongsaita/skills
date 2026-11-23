@@ -96,7 +96,7 @@ A closed set. Lengths count visible characters: Thai vowel and tone marks, and e
 | `compare` | old vs current, wrong vs right | Title, Left, Right, Takeaway | | none | optional, in each panel |
 | `code` | one step of a code walkthrough | Title, Body | Notice | none | exactly one: the excerpt |
 | `output` | what the learner should see | Title, Body | Notice | none | exactly one: the expected output |
-| `error` | a common error | Title, Cause, Fix | Symptom | none | the error text, when the Part gives one |
+| `error` | a common error | Title, Cause, Fix, and Symptom or an error block | | none | the error text, when the Part gives one |
 | `objectives` | what the learner will be able to do | Title, Items | | optional | none |
 | `setup` | prerequisites and setup | Title, Items | | optional | command blocks from the Part |
 | `terms` | key terms | Title, Items (1–5) | | optional | none |
