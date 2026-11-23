@@ -97,4 +97,4 @@ Rules for the notes:
 - **Never fabricate** a fact, a number, a quote, a URL or an API.
 - Code you copy from docs keeps its source URL and the version it was written for.
 
-When you finish, reply to the coordinator in three to five lines: the notes path, the main takeaways, and the important gaps.
+When you finish, reply to the coordinator in three to five lines: the notes path, the main takeaways, and the important gaps. Add a line `Skill problem: <what got in the way, and where>` for each time this brief, a script or a template got in your way, and none otherwise.

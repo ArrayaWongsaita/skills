@@ -76,4 +76,4 @@ Round 1 is the full review. **Round 2** rechecks only the revised slides and the
 
 ## When you finish
 
-Reply in two to four lines: the review path, the number of Blocking and Minor issues, and the number of Part gaps.
+Reply in two to four lines: the review path, the number of Blocking and Minor issues, and the number of Part gaps. Add a line `Skill problem: <what got in the way, and where>` for each time this brief, a script or a template got in your way, and none otherwise.

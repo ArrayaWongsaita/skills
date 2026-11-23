@@ -126,7 +126,7 @@ As a first step, read <skill>/references/part-writer.md and follow it.
 3. **Overview.** Write `<course_dir>/00-overview.md` yourself, from the overview skeleton in `references/part-template.md`. Set `research_date` to today and `versions` to `resolved` from `_work/code-check/env.json` (`{}` when not technical). The Part map titles must match the Part files exactly.
 4. **Code check.** Run `set-stage <course_dir> verifying`, then `python3 <skill>/scripts/code_check/check_code.py <course_dir>`. For each unverified snippet that has no `skip`, send its reason (and, for `expected output differs`, its `stdout` from `_work/code-check/results.json`) to the Part's writer in revision mode (the same prompt, plus "Revision mode. Fix only these issues: …"). Rerun with `--part N`. Allow at most 2 rounds per snippet; whatever still fails stays marked unverified. The rules are in `references/code-check.md`.
 5. **Structure.** Run `python3 <skill>/scripts/validate_course.py <course_dir>`. Send its errors to the writers in revision mode, and fix overview errors yourself, until it exits 0.
-6. **Consistency.** Dispatch one reviewer: "Review the course in `<course_dir>`. As a first step, read `<skill>/references/consistency-review.md` and follow it." Send its issues to the writers in revision mode, then run `validate_course.py` again. Rerun `check_code.py --part N` for any Part whose code changed.
+6. **Consistency.** Dispatch one reviewer: "Review the course in `<course_dir>`. As a first step, read `<skill>/references/consistency-review.md` and follow it." Append its `skill |` rows to `<course_dir>/_work/skill-problems.md`. Send the other issues to the writers in revision mode, then run `validate_course.py` again. Rerun `check_code.py --part N` for any Part whose code changed.
 7. **Close.** Run `set-part <course_dir> <N> checked` for each Part not yet checked, then `set-stage <course_dir> done`.
 
 ## Stage 6: report
@@ -147,6 +147,14 @@ When there is no Agent tool, do every role inline, in sequence, writing exactly 
 - Current state (technical topics only)
 
 Keep each note to about 8 tool calls. The gates, the scripts and the templates stay the same.
+
+## Reporting problems with this skill
+
+When something in this skill goes wrong or does not fit (a script error, a validator error that was wrong, a brief that misled a subagent, a limit or rule that did not fit real content), append one line to `<course_dir>/_work/skill-problems.md` as soon as you see it:
+
+`- <bug|improvement|docs> · <what happened> · <where: the script, brief or rule> · <stage>`
+
+A subagent's `Skill problem:` line goes in too. On resume, read the file first. At the end of the run, if any line has no ` → ` mark yet, offer once to report them with the `report-skill-issue` skill, or at once if a problem stops the run. Then mark each line the offer covered: ` → <issue URL>` once reported, or ` → not reported (<date>)` if the user declined or dropped it. A marked line is never offered again. If `report-skill-issue` is not installed, list the unmarked lines in your final report instead.
 
 ## References
 
