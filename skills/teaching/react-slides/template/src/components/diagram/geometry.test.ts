@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { fixtureDiagrams } from '../../__fixtures__/DeckFixture';
-import { type Box, CELL, edgePoints, elementBox, groupBox, nearPoint, nodeBox, outOfCanvas, type Point } from './geometry';
+import { type Box, CELL, edgePoints, edgeSlots, elementBox, groupBox, nearPoint, nodeBox, outOfCanvas, type Point } from './geometry';
 
 const DEF = fixtureDiagrams['d-loop'];
 
@@ -55,4 +55,32 @@ test('nodes outside the canvas are reported', () => {
   expect(outOfCanvas(DEF)).toEqual([]);
   const wide = { ...DEF, nodes: [...DEF.nodes, { id: 'n-far', label: 'far', concept: 'tool', at: [15, 7] as [number, number], size: [3, 1] as [number, number] }] };
   expect(outOfCanvas(wide)).toEqual(['n-far']);
+});
+
+const dist = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);
+const side = (p: Point, a: Point, b: Point) => Math.sign((b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x));
+const mid = (e: { from: Point; to: Point }) => ({ x: (e.from.x + e.to.x) / 2, y: (e.from.y + e.to.y) / 2 });
+
+test('opposite edges run side by side', () => {
+  const call = edgePoints(DEF, DEF.edges[1]);
+  const back = edgePoints(DEF, DEF.edges[2]);
+  expect(dist(mid(call), mid(back))).toBeGreaterThanOrEqual(12);
+});
+
+test('label, badge and note of an edge each get their own place', () => {
+  const edge = DEF.edges[1];
+  const { from, to } = edgePoints(DEF, edge);
+  const slots = edgeSlots(DEF, edge);
+  const along = Math.abs((to.x - from.x) * (slots.badge.y - from.y) - (to.y - from.y) * (slots.badge.x - from.x)) / dist(from, to);
+  expect(along).toBeLessThan(1); // on the line
+  expect(dist(slots.label, slots.badge)).toBeGreaterThanOrEqual(12);
+  expect(dist(slots.note, slots.badge)).toBeGreaterThanOrEqual(12);
+  expect(side(slots.label, from, to)).toBe(-side(slots.note, from, to));
+  // The note clears the edge running the other way, too.
+  const back = edgePoints(DEF, DEF.edges[2]);
+  expect(side(slots.note, back.from, back.to)).toBe(side(mid({ from, to }), back.from, back.to) * -1);
+});
+
+test('badges on opposite edges do not overlap', () => {
+  expect(dist(edgeSlots(DEF, DEF.edges[1]).badge, edgeSlots(DEF, DEF.edges[2]).badge)).toBeGreaterThanOrEqual(28);
 });

@@ -3,6 +3,7 @@ import { expect, test } from 'vitest';
 import { fixtureDiagrams } from '../../__fixtures__/DeckFixture';
 import type { DiagramState, Vocabulary } from '../types';
 import { Diagram } from './Diagram';
+import { groupBox } from './geometry';
 
 const DEF = fixtureDiagrams['d-loop'];
 const vocabulary: Vocabulary = {
@@ -86,4 +87,10 @@ test('every shape draws something', () => {
     expect(container.querySelectorAll('[data-el="n-model"] path').length, shape).toBeGreaterThan(0);
     unmount();
   }
+});
+
+test('the group label sits above its frame, clear of its members', () => {
+  const { container } = draw(step3, false);
+  const label = container.querySelector('[data-el="g-agent"] text')!;
+  expect(Number(label.getAttribute('y'))).toBeLessThan(groupBox(DEF, DEF.groups[0]).y);
 });

@@ -49,11 +49,54 @@ function exit(box: Box, target: Point): Point {
   return { x: c.x + dx * scale + (dx / length) * EDGE_GAP, y: c.y + dy * scale + (dy / length) * EDGE_GAP };
 }
 
+const PARALLEL_GAP = 8;
+const LABEL_GAP = 14;
+/** How far a badge on one of two opposite edges moves along its edge, so the pair's badges do not overlap. */
+const BADGE_SHIFT = 16;
+
+export type Anchor = 'start' | 'middle' | 'end';
+export type Slot = Point & { anchor: Anchor };
+
+const reverseOf = (def: DiagramDef, edge: DiagramEdge) => def.edges.find((e) => e.id !== edge.id && e.from === edge.to && e.to === edge.from);
+
+function unit(a: Point, b: Point): Point {
+  const length = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+  return { x: (b.x - a.x) / length, y: (b.y - a.y) / length };
+}
+
+/** Where an edge starts and ends. Two edges between the same nodes in opposite directions run side by side. */
 export function edgePoints(def: DiagramDef, edge: DiagramEdge): { from: Point; to: Point } {
   const a = elementBox(def, edge.from);
   const b = elementBox(def, edge.to);
   if (!a || !b) return { from: { x: 0, y: 0 }, to: { x: 0, y: 0 } };
-  return { from: exit(a, centre(b)), to: exit(b, centre(a)) };
+  const from = exit(a, centre(b));
+  const to = exit(b, centre(a));
+  if (!reverseOf(def, edge)) return { from, to };
+  const d = unit(from, to);
+  const shift = { x: -d.y * PARALLEL_GAP, y: d.x * PARALLEL_GAP };
+  return { from: { x: from.x + shift.x, y: from.y + shift.y }, to: { x: to.x + shift.x, y: to.y + shift.y } };
+}
+
+/**
+ * Places for what sits on an edge: a badge on the line at its middle (moved along it when an edge runs the other way), the label on one side and a note on the other.
+ * The label goes right of a vertical edge and above a horizontal one, or outward when an edge runs the other way.
+ */
+export function edgeSlots(def: DiagramDef, edge: DiagramEdge): { badge: Point; label: Slot; note: Slot } {
+  const { from, to } = edgePoints(def, edge);
+  const middle = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+  const d = unit(from, to);
+  const vertical = Math.abs(d.y) > Math.abs(d.x);
+  const reverse = Boolean(reverseOf(def, edge));
+  let s = { x: -d.y, y: d.x };
+  if (!reverse && (vertical ? s.x < 0 : s.y > 0)) s = { x: -s.x, y: -s.y };
+  const labelGap = vertical ? LABEL_GAP : LABEL_GAP + 4;
+  const noteGap = labelGap + (reverse ? 2 * PARALLEL_GAP : 0);
+  const anchor = (sign: number): Anchor => (!vertical ? 'middle' : sign > 0 ? 'start' : 'end');
+  return {
+    badge: reverse ? { x: middle.x + d.x * BADGE_SHIFT, y: middle.y + d.y * BADGE_SHIFT } : middle,
+    label: { x: middle.x + s.x * labelGap, y: middle.y + s.y * labelGap, anchor: anchor(s.x) },
+    note: { x: middle.x - s.x * noteGap, y: middle.y - s.y * noteGap, anchor: anchor(-s.x) },
+  };
 }
 
 /** The point a badge or note is near: an element's box corner area, or an edge's middle. */
