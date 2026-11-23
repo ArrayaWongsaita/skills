@@ -60,6 +60,22 @@ test('Space on a focused button or summary works the control and leaves the slid
   expect(lastNavigation()).toEqual({ name: 'part', part: 1, slide: '1-003' });
 });
 
+test('a phone held sideways gets the phone layout', () => {
+  const viewport = { width: 844, height: 390 };
+  const matches = (query: string) =>
+    query.split(',').some((part) =>
+      [...part.matchAll(/\(max-(width|height):\s*(\d+)px\)/g)].every(([, side, px]) => viewport[side as 'width' | 'height'] <= Number(px)),
+    );
+  vi.stubGlobal('matchMedia', (query: string) => ({ matches: matches(query), media: query, addEventListener() {}, removeEventListener() {} }));
+  try {
+    route.current = { name: 'part', part: 1, slide: '1-002' };
+    const { container } = render(<MiniPart />);
+    expect(container.querySelector('.rs-deck')).toHaveClass('rs-phone');
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
+
 test('keys with a modifier are left to the browser', () => {
   route.current = { name: 'part', part: 1, slide: '1-002' };
   render(<MiniPart />);

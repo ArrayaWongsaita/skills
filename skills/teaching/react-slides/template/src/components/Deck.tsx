@@ -26,7 +26,8 @@ export const DeckModeContext = createContext<'read' | 'check'>('read');
 /** The frame the check page lays a slide out in; null means "follow the screen width". */
 export const FrameContext = createContext<Frame | null>(null);
 
-export const PHONE_QUERY = '(max-width: 720px)';
+// A narrow screen, or a phone held sideways: the 16:9 frame would make the text too small to read.
+export const PHONE_QUERY = '(max-width: 720px), (max-height: 500px)';
 
 export function useDeck(): DeckValue {
   const value = useContext(DeckContext);
