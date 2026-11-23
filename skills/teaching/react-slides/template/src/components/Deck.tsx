@@ -115,6 +115,8 @@ function ReadDeck({ meta, diagrams, listings, outputs, slides }: Props & { slide
       if (event.altKey || event.ctrlKey || event.metaKey) return;
       const target = event.target as HTMLElement | null;
       if (target?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+      // Space on a focused button, link or summary is that control's: it presses the copy button or opens the solution.
+      if (event.key === ' ' && target?.closest?.('button, summary, a[href], [role="button"]')) return;
       const forward = event.key === 'ArrowRight' || event.key === 'PageDown' || (event.key === ' ' && !event.shiftKey);
       const back = event.key === 'ArrowLeft' || event.key === 'PageUp' || (event.key === ' ' && event.shiftKey);
       if (!forward && !back) return;

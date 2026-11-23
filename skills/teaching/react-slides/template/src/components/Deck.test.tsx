@@ -47,6 +47,19 @@ test('ArrowRight navigates forward', () => {
   expect(lastNavigation()).toEqual({ name: 'part', part: 1, slide: '1-001' });
 });
 
+test('Space on a focused button or summary works the control and leaves the slide alone', () => {
+  route.current = { name: 'part', part: 1, slide: '1-002' };
+  const { container } = render(<MiniPart />);
+  const button = container.querySelector('.rs-deck button') as HTMLElement;
+  expect(fireEvent.keyDown(button, { key: ' ' })).toBe(true);
+  const summary = document.createElement('summary');
+  container.querySelector('.rs-slide')!.append(summary);
+  expect(fireEvent.keyDown(summary, { key: ' ', shiftKey: true })).toBe(true);
+  expect(navigate).not.toHaveBeenCalled();
+  fireEvent.keyDown(button, { key: 'ArrowRight' });
+  expect(lastNavigation()).toEqual({ name: 'part', part: 1, slide: '1-003' });
+});
+
 test('keys with a modifier are left to the browser', () => {
   route.current = { name: 'part', part: 1, slide: '1-002' };
   render(<MiniPart />);
