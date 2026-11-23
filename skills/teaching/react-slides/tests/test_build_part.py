@@ -232,3 +232,15 @@ def test_missing_npm_is_a_clear_error(course, fake_template, monkeypatch, tmp_pa
     with pytest.raises(build_part.BuildError, match="install Node.js 20 or later"):
         _run(course, [1], fake_template, skip_install=False)
     assert not (course / "web").exists()
+
+
+def test_failed_install_still_reports_what_was_written(course, fake_template, capsys, monkeypatch):
+    import subprocess
+    monkeypatch.setattr(build_part, "TEMPLATE_DIR", fake_template)
+    monkeypatch.setattr(build_part.shutil, "which", lambda name: "/usr/bin/npm")
+    monkeypatch.setattr(build_part.subprocess, "run", lambda *a, **k: subprocess.CompletedProcess(a, 1, stdout="npm ERR! network\n"))
+    assert build_part.main([str(course), "1"]) == 1
+    out = capsys.readouterr()
+    report = json.loads(out.out)
+    assert report["install"] == "failed" and "src/parts/part-01.tsx" in report["written"]
+    assert "error: npm install failed" in out.err and "npm ERR! network" in out.err

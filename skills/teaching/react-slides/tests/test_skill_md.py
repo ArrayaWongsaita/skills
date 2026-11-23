@@ -71,3 +71,10 @@ def test_agents_md_lists_react_slides_tests():
     assert "# react-slides" in text
     assert "pytest skills/teaching/react-slides/tests -q" in text
     assert "npm --prefix skills/teaching/react-slides/template ci" in text
+
+
+def test_skill_md_tells_each_exit_status_1_apart():
+    text = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+    for case in ("no JSON report", "`errors`", "`--all`", "major template upgrade", "`install` is `failed`", "Node.js 20"):
+        assert case in text, case
+    assert "the deck cannot be read, so nothing was written" not in text

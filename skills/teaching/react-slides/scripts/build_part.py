@@ -226,7 +226,10 @@ def run(course_dir: Path, parts: list[int] | None, *, template_dir: Path = TEMPL
     report["older_parts"].sort()
 
     changed = {"package.json", "package-lock.json"} & set(report["written"] + report["forced"])
-    report["install"] = _install(web, bool(changed) or not (web / "node_modules").exists(), skip_install)
+    try:
+        report["install"] = _install(web, bool(changed) or not (web / "node_modules").exists(), skip_install)
+    except BuildError as error:  # the files are written: the report must still reach the coordinator
+        report["install"], report["install_error"] = "failed", str(error)
     return report
 
 
@@ -252,8 +255,9 @@ def main(argv: list[str]) -> int:
             print(f"error: {entry['deck']}: {message}", file=sys.stderr)
     if report["errors"]:
         print("error: fix the deck with slide-design (its validate_deck.py names the same problems), then run again", file=sys.stderr)
-        return 1
-    return 0
+    if report["install"] == "failed":
+        print(f"error: {report['install_error']}", file=sys.stderr)
+    return 1 if report["errors"] or report["install"] == "failed" else 0
 
 
 if __name__ == "__main__":
