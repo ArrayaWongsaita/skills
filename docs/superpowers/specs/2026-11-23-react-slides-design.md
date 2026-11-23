@@ -1,7 +1,7 @@
 # Design: `react-slides` skill
 
 - Date: 2026-11-23
-- Status: Draft
+- Status: Approved 2026-11-23
 - Location of the skill: `skills/teaching/react-slides/`
 - Input contract: `slide-design/deck@1` and `slide-design/vocabulary@1` (`skills/teaching/slide-design/references/deck-template.md`)
 - The look was chosen from browser mockups during the brainstorm. They are not committed; §5.4 describes the result in words.
