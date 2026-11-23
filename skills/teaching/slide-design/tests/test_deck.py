@@ -1,6 +1,8 @@
+import json
+
 import pytest
 
-from deck import meta_block, parse_deck, parse_diagrams, parse_sections, section_key
+from deck import meta_block, parse_deck, parse_diagrams, parse_sections, section_key, slide_units
 
 SLIDE = '''## 1.1 เรียกโมเดล
 
@@ -148,3 +150,53 @@ def test_parse_deck():
     listing = deck.listings["1.1-a"]
     assert listing.meta["status"] == "verified" and listing.code.text == "print(1)" and listing.code.lang == "python"
     assert deck.slides()[1].line == 27
+
+
+MINIMAL_DECK = DECK
+
+
+def draft(key: str, rows: list[tuple[str, str, dict]]) -> str:
+    """A section draft: `## <key> T` and one slide per (id, layout, extra meta) row."""
+    parts = [f"## {key} T"]
+    for slide_id, layout, meta in rows:
+        block = json.dumps({"layout": layout, "purpose": "p", "from": [], "sources": [], **meta}, ensure_ascii=False)
+        parts.append(f"### {slide_id} · {layout}\n\n```slide\n{block}\n```\n\n**Title:** t\n\n**Body:** b")
+    return "\n\n".join(parts) + "\n"
+
+
+def test_units_section_is_parsed():
+    deck = parse_deck(MINIMAL_DECK.replace("## Diagrams", '## Units\n\n```units\n{"chapters": []}\n```\n\n## Diagrams'))
+    assert deck.units == {"chapters": []} and deck.errors == []
+    assert "Units" in deck.headings
+
+
+def test_units_section_without_a_block():
+    deck = parse_deck(MINIMAL_DECK.replace("## Diagrams", "## Units\n\n## Diagrams"))
+    assert any("Units: missing the units block" in m for _, m in deck.errors)
+
+
+def test_units_section_with_bad_json():
+    deck = parse_deck(MINIMAL_DECK.replace("## Diagrams", "## Units\n\n```units\n{\n```\n\n## Diagrams"))
+    assert any("Units: the units block is not valid JSON" in m for _, m in deck.errors)
+
+
+def test_deck_without_units_section_has_none():
+    assert parse_deck(MINIMAL_DECK).units is None
+
+
+def test_slide_units_follow_topics_and_reset_at_assembly():
+    sections, _ = parse_sections(draft("1.2", [("1-001", "topic", {"unit": "u-a"}), ("1-002", "explain", {}),
+                                              ("1-003", "topic", {"unit": "u-b"}), ("1-004", "code", {}),
+                                              ("1-005", "assemble", {}), ("1-006", "compare", {})]))
+    assert slide_units(sections) == {"1-001": "u-a", "1-002": "u-a", "1-003": "u-b", "1-004": "u-b", "1-005": None, "1-006": None}
+
+
+def test_slide_units_follow_split_ids():  # Review Focus 3
+    sections, _ = parse_sections(draft("1.2", [("1-001", "topic", {"unit": "u-a"}), ("1-001a", "code", {})]))
+    assert slide_units(sections) == {"1-001": "u-a", "1-001a": "u-a"}
+
+
+def test_slide_units_reset_per_section():
+    text = draft("1.1", [("1-001", "topic", {"unit": "u-a"})]) + "\n\n" + draft("1.2", [("1-002", "explain", {})])
+    sections, _ = parse_sections(text)
+    assert slide_units(sections)["1-002"] is None

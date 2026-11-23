@@ -1,5 +1,5 @@
 ---
-template: "slide-design/deck@1"
+template: "slide-design/deck@2"
 course: "langchain-agents"
 part: 1
 title: "Agent ตัวแรก"
@@ -9,7 +9,7 @@ source_sha256: "0ac8ef9b7357e90fe2cd0605995b01641cf17cc1e74a4db0db3f4568485fe341
 language: "th"
 vocabulary: "visual-vocabulary.md"
 vocabulary_version: 1
-slide_count: 19
+slide_count: 25
 code_status: "partial"
 generated: "2026-11-21"
 ---
@@ -22,8 +22,8 @@ generated: "2026-11-21"
 ### Visuals to produce
 
 - 1-001 illustration: หุ่นยนต์ผู้ช่วยถือกล่องเครื่องมือ
-- 1-009 screenshot: https://docs.langchain.com/oss/python/langchain/agents
-- 1-010 illustration: หุ่นยนต์ผู้ช่วยถือกล่องเครื่องมือ
+- 1-011 screenshot: https://docs.langchain.com/oss/python/langchain/agents
+- 1-013 illustration: หุ่นยนต์ผู้ช่วยถือกล่องเครื่องมือ
 
 ### Code status
 
@@ -45,7 +45,17 @@ generated: "2026-11-21"
 {"kind": "illustration", "description": "หุ่นยนต์ผู้ช่วยถือกล่องเครื่องมือ", "prompt": "A friendly robot assistant holding a toolbox. Hand-drawn line illustration, thin dark strokes, a few soft colour accents, plain white background, no text.", "alt": "หุ่นยนต์ถือกล่องเครื่องมือ", "fallback": {"kind": "diagram", "diagram": "d-init", "show": ["n-start", "n-name", "n-init", "n-chat", "n-cache", "e-start", "e-name", "e-make", "e-keep"], "highlight": [], "dim": []}}
 ```
 
-### 1-002 · objectives
+### 1-002 · map
+
+```slide
+{"layout": "map", "purpose": "เห็นเส้นทางของ Part นี้ทีละเรื่อง", "from": ["Objectives"], "sources": []}
+```
+
+**Title:** เส้นทางของ Part นี้
+
+**Body:** เรียนทีละเรื่อง แล้วประกอบเป็นภาพเดียวตอนท้าย
+
+### 1-003 · objectives
 
 ```slide
 {"layout": "objectives", "purpose": "รู้ว่าจบบทแล้วทำอะไรได้", "from": ["Objectives"], "sources": []}
@@ -58,7 +68,7 @@ generated: "2026-11-21"
 2. ประกาศ tool ด้วย `@tool` ได้
 3. อ่านผลลัพธ์ที่ agent ส่งกลับมาได้
 
-### 1-003 · setup
+### 1-004 · setup
 
 ```slide
 {"layout": "setup", "purpose": "เตรียมเครื่องให้พร้อม", "from": ["Prerequisites and setup"], "sources": ["https://docs.langchain.com/oss/python/langchain/install"]}
@@ -74,7 +84,7 @@ generated: "2026-11-21"
 pip install -U langchain langgraph
 ```
 
-### 1-004 · terms
+### 1-005 · terms
 
 ```slide
 {"layout": "terms", "purpose": "รู้จักคำสำคัญของบท", "from": ["Key terms"], "sources": []}
@@ -89,7 +99,17 @@ pip install -U langchain langgraph
 
 ## 1.1 รู้จัก agent
 
-### 1-005 · focus
+### 1-006 · topic
+
+```slide
+{"layout": "topic", "purpose": "รู้ว่ากำลังจะเรียนเรื่องอะไร", "from": ["1.1/Core knowledge"], "sources": [], "unit": "u-what-agent"}
+```
+
+**Title:** agent คืออะไร
+
+**Body:** บอกได้ว่า agent ต่างจากการเรียกโมเดลครั้งเดียวอย่างไร
+
+### 1-007 · focus
 
 ```slide
 {"layout": "focus", "purpose": "เห็นว่าผู้ใช้คุยกับ model ผ่านคำถามและคำตอบ", "from": ["Core mental model"], "sources": []}
@@ -103,7 +123,7 @@ pip install -U langchain langgraph
 {"kind": "diagram", "diagram": "d-agent-loop", "show": ["n-user", "n-model", "e-ask", "e-answer"], "new": ["n-user", "n-model", "e-ask", "e-answer"], "highlight": [], "dim": []}
 ```
 
-### 1-006 · explain
+### 1-008 · explain
 
 ```slide
 {"layout": "explain", "purpose": "เห็นว่า model ขอให้เรียก tool ได้", "from": ["1.1/Core knowledge"], "sources": ["https://docs.langchain.com/oss/python/langchain/agents"]}
@@ -118,7 +138,7 @@ pip install -U langchain langgraph
 {"kind": "diagram", "diagram": "d-agent-loop", "show": ["n-user", "n-model", "e-ask", "e-answer", "n-tool", "e-call", "e-result", "g-agent"], "new": ["n-tool", "e-call", "e-result", "g-agent"], "highlight": ["n-model"], "dim": []}
 ```
 
-### 1-007 · steps
+### 1-009 · steps
 
 ```slide
 {"layout": "steps", "purpose": "เห็นวงรอบของ agent ครบทั้งสามขั้น", "from": ["Core mental model"], "sources": []}
@@ -135,7 +155,7 @@ pip install -U langchain langgraph
 {"kind": "diagram", "diagram": "d-agent-loop", "show": ["n-user", "n-model", "e-ask", "e-answer", "n-tool", "e-call", "e-result", "g-agent", "n-api", "e-llm", "e-hand", "b1", "b2", "b3", "t-loop"], "new": ["n-api", "e-llm", "e-hand", "b1", "b2", "b3", "t-loop"], "highlight": [], "dim": ["e-ask"]}
 ```
 
-### 1-008 · compare
+### 1-010 · compare
 
 ```slide
 {"layout": "compare", "purpose": "เห็นว่า create_agent ทำวงรอบให้เอง", "from": ["1.1/Misconceptions"], "sources": []}
@@ -158,7 +178,7 @@ agent = create_agent("openai:gpt-5", tools=[get_weather])
 
 **Takeaway:** ใช้ `create_agent` แล้วไม่ต้องเขียนวงรอบเอง
 
-### 1-009 · explain
+### 1-011 · explain
 
 ```slide
 {"layout": "explain", "purpose": "รู้ว่าเอกสารของ create_agent อยู่ที่ไหน", "from": ["Further reading"], "sources": ["https://docs.langchain.com/oss/python/langchain/agents"]}
@@ -174,7 +194,17 @@ agent = create_agent("openai:gpt-5", tools=[get_weather])
 
 ## 1.2 สร้าง agent ที่เรียก tool
 
-### 1-010 · explain
+### 1-012 · topic
+
+```slide
+{"layout": "topic", "purpose": "รู้ว่ากำลังจะเรียนเรื่องอะไร", "from": ["1.2/Worked example"], "sources": [], "unit": "u-declare-tool"}
+```
+
+**Title:** ประกาศ tool
+
+**Body:** ประกาศ tool ด้วย @tool
+
+### 1-013 · explain
 
 ```slide
 {"layout": "explain", "purpose": "เห็นว่า tool รับและคืนค่าอะไร", "from": ["1.2/Core knowledge"], "sources": []}
@@ -188,7 +218,7 @@ agent = create_agent("openai:gpt-5", tools=[get_weather])
 {"kind": "illustration", "description": "หุ่นยนต์ผู้ช่วยถือกล่องเครื่องมือ", "prompt": "A friendly robot assistant holding a toolbox, handing a tool to a laptop. Hand-drawn line illustration, thin dark strokes, a few soft colour accents, plain white background, no text.", "alt": "หุ่นยนต์ยื่นเครื่องมือให้คอมพิวเตอร์", "fallback": {"kind": "text", "text": "tool รับค่าเข้า แล้วคืนข้อความกลับไปให้ model"}}
 ```
 
-### 1-011 · code
+### 1-014 · code
 
 ```slide
 {"layout": "code", "purpose": "เห็นการประกาศ tool ด้วย @tool", "from": ["1.2/Worked example"], "sources": [], "snippet": "1.2-a", "lines": [[1, 2], [5, 6]], "highlight": [[5, 5]]}
@@ -205,7 +235,17 @@ from langchain_core.tools import tool
 def get_weather(city: str) -> str:
 ```
 
-### 1-012 · code
+### 1-015 · topic
+
+```slide
+{"layout": "topic", "purpose": "รู้ว่ากำลังจะเรียนเรื่องอะไร", "from": ["1.2/Worked example"], "sources": [], "unit": "u-run-agent"}
+```
+
+**Title:** เรียก agent
+
+**Body:** สร้าง agent แล้วอ่านคำตอบ
+
+### 1-016 · code
 
 ```slide
 {"layout": "code", "purpose": "เห็นการเรียก agent แล้วอ่านคำตอบ", "from": ["1.2/Worked example"], "sources": [], "snippet": "1.2-b", "lines": [[1, 3]], "highlight": [[2, 2]]}
@@ -223,7 +263,31 @@ result = agent.invoke({"messages": [{"role": "user", "content": "สวัสด
 print(result["messages"][-1].content)
 ```
 
-### 1-013 · output
+### 1-017 · assemble
+
+```slide
+{"layout": "assemble", "purpose": "เห็นว่าสองเรื่องประกอบเป็นโปรแกรมเดียว", "from": ["1.2/Worked example"], "sources": [], "assembles": "1.2", "snippet": "1.2-a", "labels": [{"unit": "u-declare-tool", "lines": [[4, 8]]}, {"unit": "u-run-agent", "lines": [[10, 11]]}], "lines": [[1, 11]]}
+```
+
+**Title:** ประกอบร่าง: tool กับ agent
+
+**Body:** ส่วนที่ 1 ประกาศ tool ส่วนที่ 2 สร้าง agent แล้วเรียกใช้ รวมกันเป็นโปรแกรมเดียว
+
+```python
+from langchain.agents import create_agent
+from langchain_core.tools import tool
+
+# A tool is a plain function with a docstring.
+@tool
+def get_weather(city: str) -> str:
+    """Get the weather for a city."""
+    return f"แดดออกที่ {city}"
+
+agent = create_agent("openai:gpt-5", tools=[get_weather])
+print(agent.invoke({"messages": [{"role": "user", "content": "อากาศที่ Bangkok?"}]}))
+```
+
+### 1-018 · output
 
 ```slide
 {"layout": "output", "purpose": "รู้ว่าผลลัพธ์หน้าตาประมาณไหน", "from": ["1.2/Worked example"], "sources": [], "snippet": "1.2-a"}
@@ -237,7 +301,7 @@ print(result["messages"][-1].content)
 {'messages': [..., AIMessage(content='แดดออกที่ Bangkok')]}
 ```
 
-### 1-014 · error
+### 1-019 · error
 
 ```slide
 {"layout": "error", "purpose": "แก้ข้อผิดพลาดเรื่อง API key ได้", "from": ["1.2/Common errors and fixes"], "sources": []}
@@ -255,7 +319,7 @@ print(result["messages"][-1].content)
 openai.AuthenticationError: Error code: 401 - {'error': {'message': 'Incorrect API key provided'}}
 ```
 
-### 1-015 · question
+### 1-020 · question
 
 ```slide
 {"layout": "question", "purpose": "ทบทวนว่า agent เลือก tool อย่างไร", "from": ["1.2/Self-check"], "sources": []}
@@ -269,10 +333,10 @@ openai.AuthenticationError: Error code: 401 - {'error': {'message': 'Incorrect A
 - จากชื่อและ docstring ของ tool
 - จากลำดับของ tool ในรายการ
 
-### 1-016 · answer
+### 1-021 · answer
 
 ```slide
-{"layout": "answer", "purpose": "ยืนยันคำตอบและโยงกลับไปที่โค้ด", "from": ["1.2/Self-check"], "sources": [], "revisit": "1-011"}
+{"layout": "answer", "purpose": "ยืนยันคำตอบและโยงกลับไปที่โค้ด", "from": ["1.2/Self-check"], "sources": [], "revisit": "1-014"}
 ```
 
 **Answer:** จากชื่อและ docstring ของ tool
@@ -281,7 +345,21 @@ openai.AuthenticationError: Error code: 401 - {'error': {'message': 'Incorrect A
 
 ## Closing
 
-### 1-017 · practice
+### 1-022 · assemble
+
+```slide
+{"layout": "assemble", "purpose": "เห็นภาพรวมของทั้ง Part", "from": ["Core mental model"], "sources": [], "assembles": "part", "labels": [{"chapter": "1.1", "elements": ["n-user", "n-model", "e-ask", "e-answer"]}, {"chapter": "1.2", "elements": ["n-tool", "e-call", "e-result"]}]}
+```
+
+**Title:** ประกอบร่างทั้ง Part
+
+**Body:** เรื่องที่ 1 คือวงคำถามกับคำตอบ เรื่องที่ 2 คือ tool ที่ model ขอให้เรียก
+
+```visual
+{"kind": "diagram", "diagram": "d-agent-loop", "show": ["n-user", "n-model", "n-tool", "n-api", "e-ask", "e-call", "e-result", "e-answer", "e-llm", "e-hand", "g-agent", "b1", "b2", "b3", "t-loop"], "new": [], "highlight": [], "dim": []}
+```
+
+### 1-023 · practice
 
 ```slide
 {"layout": "practice", "purpose": "ลองสร้าง tool ของตัวเอง", "from": ["Practice material"], "sources": []}
@@ -299,7 +377,7 @@ openai.AuthenticationError: Error code: 401 - {'error': {'message': 'Incorrect A
 1. ประกาศ `get_time` ด้วย `@tool`
 2. ส่ง `tools=[get_time]` ให้ `create_agent`
 
-### 1-018 · summary
+### 1-024 · summary
 
 ```slide
 {"layout": "summary", "purpose": "ทบทวนวงรอบของ agent", "from": ["Core mental model"], "sources": []}
@@ -313,7 +391,7 @@ openai.AuthenticationError: Error code: 401 - {'error': {'message': 'Incorrect A
 - `@tool` เปลี่ยนฟังก์ชันให้เป็น tool ✅
 - `create_agent` ทำวงรอบให้เรา
 
-### 1-019 · sources
+### 1-025 · sources
 
 ```slide
 {"layout": "sources", "purpose": "รู้ว่าจะอ่านต่อที่ไหน", "from": ["Sources"], "sources": []}
@@ -324,6 +402,49 @@ openai.AuthenticationError: Error code: 401 - {'error': {'message': 'Incorrect A
 **Items:**
 - [LangChain: Agents](https://docs.langchain.com/oss/python/langchain/agents)
 - [LangChain: Install](https://docs.langchain.com/oss/python/langchain/install)
+
+## Units
+
+```units
+{
+  "chapters": [
+    {
+      "id": "1.1",
+      "section": "1.1",
+      "title": "รู้จัก agent",
+      "units": [
+        {
+          "id": "u-what-agent",
+          "title": "agent คืออะไร",
+          "goal": "บอกได้ว่า agent ต่างจากการเรียกโมเดลครั้งเดียวอย่างไร",
+          "needs": []
+        }
+      ]
+    },
+    {
+      "id": "1.2",
+      "section": "1.2",
+      "title": "สร้าง agent ที่เรียก tool",
+      "units": [
+        {
+          "id": "u-declare-tool",
+          "title": "ประกาศ tool",
+          "goal": "ประกาศ tool ด้วย @tool",
+          "needs": []
+        },
+        {
+          "id": "u-run-agent",
+          "title": "เรียก agent",
+          "goal": "สร้าง agent แล้วอ่านคำตอบ",
+          "needs": [
+            "u-declare-tool"
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
 
 ## Diagrams
 

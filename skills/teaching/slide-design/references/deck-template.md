@@ -1,4 +1,4 @@
-# The deck contract (`slide-design/deck@1`)
+# The deck contract (`slide-design/deck@2`)
 
 Three readers use this file:
 - **The coordinator**, at Stages 1 and 4, to plan slides and read validator messages.
@@ -31,7 +31,7 @@ One `key: value` per line. Every value is a JSON literal. Keys, in this order:
 
 | Key | Value |
 |---|---|
-| `template` | `"slide-design/deck@1"` |
+| `template` | `"slide-design/deck@2"` |
 | `course` | the course slug |
 | `part` | the Part number |
 | `title` | the Part title, identical to the Part file |
@@ -48,10 +48,11 @@ One `key: value` per line. Every value is a JSON literal. Keys, in this order:
 ## Body, in order
 
 1. `# Part N: <title>`
-2. `## Deck notes`: the learner profile, that the deck is read without narration, and Part gaps. Then two generated lists: `### Visuals to produce` (each illustration to generate and screenshot to capture, by slide id) and `### Code status` (each snippet that is not verified, with its reason).
+2. `## Deck notes`: the learner profile, that the deck is read without narration, and Part gaps. Then three generated lists: `### Visuals to produce` (each illustration to generate and screenshot to capture, by slide id), `### Code status` (each snippet that is not verified, with its reason) and `### Part ordering problems` (each unit the unit map moved to an earlier sub-topic, as `- <unit id> (<unit title>): from <moved_from> to <chapter id>: <reason>`, or `_None._`).
 3. One `##` section per deck section: `## Opening`, then `## N.k <sub-topic title>` for each sub-topic in Part order, then `## Closing`.
-4. `## Diagrams`: one ```` ```diagram ```` JSON block per diagram.
-5. `## Code listings`: one `### <snippet id>` per snippet the slides show. Each holds a ```` ```listing ```` JSON block `{"snippet", "status", "reason"}`, then the complete snippet, verbatim, in a fence of its language. A slide shows an excerpt; the learner needs the whole program to run it.
+4. `## Units`: the Part's unit map, as one ```` ```units ```` JSON block (see Units below).
+5. `## Diagrams`: one ```` ```diagram ```` JSON block per diagram.
+6. `## Code listings`: one `### <snippet id>` per snippet the slides show. Each holds a ```` ```listing ```` JSON block `{"snippet", "status", "reason"}`, then the complete snippet, verbatim, in a fence of its language. A slide shows an excerpt; the learner needs the whole program to run it.
 
 ## A slide
 
@@ -77,7 +78,7 @@ One `key: value` per line. Every value is a JSON literal. Keys, in this order:
   - `purpose`: the single new thing the learner gains, at most 120 characters
   - `from`: Part refs this slide's content comes from: a Part section (`"Core mental model"`) or a sub-topic slot (`"1.2/Core knowledge"`). A sub-topic ref belongs only in that sub-topic's section.
   - `sources`: the URLs this slide's claims rely on, taken from the Part
-  - layout keys: `code` takes `snippet`, `lines` and `highlight`; `output` takes `snippet`; `answer` takes `revisit`
+  - layout keys: `code` takes `snippet`, `lines` and `highlight`; `output` takes `snippet`; `answer` takes `revisit`; `topic` takes `unit`; `assemble` takes `assembles` and `labels`, plus `snippet` and `lines` when it shows code
 - **Fields:** a line that starts with a bold label. The text runs to the next label, block or heading. Lists inside a field use `1. ` or `- `. The labels are fixed:
   `**Title:**`, `**Body:**`, `**Items:**`, `**Left:**`, `**Right:**`, `**Takeaway:**`, `**Question:**`, `**Answer:**`, `**Why:**`, `**Symptom:**`, `**Cause:**`, `**Fix:**`, `**Task:**`, `**Solution:**`, `**Notice:**`
 - **Visual block:** at most one ```` ```visual ```` JSON block (see Visuals below).
@@ -105,8 +106,11 @@ A closed set. Lengths count visible characters: Thai vowel and tone marks, and e
 | `practice` | practice | Title, Task | Items (hints), Solution (only when the Part gives one) | optional | none |
 | `summary` | recap, back to the core mental model | Title, Items | | optional | none |
 | `sources` | further reading and sources as links | Title, Items | | none | none |
+| `map` (deck@2) | the Part's units, chapter by chapter, drawn from `## Units`; once, in the opening | Title | Body | none | none |
+| `topic` (deck@2) | the divider that opens a unit; Title is the unit's title and Body its goal, verbatim | Title, Body | | optional, a diagram | none |
+| `assemble` (deck@2) | puts a chapter's units, or the whole Part's chapters, back together | Title, Body | Notice | optional, a diagram | exactly one when it shows code: the excerpt |
 
-Titles are at most 70 characters. A `Notice` is at most 150 and is required on `code` and `output` slides whose snippet is not verified. The other limits, per item for Items:
+Titles are at most 70 characters. A `Notice` is at most 150 and is required on `code`, `output` and code `assemble` slides whose snippet is not verified. The other limits, per item for Items:
 
 | Layout | Field | Limit |
 |---|---|---|
@@ -135,6 +139,11 @@ Titles are at most 70 characters. A `Notice` is at most 150 and is required on `
 | `practice` | Solution | 300 |
 | `summary` | Items | 100 |
 | `sources` | Items | 200 |
+| `map` | Body | 120 |
+| `topic` | Body | 120 |
+| `assemble` | Body | 300 |
+
+A `topic` Body equals its unit's `goal`, so its limit is the goal's, 120. (The design suggested 160; a longer Body could never match the goal.)
 
 ### Code, output and other blocks
 
@@ -143,6 +152,30 @@ Titles are at most 70 characters. A `Notice` is at most 150 and is required on `
 - **`setup`, `error`, `compare` blocks:** text that appears verbatim in the Part. Nothing is invented.
 - **Inline code** in any field appears verbatim in the Part.
 - **`answer`:** `revisit` is the id of an earlier slide the learner can go back to.
+- **`assemble` with code:** `snippet` and `lines` work as on `code`, with no `highlight`. The block holds exactly those lines.
+
+### Units (deck@2)
+
+`## Units` holds one ```` ```units ```` block: the unit map approved at the gate (`_work/part-NN/units.json`), copied as it is.
+
+```json
+{"chapters": [
+  {"id": "1.2", "section": "1.2", "title": "<chapter title>", "units": [
+    {"id": "u-message-roles", "title": "<unit title>", "goal": "<what the learner can do>", "needs": []},
+    {"id": "u-invoke", "title": "…", "goal": "…", "needs": ["u-message-roles"]},
+    {"id": "u-sample", "title": "…", "goal": "…", "needs": [], "moved_from": "1.3", "reason": "<why it comes first>"}]}
+]}
+```
+
+- **Chapter:** `id` is the sub-topic key (`1.2`), or the key plus a letter (`1.2a`, `1.2b`, …) when a sub-topic is split into chapters. `section` is the sub-topic key. `title` is plain text. A chapter holds 1 to 6 units.
+- **Unit:** `id` looks like `u-<words>` and is unique in the Part. `title` is plain text, without Markdown (the header, the map and the legend show it as written), and at most 40 characters; `goal` is at most 120. `needs` names earlier units only. `moved_from` and `reason` mark a unit taught in an earlier sub-topic than the Part put it, for a prerequisite reason.
+- **A slide's unit:** the nearest `topic` slide before it in its section. An `assemble` slide ends the unit: the slides after it, up to the next `topic`, belong to the chapter as a whole.
+- **`topic`:** `unit` names the unit it opens. Its Title equals the unit's `title` and its Body equals the unit's `goal`.
+- **`assemble`:** `assembles` is the chapter id, or `"part"` for the closing's assembly of the whole Part. `labels` numbers the pieces, in order:
+  - on code, `[{"unit": "<unit id>", "lines": [[first, last], …]}, …]`, each range inside the shown `lines`, not overlapping;
+  - on a diagram, `[{"unit": "<unit id>", "elements": ["<element id>", …]}, …]`, each element shown;
+  - on the Part's assembly, `[{"chapter": "<chapter id>", "elements": [...]}, …]`.
+  A chapter's assembly may label units of this chapter and of earlier chapters of the same sub-topic, never a later chapter's. It shows code or a diagram, not both.
 
 ## Visuals
 
@@ -202,7 +235,7 @@ The file is append-only. `vocabulary.py add` adds concepts and bumps `version`; 
 
 ## Versioning
 
-Renaming a heading, a field label or a JSON key, or changing what one means, is a breaking change: bump `deck@1` to `deck@2` in `contract.py` and here. Adding an optional key that builders may ignore is not.
+Renaming a heading, a field label or a JSON key, or changing what one means, is a breaking change: bump the version (now `deck@2`) in `contract.py` and here. Adding an optional key that builders may ignore is not. `deck@2` added `## Units`, `### Part ordering problems` and the `map`, `topic` and `assemble` layouts to `deck@1`; a builder still reads a `deck@1` deck, which has none of them.
 
 ## A filled example
 
@@ -212,19 +245,15 @@ A section draft, as a writer writes it to `sections/1.2.md`:
 ````markdown
 ## 1.2 สร้าง agent ที่เรียก tool
 
-### 1-015 · explain
+### 1-016 · topic
 
 ```slide
-{"layout": "explain", "purpose": "เห็นว่า create_agent ต่อ tool เข้ากับ model", "from": ["1.2/Core knowledge"], "sources": ["https://docs.langchain.com/oss/python/langchain/agents"]}
+{"layout": "topic", "purpose": "เปิดเรื่องแรกของบท: ประกาศ tool ให้โมเดลเรียกได้", "from": ["1.2/Worked example"], "sources": [], "unit": "u-tool"}
 ```
 
-**Title:** `create_agent` ต่อ tool เข้ากับ model
+**Title:** ประกาศ tool
 
-**Body:** `create_agent` รับโมเดลและรายการ tool เมื่อโมเดลตัดสินใจว่าต้องใช้ tool ก็จะส่ง tool call ออกไป
-
-```visual
-{"kind": "diagram", "diagram": "d-agent-loop", "show": ["n-user", "n-model", "e-ask", "e-answer", "n-tool", "e-call"], "new": ["n-tool", "e-call"], "highlight": [], "dim": []}
-```
+**Body:** เปลี่ยนฟังก์ชันธรรมดาเป็น tool ด้วย @tool
 
 ### 1-017 · code
 
@@ -243,7 +272,53 @@ def get_weather(city: str) -> str:
     return f"แดดออกที่ {city}"
 ```
 
-### 1-023 · question
+### 1-019 · topic
+
+```slide
+{"layout": "topic", "purpose": "เปิดเรื่องที่สองของบท: ต่อ tool เข้ากับ agent", "from": ["1.2/Core knowledge"], "sources": [], "unit": "u-agent"}
+```
+
+**Title:** ต่อ tool เข้ากับ agent
+
+**Body:** สร้าง agent จากโมเดลกับ tool แล้วส่งคำถาม
+
+### 1-021 · explain
+
+```slide
+{"layout": "explain", "purpose": "เห็นว่า create_agent ต่อ tool เข้ากับ model", "from": ["1.2/Core knowledge"], "sources": ["https://docs.langchain.com/oss/python/langchain/agents"]}
+```
+
+**Title:** `create_agent` ต่อ tool เข้ากับ model
+
+**Body:** `create_agent` รับโมเดลและรายการ tool เมื่อโมเดลตัดสินใจว่าต้องใช้ tool ก็จะส่ง tool call ออกไป
+
+```visual
+{"kind": "diagram", "diagram": "d-agent-loop", "show": ["n-user", "n-model", "e-ask", "e-answer", "n-tool", "e-call"], "new": ["n-tool", "e-call"], "highlight": [], "dim": []}
+```
+
+### 1-025 · assemble
+
+```slide
+{"layout": "assemble", "purpose": "เห็นว่าสองเรื่องของบทนี้ประกอบกันเป็นโปรแกรมเดียว", "from": ["1.2/Worked example"], "sources": [], "assembles": "1.2", "snippet": "1.2-a", "lines": [[5, 13]], "labels": [{"unit": "u-tool", "lines": [[5, 8]]}, {"unit": "u-agent", "lines": [[11, 13]]}]}
+```
+
+**Title:** ประกอบร่าง: tool กับ agent
+
+**Body:** เลข 1 คือส่วนที่ประกาศ tool เลข 2 คือส่วนที่สร้าง agent แล้วถาม
+
+```python
+@tool
+def get_weather(city: str) -> str:
+    """Get the weather for a city."""
+    return f"แดดออกที่ {city}"
+
+
+agent = create_agent(model="openai:gpt-5", tools=[get_weather])
+result = agent.invoke({"messages": [{"role": "user", "content": "อากาศที่กรุงเทพ?"}]})
+print(result["messages"][-1].content)
+```
+
+### 1-028 · question
 
 ```slide
 {"layout": "question", "purpose": "ทบทวนว่า agent เลือก tool อย่างไร", "from": ["1.2/Self-check"], "sources": []}
@@ -253,7 +328,7 @@ def get_weather(city: str) -> str:
 
 **Body:** ลองตอบในใจก่อน แล้วค่อยไปหน้าถัดไป
 
-### 1-024 · answer
+### 1-029 · answer
 
 ```slide
 {"layout": "answer", "purpose": "ยืนยันคำตอบและโยงกลับไปที่โค้ดประกาศ tool", "from": ["1.2/Self-check"], "sources": [], "revisit": "1-017"}

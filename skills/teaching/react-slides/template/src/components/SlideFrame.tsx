@@ -4,6 +4,7 @@ import { formatRoute } from '../router';
 import { t } from '../strings';
 import { useDeck } from './Deck';
 import type { Base, Rich } from './types';
+import { unitPosition } from './units';
 
 type Props = {
   slide: Base;
@@ -16,6 +17,8 @@ type Props = {
   hideSources?: boolean;
   /** The field the heading shows: `question` and `answer` slides have no title. */
   titleField?: string;
+  /** A short line above the title, such as a divider's "Unit 2/3". Not a deck field. */
+  kicker?: ReactNode;
   className?: string;
 };
 
@@ -25,15 +28,18 @@ function sectionLabel(language: string, section: string): string {
   return section;
 }
 
-export function SlideFrame({ slide, title, children, visual, wide, hideSources, titleField = 'title', className }: Props) {
-  const { meta, frame } = useDeck();
+export function SlideFrame({ slide, title, children, visual, wide, hideSources, titleField = 'title', kicker, className }: Props) {
+  const { meta, frame, units } = useDeck();
+  const position = slide.unit ? unitPosition(units, slide.unit) : null;
   const ref = useRef<HTMLElement>(null);
   useAutoFit(ref, frame === 'desktop');
   return (
     <section ref={ref} className={`rs-slide${wide ? ' rs-wide' : ''}${visual ? ' rs-has-visual' : ''}${className ? ` ${className}` : ''}`} data-slide={slide.id} aria-roledescription="slide">
       <a className="rs-topline" href={formatRoute({ name: 'home' })}>
         Part {meta.part} · {sectionLabel(meta.language, slide.section)}
+        {position ? ` · ${t(meta.language, 'unit', { n: position.n, m: position.m })} ${position.unit.title}` : null}
       </a>
+      {kicker ? <div className="rs-kicker">{kicker}</div> : null}
       {title !== undefined ? (
         <h2 className="rs-title" data-field={titleField}>
           {title}

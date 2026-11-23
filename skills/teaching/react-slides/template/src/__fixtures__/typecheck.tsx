@@ -1,7 +1,7 @@
 // `npm run build` type-checks this file: each line leaves out a required prop and must fail to compile.
 import {
-  Answer, Code, Compare, Cover, Error as ErrorSlide, Explain, Focus, Objectives, Output, Practice, Question, Setup, Sources, Steps, Summary,
-  Terms,
+  Answer, Assemble, Code, Compare, Cover, Error as ErrorSlide, Explain, Focus, MapSlide, Objectives, Output, Practice, Question, Setup, Sources,
+  Steps, Summary, Terms, Topic,
 } from '../components';
 import type { Visual } from '../components/types';
 
@@ -42,6 +42,12 @@ export const missingRequiredProps = [
   <Summary key="summary" {...base} title={r} />,
   // @ts-expect-error items is required
   <Sources key="sources" {...base} title={r} />,
+  // @ts-expect-error title is required
+  <MapSlide key="map" {...base} />,
+  // @ts-expect-error unit is required
+  <Topic key="topic" {...base} title={r} body={r} />,
+  // @ts-expect-error labels is required
+  <Assemble key="assemble" {...base} title={r} body={r} assembles="1.1" />,
   // @ts-expect-error a visual is required on explain slides
   <Explain key="explain-visual" {...base} title={r} body={r} />,
   // @ts-expect-error id is part of every slide

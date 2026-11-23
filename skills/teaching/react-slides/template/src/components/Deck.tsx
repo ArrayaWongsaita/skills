@@ -3,7 +3,8 @@ import { useMediaQuery, useReducedMotion, useSwipe } from '../hooks';
 import { loadProgress, saveProgress } from '../progress';
 import { navigate, useRoute } from '../router';
 import { Nav } from './Nav';
-import type { Base, Block, DiagramDef, Listing, PartMeta } from './types';
+import type { Base, Block, DiagramDef, Listing, PartMeta, Units } from './types';
+import { NO_UNITS } from './units';
 
 export type Direction = 'forward' | 'back' | 'none';
 export type Frame = 'desktop' | 'phone';
@@ -13,6 +14,7 @@ export type DeckValue = {
   diagrams: Record<string, DiagramDef>;
   listings: Record<string, Listing>;
   outputs: Record<string, Block>;
+  units: Units;
   current: string;
   direction: Direction;
   reducedMotion: boolean;
@@ -40,6 +42,8 @@ type Props = {
   diagrams: Record<string, DiagramDef>;
   listings: Record<string, Listing>;
   outputs: Record<string, Block>;
+  /** The Part's unit map; a deck@1 deck has none. */
+  units?: Units;
   children: ReactNode;
 };
 
@@ -59,7 +63,7 @@ function useFrame(): Frame {
   return fixed ?? (phone ? 'phone' : 'desktop');
 }
 
-function CheckDeck({ meta, diagrams, listings, outputs, slides }: Props & { slides: ReactElement<Base>[] }) {
+function CheckDeck({ meta, diagrams, listings, outputs, units = NO_UNITS, slides }: Props & { slides: ReactElement<Base>[] }) {
   const frame = useFrame();
   const ids = slides.map((slide) => slide.props.id);
   return (
@@ -67,7 +71,7 @@ function CheckDeck({ meta, diagrams, listings, outputs, slides }: Props & { slid
       {slides.map((slide) => (
         <DeckContext.Provider
           key={slide.props.id}
-          value={{ meta, diagrams, listings, outputs, current: slide.props.id, direction: 'none', reducedMotion: true, frame, ids }}
+          value={{ meta, diagrams, listings, outputs, units, current: slide.props.id, direction: 'none', reducedMotion: true, frame, ids }}
         >
           <div className="rs-stage" data-check-slide={slide.props.id}>
             {slide}
@@ -78,7 +82,7 @@ function CheckDeck({ meta, diagrams, listings, outputs, slides }: Props & { slid
   );
 }
 
-function ReadDeck({ meta, diagrams, listings, outputs, slides }: Props & { slides: ReactElement<Base>[] }) {
+function ReadDeck({ meta, diagrams, listings, outputs, units = NO_UNITS, slides }: Props & { slides: ReactElement<Base>[] }) {
   const route = useRoute();
   const reducedMotion = useReducedMotion();
   const frame = useFrame();
@@ -133,7 +137,7 @@ function ReadDeck({ meta, diagrams, listings, outputs, slides }: Props & { slide
 
   if (index < 0) return null;
   return (
-    <DeckContext.Provider value={{ meta, diagrams, listings, outputs, current, direction, reducedMotion, frame, ids }}>
+    <DeckContext.Provider value={{ meta, diagrams, listings, outputs, units, current, direction, reducedMotion, frame, ids }}>
       <div ref={root} className={`rs-deck rs-${frame}`}>
         <div key={current} className={reducedMotion ? 'rs-stage' : 'rs-stage rs-fade-slide'}>
           {slides[index]}

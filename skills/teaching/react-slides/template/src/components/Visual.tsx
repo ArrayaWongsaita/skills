@@ -3,7 +3,7 @@
 import { Component, type ComponentType, type LazyExoticComponent, type ReactNode, lazy, Suspense, useEffect, useState } from 'react';
 import { type AssetLookup, assets, type IllustrationLoader } from '../assets';
 import { useDeck } from './Deck';
-import { Diagram } from './diagram/Diagram';
+import { Diagram, type DiagramLabel } from './diagram/Diagram';
 import type { Fallback, Visual } from './types';
 
 const lazyCache = new Map<IllustrationLoader, LazyExoticComponent<ComponentType>>();
@@ -69,11 +69,12 @@ function Illustration({ loader, alt, id, fallback }: { loader: IllustrationLoade
   );
 }
 
-export function VisualSlot({ visual, lookup = assets }: { visual: Visual; lookup?: AssetLookup }) {
+/** `labels` numbers the diagram's elements, as an assembly does. */
+export function VisualSlot({ visual, lookup = assets, labels }: { visual: Visual; lookup?: AssetLookup; labels?: DiagramLabel[] }) {
   const { meta, diagrams, direction, reducedMotion } = useDeck();
   if (visual.kind === 'diagram') {
     const def = diagrams[visual.diagram];
-    return def ? <Diagram state={visual} def={def} animate={direction === 'forward' && !reducedMotion} /> : null;
+    return def ? <Diagram state={visual} def={def} animate={direction === 'forward' && !reducedMotion} labels={labels} /> : null;
   }
   const alt = visual.kind === 'illustration' ? visual.alt : visual.capture;
   const image = lookup.image(meta.part, visual.key);

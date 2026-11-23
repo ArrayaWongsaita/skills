@@ -1,11 +1,14 @@
-"""Assemble one Part's section drafts into its deck file (slide-design/deck@1).
+"""Assemble one Part's section drafts into its deck file (slide-design/deck@2).
 
 Reads <course_dir>/slides/_work/part-NN/: sections/<key>.md for every
-section in Part order, diagrams.md and the optional deck-notes.md. Writes
+section in Part order, units.json, diagrams.md and the optional
+deck-notes.md. Writes
 <course_dir>/slides/<the Part's file name>. Slide ids are renumbered in deck
 order (a writer's split ids such as 1-007a become plain numbers), answer
 `revisit` pointers follow, and the deck notes, diagrams and code listings
-are generated. Assembling the same inputs twice gives the same file.
+are generated, with the unit map as the Units section and its moved units
+under "Part ordering problems". Assembling the same inputs twice gives the
+same file.
 
 CLI:
     python3 assemble_deck.py <course_dir> <part>
@@ -30,6 +33,8 @@ from contract import (  # noqa: E402
     NOTES_HEADING,
     OPENING,
     SLIDES_DIR,
+    UNITS_FILE,
+    UNITS_HEADING,
     VOCABULARY_FILE,
     WORK_DIR,
 )
@@ -37,6 +42,7 @@ from deck import Section, meta_block, parse_diagrams, parse_sections  # noqa: E4
 from deck_state import StateError, load_state  # noqa: E402
 from mdtext import scan  # noqa: E402
 from part_reader import Part, PartError, digest, find_part, read_part  # noqa: E402
+from units import UnitsError, chapter_list, chapter_units, check_units, load_units  # noqa: E402
 from vocabulary import VocabularyError  # noqa: E402
 from vocabulary import load as load_vocabulary  # noqa: E402
 
@@ -146,6 +152,13 @@ def assemble(course_dir: Path, part: int, today: str | None = None) -> Path:
     except VocabularyError as error:
         raise AssembleError(str(error)) from None
     work = work_dir(course_dir, part)
+    try:
+        units = load_units(work / UNITS_FILE)
+    except UnitsError as error:
+        raise AssembleError(str(error)) from None
+    problems = check_units(units, [s.key for s in source.subtopics])
+    if problems:
+        raise AssembleError(f"{UNITS_FILE}: " + "; ".join(problems) + f"; fix it and run validate_deck.py <course_dir> {source.number} --plan")
 
     drafts = _read_drafts(work, source)
     mapping = renumber([section for _, _, section in drafts], part)
@@ -156,7 +169,7 @@ def assemble(course_dir: Path, part: int, today: str | None = None) -> Path:
     visuals = []
     for final, slide in slides:
         snippet = slide.meta.get("snippet")
-        if slide.layout in ("code", "output") and snippet is not None:
+        if slide.layout in ("code", "output", "assemble") and snippet is not None:
             if snippet not in source.snippets:
                 raise AssembleError(f"slide {slide.id}: unknown snippet {snippet!r}")
             referenced.add(snippet)
@@ -167,6 +180,8 @@ def assemble(course_dir: Path, part: int, today: str | None = None) -> Path:
             visuals.append(f"- {final} screenshot: {visual.get('capture', '')}")
     used = [snippet for snippet in source.snippets.values() if snippet.id in referenced]
     status = [f"- {s.id} {s.status}: {s.reason}" for s in used if s.status != "verified"]
+    moved = [f"- {u['id']} ({u['title']}): from {u['moved_from']} to {c['id']}: {u.get('reason', '')}"
+             for c in chapter_list(units) for u in chapter_units(c) if u.get("moved_from")]
 
     diagrams_path = work / "diagrams.md"
     if not diagrams_path.exists():
@@ -206,7 +221,11 @@ def assemble(course_dir: Path, part: int, today: str | None = None) -> Path:
         "\n".join(visuals) or "_None._",
         "### Code status",
         "\n".join(status) or "_None._",
+        "### Part ordering problems",
+        "\n".join(moved) or "_None._",
         *texts,
+        f"## {UNITS_HEADING}",
+        "```units\n" + json.dumps(units, ensure_ascii=False, indent=2) + "\n```",
         f"## {DIAGRAMS_HEADING}",
         "\n\n".join(raw_diagrams) or "_None._",
         f"## {LISTINGS_HEADING}",

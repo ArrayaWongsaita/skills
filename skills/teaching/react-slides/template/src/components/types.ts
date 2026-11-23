@@ -25,6 +25,13 @@ export type DiagramDef = {
   notes: { id: string; text: string; near: string }[];
 };
 export type PartMeta = { course: string; part: number; slug: string; title: string; language: string; slideCount: number };
-export type Base = { id: string; section: string; purpose: string; from: string[]; sources: string[] };
+/** `unit` is the unit the slide belongs to (deck@2): the header names it. */
+export type Base = { id: string; section: string; purpose: string; from: string[]; sources: string[]; unit?: string };
+export type UnitDef = { id: string; title: string; goal: string; needs: string[] };
+export type ChapterDef = { id: string; section: string; title: string; units: UnitDef[] };
+/** A Part's unit map: its chapters in order, each with its units in teaching order. Empty for a deck@1 deck. */
+export type Units = { chapters: ChapterDef[] };
+/** One numbered piece of an assembly: a unit (or, for the whole Part, a chapter) and the code lines or diagram elements it covers. */
+export type AssemblyLabel = { unit?: string; chapter?: string; lines?: Range[]; elements?: string[] };
 export type Concept = { id: string; meaning: string; shape: string; role: string; icon: string };
 export type Vocabulary = { version: number; roles: Record<string, string>; concepts: Concept[]; style: string };

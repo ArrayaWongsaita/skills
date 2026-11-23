@@ -36,5 +36,5 @@ def test_inline_code_and_urls():
 def test_layout_table_is_consistent():
     for name, layout in LAYOUTS.items():
         assert set(layout.required) | set(layout.optional) <= set(FIELDS), name
-        assert layout.visual in ("required", "optional", "none") and layout.content in ("none", "code", "output", "error", "setup", "panels")
+        assert layout.visual in ("required", "optional", "none") and layout.content in ("none", "code", "output", "error", "setup", "panels", "assembly")
     assert {layout for layout, _ in FIELD_LIMITS} <= set(LAYOUTS)

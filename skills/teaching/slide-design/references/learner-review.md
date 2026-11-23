@@ -15,13 +15,20 @@ For pass 2 you also read the Part file and `00-overview.md`.
 
 ## Pass 1: as the learner
 
-Read only the vocabulary and the deck, in order, as the learner described in the profile. Picture each slide built from its text and visual. Flag:
+Read only the vocabulary and the deck, in order, as the learner described in the profile. The deck's `## Units` section is its unit map: each chapter's units, in order, and the slides follow it, each unit opened by a `topic` slide and each chapter of two or more units closed by an `assemble` slide. Picture each slide built from its text and visual. Flag:
 1. **A term used before it is explained** (the term rule below)
 2. **Two new ideas on one slide**
 3. **A skipped step:** the learner cannot get from the previous slide to this one
 4. **A visual that does not match its text,** or is too vague for a builder to draw one way
 5. **Text too dense for its layout,** even within the limit
 6. **A question that cannot be answered** from earlier slides
+7. **A slide that leaves the learner unsure which unit they are in:** it drifts into another unit's topic, or its text does not connect to its unit's goal
+8. **A unit that relies on something a later unit teaches**
+9. **An assembly that introduces anything new:** a line, an element or an idea no earlier unit taught
+10. **A concept whose code is far from its explanation:** the learner meets the lines several slides away from the idea they carry
+11. **A decorative visual:** a picture that does not show, organise or interpret anything the slide says
+12. **A unit carrying two ideas, or a unit too thin** for the learner profile, which would sit better merged with its neighbour
+13. **A moved unit that shows code** from a snippet of a sub-topic the learner has not reached yet
 
 ## Pass 2: for fidelity
 
@@ -45,6 +52,7 @@ A term the Part itself never explains is a **Part gap**. Writers may not add con
 
 - **Blocking:** a learner would be stuck or misled. For example:
   - a slide relies on a term that has not been explained
+  - a unit relies on a later unit, or a moved unit shows code from a sub-topic not reached
   - a claim does not match the Part
   - a visual contradicts its text
   - an answer cannot be worked out from earlier slides
@@ -68,6 +76,7 @@ A term the Part itself never explains is a **Part gap**. Writers may not add con
 - One row per issue, ordered by slide id. Slide is the deck's id, or `deck` for the whole deck.
 - Pass is `learner` or `fidelity`.
 - A suggested fix stays inside the Part's content. Never suggest adding a fact.
+- A fix that needs the unit map to change says so: which units to split, merge or reorder, or which unit belongs in another sub-topic.
 - When there is nothing to report, write the table header and the line `No issues.`
 
 ## Round 2

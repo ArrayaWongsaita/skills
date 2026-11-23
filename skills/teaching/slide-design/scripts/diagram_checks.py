@@ -169,6 +169,11 @@ def _state(visual: dict, diagrams: dict[str, dict]) -> tuple[dict | None, dict[s
     return diagram, sets, messages
 
 
+def _epitome(slide, seen: bool, sets: dict[str, list]) -> bool:
+    """The opening may preview a diagram whole and dimmed before the Part builds it: its first state, with no `new`."""
+    return slide.section == "opening" and not seen and not sets["new"] and bool(sets["show"]) and set(sets["dim"]) == set(sets["show"])
+
+
 def check_states(slides: list, diagrams: dict[str, dict]) -> list[tuple[str, str]]:
     found: list[tuple[str, str]] = []
     previous: dict[str, set[str]] = {}
@@ -182,6 +187,8 @@ def check_states(slides: list, diagrams: dict[str, dict]) -> list[tuple[str, str
             if diagram is not None:
                 shown = set(sets["show"])
                 expected = shown - previous.get(diagram["id"], set())
+                if _epitome(slide, diagram["id"] in previous, sets):
+                    expected = set()
                 if set(sets["new"]) != expected:
                     found.append((slide.id, f"`new` does not match what this slide adds: expected [{', '.join(sorted(expected))}]"))
                 previous[diagram["id"]] = shown

@@ -56,3 +56,13 @@ def test_part_one_sha_matches_and_part_two_is_stale():
 def test_slide_count_matches():
     for part in (1, 2):
         assert _meta(part)["slide_count"] == len(_deck(part).slides())
+
+
+def test_part_one_is_deck_at_2_with_units():
+    d = _deck(1)
+    assert d.meta["template"] == "slide-design/deck@2"
+    assert [c["id"] for c in d.units["chapters"]] == ["1.1", "1.2"]
+
+
+def test_part_two_is_deck_at_1():
+    assert _meta(2)["template"] == "slide-design/deck@1" and _deck(2).units is None

@@ -24,6 +24,7 @@ const en = {
   why: 'Why',
   hints: 'Hints',
   solution: 'Show the solution',
+  unit: 'Unit {n}/{m}',
 };
 
 export type StringKey = keyof typeof en;
@@ -53,6 +54,7 @@ const th: Record<StringKey, string> = {
   why: 'เพราะ',
   hints: 'คำใบ้',
   solution: 'ดูเฉลย',
+  unit: 'เรื่อง {n}/{m}',
 };
 
 const languages: Record<string, Record<StringKey, string>> = { en, th };

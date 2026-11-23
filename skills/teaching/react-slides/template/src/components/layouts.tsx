@@ -6,7 +6,8 @@ import { slideNumber, t } from '../strings';
 import { BlockList, CodeBlock, OutputBlock } from './code';
 import { DeckModeContext, useDeck } from './Deck';
 import { SlideFrame } from './SlideFrame';
-import type { Base, Block, Range, Rich, Visual } from './types';
+import type { AssemblyLabel, Base, Block, Range, Rich, Visual } from './types';
+import { chapterTitle, unitPosition, unitTitle } from './units';
 import { VisualSlot } from './Visual';
 
 export function Field({ name, children, className }: { name: string; children: ReactNode; className?: string }) {
@@ -236,6 +237,102 @@ export function Sources(props: Base & { title: Rich; items: Rich[] }) {
   return (
     <SlideFrame slide={props} title={props.title} hideSources>
       <Items items={props.items} className="rs-source-list" />
+    </SlideFrame>
+  );
+}
+
+/** The Part's route: every chapter and its units, from the deck's unit map. Generated chrome, not a deck field. */
+export function MapSlide(props: Base & { title: Rich; body?: Rich }) {
+  const { units } = useDeck();
+  return (
+    <SlideFrame slide={props} title={props.title} wide className="rs-map">
+      {props.body !== undefined ? <Field name="body">{props.body}</Field> : null}
+      {units.chapters.length ? (
+        <ol className="rs-unit-map">
+          {units.chapters.map((chapter, index) => (
+            <li key={chapter.id} className="rs-map-chapter">
+              <div className="rs-map-chapter-title">
+                <span className="rs-map-n" aria-hidden="true">
+                  {index + 1}
+                </span>
+                {chapter.title}
+              </div>
+              <ol className="rs-map-units">
+                {chapter.units.map((unit) => (
+                  <li key={unit.id}>{unit.title}</li>
+                ))}
+              </ol>
+            </li>
+          ))}
+        </ol>
+      ) : null}
+    </SlideFrame>
+  );
+}
+
+/** The divider that opens a unit: where it sits in its chapter, its title and goal, and the chapter's units so far. */
+export function Topic(props: Base & { unit: string; title: Rich; body: Rich; visual?: Visual }) {
+  const { meta, units } = useDeck();
+  const position = unitPosition(units, props.unit);
+  const kicker = position ? t(meta.language, 'unit', { n: position.n, m: position.m }) : undefined;
+  return (
+    <SlideFrame slide={props} title={props.title} kicker={kicker} visual={slot(props.visual)} className="rs-topic">
+      <Field name="body">{props.body}</Field>
+      {position ? (
+        <ol className="rs-topic-units">
+          {position.chapter.units.map((unit, index) => (
+            <li key={unit.id} data-unit-state={index + 1 < position.n ? 'done' : index + 1 === position.n ? 'current' : 'todo'}>
+              {unit.title}
+            </li>
+          ))}
+        </ol>
+      ) : null}
+    </SlideFrame>
+  );
+}
+
+/** Puts a chapter's units, or the whole Part's chapters, back together: numbered code lines or diagram elements, with a legend. */
+export function Assemble(props: Base & {
+  title: Rich; body: Rich; notice?: Rich; assembles: string; labels: AssemblyLabel[]; snippet?: string; lines?: Range[]; visual?: Visual;
+}) {
+  const { listings, meta, units } = useDeck();
+  const numbered = props.labels.map((label, index) => ({ ...label, n: index + 1 }));
+  const name = (label: AssemblyLabel) => (label.unit ? unitTitle(units, label.unit) : label.chapter ? chapterTitle(units, label.chapter) : '');
+  const listing = props.snippet ? listings[props.snippet] : undefined;
+  const code = listing && props.lines;
+  const legend = (
+    <ol className="rs-assembly-legend">
+      {numbered.map((label) => (
+        <li key={label.n} data-label={label.n}>
+          <span className="rs-assembly-n" aria-hidden="true">
+            {label.n}
+          </span>
+          <span className="rs-assembly-name">{name(label)}</span>
+        </li>
+      ))}
+    </ol>
+  );
+  const visual = !code && props.visual ? (
+    <VisualSlot visual={props.visual} labels={numbered.filter((l) => l.elements).map((l) => ({ n: l.n, elements: l.elements! }))} />
+  ) : undefined;
+  return (
+    <SlideFrame slide={props} title={props.title} wide={Boolean(code)} visual={visual} className="rs-assemble">
+      <Field name="body">{props.body}</Field>
+      {props.notice !== undefined ? (
+        <Field name="notice" className="rs-notice">
+          {props.notice}
+        </Field>
+      ) : null}
+      {legend}
+      {code ? (
+        <CodeBlock
+          listing={listing}
+          lines={props.lines!}
+          highlight={[]}
+          language={meta.language}
+          groups={numbered.filter((l) => l.lines).map((l) => ({ n: l.n, lines: l.lines! }))}
+        />
+      ) : null}
     </SlideFrame>
   );
 }

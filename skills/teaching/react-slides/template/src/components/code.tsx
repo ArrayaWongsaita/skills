@@ -126,9 +126,16 @@ function useScrolls<T extends HTMLElement>() {
 
 const inRanges = (n: number, ranges: Range[]) => ranges.some(([first, last]) => n >= first && n <= last);
 
-export function CodeBlock({ listing, lines, highlight, language }: { listing: Listing; lines: Range[]; highlight: Range[]; language: string }) {
+/** A numbered run of lines: an assembly marks which unit each part of the program came from. */
+export type CodeGroup = { n: number; lines: Range[] };
+
+type CodeBlockProps = { listing: Listing; lines: Range[]; highlight: Range[]; language: string; groups?: CodeGroup[] };
+
+export function CodeBlock({ listing, lines, highlight, language, groups = [] }: CodeBlockProps) {
   const html = useMemo(() => highlightLines(listing.code, listing.lang), [listing.code, listing.lang]);
   const rows = excerptRows(listing.code, lines);
+  const groupOf = (n: number) => groups.find((group) => inRanges(n, group.lines))?.n;
+  const firstRow = new Map(groups.map((group) => [Math.min(...group.lines.map(([first]) => first)), group.n]));
   const scroll = useScrolls<HTMLPreElement>();
   return (
     <figure className="rs-codeblock">
@@ -144,7 +151,17 @@ export function CodeBlock({ listing, lines, highlight, language }: { listing: Li
                 ⋯
               </span>
             ) : (
-              <span key={row.n} className={inRanges(row.n, highlight) ? 'rs-row rs-hl' : 'rs-row'} data-line={row.n}>
+              <span
+                key={row.n}
+                className={inRanges(row.n, highlight) ? 'rs-row rs-hl' : 'rs-row'}
+                data-line={row.n}
+                {...(groupOf(row.n) !== undefined ? { 'data-group': groupOf(row.n) } : {})}
+              >
+                {firstRow.has(row.n) && groupOf(row.n) === firstRow.get(row.n) ? (
+                  <span className="rs-group-n" aria-hidden="true">
+                    {firstRow.get(row.n)}
+                  </span>
+                ) : null}
                 <span className="rs-ln" aria-hidden="true">
                   {row.n}
                 </span>

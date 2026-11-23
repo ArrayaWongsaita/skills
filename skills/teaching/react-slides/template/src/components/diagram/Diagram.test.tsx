@@ -94,3 +94,18 @@ test('the group label sits above its frame, clear of its members', () => {
   const label = container.querySelector('[data-el="g-agent"] text')!;
   expect(Number(label.getAttribute('y'))).toBeLessThan(groupBox(DEF, DEF.groups[0]).y);
 });
+
+test('labelled elements carry their label number, and each label is drawn once', () => {
+  const { container } = render(<Diagram state={step3} def={DEF} animate={false} vocabulary={vocabulary} labels={[{ n: 1, elements: ['n-user', 'e-ask'] }, { n: 2, elements: ['n-tool', 'g-agent'] }]} />);
+  expect(container.querySelector('[data-el="n-user"]')).toHaveAttribute('data-label', '1');
+  expect(container.querySelector('[data-el="e-ask"]')).toHaveAttribute('data-label', '1');
+  expect(container.querySelector('[data-el="g-agent"]')).toHaveAttribute('data-label', '2');
+  expect(container.querySelector('[data-el="n-model"]')).not.toHaveAttribute('data-label');
+  expect([...container.querySelectorAll('[data-label-tag]')].map((tag) => tag.getAttribute('data-label-tag'))).toEqual(['1', '2']);
+});
+
+test('without labels no element carries one', () => {
+  const { container } = draw(step3, false);
+  expect(container.querySelector('[data-label]')).toBeNull();
+  expect(container.querySelector('[data-label-tag]')).toBeNull();
+});

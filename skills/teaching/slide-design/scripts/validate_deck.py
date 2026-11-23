@@ -1,14 +1,16 @@
-"""Validate one Part's deck (slide-design/deck@1) against its Part.
+"""Validate one Part's deck (slide-design/deck@2) against its Part.
 
-Checks structure, text lengths, visuals, diagrams and their build states,
+Checks structure, the unit map and the unit structure (unit_checks.py: the
+map slide, a topic slide per unit, the chapter and Part assemblies), text lengths, visuals, diagrams and their build states,
 coverage of every filled Part slot and snippet, and fidelity: code, output,
 commands, error messages, inline code and URLs must come from the Part
 verbatim. A deck whose Part changed after assembly is reported as stale and
-checked no further. `--diagrams` checks only the storyboard's diagrams
-(_work/part-NN/diagrams.md) before the gate.
+checked no further. `--plan` checks the storyboard before the gate: its
+diagrams (_work/part-NN/diagrams.md) and its unit map (_work/part-NN/units.json).
+`--diagrams` checks the diagrams alone.
 
 CLI:
-    python3 validate_deck.py <course_dir> <part> [--diagrams] [--json]
+    python3 validate_deck.py <course_dir> <part> [--plan | --diagrams] [--json]
 Exit 1 if any error, else 0.
 """
 
@@ -38,14 +40,18 @@ from contract import (  # noqa: E402
     PURPOSE_LIMIT,
     SLIDES_DIR,
     TITLE_LIMIT,
+    UNITS_FILE,
+    UNITS_HEADING,
     VISUAL_KINDS,
     VOCABULARY_FILE,
     WORK_DIR,
 )
-from deck import Deck, Slide, parse_deck, parse_diagrams  # noqa: E402
+from deck import Deck, Slide, parse_deck, parse_diagrams, slide_units  # noqa: E402
 from diagram_checks import check_diagram, check_states  # noqa: E402
 from mdtext import inline_code, urls, visible_length  # noqa: E402
 from part_reader import Part, PartError, digest, find_part, read_part  # noqa: E402
+from unit_checks import check_structure  # noqa: E402
+from units import UnitsError, check_units, load_units, units_by_id  # noqa: E402
 from vocabulary import Vocabulary, VocabularyError, add_concepts, init_vocabulary, vocabulary_path  # noqa: E402
 from vocabulary import load as load_vocabulary  # noqa: E402
 
@@ -107,12 +113,21 @@ def _frontmatter(deck: Deck, source: Part, vocab: Vocabulary | None) -> list[Iss
 
 def _headings(deck: Deck, source: Part) -> list[Issue]:
     issues = []
-    expected = [NOTES_HEADING, OPENING, *[f"{s.key} {s.title}" for s in source.subtopics], CLOSING, DIAGRAMS_HEADING, LISTINGS_HEADING]
+    expected = [NOTES_HEADING, OPENING, *[f"{s.key} {s.title}" for s in source.subtopics], CLOSING, UNITS_HEADING, DIAGRAMS_HEADING, LISTINGS_HEADING]
     if deck.headings != expected:
         issues.append(_error("deck", f"sections must be: {', '.join(expected)}"))
     if not deck.notes.split("\n### ", 1)[0].strip() or deck.notes.startswith("### "):
         issues.append(_error("deck", "deck notes must not be empty: write the learner profile and Part gaps before the generated lists"))
     return issues
+
+
+def _units(deck: Deck, source: Part) -> list[Issue]:
+    if deck.units is None:
+        return [_error("deck", "a deck@2 deck needs its Units section")]
+    problems = check_units(deck.units, [s.key for s in source.subtopics])
+    if problems:
+        return [_error("units", message) for message in problems]
+    return [_error(where, message) for where, message in check_structure(deck.sections, deck.units)]
 
 
 def _listings(deck: Deck, source: Part, used: list[str]) -> list[Issue]:
@@ -178,7 +193,7 @@ def _code(slide: Slide, source: Part) -> list[str]:
     if len(slide.blocks) != 1:
         return [f"{slide.layout} slide holds exactly one block"]
     block = slide.blocks[0]
-    if layout.content == "code":
+    if layout.content in ("code", "assembly"):
         if block.lang != snippet.lang:
             messages.append(f"code block language should be {snippet.lang}")
         lines = snippet.code.split("\n")
@@ -284,7 +299,7 @@ def _fidelity(slide: Slide, source: Part) -> list[str]:
     return messages
 
 
-def _meta(slide: Slide, source: Part, earlier: set[str]) -> list[str]:
+def _meta(slide: Slide, source: Part, earlier: set[str], moved_from: str | None = None) -> list[str]:
     meta, messages = slide.meta, []
     allowed = set(META_KEYS) | set(LAYOUT_META_KEYS.get(slide.layout, ()))
     messages += [f"unknown slide key {key!r}" for key in meta if key not in allowed]
@@ -304,7 +319,7 @@ def _meta(slide: Slide, source: Part, earlier: set[str]) -> list[str]:
             messages.append(f"unknown ref {ref!r}")
         elif text == EMPTY_SLOT:
             messages.append(f"ref points to an empty slot: {ref}")
-        if "/" in ref and ref.split("/", 1)[0] != slide.section:
+        if "/" in ref and ref.split("/", 1)[0] not in (slide.section, moved_from):
             messages.append(f"content from {ref.split('/', 1)[0]} in section {slide.section}")
     if "sources" in meta and not isinstance(meta["sources"], list):
         messages.append("sources must be a list of URLs")
@@ -320,19 +335,22 @@ def _slides(deck: Deck, source: Part, vocab: Vocabulary | None) -> tuple[list[Is
     if [slide.id for slide in slides] != expected_ids:
         issues.append(_error("deck", f"slide ids must be sequential from {source.number}-001"))
     earlier: set[str] = set()
+    valid = deck.units is not None and not check_units(deck.units, [s.key for s in source.subtopics])
+    unit_of, by_id = slide_units(deck.sections), (units_by_id(deck.units) if valid else {})
     for slide in slides:
         layout = slide.meta.get("layout")
+        moved_from = (by_id.get(unit_of.get(slide.id)) or {}).get("moved_from")
         messages = []
         if layout not in LAYOUTS:
             messages.append(f"unknown layout {layout!r}")
         if slide.layout != layout:
             messages.append(f"the heading says {slide.layout} but the slide block says {layout}")
         if not messages:
-            messages += _meta(slide, source, earlier)
+            messages += _meta(slide, source, earlier, moved_from)
             messages += _fields(slide)
             messages += _visual(slide, source, vocab)
             messages += _fidelity(slide, source)
-            if LAYOUTS[layout].content in ("code", "output"):
+            if LAYOUTS[layout].content in ("code", "output") or (layout == "assemble" and "snippet" in slide.meta):
                 messages += _code(slide, source)
         issues += [_error(slide.id, message) for message in messages]
         earlier.add(slide.id)
@@ -342,9 +360,9 @@ def _slides(deck: Deck, source: Part, vocab: Vocabulary | None) -> tuple[list[Is
 def _coverage(slides: list[Slide], source: Part) -> tuple[list[Issue], list[str]]:
     covered = {ref for slide in slides for ref in (slide.meta.get("from") or []) if isinstance(ref, str)}
     issues = [_error("coverage", f"not covered: {ref}") for ref in source.slot_refs() if ref not in covered]
-    in_code = {slide.meta.get("snippet") for slide in slides if slide.layout == "code"}
+    in_code = {slide.meta.get("snippet") for slide in slides if slide.layout in ("code", "assemble")}
     issues += [_error("coverage", f"not covered: snippet {snippet_id}") for snippet_id in source.snippets if snippet_id not in in_code]
-    referenced = {slide.meta.get("snippet") for slide in slides if slide.layout in ("code", "output")}
+    referenced = {slide.meta.get("snippet") for slide in slides if slide.layout in ("code", "output", "assemble")}
     return issues, [snippet_id for snippet_id in source.snippets if snippet_id in referenced]
 
 
@@ -374,6 +392,7 @@ def validate(course_dir: Path, part: int) -> list[Issue]:
         return issues
     issues += _frontmatter(deck, source, vocab)
     issues += _headings(deck, source)
+    issues += _units(deck, source)
     slide_issues, slides = _slides(deck, source, vocab)
     issues += slide_issues
     coverage, used = _coverage(slides, source)
@@ -406,14 +425,32 @@ def validate_diagrams(course_dir: Path, part: int) -> list[Issue]:
     return issues
 
 
+def validate_plan(course_dir: Path, part: int) -> list[Issue]:
+    """The storyboard's diagrams and unit map, before the gate."""
+    issues = validate_diagrams(course_dir, part)
+    try:
+        data = load_units(_work(course_dir, part) / UNITS_FILE)
+        source = read_part(find_part(Path(course_dir), part))
+    except UnitsError as error:
+        return issues + [_error(UNITS_FILE, str(error))]
+    except PartError as error:
+        return issues + [_error("part", str(error))]
+    return issues + [_error(UNITS_FILE, message) for message in check_units(data, [sub.key for sub in source.subtopics])]
+
+
 def main(argv: list[str]) -> int:
     flags = {arg for arg in argv if arg.startswith("--")}
     args = [arg for arg in argv if not arg.startswith("--")]
-    if len(args) != 2 or flags - {"--diagrams", "--json"}:
-        print("usage: validate_deck.py <course_dir> <part> [--diagrams] [--json]", file=sys.stderr)
+    if len(args) != 2 or flags - {"--plan", "--diagrams", "--json"} or {"--plan", "--diagrams"} <= flags:
+        print("usage: validate_deck.py <course_dir> <part> [--plan | --diagrams] [--json]", file=sys.stderr)
         return 2
     course_dir, part = Path(args[0]), int(args[1])
-    issues = validate_diagrams(course_dir, part) if "--diagrams" in flags else validate(course_dir, part)
+    if "--plan" in flags:
+        issues = validate_plan(course_dir, part)
+    elif "--diagrams" in flags:
+        issues = validate_diagrams(course_dir, part)
+    else:
+        issues = validate(course_dir, part)
     if "--json" in flags:
         print(json.dumps([asdict(issue) for issue in issues], ensure_ascii=False))
     else:

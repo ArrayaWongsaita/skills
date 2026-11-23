@@ -7,7 +7,7 @@ description: Use after slide-design, one Part at a time, to build a Part's deck 
 
 You are the **coordinator**. You talk with the user, run the script, dispatch the illustrator, capture screenshots, build the app and check it in a browser. Talk with the user in their language. Code, file names and the report's paths stay as they are.
 
-The input is a `slide-design` deck (`slide-design/deck@1`) and the course's visual vocabulary (`slide-design/vocabulary@1`). The output is the course's web app, `<course_dir>/web/`: a Vite + React + TypeScript app with a home page of Part cards and one slide deck per Part.
+The input is a `slide-design` deck (`slide-design/deck@2`, with its unit map; a `slide-design/deck@1` deck from an earlier run still builds, without units) and the course's visual vocabulary (`slide-design/vocabulary@1`). The output is the course's web app, `<course_dir>/web/`: a Vite + React + TypeScript app with a home page of Part cards and one slide deck per Part.
 
 All paths below are relative to this skill's base directory (the directory this file was loaded from), written `<skill>/…`. `<course_dir>` is the course folder, `<cwd>/courses/<slug>/`. `<N>` is the Part number and `NN` is that number with two digits (`part-01`, `part-10`). `<web>` is `<course_dir>/web` and `<work>` is `<web>/_work/part-NN`, which is git-ignored and never bundled.
 
@@ -75,7 +75,7 @@ Public pages only: never sign in, never create an account, never type credential
 1. `npm --prefix <course_dir>/web run build` must pass. It runs `tsc --noEmit` and the Vite build. When it fails, stop and report the failing file and the error: an edited file that no longer compiles is the user's to fix, or to replace with `--force`. An illustration that fails goes back to the illustrator.
 2. `npm --prefix <course_dir>/web run preview`, in the background. It serves the build at `http://localhost:4173/` (it prints another port when that one is busy).
 3. Open `http://localhost:4173/#/check/part-NN` and wait until `window.__reactSlidesCheck.done` is true. Read its `findings`.
-4. Take screenshots of every slide with a finding, and one slide of each layout, at `http://localhost:4173/#/part-NN/<slide id>`, and look at them.
+4. Take screenshots of every slide with a finding, and one slide of each layout (including `map`, `topic` and `assemble`), at `http://localhost:4173/#/part-NN/<slide id>`, and look at them.
 5. Fix what can be fixed in the illustrations, rebuild and check once more.
 
 `references/visual-check.md` says what each finding means and what may be fixed. Text overflow that the template's auto-fit cannot absorb is a template defect: it goes in the report and in `skill-problems.md`.

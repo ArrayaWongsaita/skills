@@ -2,17 +2,23 @@
 
 Read this at Stage 1 when you plan the deck's visuals, and as a writer when you set a slide's visual. The learner reads the deck alone, so the visual carries half the explanation. It has to be precise enough that a builder in Google Slides or React draws exactly one thing.
 
+## What a visual is for
+
+Every slide that explains (`focus`, `explain`, `steps`) needs a visual, and that visual carries part of the explanation: it **shows** the thing, **organises** it (parts, order, flow) or **interprets** it (an analogy, a cause). A decorative picture, one that only makes the slide look nicer, is not allowed: it costs the learner attention and teaches nothing.
+
+**Text sits beside the picture it explains.** The slide's text names what the picture shows, in the picture's words; the picture never repeats the whole text.
+
 ## Which kind
 
-Prefer them in this order:
+- **`diagram`:** for structure and flow: parts and relations, a loop, data passing between functions. A diagram can be built up over several slides, which is how the learner sees one new piece at a time.
+- **`illustration`:** for something concrete from the Part: the worked example's situation, the real-world task, the analogy, the hook. A unit often starts with one, before its concept goes on the diagram. The builder draws it as a sketch, so its description must be **sketchable**: simple shapes and objects in a plain scene, with no faces, hands, emotions, realistic objects, brand logos or fine detail.
+- **`screenshot`:** only for a real interface the learner must use, typically a setup step such as creating an API key. Screenshots go stale, so use them rarely, and at the gate say for each one why a diagram is not enough.
 
-1. **`diagram`:** for anything with parts and relations: a flow, a loop, a structure, data passing between functions. This is the default. A diagram can be built up over several slides, which is how the learner sees one new piece at a time.
-2. **`illustration`:** only where a diagram cannot carry the idea, typically the Part's analogy or the opening hook. It must be generated, so it costs the user a step.
-3. **`screenshot`:** only for a real interface the learner must use, typically a setup step such as creating an API key. Screenshots go stale, so use them rarely.
+`code`, `output` and `error` slides use their own content as the visual; they take no `visual` block. A code `assemble` slide shows its code and takes no visual; `map` takes none either, since the builder draws it from the unit map.
 
-`code`, `output` and `error` slides use their own content as the visual; they take no `visual` block.
+## One diagram per chapter
 
-At the gate, say for every illustration and screenshot why a diagram is not enough.
+Plan one diagram per chapter that grows across the chapter's units, one build step at a time: each unit adds its piece. The chapter's `assemble` slide shows it complete, each unit's elements labelled with the unit's number. A unit's `topic` slide may show the diagram's current state, to say where the new unit sits. The core mental model is the Part's diagram: the opening shows it whole and dimmed, the chapters build its pieces, and the closing's `assemble` slide shows it complete, labelled by chapter.
 
 ## Why a fixed grid, not Mermaid
 
@@ -25,7 +31,7 @@ Mermaid lays diagrams out automatically, so adding one box moves the others, and
 - Read left to right, top to bottom, in the order things happen.
 - Nodes never overlap; touching is allowed.
 - Labels are at most 24 characters. Use the words of the slide text, so the learner can match them.
-- Use the same diagram, unchanged, everywhere the same idea returns: the core mental model in the opening, in a sub-topic and in the summary.
+- Use the same diagram, unchanged, everywhere the same idea returns: the core mental model in the opening, in a sub-topic and in the closing.
 
 ## Build steps
 
@@ -36,6 +42,7 @@ A **build step** is a slide that shows elements the previous slide on that diagr
 - `new`, `highlight` and `dim` are subsets of `show` and never overlap.
 - **Closure:** when an edge is shown, both its ends are shown. When a badge or note is shown, the element it sits near is shown. When a group is shown, all its members are shown.
 - A `steps` slide shows numbered badges 1…n, one per numbered item, near the element each item describes.
+- **The epitome:** the opening may show the core diagram whole before the Part builds it, every shown element in `dim` and `new` empty. It is the one first appearance that needs no `new`; later slides count `new` against it as usual.
 
 ## Shapes and colours
 
@@ -55,7 +62,7 @@ Colour roles come from the vocabulary's `## Colour roles` (by default `primary`,
 
 ## Illustrations
 
-- `description`: what the picture shows, in the slide language.
+- `description`: what the picture shows, in the slide language: a concrete, sketchable scene from the Part.
 - `prompt`: an English image-generation prompt. Describe the scene concretely, with no text in the image. End it with the vocabulary's illustration style sentence, exactly, so every picture in the course looks alike.
 - `alt`: alt text in the slide language.
 - `fallback`: what the builder uses when no image is generated. Prefer a diagram state, which needs no `new`; otherwise `{"kind": "text", "text": "…"}`.

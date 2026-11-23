@@ -117,7 +117,7 @@ def test_converting_part_two_leaves_part_one_untouched(course, fake_template):
 
 def test_unsupported_markup_is_a_warning(course, fake_template):
     report = _run(course, [1], fake_template)
-    assert any("1-017" in warning and "~~" in warning for warning in report["warnings"])
+    assert any("1-023" in warning and "~~" in warning for warning in report["warnings"])
 
 
 def test_edited_part_is_skipped_and_reported(course, fake_template):
@@ -162,7 +162,7 @@ def test_all_converts_every_deck_and_reports_bad_ones(course, fake_template):
 
 
 def test_a_bad_deck_writes_nothing(course, fake_template):
-    replace(course / "slides/part-01-first-agent.md", "### 1-006 · explain", "### 1-006 · fancy")
+    replace(course / "slides/part-01-first-agent.md", "### 1-008 · explain", "### 1-008 · fancy")
     report = _run(course, [1], fake_template)
     assert report["parts"] == [] and report["errors"] and not (course / "web").exists()
 
@@ -221,7 +221,7 @@ def test_cli_exit_codes(course, fake_template, capsys, monkeypatch):
     monkeypatch.setattr(build_part, "TEMPLATE_DIR", fake_template)
     assert build_part.main([str(course), "1", "--skip-install"]) == 0
     assert json.loads(capsys.readouterr().out)["parts"] == [1]
-    replace(course / "slides/part-01-first-agent.md", "### 1-006 · explain", "### 1-006 · fancy")
+    replace(course / "slides/part-01-first-agent.md", "### 1-008 · explain", "### 1-008 · fancy")
     assert build_part.main([str(course), "--all", "--skip-install"]) == 1
     err = capsys.readouterr().err
     assert "error: slides/part-01-first-agent.md: line " in err and "unknown layout fancy" in err
