@@ -118,6 +118,12 @@ def test_the_real_template_is_locked_with_pnpm_and_a_course_gets_the_lockfile():
     assert "pnpm-lock.yaml" in scaffold.template_files(TEMPLATE)
 
 
+def test_a_course_gets_the_default_icon_the_user_can_replace():
+    files = scaffold.template_files(TEMPLATE)
+    assert "src/assets/icon.svg" in files
+    assert files["src/assets/icon.svg"].lstrip().startswith("<svg")
+
+
 def test_sync_count_sets_slide_count_from_the_slide_ids(tmp_path, mini_template):
     course = tmp_path / "courses" / "c"
     run(course, mini_template, part=2, slug="a", part_title="t")

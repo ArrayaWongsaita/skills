@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo } from 'react';
 import { CheckPage } from './check/CheckPage';
 import { Home } from './components/Home';
 import { course } from './course';
+import { iconUrl, setFavicon } from './icon';
 import { listParts, type PartEntry } from './parts';
 import { loadProgress } from './progress';
 import { useRoute } from './router';
@@ -20,6 +21,10 @@ export function App() {
   const parts = useMemo(listParts, []);
   const entry = route.name === 'home' ? undefined : parts.find((part) => part.meta.part === route.part);
   const language = entry?.meta.language ?? parts[0]?.meta.language ?? 'en';
+
+  useEffect(() => {
+    if (iconUrl) setFavicon(document, iconUrl);
+  }, []);
 
   useEffect(() => {
     document.documentElement.lang = language;

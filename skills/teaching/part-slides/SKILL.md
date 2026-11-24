@@ -65,6 +65,10 @@ The user reads the slides and asks for changes, usually "this slide is confusing
 - Code on a slide is run, and the slide shows its real output.
 - Never present an assumption as something the user said. With no way to ask, write what you assumed and say so.
 
+## The course icon
+
+The course icon shows in two places only: the header of the home page and the browser tab. It is not on the slides, where it pulled the eye from the content. The default is `template/src/assets/icon.svg`. To use your own icon, replace that file in the template (every new course then gets it), or in one course put `icon.svg`, `icon.png`, `icon.webp` or `icon.jpg` in `<web>/src/assets/` (a png, webp or jpg wins over the svg) and rebuild. Use a square picture that still reads at 16 px, the size of a tab.
+
 ## Reporting problems with this skill
 
 When something in this skill goes wrong or does not fit (a script error, a validator error that was wrong, a brief that misled a subagent, a limit or rule that did not fit real content), append one line to `<course_dir>/skill-problems.md` as soon as you see it:

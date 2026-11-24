@@ -1,4 +1,5 @@
 import type { Progress } from '../progress';
+import { iconUrl } from '../icon';
 import { formatRoute } from '../router';
 import { slideNumber, t } from '../strings';
 import { SketchLine, SketchRect } from './sketch';
@@ -11,6 +12,7 @@ export function Home({ course, parts, progress }: Props) {
   return (
     <main className="rs-home">
       <header>
+        {iconUrl ? <img className="rs-home-icon" src={iconUrl} alt="" draggable={false} /> : null}
         <h1>{course.title}</h1>
         <p className="rs-muted">{t(language, 'homeSubtitle')}</p>
       </header>

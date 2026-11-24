@@ -31,3 +31,11 @@ test('no parts yet', () => {
   render(<Home course={{ slug: 'c', title: 'Course' }} parts={[]} progress={{}} />);
   expect(screen.queryAllByRole('link')).toHaveLength(0);
 });
+
+test('the course icon is beside the course title, as a decorative picture', () => {
+  const { container } = render(<Home course={{ slug: 'c', title: 'Course' }} parts={parts} progress={{}} />);
+  const icon = container.querySelector('header > .rs-home-icon')!;
+  expect(icon).toHaveAttribute('alt', '');
+  expect(icon.getAttribute('src')).toBeTruthy();
+  expect(container.querySelector('header h1')).toHaveTextContent('Course');
+});
