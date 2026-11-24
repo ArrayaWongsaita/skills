@@ -23,6 +23,8 @@ Run the tests of every skill you change, from the repo root:
 ```bash
 # report-skill-issue
 uv run --no-project --python 3.12 --with pytest pytest skills/meta/report-skill-issue/tests -q
+# opencode-delegate
+uv run --no-project --python 3.12 --with pytest pytest skills/meta/opencode-delegate/tests -q
 # part-slides (pnpm): run the pnpm lines first; its end-to-end pytest needs the template's node_modules
 pnpm --dir skills/teaching/part-slides/template install --frozen-lockfile && pnpm --dir skills/teaching/part-slides/template test && pnpm --dir skills/teaching/part-slides/template run build
 uv run --no-project --python 3.12 --with pytest pytest skills/teaching/part-slides/tests -q
