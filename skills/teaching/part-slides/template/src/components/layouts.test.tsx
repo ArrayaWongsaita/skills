@@ -100,7 +100,6 @@ const caseOf = (name: string) => LAYOUT_CASES.find(([n]) => n === name)![1];
 test('topic shows its position and marks units done, current and to come', () => {
   const { container } = render(<DeckFixture>{caseOf('Topic')}</DeckFixture>);
   expect(screen.getByText('เรื่อง 2/3')).toBeInTheDocument();
-  expect(container.querySelector('.rs-topline')).toHaveTextContent('เรื่อง 2/3 เรื่องสอง');
   const states = [...container.querySelectorAll('[data-unit-state]')].map((li) => li.getAttribute('data-unit-state'));
   expect(states).toEqual(['done', 'current', 'todo']);
   expect(container.querySelector('[data-unit-state="current"]')).toHaveTextContent('เรื่องสอง');
@@ -151,66 +150,42 @@ test('a map with no units still renders its fields', () => {
 
 const inTopic = (id: string, phase: 'know' | 'parts' | 'example' | 'watchout' | 'check', topic = 't-a') => ({ ...base(id), topic, phase });
 const part = (id: string) => <Explain key={id} {...inTopic(id, 'parts')} title={<>ตัวหนึ่ง</>} body={<>อธิบายตัวหนึ่ง</>} visual={visual} />;
-const kickerOf = (container: HTMLElement, id: string) => container.querySelector(`[data-slide="${id}"] .rs-kicker`);
-
-test('a parts slide with siblings shows its place in the phase', () => {
-  const { container } = render(<DeckFixture topics={fixtureTopics}>{[part('1-020'), part('1-021'), part('1-022')]}</DeckFixture>);
-  expect(['1-020', '1-021', '1-022'].map((id) => kickerOf(container, id)?.textContent)).toEqual(['ส่วนประกอบ · 1/3', 'ส่วนประกอบ · 2/3', 'ส่วนประกอบ · 3/3']);
-});
-
-test('a lone slide of a phase shows the label with no place', () => {  // Review Focus 1
-  const { container } = render(
-    <DeckFixture topics={fixtureTopics}>
-      <Explain {...inTopic('1-020', 'parts')} title={<>ตัวเดียว</>} body={<>b</>} visual={visual} />
-      <Explain {...inTopic('1-021', 'example')} title={<>ตัวอย่างเดียว</>} body={<>b</>} visual={visual} />
-    </DeckFixture>,
-  );
-  expect(kickerOf(container, '1-020')?.textContent).toBe('ส่วนประกอบ');
-  expect(kickerOf(container, '1-021')?.textContent).toBe('ตัวอย่าง');
-});
-
-test('the five phase labels in Thai and in English', () => {
-  const phases = ['know', 'parts', 'example', 'watchout', 'check'] as const;
-  const slides = phases.map((phase, i) => <Explain key={phase} {...inTopic(`1-02${i}`, phase)} title={<>t</>} body={<>b</>} visual={visual} />);
-  const th = render(<DeckFixture topics={fixtureTopics}>{slides}</DeckFixture>);
-  expect(phases.map((_, i) => kickerOf(th.container, `1-02${i}`)?.textContent)).toEqual(['รู้จัก', 'ส่วนประกอบ', 'ตัวอย่าง', 'ระวัง', 'ทบทวน']);
-  th.unmount();
-  const en = render(<DeckFixture topics={fixtureTopics} language="en">{slides}</DeckFixture>);
-  expect(phases.map((_, i) => kickerOf(en.container, `1-02${i}`)?.textContent)).toEqual(['Know it', 'Parts', 'Examples', 'Watch out', 'Check']);
-});
-
-test('the top line names the topic of a slide', () => {
-  const { container } = render(<DeckFixture topics={fixtureTopics}>{part('1-020')}</DeckFixture>);
-  expect(container.querySelector('.rs-topline')).toHaveTextContent('Part 1 · 1.1 หัวข้อ · หัวข้อแรก');
-});
-
-test('a topic named like its sub-topic heading is named once in the top line', () => {
-  const same = { topics: [{ id: 't-a', section: '1.1', title: 'หัวข้อ', components: [] }] };
-  const { container } = render(<DeckFixture topics={same}>{part('1-020')}</DeckFixture>);
-  expect(container.querySelector('.rs-topline')!.textContent).toBe('Part 1 · 1.1 หัวข้อ');
-});
-
-test('a topic that is not in the list adds nothing to the top line', () => {
-  const { container } = render(
-    <DeckFixture topics={fixtureTopics}>
-      <Explain {...inTopic('1-020', 'parts', 't-ghost')} title={<>t</>} body={<>b</>} visual={visual} />
-    </DeckFixture>,
-  );
-  expect(container.querySelector('.rs-topline')!.textContent).toBe('Part 1 · 1.1 หัวข้อ');
-});
-
-test('an explicit kicker wins over the phase label', () => {
-  const Own = (props: typeof base extends (id: string) => infer B ? B & { topic: string; phase: 'parts' } : never) => <SlideFrame slide={props} title={<>t</>} kicker={<>ป้ายของฉัน</>} />;
-  const { container } = render(<DeckFixture topics={fixtureTopics}><Own {...inTopic('1-020', 'parts')} phase="parts" /></DeckFixture>);
-  expect(kickerOf(container, '1-020')?.textContent).toBe('ป้ายของฉัน');
-});
-
-test('a slide with no phase has no kicker of its own', () => {
-  const { container } = render(<DeckFixture topics={fixtureTopics}><Explain {...base('1-020')} title={<>t</>} body={<>b</>} visual={visual} /></DeckFixture>);
-  expect(kickerOf(container, '1-020')).toBeNull();
-});
 
 const divider = (extra: object = {}) => ({ ...base('1-030'), topic: 't-b', ...extra });
+
+const slideOf = (container: HTMLElement, id: string) => container.querySelector(`[data-slide="${id}"]`)!;
+
+test('the Part, section and phase are a small block at the top of every slide, above the title', () => {
+  for (const frame of ['desktop', 'phone'] as const) {
+    const { container, unmount } = render(<DeckFixture topics={fixtureTopics} frame={frame}>{[part('1-020'), part('1-021')]}</DeckFixture>);
+    const slide = slideOf(container, '1-020');
+    expect(slide.firstElementChild).toHaveClass('rs-where');
+    expect(slide.children[1]).toHaveClass('rs-title');
+    expect(slide.querySelector('.rs-where .rs-topline')).toHaveTextContent('Part 1 · 1.1 หัวข้อ · หัวข้อแรก');
+    expect(slide.querySelector('.rs-where .rs-phase')).toHaveTextContent('ส่วนประกอบ · 1/2');
+    expect(slide.querySelector('.rs-topline')).toHaveAttribute('href', '#/');
+    unmount();
+  }
+});
+
+test('a slide with no phase has the place and no phase line', () => {
+  const { container } = render(<DeckFixture topics={fixtureTopics}><Explain {...base('1-020')} title={<>t</>} body={<>b</>} visual={visual} /></DeckFixture>);
+  expect(slideOf(container, '1-020').querySelector('.rs-phase')).toBeNull();
+});
+
+test('a divider shows the place, then its "next topic" label, then its title', () => {
+  const { container } = render(<DeckFixture topics={fixtureTopics}><Topic {...divider()} title={<>หัวข้อสอง</>} /></DeckFixture>);
+  const slide = container.querySelector('.rs-slide')!;
+  expect([...slide.children].slice(0, 3).map((el) => el.className.split(' ')[0])).toEqual(['rs-where', 'rs-kicker', 'rs-title']);
+});
+
+test('a slide carries no icon: the course icon is on the home page and the tab, and would pull the eye from the content', () => {
+  for (const frame of ['desktop', 'phone'] as const) {
+    const { container, unmount } = render(<DeckFixture topics={fixtureTopics} frame={frame}>{part('1-020')}</DeckFixture>);
+    expect(container.querySelector('img')).toBeNull();
+    unmount();
+  }
+});
 
 test('a topic divider shows only the title, the tagline and the visual', () => {
   const { container } = render(
@@ -222,7 +197,6 @@ test('a topic divider shows only the title, the tagline and the visual', () => {
   expect(container.querySelector('[data-field="body"]')).toHaveTextContent('แท็กไลน์');
   expect(container.querySelector('.rs-visual')).not.toBeNull();
   expect(container.querySelector('ol, ul')).toBeNull();
-  expect(container.querySelector('.rs-topline')!.textContent).not.toMatch(/เรื่อง \d/);
   expect(container.querySelector('.rs-kicker')).toHaveTextContent('หัวข้อถัดไป 2/3');
   expect(container.querySelector('.rs-slide')).toHaveClass('rs-topic', 'rs-divider');
 });

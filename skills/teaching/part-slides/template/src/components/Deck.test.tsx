@@ -207,3 +207,10 @@ test('a deck with no topic list has an empty one', () => {
   const { container } = render(<DeckFixture><Probe id="1-001" section="s" purpose="p" from={[]} sources={[]} /></DeckFixture>);
   expect(JSON.parse(container.querySelector('[data-probe="1-001"]')!.textContent!)).toEqual({ topics: [], place: null });
 });
+
+test('the bottom bar has only the all-parts link and the pager; the place is at the top of the slide', () => {
+  route.current = { name: 'part', part: 1, slide: '1-002' };
+  const { container } = render(<MiniPart />);
+  expect(container.querySelector('.rs-nav .rs-where, .rs-nav .rs-topline')).toBeNull();
+  expect(container.querySelector('.rs-slide > .rs-where .rs-topline')).toHaveTextContent('Part 1 · 1.1 หัวข้อ · เรื่อง 1/2 เรื่องแรก');
+});

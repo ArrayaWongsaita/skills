@@ -222,9 +222,22 @@ a {
   overflow-wrap: anywhere;
 }
 
-.rs-topline {
+/* Where the slide is (Part · section · phase): wayfinding at the top of the slide, so it is small and muted and the title stays the first thing read. */
+.rs-where {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1em;
   color: var(--rs-muted);
+  font-size: 0.62em;
+}
+
+/* A phone's text is already small: keep this line at a size that still reads. */
+.rs-phone .rs-where {
   font-size: 0.72em;
+}
+
+.rs-topline {
+  color: inherit;
   text-decoration: none;
 }
 

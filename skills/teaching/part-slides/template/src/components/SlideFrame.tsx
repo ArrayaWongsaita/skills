@@ -1,11 +1,9 @@
 import { type ReactNode, useRef } from 'react';
 import { useAutoFit } from '../hooks';
-import { formatRoute } from '../router';
-import { type StringKey, t } from '../strings';
+import { t } from '../strings';
 import { useDeck } from './Deck';
-import { topicPosition } from './topics';
-import type { Base, Phase, Rich } from './types';
-import { unitPosition } from './units';
+import type { Base, Rich } from './types';
+import { WhereLine, whereOf } from './where';
 
 type Props = {
   slide: Base;
@@ -18,49 +16,21 @@ type Props = {
   hideSources?: boolean;
   /** The field the heading shows: `question` and `answer` slides have no title. */
   titleField?: string;
-  /** A short line above the title, such as a divider's "Unit 2/3". Not a deck field. It wins over the phase label. */
+  /** A short line above the title, such as a divider's "Next topic 2/3". Not a deck field. */
   kicker?: ReactNode;
   className?: string;
 };
 
-const PHASE_LABELS: Record<Phase, StringKey> = {
-  know: 'phaseKnow',
-  parts: 'phaseParts',
-  example: 'phaseExample',
-  watchout: 'phaseWatchout',
-  check: 'phaseCheck',
-};
-
-function sectionLabel(language: string, section: string): string {
-  if (section === 'Opening') return t(language, 'opening');
-  if (section === 'Closing') return t(language, 'closing');
-  return section;
-}
-
-/** True when a section label ("1.1 Title") already says the topic's title, so the top line names the topic once. */
-function isHeadingOf(section: string, title: string): boolean {
-  return section.replace(/^\d+(?:\.\d+)*\s+/, '').trim() === title.trim();
-}
-
 export function SlideFrame({ slide, title, children, visual, wide, hideSources, titleField = 'title', kicker, className }: Props) {
-  const { meta, frame, units, topics, places } = useDeck();
-  const position = slide.unit ? unitPosition(units, slide.unit) : null;
-  const topic = slide.topic ? topicPosition(topics, slide.topic) : null;
-  const place = places[slide.id];
-  const phase = slide.phase ? t(meta.language, PHASE_LABELS[slide.phase]) : null;
-  const phaseKicker = phase ? (place && place.m >= 2 ? `${phase} · ${place.n}/${place.m}` : phase) : null;
-  const shownKicker = kicker ?? phaseKicker;
+  const deck = useDeck();
+  const { meta, frame } = deck;
   const sources = slide.sources ?? [];
   const ref = useRef<HTMLElement>(null);
   useAutoFit(ref, frame === 'desktop');
   return (
     <section ref={ref} className={`rs-slide${wide ? ' rs-wide' : ''}${visual ? ' rs-has-visual' : ''}${className ? ` ${className}` : ''}`} data-slide={slide.id} data-section={slide.section} data-phase={slide.phase} aria-roledescription="slide">
-      <a className="rs-topline" href={formatRoute({ name: 'home' })}>
-        Part {meta.part} · {sectionLabel(meta.language, slide.section)}
-        {position ? ` · ${t(meta.language, 'unit', { n: position.n, m: position.m })} ${position.unit.title}` : null}
-        {topic && !isHeadingOf(slide.section, topic.topic.title) ? ` · ${topic.topic.title}` : null}
-      </a>
-      {shownKicker ? <div className="rs-kicker">{shownKicker}</div> : null}
+      <WhereLine where={whereOf(deck, slide)} />
+      {kicker ? <div className="rs-kicker">{kicker}</div> : null}
       {title !== undefined ? (
         <h2 className="rs-title" data-field={titleField}>
           {title}
