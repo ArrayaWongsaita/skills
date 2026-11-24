@@ -29,25 +29,26 @@ test('rows show the real line numbers and a gap row', () => {
   expect(container.querySelector('.rs-gap')).toHaveTextContent('⋯');
 });
 
-test('copy these lines gives exactly the shown lines', async () => {
+test('a code block has one copy button, and it copies exactly the shown lines', async () => {
   const writeText = mockClipboard();
   render(<CodeBlock listing={listing} lines={[[1, 2], [5, 6]]} highlight={[]} language="th" />);
-  fireEvent.click(screen.getByRole('button', { name: 'คัดลอกส่วนนี้' }));
+  expect(screen.getAllByRole('button')).toHaveLength(1);
+  fireEvent.click(screen.getByRole('button', { name: 'คัดลอก' }));
   expect(await screen.findByText('คัดลอกแล้ว ✓')).toBeInTheDocument();
   expect(writeText).toHaveBeenCalledWith('a\nb\ne\nf\n');
 });
 
-test('copy the full program gives the listing', async () => {
+test('a whole listing is copied whole', async () => {
   const writeText = mockClipboard();
-  render(<CodeBlock listing={listing} lines={[[1, 2]]} highlight={[]} language="th" />);
-  fireEvent.click(screen.getByRole('button', { name: 'คัดลอกโปรแกรมเต็ม' }));
+  render(<CodeBlock listing={listing} lines={[[1, 6]]} highlight={[]} language="th" />);
+  fireEvent.click(screen.getByRole('button', { name: 'คัดลอก' }));
   await screen.findByText('คัดลอกแล้ว ✓');
   expect(writeText).toHaveBeenCalledWith('a\nb\nc\nd\ne\nf\n');
 });
 
 test('clipboard unavailable', async () => {
   render(<CodeBlock listing={listing} lines={[[1, 2]]} highlight={[]} language="en" />);
-  fireEvent.click(screen.getByRole('button', { name: 'Copy these lines' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
   expect(await screen.findByText('Could not copy: select the text instead')).toBeInTheDocument();
 });
 

@@ -1,7 +1,5 @@
 // Interface text. Thai and English ship with the template; other languages fall back to English.
 const en = {
-  copyLines: 'Copy these lines',
-  copyAll: 'Copy the full program',
   copy: 'Copy',
   copied: 'Copied ✓',
   copyFailed: 'Could not copy: select the text instead',
@@ -36,8 +34,6 @@ const en = {
 export type StringKey = keyof typeof en;
 
 const th: Record<StringKey, string> = {
-  copyLines: 'คัดลอกส่วนนี้',
-  copyAll: 'คัดลอกโปรแกรมเต็ม',
   copy: 'คัดลอก',
   copied: 'คัดลอกแล้ว ✓',
   copyFailed: 'คัดลอกไม่ได้ ให้เลือกข้อความแทน',

@@ -140,8 +140,7 @@ export function CodeBlock({ listing, lines, highlight, language, groups = [] }: 
   return (
     <figure className="rs-codeblock">
       <div className="rs-code-actions">
-        <CopyButton text={excerptText(listing.code, lines)} label="copyLines" language={language} />
-        <CopyButton text={withNewline(listing.code)} label="copyAll" language={language} />
+        <CopyButton text={excerptText(listing.code, lines)} label="copy" language={language} />
       </div>
       <pre ref={scroll} className="rs-code" data-lang={listing.lang}>
         <code>

@@ -18,7 +18,7 @@ const LAYOUT_CASES: [string, ReactElement, string[]][] = [
   ['Explain', <Explain {...base('1-003')} title={<>อธิบาย</>} body={<>เนื้อหาของบท</>} visual={visual} />, ['อธิบาย', 'เนื้อหาของบท']],
   ['Steps', <Steps {...base('1-004')} title={<>ขั้นตอน</>} items={[<>ขั้นแรก</>, <>ขั้นสอง</>]} visual={visual} />, ['ขั้นแรก', 'ขั้นสอง']],
   ['Compare', <Compare {...base('1-005')} title={<>เทียบ</>} left={<>ฝั่งซ้าย</>} right={<>ฝั่งขวา</>} takeaway={<>สรุปเทียบ</>} leftBlocks={[block]} />, ['ฝั่งซ้าย', 'ฝั่งขวา', 'สรุปเทียบ', 'pip install x']],
-  ['Code', <Code {...base('1-006')} title={<>โค้ด</>} body={<>อธิบายโค้ด</>} snippet="s-ok" lines={[[1, 2]]} highlight={[]} />, ['อธิบายโค้ด', 'คัดลอกส่วนนี้']],
+  ['Code', <Code {...base('1-006')} title={<>โค้ด</>} body={<>อธิบายโค้ด</>} snippet="s-ok" lines={[[1, 2]]} highlight={[]} />, ['อธิบายโค้ด', 'คัดลอก']],
   ['Output', <Output {...base('1-007')} title={<>ผลลัพธ์</>} body={<>สิ่งที่เห็น</>} snippet="s-ok" />, ['สิ่งที่เห็น', 'hello <world> & {x}']],
   ['Error', <ErrorSlide {...base('1-008')} title={<>ข้อผิดพลาด</>} symptom={<>อาการ 401</>} cause={<>ไม่มี key</>} fix={<>ตั้ง key</>} blocks={[{ lang: 'text', info: 'text', text: 'Error 401' }]} />, ['อาการ 401', 'ไม่มี key', 'ตั้ง key', 'Error 401']],
   ['Objectives', <Objectives {...base('1-009')} title={<>เป้าหมาย</>} items={[<>ทำได้หนึ่ง</>]} />, ['ทำได้หนึ่ง']],
