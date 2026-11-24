@@ -450,10 +450,12 @@ a {
   margin-bottom: 0.7em;
 }
 
+/* A notice is a soft yellow card with a thin edge all round: a thick edge on one side reads as a quote bar and pulls the eye. */
 .rs-notice {
   margin: 0.6em 0;
   padding: 0.4em 0.8em;
-  border-left: 4px solid #c9971c;
+  border: 1.5px solid #eadfb8;
+  border-radius: 12px;
   background: #fbf6e8;
   font-size: 0.85em;
 }
@@ -567,9 +569,11 @@ a {
   background: #f3f1ec;
 }
 
+/* A program's output is a light result card under its code, set apart by its blue tint: a solid dark block weighed more than the code it answers. */
 .rs-output pre {
-  background: #2b2b2b;
-  color: #f2f2f2;
+  background: #f2f7fc;
+  color: var(--rs-ink);
+  border: 1.5px solid #d8e4f0;
 }
 
 .rs-output figcaption {
