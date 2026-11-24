@@ -37,7 +37,7 @@ Required props are first; optional ones are marked `?`. `visual` takes a figure,
 | Layout | Props | Use |
 |---|---|---|
 | `Cover` | `title`, `body?`, `visual?` | the Part's first slide |
-| `Topic` | `title`, `body?`, `visual?` | a topic's divider: the name large, an optional tagline, nothing else |
+| `Topic` | `title`, `body?`, `visual?` | a topic's divider: the name large, an optional tagline and the topic's picture (the drawing its `know` slide draws in full), nothing else |
 | `Focus` | `title`, `body`, `visual?` | one point or a hook |
 | `Explain` | `title`, `body`, `visual?` | the default explanation |
 | `Steps` | `title`, `items` (2–6), `visual?` | a process or a list of parts |

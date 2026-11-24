@@ -13,7 +13,7 @@ All paths below are relative to this skill's base directory, written `<skill>/â€
 
 ## A Part
 
-An **opening** of at most 3 slides, then **topics**, then a **closing**. Each topic is a segment that always runs the same way, so the learner knows where they are: a divider that only names the topic, then `know` (what it is), `parts` (one slide per component), `example` (code with its real output), `watchout` (a mistake beginners really make, only when there is one) and, if the user asks, `check`. Details and the budgets: `references/plan-list.md`.
+An **opening** of at most 3 slides, then **topics**, then a **closing**. Each topic is a segment that always runs the same way, so the learner knows where they are: a divider that names the topic and shows its picture, then `know` (what it is), `parts` (one slide per component), `example` (code with its real output), `watchout` (a mistake beginners really make, only when there is one) and, if the user asks, `check`. Details and the budgets: `references/plan-list.md`.
 
 ## Start or resume
 
@@ -60,6 +60,7 @@ The user reads the slides and asks for changes, usually "this slide is confusing
 
 - The learner, not the research, decides what goes on a slide. Leave out what they do not need yet.
 - Concrete before abstract. A term is explained where it is first needed; there is no glossary slide.
+- Picture first: a slide that explains or tells a story is a picture slide. Ask what you would sketch on a whiteboard, use text only for what has no shape, and say why in the plan. Code slides stay code slides, after the picture that explains them.
 - One new idea per slide, at most 160 Thai characters of text. Two slides, not a denser one.
 - No source voice ("X states thatâ€¦") on slides. Facts come from `research.md`; sources go on the last slide.
 - Code on a slide is run, and the slide shows its real output.
