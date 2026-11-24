@@ -3,7 +3,7 @@ import { expect, test, vi } from 'vitest';
 import { MiniPart, miniMeta } from '../__fixtures__/MiniPart';
 import { TopicPart, topicMeta } from '../__fixtures__/TopicPart';
 import { Deck } from '../components/Deck';
-import { Explain, Topic } from '../components/layouts';
+import { Code, Explain, Topic } from '../components/layouts';
 import type { PartMeta } from '../components/types';
 import { CheckPage } from './CheckPage';
 
@@ -78,4 +78,71 @@ test('the page reports a budget finding for a topic of ten slides and lists the 
   expect(result.slides).toHaveLength(10);
   expect(result.slides[0]).toMatchObject({ id: '1-001', section: 'หัวข้อยาว', divider: true, title: 'หัวข้อยาว' });
   expect(result.slides[1]).toMatchObject({ id: '1-002', phase: 'know', divider: false, title: 'สไลด์ 2' });
+});
+
+// A highlight that marks most of the code points at nothing: the page measures the shown and the highlighted lines.
+const hlMeta: PartMeta = { course: 'c', part: 1, slug: 'hl', title: 'Highlight', language: 'th', slideCount: 2 };
+const six = { lang: 'python', status: 'verified', reason: '', code: 'a = 1\nb = 2\nc = 3\nd = 4\ne = 5\nf = 6' } as const;
+function Highlighted() {
+  return (
+    <Deck meta={hlMeta} diagrams={{}} listings={{ six }} outputs={{}}>
+      <Code id="1-001" section="Opening" title={<>ทุกบรรทัด</>} body={<>b</>} snippet="six" highlight={[[1, 5]]} />
+      <Code id="1-002" section="Opening" title={<>บรรทัดเดียว</>} body={<>b</>} snippet="six" highlight={[[2, 2]]} />
+    </Deck>
+  );
+}
+
+test('the page reports a highlight on most of the code, and only that one', async () => {
+  const entry = { meta: hlMeta, load: () => Promise.resolve({ default: Highlighted }) };
+  render(<CheckPage entry={entry} />);
+  await vi.waitFor(() => expect(window.__reactSlidesCheck?.done).toBe(true), { timeout: 6000 });
+  const found = window.__reactSlidesCheck!.findings.filter((f) => f.kind === 'highlight');
+  expect(found).toEqual([expect.objectContaining({ slide: '1-001', level: 'problem', frame: 'both' })]);
+  expect(found[0]!.detail).toContain('5 of 6');
+});
+
+test('a code line wider than its box is a scrolling-block note, though the code never grows taller', async () => {
+  const isCode = (el: Element) => el.classList.contains('rs-code');
+  const content = vi.spyOn(Element.prototype, 'scrollWidth', 'get').mockImplementation(function (this: Element) { return isCode(this) ? 900 : 100; });
+  const box = vi.spyOn(Element.prototype, 'clientWidth', 'get').mockImplementation(function (this: Element) { return isCode(this) ? 600 : 100; });
+  try {
+    const entry = { meta: hlMeta, load: () => Promise.resolve({ default: Highlighted }) };
+    render(<CheckPage entry={entry} />);
+    await vi.waitFor(() => expect(window.__reactSlidesCheck?.done).toBe(true), { timeout: 6000 });
+    const found = window.__reactSlidesCheck!.findings.filter((f) => f.kind === 'scrolling-block' && f.slide === '1-002');
+    expect(found.length).toBeGreaterThan(0);
+    expect(found[0]!.detail).toContain('1 block');
+  } finally {
+    content.mockRestore();
+    box.mockRestore();
+  }
+});
+
+// Two labels of one drawing drawn on top of each other (a two-line label placed twice), and a drawing whose labels are apart.
+const picMeta: PartMeta = { course: 'c', part: 1, slug: 'pic', title: 'Pictures', language: 'th', slideCount: 2 };
+function Pictures() {
+  const at = (n: number) => ({ 'data-box': `${n}` });
+  return (
+    <Deck meta={picMeta} diagrams={{}} listings={{}} outputs={{}}>
+      <Explain id="1-001" section="Opening" title={<>ซ้อน</>} body={<>b</>} visual={<svg className="rs-figure"><text {...at(0)}>filter</text><text {...at(1)}>เก็บไหม?</text></svg>} />
+      <Explain id="1-002" section="Opening" title={<>แยก</>} body={<>b</>} visual={<svg className="rs-figure"><text {...at(0)}>filter</text><text {...at(3)}>เก็บไหม?</text></svg>} />
+    </Deck>
+  );
+}
+
+test('the page reports labels of a drawing that sit on top of each other, and only on that slide', async () => {
+  const boxes: Record<string, [number, number]> = { '0': [100, 120], '1': [112, 132], '3': [150, 170] }; // top, bottom; all 80 px wide
+  const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+    const box = boxes[(this as HTMLElement).dataset?.box ?? ''];
+    return (box ? { left: 10, right: 90, top: box[0], bottom: box[1], width: 80, height: box[1] - box[0], x: 10, y: box[0], toJSON: () => ({}) } : { left: 0, right: 0, top: 0, bottom: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect;
+  });
+  try {
+    const entry = { meta: picMeta, load: () => Promise.resolve({ default: Pictures }) };
+    render(<CheckPage entry={entry} />);
+    await vi.waitFor(() => expect(window.__reactSlidesCheck?.done).toBe(true), { timeout: 6000 });
+    const found = window.__reactSlidesCheck!.findings.filter((f) => f.kind === 'text-overlap');
+    expect(found).toEqual([expect.objectContaining({ slide: '1-001', level: 'problem' })]);
+  } finally {
+    rect.mockRestore();
+  }
 });

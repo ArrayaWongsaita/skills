@@ -8,10 +8,15 @@ export type Measurement = {
   frame: Frame;
   prose: { scrollW: number; clientW: number; scrollH: number; clientH: number; fit: number }[];
   scrollingBlocks: number;
+  /** The lines a code block shows, and how many of them are highlighted. */
+  codeRows: number;
+  highlightedRows: number;
   outOfCanvas: string[];
+  /** Pairs of labels in the slide's drawings that sit on top of each other. */
+  textOverlaps: number;
   fallback: boolean;
 };
-export type FindingKind = 'prose-overflow' | 'out-of-canvas' | 'fallback' | 'font-missing' | 'console-error' | 'scrolling-block' | 'budget';
+export type FindingKind = 'prose-overflow' | 'out-of-canvas' | 'fallback' | 'font-missing' | 'console-error' | 'scrolling-block' | 'highlight' | 'text-overlap' | 'budget';
 export type Finding = { slide: string; frame: string; kind: FindingKind; level: 'problem' | 'note'; detail: string };
 /** What the check page knows about one slide, for the readability budgets and for the agent's slide list. */
 export type SlideInfo = { id: string; section: string; phase?: Phase; divider: boolean; title: string; chars: number };
@@ -58,6 +63,8 @@ export function findings(ms: Measurement[], fontsOk: { mali: boolean; mono: bool
     if (m.scrollingBlocks > 0) {
       found.push({ slide: m.slide, frame: m.frame, kind: 'scrolling-block', level: 'note', detail: `${m.scrollingBlocks} block(s) scroll inside their box` });
     }
+    if (m.highlightedRows * 2 > m.codeRows) perSlide(m, 'highlight', `${m.highlightedRows} of ${m.codeRows} code lines are highlighted: highlight the one place to look at, or nothing`);
+    if (m.textOverlaps > 0) perSlide(m, 'text-overlap', `${m.textOverlaps} pair(s) of labels in a drawing overlap: move them apart or shorten them`);
     if (m.outOfCanvas.length > 0) perSlide(m, 'out-of-canvas', `diagram nodes outside the canvas: ${m.outOfCanvas.join(', ')}`);
     if (m.fallback) perSlide(m, 'fallback', 'shows its fallback: the illustration or screenshot is missing or failed to draw');
   }

@@ -67,6 +67,7 @@ A picture earns its place: it shows the thing, it does not decorate. Choose in t
 Rules for a drawing:
 - `<svg viewBox="0 0 460 330">` (or similar) with the class name `rs-figure`, so it scales to the picture column; keep 12 units clear at every edge.
 - Text at `fontSize` 16 or more. No two labels closer than the width of the longer one. A label names a thing; it does not explain.
+- A box has one label in its centre. A second line inside the same box goes at least 1.6 × `fontSize` below the first (Thai marks need that room), and the first line moves up to make room: never put a second label on the box's centre. The check page reports labels of one drawing that sit on top of each other as a `text-overlap` problem.
 - Give the drawing the props the slides need (`highlight`, `current`), so one drawing serves several slides: the same picture for the same concept, with the part under discussion highlighted, is what keeps a learner oriented.
 - The same concept has the same colour all through the Part (and the course: see `course-notes.md`).
 - Draw nothing you have not looked at: you will take a screenshot of every distinct drawing in the check step.
@@ -78,7 +79,8 @@ A topic with code shows the real program and its real output.
 1. Write the program in `part-NN.data.ts`: `listings.<name> = { lang: 'python', status: 'verified', reason: '', code: '…' }`.
 2. **Run it** with the real interpreter (Bash). Put exactly what it printed in `outputs.<name> = { lang: 'text', info: 'text', text: '…' }`.
 3. When you cannot run it, set `status: 'unverified'`, give a `reason`, mark the output `info: 'text illustrative'` and put a `notice` on the slide that says so. Tell the user.
-4. `<Example snippet="name" highlight={[[2, 3]]} …/>` shows the lines; `lines` picks an excerpt (whole listing by default).
+4. `<Example snippet="name" highlight={[[2, 3]]} …/>` shows the lines; `lines` picks an excerpt (whole listing by default). The one copy button copies exactly what the slide shows.
+5. **Highlight only the one place the learner must look at** (a line or two). When most of the lines matter, highlight none: a highlight on everything points at nothing. The check page reports a highlight on more than half of the shown lines.
 
 ## Writing the text
 

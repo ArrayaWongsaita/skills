@@ -107,7 +107,10 @@ function CopyButton({ text, label, language }: { text: string; label: StringKey;
   );
 }
 
-/** Marks a box whose content is taller than its space, so it scrolls with a visible cue (and the check page can count it). */
+/**
+ * Marks a box whose content does not fit its space, so the check page can count it: `data-scrolls` when it is taller (it scrolls with a
+ * visible cue), `data-scrolls-x` when a line is wider.
+ */
 function useScrolls<T extends HTMLElement>() {
   const ref = useRef<T>(null);
   useLayoutEffect(() => {
@@ -115,6 +118,7 @@ function useScrolls<T extends HTMLElement>() {
     if (!element) return;
     const measure = () => {
       element.dataset.scrolls = String(element.scrollHeight > element.clientHeight + 1);
+      element.dataset.scrollsX = String(element.scrollWidth > element.clientWidth + 1);
     };
     measure();
     const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;

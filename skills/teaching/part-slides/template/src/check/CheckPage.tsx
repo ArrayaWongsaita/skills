@@ -7,6 +7,7 @@ import type { PartEntry } from '../parts';
 import { consoleErrors } from './console';
 import { budgets } from './budgets';
 import { type Finding, findings, type Frame, type Measurement, type SlideInfo } from './findings';
+import { countOverlaps } from './overlap';
 
 const FRAMES: { frame: Frame; width: number; height: number }[] = [
   { frame: 'desktop', width: 1280, height: 720 },
@@ -42,7 +43,10 @@ function measure(root: HTMLElement): Measurement[] {
         prose: slide
           ? [{ scrollW: slide.scrollWidth, clientW: slide.clientWidth, scrollH: neededHeight(slide), clientH: slide.clientHeight, fit: Number(slide.dataset.fit ?? '1') }]
           : [],
-        scrollingBlocks: stage.querySelectorAll('[data-scrolls="true"]').length,
+        scrollingBlocks: stage.querySelectorAll('[data-scrolls="true"], [data-scrolls-x="true"]').length,
+        codeRows: stage.querySelectorAll('.rs-codeblock .rs-row').length,
+        highlightedRows: stage.querySelectorAll('.rs-codeblock .rs-hl').length,
+        textOverlaps: [...stage.querySelectorAll('svg')].reduce((sum, svg) => sum + countOverlaps([...svg.querySelectorAll('text')].map((label) => label.getBoundingClientRect())), 0),
         outOfCanvas: [...new Set(outside.filter(Boolean))],
         fallback: stage.querySelector('[data-fallback]') !== null,
       });

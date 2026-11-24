@@ -122,3 +122,27 @@ test('groups mark their rows and number their first row', () => {
   expect([...container.querySelectorAll('[data-group]')].map((row) => `${row.getAttribute('data-line')}:${row.getAttribute('data-group')}`)).toEqual(['2:1', '3:1', '5:2', '6:2']);
   expect([...container.querySelectorAll('.rs-group-n')].map((mark) => mark.textContent)).toEqual(['1', '2']);
 });
+
+test('a code block wider than its box says it scrolls sideways, so the check page can count it', () => {
+  const content = vi.spyOn(Element.prototype, 'scrollWidth', 'get').mockReturnValue(900);
+  const box = vi.spyOn(Element.prototype, 'clientWidth', 'get').mockReturnValue(600);
+  try {
+    const { container } = render(<CodeBlock listing={listing} lines={[[1, 6]]} highlight={[]} language="th" />);
+    expect(container.querySelector('pre')).toHaveAttribute('data-scrolls-x', 'true');
+  } finally {
+    content.mockRestore();
+    box.mockRestore();
+  }
+});
+
+test('a code block that fits its box does not say so', () => {
+  const content = vi.spyOn(Element.prototype, 'scrollWidth', 'get').mockReturnValue(600);
+  const box = vi.spyOn(Element.prototype, 'clientWidth', 'get').mockReturnValue(600);
+  try {
+    const { container } = render(<CodeBlock listing={listing} lines={[[1, 6]]} highlight={[]} language="th" />);
+    expect(container.querySelector('pre')).toHaveAttribute('data-scrolls-x', 'false');
+  } finally {
+    content.mockRestore();
+    box.mockRestore();
+  }
+});
