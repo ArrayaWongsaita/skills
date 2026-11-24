@@ -18,12 +18,13 @@ export function topicTitle(topics: Topics, id: string): string {
   return topicPosition(topics, id)?.topic.title ?? id;
 }
 
-/** The place of every slide that has a topic and a phase, counted among the slides of the same phase of the same topic. */
+/** The place of every slide that has a topic (or, with no topic id, a section) and a phase, counted among the slides of the same phase of the same topic. */
 export function phasePlaces(slides: ReactElement<Base>[]): Record<string, Place> {
   const groups = new Map<string, string[]>();
   for (const { props } of slides) {
-    if (!props.topic || !props.phase) continue;
-    const key = `${props.topic}\n${props.phase}`;
+    const group = props.topic ?? props.section; // a hand-written slide names its topic by its section
+    if (!group || !props.phase) continue;
+    const key = `${group}\n${props.phase}`;
     groups.set(key, [...(groups.get(key) ?? []), props.id]);
   }
   const places: Record<string, Place> = {};

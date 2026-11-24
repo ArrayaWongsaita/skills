@@ -45,3 +45,15 @@ test('the same phase of two topics, and two phases of one topic, count apart', (
 test('a slide with a topic but no phase, such as a divider, has no place', () => {
   expect(phasePlaces([slide('1-001', 't-a'), slide('1-002', 't-a', 'know')])).toEqual({ '1-002': { n: 1, m: 1 } });
 });
+
+// part-slides: a hand-written slide names its topic by its section, with no topic id.
+const inSection = (id: string, section: string, phase?: Phase) => ({ props: { id, section, phase } }) as unknown as ReactElement<Base>;
+
+test('slides with a section and a phase but no topic id are numbered within their section', () => {
+  const places = phasePlaces([
+    inSection('1-001', 'Sorting', 'parts'), inSection('1-002', 'Sorting', 'parts'),
+    inSection('1-003', 'Filtering', 'parts'), inSection('1-004', 'Filtering', 'parts'), inSection('1-005', 'Filtering', 'parts'),
+  ]);
+  expect([places['1-001'], places['1-002']]).toEqual([{ n: 1, m: 2 }, { n: 2, m: 2 }]);
+  expect(places['1-005']).toEqual({ n: 3, m: 3 });
+});
