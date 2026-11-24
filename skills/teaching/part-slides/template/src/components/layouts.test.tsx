@@ -370,3 +370,15 @@ test('Focus, Explain and Steps may have no picture, and then have no visual colu
   expect(container.querySelectorAll('.rs-slide')).toHaveLength(3);
   expect(container.querySelector('.rs-visual')).toBeNull();
 });
+
+test('an Error slide can carry a picture, and is then a two-column slide like Explain; without one it stays wide', () => {
+  const fix = { cause: <>สาเหตุ</>, fix: <>วิธีแก้</> };
+  const withPicture = render(<DeckFixture topics={fixtureTopics}><ErrorSlide {...base('1-008')} title={<>ผิด</>} {...fix} symptom={<>อาการ</>} visual={<svg data-testid="pic" />} /></DeckFixture>);
+  expect(withPicture.container.querySelector('.rs-visual [data-testid="pic"]')).not.toBeNull();
+  expect(slideOf(withPicture.container, '1-008')).toHaveClass('rs-has-visual');
+  expect(slideOf(withPicture.container, '1-008')).not.toHaveClass('rs-wide');
+  withPicture.unmount();
+  const plain = render(<DeckFixture topics={fixtureTopics}><ErrorSlide {...base('1-008')} title={<>ผิด</>} {...fix} /></DeckFixture>);
+  expect(slideOf(plain.container, '1-008')).toHaveClass('rs-wide');
+  expect(plain.container.querySelector('.rs-visual')).toBeNull();
+});

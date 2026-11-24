@@ -187,11 +187,11 @@ export function Output(props: Base & { title: Rich; body: Rich; notice?: Rich; s
   );
 }
 
-export function Error(props: Base & { title: Rich; cause: Rich; fix: Rich; symptom?: Rich; blocks?: Block[] }) {
+export function Error(props: Base & { title: Rich; cause: Rich; fix: Rich; symptom?: Rich; blocks?: Block[]; visual?: VisualProp }) {
   const { meta } = useDeck();
   const lang = meta.language;
   return (
-    <SlideFrame slide={props} title={props.title} wide>
+    <SlideFrame slide={props} title={props.title} wide={props.visual === undefined} visual={slot(props.visual)}>
       {props.symptom !== undefined ? (
         <Labelled label={t(lang, 'symptom')} name="symptom">
           {props.symptom}

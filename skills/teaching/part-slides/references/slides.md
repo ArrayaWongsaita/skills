@@ -46,7 +46,7 @@ Required props are first; optional ones are marked `?`. `visual` takes a figure,
 | `Example` | `title`, `body`, `snippet`, `lines?`, `highlight?`, `notice?` | code with its output |
 | `Code` | `title`, `body`, `snippet`, `lines?`, `highlight?`, `notice?` | code alone |
 | `Output` | `title`, `body`, `snippet`, `notice?` | an output alone |
-| `Error` | `title`, `cause`, `fix`, `symptom?`, `blocks?` | a mistake, its cause and its fix |
+| `Error` | `title`, `cause`, `fix`, `symptom?`, `blocks?`, `visual?` | a mistake, its cause and its fix; with a `visual` it is a two-column slide, so leave the code for the next slide |
 | `Question`, `Answer` | `question`, `body`, `items?` · `answer`, `why`, `revisit` | the optional review |
 | `Summary` | `title`, `items`, `visual?` | the Closing's summary |
 | `Sources` | `title`, `items` (`<A href>` links) | the last slide |
