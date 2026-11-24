@@ -5,7 +5,8 @@ import { DeckModeContext, FrameContext } from '../components/Deck';
 import { neededHeight } from '../hooks';
 import type { PartEntry } from '../parts';
 import { consoleErrors } from './console';
-import { type Finding, findings, type Frame, type Measurement } from './findings';
+import { budgets } from './budgets';
+import { type Finding, findings, type Frame, type Measurement, type SlideInfo } from './findings';
 
 const FRAMES: { frame: Frame; width: number; height: number }[] = [
   { frame: 'desktop', width: 1280, height: 720 },
@@ -50,6 +51,34 @@ function measure(root: HTMLElement): Measurement[] {
   return out;
 }
 
+/** The prose a reader has to take in: the title and the text beside the picture, with code and its output left out. */
+function proseChars(slide: HTMLElement): number {
+  const parts = [...slide.querySelectorAll<HTMLElement>('.rs-title, .rs-prose')].map((el) => {
+    const copy = el.cloneNode(true) as HTMLElement;
+    for (const skip of copy.querySelectorAll('pre, .rs-codeblock, .rs-output, .rs-block')) skip.remove();
+    return copy.textContent ?? '';
+  });
+  return parts.join(' ').replace(/\s+/g, ' ').trim().length;
+}
+
+/** One entry per slide, read from the desktop layout. */
+function readSlides(root: HTMLElement): SlideInfo[] {
+  const frame = root.querySelector<HTMLElement>('[data-frame="desktop"]');
+  if (!frame) return [];
+  return [...frame.querySelectorAll<HTMLElement>('[data-check-slide]')].map((stage) => {
+    const slide = stage.querySelector<HTMLElement>('.rs-slide');
+    const phase = slide?.dataset.phase;
+    return {
+      id: stage.dataset.checkSlide ?? '',
+      section: slide?.dataset.section ?? '',
+      ...(phase ? { phase: phase as SlideInfo['phase'] } : {}),
+      divider: slide?.classList.contains('rs-divider') ?? false,
+      title: slide?.querySelector('.rs-title')?.textContent?.trim() ?? '',
+      chars: slide ? proseChars(slide) : 0,
+    };
+  });
+}
+
 export function CheckPage({ entry }: { entry: PartEntry }) {
   const Part = useMemo(() => lazy(entry.load), [entry]);
   const root = useRef<HTMLDivElement>(null);
@@ -58,7 +87,7 @@ export function CheckPage({ entry }: { entry: PartEntry }) {
 
   useEffect(() => {
     let cancelled = false;
-    window.__reactSlidesCheck = { part, done: false, findings: [], measurements: [] };
+    window.__reactSlidesCheck = { part, done: false, findings: [], measurements: [], slides: [] };
     (async () => {
       const expected = entry.meta.slideCount * FRAMES.length;
       for (let waited = 0; waited < WAIT_LIMIT_MS; waited += WAIT_MS) {
@@ -70,9 +99,12 @@ export function CheckPage({ entry }: { entry: PartEntry }) {
       await sleep(SETTLE_MS);
       if (cancelled || !root.current) return;
       const measurements = measure(root.current);
-      const found = findings(measurements, fonts, consoleErrors());
+      const slides = readSlides(root.current);
+      const budget = budgets(slides, entry.meta.language);
+      const all = findings(measurements, fonts, consoleErrors());
+      const found = [...all.filter((f) => f.level === 'problem'), ...budget.filter((f) => f.level === 'problem'), ...all.filter((f) => f.level === 'note'), ...budget.filter((f) => f.level === 'note')];
       setResult(found);
-      window.__reactSlidesCheck = { part, done: true, findings: found, measurements };
+      window.__reactSlidesCheck = { part, done: true, findings: found, measurements, slides };
     })();
     return () => {
       cancelled = true;

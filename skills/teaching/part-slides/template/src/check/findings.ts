@@ -1,4 +1,5 @@
 // What the check page reports, from what it measured. Pure, so the rules are tested without a browser.
+import type { Phase } from '../components/types';
 import { MIN_FIT } from '../hooks';
 
 export type Frame = 'desktop' | 'phone';
@@ -10,9 +11,11 @@ export type Measurement = {
   outOfCanvas: string[];
   fallback: boolean;
 };
-export type FindingKind = 'prose-overflow' | 'out-of-canvas' | 'fallback' | 'font-missing' | 'console-error' | 'scrolling-block';
+export type FindingKind = 'prose-overflow' | 'out-of-canvas' | 'fallback' | 'font-missing' | 'console-error' | 'scrolling-block' | 'budget';
 export type Finding = { slide: string; frame: string; kind: FindingKind; level: 'problem' | 'note'; detail: string };
-export type CheckResult = { part: number; done: boolean; findings: Finding[]; measurements: Measurement[] };
+/** What the check page knows about one slide, for the readability budgets and for the agent's slide list. */
+export type SlideInfo = { id: string; section: string; phase?: Phase; divider: boolean; title: string; chars: number };
+export type CheckResult = { part: number; done: boolean; findings: Finding[]; measurements: Measurement[]; slides: SlideInfo[] };
 
 declare global {
   interface Window {

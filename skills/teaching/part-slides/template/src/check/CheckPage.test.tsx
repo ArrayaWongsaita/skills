@@ -2,6 +2,9 @@ import { render, screen } from '@testing-library/react';
 import { expect, test, vi } from 'vitest';
 import { MiniPart, miniMeta } from '../__fixtures__/MiniPart';
 import { TopicPart, topicMeta } from '../__fixtures__/TopicPart';
+import { Deck } from '../components/Deck';
+import { Explain, Topic } from '../components/layouts';
+import type { PartMeta } from '../components/types';
 import { CheckPage } from './CheckPage';
 
 vi.mock('../router', async (original) => ({
@@ -49,4 +52,30 @@ test('a slide whose body spills over the sources footer inside the frame is a pr
     scroll.mockRestore();
     client.mockRestore();
   }
+});
+
+// part-slides: the page reads each slide's section, phase and text, reports the readability budgets and lists the slides.
+const longMeta: PartMeta = { course: 'c', part: 1, slug: 'long', title: 'Long', language: 'th', slideCount: 10 };
+function LongTopic() {
+  return (
+    <Deck meta={longMeta} diagrams={{}} listings={{}} outputs={{}}>
+      <Topic id="1-001" section="หัวข้อยาว" title={<>หัวข้อยาว</>} />
+      {Array.from({ length: 9 }, (_, i) => (
+        <Explain key={i} id={`1-${String(i + 2).padStart(3, '0')}`} section="หัวข้อยาว" phase="know" title={<>สไลด์ {i + 2}</>} body={<>เนื้อหา</>} visual={<svg />} />
+      ))}
+    </Deck>
+  );
+}
+
+test('the page reports a budget finding for a topic of ten slides and lists the slides', async () => {
+  const entry = { meta: longMeta, load: () => Promise.resolve({ default: LongTopic }) };
+  render(<CheckPage entry={entry} />);
+  await vi.waitFor(() => expect(window.__reactSlidesCheck?.done).toBe(true), { timeout: 6000 });
+  const result = window.__reactSlidesCheck!;
+  const budget = result.findings.filter((f) => f.kind === 'budget');
+  expect(budget).toHaveLength(1);
+  expect(budget[0]).toMatchObject({ slide: '1-010', level: 'problem' });
+  expect(result.slides).toHaveLength(10);
+  expect(result.slides[0]).toMatchObject({ id: '1-001', section: 'หัวข้อยาว', divider: true, title: 'หัวข้อยาว' });
+  expect(result.slides[1]).toMatchObject({ id: '1-002', phase: 'know', divider: false, title: 'สไลด์ 2' });
 });
