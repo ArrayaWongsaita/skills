@@ -102,7 +102,7 @@ export function Compare(props: Base & { title: Rich; left: Rich; right: Rich; ta
   );
 }
 
-export function Code(props: Base & { title: Rich; body: Rich; notice?: Rich; snippet: string; lines: Range[]; highlight: Range[] }) {
+export function Code(props: Base & { title: Rich; body: Rich; notice?: Rich; snippet: string; lines?: Range[]; highlight?: Range[] }) {
   const { listings, meta } = useDeck();
   const listing = listings[props.snippet];
   return (
@@ -113,13 +113,13 @@ export function Code(props: Base & { title: Rich; body: Rich; notice?: Rich; sni
           {props.notice}
         </Field>
       ) : null}
-      {listing ? <CodeBlock listing={listing} lines={props.lines} highlight={props.highlight} language={meta.language} /> : null}
+      {listing ? <CodeBlock listing={listing} lines={props.lines ?? [[1, listing.code.split('\n').length]]} highlight={props.highlight ?? []} language={meta.language} /> : null}
     </SlideFrame>
   );
 }
 
 /** One example: the code excerpt and, when the snippet has an expected output, the output right after it. */
-export function Example(props: Base & { title: Rich; body: Rich; notice?: Rich; snippet: string; lines: Range[]; highlight: Range[] }) {
+export function Example(props: Base & { title: Rich; body: Rich; notice?: Rich; snippet: string; lines?: Range[]; highlight?: Range[] }) {
   const { listings, outputs, meta } = useDeck();
   const listing = listings[props.snippet];
   const block = outputs[props.snippet];
@@ -131,7 +131,7 @@ export function Example(props: Base & { title: Rich; body: Rich; notice?: Rich; 
           {props.notice}
         </Field>
       ) : null}
-      {listing ? <CodeBlock listing={listing} lines={props.lines} highlight={props.highlight} language={meta.language} /> : null}
+      {listing ? <CodeBlock listing={listing} lines={props.lines ?? [[1, listing.code.split('\n').length]]} highlight={props.highlight ?? []} language={meta.language} /> : null}
       {block ? <OutputBlock block={block} language={meta.language} /> : null}
     </SlideFrame>
   );

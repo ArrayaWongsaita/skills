@@ -373,3 +373,14 @@ test('a divider is marked as one even when the deck has no topic list', () => {
   );
   expect(container.querySelector('.rs-slide.rs-divider')).not.toBeNull();
 });
+
+test('Example and Code show the whole listing and highlight nothing when given no lines', () => {
+  const { container } = render(
+    <DeckFixture>
+      <Example {...lean('1-001')} title={<>ตัวอย่าง</>} body={<>รันแล้วเห็น</>} snippet="s-ok" />
+      <Code {...lean('1-002')} title={<>โค้ด</>} body={<>อ่านโค้ด</>} snippet="s-ok" />
+    </DeckFixture>,
+  );
+  expect(container.querySelectorAll('.rs-example .rs-row')).toHaveLength(6);
+  expect(container.querySelectorAll('.rs-hl')).toHaveLength(0);
+});

@@ -20,8 +20,8 @@ export const missingRequiredProps = [
   <Steps key="steps" {...base} title={r} visual={v} />,
   // @ts-expect-error takeaway is required
   <Compare key="compare" {...base} title={r} left={r} right={r} />,
-  // @ts-expect-error lines is required
-  <Code key="code" {...base} title={r} body={r} snippet="s" highlight={[]} />,
+  // @ts-expect-error snippet is required
+  <Code key="code" {...base} title={r} body={r} />,
   // @ts-expect-error snippet is required
   <Output key="output" {...base} title={r} body={r} />,
   // @ts-expect-error fix is required
@@ -50,8 +50,8 @@ export const missingRequiredProps = [
   <Anatomy key="anatomy" {...base} title={r} items={[r, r]} />,
   // @ts-expect-error items is required
   <Anatomy key="anatomy-items" {...base} title={r} pieces={[]} />,
-  // @ts-expect-error lines is required
-  <Example key="example" {...base} title={r} body={r} snippet="s" highlight={[]} />,
+  // @ts-expect-error snippet is required
+  <Example key="example" {...base} title={r} body={r} />,
   // @ts-expect-error labels is required
   <Assemble key="assemble" {...base} title={r} body={r} assembles="1.1" />,
   // @ts-expect-error a visual is required on explain slides
