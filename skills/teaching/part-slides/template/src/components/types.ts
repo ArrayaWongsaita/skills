@@ -28,7 +28,9 @@ export type PartMeta = { course: string; part: number; slug: string; title: stri
 /** The phases of a topic (deck@3), in teaching order. The divider has none. */
 export type Phase = 'know' | 'parts' | 'example' | 'watchout' | 'check';
 /** `unit` is the unit the slide belongs to (deck@2); `topic` and `phase` are the topic and the phase of a deck@3 slide: the header and the kicker name them. */
-export type Base = { id: string; section: string; purpose: string; from: string[]; sources: string[]; unit?: string; topic?: string; phase?: Phase };
+export type Base = { id: string; section: string; purpose?: string; from?: string[]; sources?: string[]; unit?: string; topic?: string; phase?: Phase };
+/** A slide's picture: a deck's visual data, or any node (the Part's own drawing, a figure). */
+export type VisualProp = Visual | ReactNode;
 export type UnitDef = { id: string; title: string; goal: string; needs: string[] };
 export type ChapterDef = { id: string; section: string; title: string; units: UnitDef[] };
 /** A Part's unit map: its chapters in order, each with its units in teaching order. Empty for a deck@1 deck. */

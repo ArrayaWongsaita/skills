@@ -326,3 +326,50 @@ test('the legend of an assembly names a topic', () => {
   expect(container.querySelector('[data-line="3"]')).toHaveAttribute('data-group', '1');
   expect(container.querySelector('[data-line="7"]')).toHaveAttribute('data-group', '2');
 });
+
+// part-slides: a Part is written by hand, so a slide carries no research metadata and its picture can be any node.
+const own = <svg data-testid="own" />;
+const lean = (id: string) => ({ id, section: 'หัวข้อ' });
+
+test('a slide without purpose, from and sources renders, with no sources footer', () => {
+  const { container } = render(
+    <DeckFixture>
+      <Explain {...lean('1-001')} title={<>ชื่อสไลด์</>} body={<>เนื้อหา</>} visual={own} />
+    </DeckFixture>,
+  );
+  expect(screen.getByText('ชื่อสไลด์')).toBeInTheDocument();
+  expect(screen.getByTestId('own')).toBeInTheDocument();
+  expect(container.querySelector('.rs-sources')).toBeNull();
+});
+
+test.each([
+  ['Cover', (v: ReactElement) => <Cover {...lean('1-001')} title={<>ก</>} visual={v} />],
+  ['Focus', (v: ReactElement) => <Focus {...lean('1-001')} title={<>ก</>} body={<>ข</>} visual={v} />],
+  ['Steps', (v: ReactElement) => <Steps {...lean('1-001')} title={<>ก</>} items={[<>หนึ่ง</>, <>สอง</>]} visual={v} />],
+  ['Topic', (v: ReactElement) => <Topic {...lean('1-001')} title={<>ก</>} visual={v} />],
+  ['Objectives', (v: ReactElement) => <Objectives {...lean('1-001')} title={<>ก</>} items={[<>ข</>]} visual={v} />],
+  ['Summary', (v: ReactElement) => <Summary {...lean('1-001')} title={<>ก</>} items={[<>ข</>]} visual={v} />],
+])('%s shows a node as its visual', (_name, make) => {
+  render(<DeckFixture>{make(own)}</DeckFixture>);
+  expect(screen.getByTestId('own')).toBeInTheDocument();
+});
+
+test('the slide is marked with its section and phase', () => {
+  const { container } = render(
+    <DeckFixture>
+      <Explain {...lean('1-001')} phase="know" title={<>ก</>} body={<>ข</>} visual={own} />
+    </DeckFixture>,
+  );
+  const slide = container.querySelector('.rs-slide');
+  expect(slide).toHaveAttribute('data-section', 'หัวข้อ');
+  expect(slide).toHaveAttribute('data-phase', 'know');
+});
+
+test('a divider is marked as one even when the deck has no topic list', () => {
+  const { container } = render(
+    <DeckFixture>
+      <Topic {...lean('1-002')} title={<>หัวข้อ</>} />
+    </DeckFixture>,
+  );
+  expect(container.querySelector('.rs-slide.rs-divider')).not.toBeNull();
+});

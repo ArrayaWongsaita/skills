@@ -8,7 +8,7 @@ import { DeckModeContext, useDeck } from './Deck';
 import { SlideFrame } from './SlideFrame';
 import { roleColour } from '../theme/roles';
 import { topicPosition, topicTitle } from './topics';
-import type { AssemblyLabel, Base, Block, Piece, Range, Rich, Visual } from './types';
+import type { AssemblyLabel, Base, Block, Piece, Range, Rich, Visual, VisualProp } from './types';
 import { chapterTitle, unitPosition, unitTitle } from './units';
 import { VisualSlot } from './Visual';
 
@@ -46,9 +46,10 @@ function Labelled({ label, name, children }: { label: string; name: string; chil
   );
 }
 
-const slot = (visual?: Visual) => (visual ? <VisualSlot visual={visual} /> : undefined);
+const isData = (visual: VisualProp): visual is Visual => typeof visual === 'object' && visual !== null && 'kind' in visual && typeof (visual as { kind: unknown }).kind === 'string';
+const slot = (visual?: VisualProp) => (!visual ? undefined : isData(visual) ? <VisualSlot visual={visual} /> : visual);
 
-export function Cover(props: Base & { title: Rich; body?: Rich; visual?: Visual }) {
+export function Cover(props: Base & { title: Rich; body?: Rich; visual?: VisualProp }) {
   return (
     <SlideFrame slide={props} title={props.title} visual={slot(props.visual)} className="rs-cover">
       {props.body !== undefined ? <Field name="body">{props.body}</Field> : null}
@@ -56,7 +57,7 @@ export function Cover(props: Base & { title: Rich; body?: Rich; visual?: Visual 
   );
 }
 
-export function Focus(props: Base & { title: Rich; body: Rich; visual: Visual }) {
+export function Focus(props: Base & { title: Rich; body: Rich; visual: VisualProp }) {
   return (
     <SlideFrame slide={props} title={props.title} visual={slot(props.visual)} className="rs-focus">
       <Field name="body">{props.body}</Field>
@@ -64,7 +65,7 @@ export function Focus(props: Base & { title: Rich; body: Rich; visual: Visual })
   );
 }
 
-export function Explain(props: Base & { title: Rich; body: Rich; visual: Visual }) {
+export function Explain(props: Base & { title: Rich; body: Rich; visual: VisualProp }) {
   return (
     <SlideFrame slide={props} title={props.title} visual={slot(props.visual)}>
       <Field name="body">{props.body}</Field>
@@ -72,7 +73,7 @@ export function Explain(props: Base & { title: Rich; body: Rich; visual: Visual 
   );
 }
 
-export function Steps(props: Base & { title: Rich; items: Rich[]; visual: Visual }) {
+export function Steps(props: Base & { title: Rich; items: Rich[]; visual: VisualProp }) {
   return (
     <SlideFrame slide={props} title={props.title} visual={slot(props.visual)}>
       <Items items={props.items} ordered className="rs-steps" />
@@ -207,7 +208,7 @@ export function Error(props: Base & { title: Rich; cause: Rich; fix: Rich; sympt
   );
 }
 
-export function Objectives(props: Base & { title: Rich; items: Rich[]; visual?: Visual }) {
+export function Objectives(props: Base & { title: Rich; items: Rich[]; visual?: VisualProp }) {
   return (
     <SlideFrame slide={props} title={props.title} visual={slot(props.visual)}>
       <Items items={props.items} ordered />
@@ -215,7 +216,7 @@ export function Objectives(props: Base & { title: Rich; items: Rich[]; visual?: 
   );
 }
 
-export function Setup(props: Base & { title: Rich; items: Rich[]; visual?: Visual; blocks?: Block[] }) {
+export function Setup(props: Base & { title: Rich; items: Rich[]; visual?: VisualProp; blocks?: Block[] }) {
   const { meta } = useDeck();
   return (
     <SlideFrame slide={props} title={props.title} visual={slot(props.visual)}>
@@ -225,7 +226,7 @@ export function Setup(props: Base & { title: Rich; items: Rich[]; visual?: Visua
   );
 }
 
-export function Terms(props: Base & { title: Rich; items: Rich[]; visual?: Visual }) {
+export function Terms(props: Base & { title: Rich; items: Rich[]; visual?: VisualProp }) {
   return (
     <SlideFrame slide={props} title={props.title} visual={slot(props.visual)}>
       <Items items={props.items} className="rs-terms" />
@@ -233,7 +234,7 @@ export function Terms(props: Base & { title: Rich; items: Rich[]; visual?: Visua
   );
 }
 
-export function Question(props: Base & { question: Rich; body: Rich; items?: Rich[]; visual?: Visual }) {
+export function Question(props: Base & { question: Rich; body: Rich; items?: Rich[]; visual?: VisualProp }) {
   return (
     <SlideFrame slide={props} title={props.question} titleField="question" visual={slot(props.visual)}>
       {props.items?.length ? <Items items={props.items} ordered className="rs-choices" /> : null}
@@ -244,7 +245,7 @@ export function Question(props: Base & { question: Rich; body: Rich; items?: Ric
   );
 }
 
-export function Answer(props: Base & { answer: Rich; why: Rich; revisit: string; visual?: Visual }) {
+export function Answer(props: Base & { answer: Rich; why: Rich; revisit: string; visual?: VisualProp }) {
   const { meta, ids } = useDeck();
   const n = ids.indexOf(props.revisit) + 1 || slideNumber(props.revisit);
   return (
@@ -261,7 +262,7 @@ export function Answer(props: Base & { answer: Rich; why: Rich; revisit: string;
   );
 }
 
-export function Practice(props: Base & { title: Rich; task: Rich; items?: Rich[]; solution?: Rich; visual?: Visual }) {
+export function Practice(props: Base & { title: Rich; task: Rich; items?: Rich[]; solution?: Rich; visual?: VisualProp }) {
   const { meta } = useDeck();
   // The check page measures the slide with its solution open, the biggest it gets.
   const checking = useContext(DeckModeContext) === 'check';
@@ -284,7 +285,7 @@ export function Practice(props: Base & { title: Rich; task: Rich; items?: Rich[]
   );
 }
 
-export function Summary(props: Base & { title: Rich; items: Rich[]; visual?: Visual }) {
+export function Summary(props: Base & { title: Rich; items: Rich[]; visual?: VisualProp }) {
   return (
     <SlideFrame slide={props} title={props.title} visual={slot(props.visual)}>
       <Items items={props.items} />
@@ -345,7 +346,7 @@ export function MapSlide(props: Base & { title: Rich; body?: Rich }) {
  * The divider that opens a topic (deck@3): its title large, its tagline and an optional picture, and nothing else.
  * In a deck@2 deck it opens a unit: where it sits in its chapter, its title and goal, and the chapter's units so far.
  */
-export function Topic(props: Base & { unit?: string; title: Rich; body?: Rich; visual?: Visual }) {
+export function Topic(props: Base & { unit?: string; title: Rich; body?: Rich; visual?: VisualProp }) {
   const { meta, units, topics } = useDeck();
   const place = props.topic ? topicPosition(topics, props.topic) : null;
   if (place) {
@@ -358,7 +359,7 @@ export function Topic(props: Base & { unit?: string; title: Rich; body?: Rich; v
   const position = props.unit ? unitPosition(units, props.unit) : null;
   const kicker = position ? t(meta.language, 'unit', { n: position.n, m: position.m }) : undefined;
   return (
-    <SlideFrame slide={props} title={props.title} kicker={kicker} visual={slot(props.visual)} className="rs-topic">
+    <SlideFrame slide={props} title={props.title} kicker={kicker} visual={slot(props.visual)} className={props.unit ? 'rs-topic' : 'rs-topic rs-divider'}>
       {props.body !== undefined ? <Field name="body">{props.body}</Field> : null}
       {position ? (
         <ol className="rs-topic-units">

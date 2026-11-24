@@ -50,10 +50,11 @@ export function SlideFrame({ slide, title, children, visual, wide, hideSources, 
   const phase = slide.phase ? t(meta.language, PHASE_LABELS[slide.phase]) : null;
   const phaseKicker = phase ? (place && place.m >= 2 ? `${phase} · ${place.n}/${place.m}` : phase) : null;
   const shownKicker = kicker ?? phaseKicker;
+  const sources = slide.sources ?? [];
   const ref = useRef<HTMLElement>(null);
   useAutoFit(ref, frame === 'desktop');
   return (
-    <section ref={ref} className={`rs-slide${wide ? ' rs-wide' : ''}${visual ? ' rs-has-visual' : ''}${className ? ` ${className}` : ''}`} data-slide={slide.id} aria-roledescription="slide">
+    <section ref={ref} className={`rs-slide${wide ? ' rs-wide' : ''}${visual ? ' rs-has-visual' : ''}${className ? ` ${className}` : ''}`} data-slide={slide.id} data-section={slide.section} data-phase={slide.phase} aria-roledescription="slide">
       <a className="rs-topline" href={formatRoute({ name: 'home' })}>
         Part {meta.part} · {sectionLabel(meta.language, slide.section)}
         {position ? ` · ${t(meta.language, 'unit', { n: position.n, m: position.m })} ${position.unit.title}` : null}
@@ -69,10 +70,10 @@ export function SlideFrame({ slide, title, children, visual, wide, hideSources, 
         <div className="rs-prose">{children}</div>
         {visual ? <div className="rs-visual">{visual}</div> : null}
       </div>
-      {!hideSources && slide.sources.length > 0 ? (
+      {!hideSources && sources.length > 0 ? (
         <footer className="rs-sources">
           {t(meta.language, 'sources')}:{' '}
-          {slide.sources.map((url, i) => (
+          {sources.map((url, i) => (
             <span key={url}>
               {i > 0 ? ' · ' : ''}
               <a href={url} target="_blank" rel="noopener noreferrer">
