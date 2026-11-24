@@ -28,7 +28,7 @@ export default function Part01() {
 }
 ```
 
-Every slide has `id` (`<part>-<nnn>`, in order), `section` (`"Opening"`, `"Closing"`, or the topic's name: it is shown in the top line and is how the check page groups slides) and, inside a topic, `phase` (`know`, `parts`, `example`, `watchout`, `check`: it becomes the kicker, with `n/m` when the phase has several slides). Text is JSX: `<>…</>`, with `<B>` for bold, `<I>`, `<C>` for inline code and `<A href>`; use `<P>`, `<Ul>`, `<Ol>`, `<Li>` for blocks. After adding or removing slides run `scaffold.py <course_dir> --sync-count N`, which keeps `meta.slideCount` equal to the number of slides: the check page waits for that many.
+Every slide has `id` (`<part>-<nnn>`, in order), `section` (`"Opening"`, `"Closing"`, or the topic's name: it is named in the small muted line at the top of the slide and is how the check page groups slides) and, inside a topic, `phase` (`know`, `parts`, `example`, `watchout`, `check`: it is shown under the place line, with `n/m` when the phase has several slides). Text is JSX: `<>…</>`, with `<B>` for bold, `<I>`, `<C>` for inline code and `<A href>`; use `<P>`, `<Ul>`, `<Ol>`, `<Li>` for blocks. After adding or removing slides run `scaffold.py <course_dir> --sync-count N`, which keeps `meta.slideCount` equal to the number of slides: the check page waits for that many.
 
 ## The layouts
 
