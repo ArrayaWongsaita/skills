@@ -1,0 +1,1004 @@
+@import '@fontsource/mali/400.css';
+@import '@fontsource/mali/600.css';
+@import '@fontsource/jetbrains-mono/400.css';
+
+:root {
+  --rs-ink: #2b2b2b;
+  --rs-muted: #646464; /* 5.9:1 on white: WCAG AA for small text */
+  --rs-paper: #ffffff;
+  --rs-line: #d8d8d8;
+  --rs-accent: #4a86c5;
+  --rs-font: 'Mali', system-ui, sans-serif;
+  --rs-mono: 'JetBrains Mono', ui-monospace, monospace;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--rs-paper);
+  color: var(--rs-ink);
+  font-family: var(--rs-font);
+  line-height: 1.6;
+  word-break: normal;
+}
+
+code,
+pre,
+.rs-mono {
+  font-family: var(--rs-mono);
+  /* No ligatures: `->` must look like what a learner types. */
+  font-variant-ligatures: none;
+}
+
+code,
+a {
+  overflow-wrap: anywhere;
+}
+
+a {
+  color: var(--rs-accent);
+}
+
+:focus-visible {
+  outline: 3px solid var(--rs-accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.rs-muted {
+  color: var(--rs-muted);
+}
+
+/* Build-step animation: strokes draw in, labels fade in after them. */
+.rs-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: rs-draw 700ms ease-out forwards;
+}
+
+@keyframes rs-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.rs-fade {
+  opacity: 0;
+  animation: rs-fade 300ms ease-out 600ms forwards;
+}
+
+@keyframes rs-fade {
+  to {
+    opacity: 1;
+  }
+}
+
+.rs-fade-slide {
+  animation: rs-fade-slide 180ms ease-out;
+}
+
+@keyframes rs-fade-slide {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rs-draw,
+  .rs-fade,
+  .rs-fade-slide {
+    animation: none;
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+/* Home */
+.rs-home {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 48px 16px 64px;
+}
+
+.rs-home header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 20px;
+  align-items: center;
+}
+
+.rs-home header > :not(.rs-home-icon) {
+  grid-column: 2;
+}
+
+/* The course's icon: on the home page and in the browser tab only, never on the slides. */
+.rs-home-icon {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  height: clamp(3.2rem, 7vw, 4.6rem);
+  width: auto;
+  max-width: 7rem;
+  object-fit: contain;
+}
+
+.rs-home h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  font-weight: 600;
+}
+
+.rs-cards {
+  list-style: none;
+  margin: 32px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 24px;
+}
+
+.rs-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 170px;
+  padding: 22px 24px;
+  color: var(--rs-ink);
+  text-decoration: none;
+}
+
+.rs-card-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.rs-card-frame path {
+  vector-effect: non-scaling-stroke;
+}
+
+.rs-card:hover .rs-card-title {
+  text-decoration: underline;
+}
+
+.rs-card-kicker {
+  color: var(--rs-muted);
+  font-size: 0.9rem;
+}
+
+.rs-card-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.rs-card-progress {
+  width: 100%;
+  height: 8px;
+  margin-top: auto;
+}
+
+/* Deck: a 16:9 stage on desktop, a scrolling page on phones (the .rs-phone frame). */
+.rs-deck {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 16px 64px;
+}
+
+.rs-desktop .rs-stage {
+  width: min(100%, calc((100vh - 96px) * 16 / 9));
+  aspect-ratio: 16 / 9;
+  container-type: size;
+}
+
+.rs-desktop .rs-slide {
+  height: 100%;
+  overflow: hidden;
+  padding: 3.4cqw 4.4cqw 2.6cqw;
+  font-size: calc(1.75cqw * var(--fit, 1));
+}
+
+/* Last resort: content still too big at 85 % scrolls rather than being cut off. */
+.rs-desktop .rs-slide[data-overflow='true'] {
+  overflow-y: auto;
+}
+
+.rs-slide {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9em;
+  /* A long URL or identifier breaks instead of widening a phone slide; code keeps white-space: pre and scrolls. */
+  overflow-wrap: anywhere;
+}
+
+/* Where the slide is (Part · section · phase): wayfinding at the top of the slide, so it is small and muted and the title stays the first thing read. */
+.rs-where {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1em;
+  color: var(--rs-muted);
+  font-size: 0.62em;
+}
+
+/* A phone's text is already small: keep this line at a size that still reads. */
+.rs-phone .rs-where {
+  font-size: 0.72em;
+}
+
+.rs-topline {
+  color: inherit;
+  text-decoration: none;
+}
+
+.rs-title {
+  margin: 0;
+  font-size: 1.7em;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.rs-slide-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.6em;
+}
+
+.rs-desktop .rs-has-visual .rs-slide-body {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  align-items: center;
+}
+
+.rs-prose {
+  min-width: 0;
+}
+
+.rs-prose > :first-child {
+  margin-top: 0;
+}
+
+.rs-visual {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rs-visual > svg,
+.rs-visual img {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.rs-sources {
+  color: var(--rs-muted);
+  font-size: 0.62em;
+}
+
+/* The closing slide lists every source of the Part: a dozen links must fit one slide, so the list is smaller and, on the desktop slide, in two columns. */
+.rs-source-list {
+  font-size: 0.85em;
+}
+
+.rs-desktop .rs-source-list {
+  columns: 2;
+  column-gap: 2.4em;
+}
+
+.rs-source-list li {
+  break-inside: avoid;
+}
+
+.rs-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 10px;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  color: var(--rs-muted);
+  font-size: 0.95rem;
+}
+
+.rs-nav > * {
+  pointer-events: auto;
+}
+
+.rs-nav-home {
+  position: absolute;
+  left: 16px;
+  color: var(--rs-muted);
+  text-decoration: none;
+}
+
+.rs-nav-pager {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.rs-nav button {
+  font: inherit;
+  font-size: 1.4rem;
+  line-height: 1;
+  min-width: 44px;
+  min-height: 44px;
+  border: none;
+  background: none;
+  color: var(--rs-ink);
+  cursor: pointer;
+}
+
+.rs-nav button:disabled {
+  color: var(--rs-line);
+  cursor: default;
+}
+
+.rs-phone.rs-deck {
+  display: block;
+  padding: 0 0 76px;
+}
+
+.rs-phone .rs-stage {
+  width: 100%;
+}
+
+.rs-phone .rs-slide {
+  padding: 20px 16px 8px;
+  font-size: 17px;
+}
+
+.rs-phone .rs-slide-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.rs-phone .rs-nav {
+  bottom: 0;
+  padding: 4px 0;
+  background: var(--rs-paper);
+  border-top: 1px solid var(--rs-line);
+}
+
+/* Layouts */
+.rs-field p {
+  margin: 0 0 0.6em;
+}
+
+.rs-field ol,
+.rs-field ul,
+.rs-items {
+  margin: 0;
+  padding-left: 1.4em;
+}
+
+.rs-items > li {
+  margin: 0 0 0.45em;
+}
+
+.rs-steps > li::marker {
+  font-weight: 600;
+  color: var(--rs-accent);
+}
+
+.rs-choices {
+  list-style: lower-alpha;
+}
+
+.rs-code-inline {
+  font-size: 0.88em;
+  padding: 0.05em 0.35em;
+  border-radius: 6px;
+  background: #f3f1ec;
+}
+
+.rs-cover {
+  justify-content: center;
+}
+
+.rs-cover .rs-title {
+  font-size: 2.5em;
+}
+
+.rs-focus .rs-title {
+  font-size: 2em;
+}
+
+.rs-compare {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.4em;
+}
+
+.rs-phone .rs-compare {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.rs-panel {
+  min-width: 0;
+  padding: 0.8em 1em;
+  border: 1.5px dashed var(--rs-line);
+  border-radius: 14px;
+}
+
+.rs-takeaway {
+  margin-top: 1em;
+  font-weight: 600;
+}
+
+.rs-label {
+  color: var(--rs-muted);
+  font-size: 0.8em;
+}
+
+.rs-labelled {
+  margin-bottom: 0.7em;
+}
+
+/* A notice is a soft yellow card with a thin edge all round: a thick edge on one side reads as a quote bar and pulls the eye. */
+.rs-notice {
+  margin: 0.6em 0;
+  padding: 0.4em 0.8em;
+  border: 1.5px solid #eadfb8;
+  border-radius: 12px;
+  background: #fbf6e8;
+  font-size: 0.85em;
+}
+
+.rs-hint {
+  color: var(--rs-muted);
+  margin-top: 0.8em;
+}
+
+.rs-revisit {
+  display: inline-block;
+  margin-top: 0.8em;
+}
+
+.rs-solution summary {
+  cursor: pointer;
+  color: var(--rs-accent);
+  margin-top: 0.8em;
+}
+
+/* Code: line numbers, a highlighter-pen mark, inner scrolling with a cue; never wraps, never shrinks. */
+.rs-wide .rs-slide-body {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.rs-desktop .rs-wide .rs-prose {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.rs-codeblock,
+.rs-block,
+.rs-output {
+  position: relative;
+  margin: 0.6em 0 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.rs-code,
+.rs-output pre {
+  margin: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.7em 0.9em;
+  border-radius: 12px;
+  font-size: 0.78em;
+  line-height: 1.55;
+  white-space: pre;
+  tab-size: 4;
+}
+
+.rs-code {
+  background: #faf8f3;
+  border: 1.5px solid #e6e1d6;
+}
+
+.rs-code[data-scrolls='true'],
+.rs-output pre[data-scrolls='true'] {
+  -webkit-mask-image: linear-gradient(to bottom, #000 85%, transparent);
+  mask-image: linear-gradient(to bottom, #000 85%, transparent);
+}
+
+.rs-row {
+  display: block;
+  padding-right: 1em;
+}
+
+.rs-ln {
+  display: inline-block;
+  min-width: 2.2em;
+  margin-right: 1em;
+  text-align: right;
+  color: #8a8a8a;
+  user-select: none;
+}
+
+.rs-hl {
+  background: linear-gradient(transparent 12%, #fff2a8 12%, #fff2a8 88%, transparent 88%);
+}
+
+.rs-gap {
+  display: block;
+  color: #8a8a8a;
+  padding-left: 3.2em;
+}
+
+.rs-code-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5em;
+  margin-bottom: 0.35em;
+}
+
+.rs-copy {
+  font: inherit;
+  font-size: 0.72em;
+  padding: 0.25em 0.8em;
+  min-height: 36px;
+  border: 1.5px solid var(--rs-ink);
+  border-radius: 999px;
+  background: var(--rs-paper);
+  color: var(--rs-ink);
+  cursor: pointer;
+}
+
+.rs-copy:hover {
+  background: #f3f1ec;
+}
+
+/* A program's output is a light result card under its code, set apart by its blue tint: a solid dark block weighed more than the code it answers. */
+.rs-output pre {
+  background: #f2f7fc;
+  color: var(--rs-ink);
+  border: 1.5px solid #d8e4f0;
+}
+
+.rs-output figcaption {
+  color: var(--rs-muted);
+  font-size: 0.72em;
+  margin-bottom: 0.3em;
+}
+
+.rs-phone .rs-code,
+.rs-phone .rs-output pre {
+  max-height: none;
+}
+
+.hljs-keyword,
+.hljs-built_in,
+.hljs-selector-tag {
+  color: #8a4fbf;
+}
+
+.hljs-string,
+.hljs-regexp,
+.hljs-addition {
+  color: #3f8a52;
+}
+
+.hljs-number,
+.hljs-literal,
+.hljs-symbol {
+  color: #b7652a;
+}
+
+.hljs-comment,
+.hljs-quote {
+  color: #7d7d7d;
+  font-style: italic;
+}
+
+.hljs-title,
+.hljs-title.function_,
+.hljs-section {
+  color: #3a6fb0;
+}
+
+.hljs-meta,
+.hljs-attr,
+.hljs-attribute,
+.hljs-variable,
+.hljs-params {
+  color: #a34d6c;
+}
+
+/* Diagrams */
+.rs-diagram {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.rs-diagram text {
+  font-family: var(--rs-font);
+}
+
+.rs-diagram .rs-hl path {
+  stroke-width: 2.6px;
+}
+
+.rs-diagram .rs-dim {
+  opacity: 0.35;
+}
+
+.rs-halo {
+  paint-order: stroke;
+  stroke: var(--rs-paper);
+  stroke-width: 5px;
+  stroke-linejoin: round;
+}
+
+/* Illustrations, screenshots and fallbacks */
+.rs-illustration {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rs-illustration > svg {
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+}
+
+.rs-illustration.rs-draw-in path[pathLength] {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: rs-draw 1100ms ease-out forwards;
+}
+
+.rs-image {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border: 1.5px solid var(--rs-line);
+  border-radius: 10px;
+}
+
+.rs-fallback-diagram {
+  width: 100%;
+  height: 100%;
+}
+
+.rs-fallback-text {
+  padding: 0.9em 1.1em;
+  border: 1.5px dashed var(--rs-line);
+  border-radius: 14px;
+  color: var(--rs-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rs-illustration.rs-draw-in path[pathLength] {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
+
+/* The check page (#/check/part-NN): fixed frames, so measurements do not depend on the window. */
+.rs-check {
+  padding: 24px;
+}
+
+.rs-check-table {
+  border-collapse: collapse;
+  margin-bottom: 32px;
+  font-size: 14px;
+}
+
+.rs-check-table th,
+.rs-check-table td {
+  border: 1px solid var(--rs-line);
+  padding: 4px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.rs-check-table tr[data-level='problem'] td:nth-child(4) {
+  color: #c0392b;
+}
+
+.rs-check-frames {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 48px;
+  align-items: flex-start;
+}
+
+.rs-check-frame .rs-deck {
+  min-height: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.rs-check-frame[data-frame='desktop'] .rs-stage {
+  width: 1280px;
+  height: 720px;
+  aspect-ratio: auto;
+  outline: 1px solid var(--rs-line);
+}
+
+.rs-check-frame[data-frame='phone'] .rs-stage {
+  width: 390px;
+  min-height: 844px;
+  outline: 1px solid var(--rs-line);
+}
+
+/* deck@2: the Part map, a unit's divider and an assembly. Generated chrome; the deck's fields keep their own styles. */
+.rs-kicker {
+  color: var(--rs-accent);
+  font-size: 0.85em;
+  font-weight: 600;
+}
+
+.rs-unit-map {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14em, 1fr));
+  gap: 1em;
+  margin: 1em 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rs-map-chapter {
+  padding: 0.7em 1em;
+  border: 1.5px dashed var(--rs-line);
+  border-radius: 14px;
+}
+
+.rs-map-chapter-title {
+  font-weight: 600;
+}
+
+.rs-map-n,
+.rs-assembly-n {
+  display: inline-grid;
+  place-items: center;
+  width: 1.6em;
+  height: 1.6em;
+  margin-right: 0.5em;
+  border-radius: 50%;
+  background: var(--rs-accent);
+  color: var(--rs-paper);
+  font-size: 0.8em;
+  font-weight: 600;
+}
+
+.rs-map-units {
+  margin: 0.4em 0 0;
+  padding-left: 1.4em;
+}
+
+.rs-topic .rs-title {
+  font-size: 2.1em;
+}
+
+.rs-topic-units {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em 0.8em;
+  margin: 1.2em 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85em;
+}
+
+.rs-topic-units > li {
+  padding: 0.15em 0.7em;
+  border: 1.5px dashed var(--rs-line);
+  border-radius: 999px;
+  color: var(--rs-muted);
+}
+
+.rs-topic-units > li[data-unit-state='done']::before {
+  content: '✓ ';
+}
+
+.rs-topic-units > li[data-unit-state='current'] {
+  border-style: solid;
+  border-color: var(--rs-accent);
+  color: var(--rs-ink);
+  font-weight: 600;
+}
+
+.rs-assembly-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em 1.2em;
+  margin: 0.8em 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rs-group-n {
+  display: inline-grid;
+  place-items: center;
+  width: 1.5em;
+  height: 1.5em;
+  margin-left: -1.7em;
+  margin-right: 0.2em;
+  border-radius: 50%;
+  background: var(--rs-accent);
+  color: var(--rs-paper);
+  font-size: 0.8em;
+  user-select: none;
+}
+
+/* In an assembly every row makes room for the group numbers, so the line numbers stay in one column. */
+.rs-code:has([data-group]) .rs-row {
+  padding-left: 1.7em;
+  border-left: 3px solid transparent;
+}
+
+.rs-code:has([data-group]) .rs-row[data-group] {
+  border-left-color: var(--rs-accent);
+}
+
+.rs-label-tag text {
+  pointer-events: none;
+}
+
+/* deck@3: the topic divider, the topic map, the anatomy of a line and an example. Generated chrome; the deck's fields keep their own styles. */
+.rs-divider {
+  justify-content: center;
+}
+
+.rs-divider .rs-title {
+  font-family: var(--rs-mono);
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+.rs-divider .rs-prose [data-field='body'] {
+  margin: 0.2em 0 0;
+  color: var(--rs-muted);
+  font-size: 1.35em;
+}
+
+.rs-divider .rs-kicker {
+  letter-spacing: 0.02em;
+}
+
+.rs-phone .rs-divider .rs-title {
+  font-size: 2.2em;
+}
+
+.rs-topic-map {
+  display: grid;
+  gap: 0.7em;
+  margin: 1em 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rs-topic-map > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2em 0.8em;
+  padding: 0.5em 1em;
+  border: 1.5px dashed var(--rs-line);
+  border-radius: 14px;
+}
+
+.rs-topic-map-title {
+  font-weight: 600;
+}
+
+.rs-topic-map-tagline {
+  color: var(--rs-muted);
+  font-size: 0.9em;
+}
+
+.rs-anatomy-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.9em 0.15em;
+  margin: 1.4em 0 1.2em;
+  font-family: var(--rs-mono);
+  font-size: 1.25em;
+}
+
+.rs-piece {
+  position: relative;
+  padding: 0.15em 0.5em;
+  border: 2px solid var(--rs-piece, var(--rs-accent));
+  border-radius: 10px;
+  background: var(--rs-paper);
+  white-space: pre;
+}
+
+.rs-piece[data-piece-n]::after {
+  content: attr(data-piece-n);
+  position: absolute;
+  top: -1.05em;
+  left: -0.4em;
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.4em;
+  height: 1.4em;
+  border-radius: 999px;
+  background: var(--rs-piece, var(--rs-accent));
+  color: var(--rs-paper);
+  font-family: var(--rs-font);
+  font-size: 0.7em;
+  font-weight: 700;
+}
+
+.rs-piece-plain {
+  padding: 0.15em 0.2em;
+  border-color: transparent;
+  color: var(--rs-muted);
+}
+
+.rs-anatomy-legend {
+  display: grid;
+  gap: 0.5em;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: rs-piece;
+}
+
+.rs-anatomy-legend > li {
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+  counter-increment: rs-piece;
+}
+
+.rs-anatomy-legend > li::before {
+  content: counter(rs-piece);
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.5em;
+  height: 1.5em;
+  border-radius: 999px;
+  background: var(--rs-piece, var(--rs-accent));
+  color: var(--rs-paper);
+  font-size: 0.8em;
+  font-weight: 700;
+}
+
+.rs-example .rs-output {
+  margin-top: 0.6em;
+}
+
+/* Figures (components/figures.tsx): they fill the width of their space and keep their proportions. */
+.rs-figure {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 100%;
+}

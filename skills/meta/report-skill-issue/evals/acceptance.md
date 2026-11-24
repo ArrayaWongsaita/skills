@@ -23,14 +23,14 @@ uv run --no-project --python 3.12 --with pytest pytest skills/meta/report-skill-
 | 3d | `post` can comment instead | `test_comment_mode` | `gh issue comment N` gets the body |
 | 4 | `similar` searches the skill's issues | `test_similar_lists_open_first` | it passes the skill's label and the words; closed matches come after open ones |
 | 5 | Every skill has the reporting hook | `test_repo_hooks.py::test_every_skill_has_the_reporting_hook` | each `skills/*/*/SKILL.md` has `## Reporting problems with this skill` |
-| 6 | Every subagent brief can report a skill problem | the `test_references.py` of `course-research` and `slide-design` | each brief has the `Skill problem:` line; `consistency-review.md` has the `skill \|` row |
+| 6 | A skill that hands work to subagents asks each for a `Skill problem:` line | none now: `part-slides` writes everything itself and has no subagent briefs | a skill that adds briefs adds this check to its own tests |
 
 ## Manual check
 
 7. **A real report, then a real fix:**
    1. Check that the private repository exists: `gh repo view ArrayaWongsaita/skills-issues --json visibility` prints `PRIVATE`.
    2. Install `report-skill-issue` next to the skill you will run, as a symlink into a checkout of this repo that stays on `main`.
-   3. Run `slide-design` or `course-research` on a real course. Note a problem it meets, or provoke one. At the end, the agent offers the report once.
+   3. Run `part-slides` on a real course. Note a problem it meets, or provoke one. At the end, the agent offers the report once.
    4. Approve the report. Check the issue in `skills-issues`:
       - the title is `[<skill>] …`
       - it has the kind label and `skill:<name>`

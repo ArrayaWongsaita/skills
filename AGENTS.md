@@ -9,7 +9,7 @@ Each skill lives in `skills/<category>/<name>/`:
 - `references/`: the briefs and contracts that `SKILL.md` links to.
 - `scripts/`: stdlib Python, 3.11 or later. Each script puts its own folder on `sys.path`.
 - `tests/`: pytest. `conftest.py` puts `scripts/` on `sys.path`.
-- `template/` (react-slides only): the React app the skill copies into a course, with its own vitest tests.
+- `template/` (part-slides): the React app the skill copies into a course, with its own vitest tests.
 - `evals/acceptance.md`: the acceptance checks.
 
 Designs and implementation plans are in `docs/superpowers/specs/` and `docs/superpowers/plans/`.
@@ -21,15 +21,11 @@ Skills are installed as symlinks from `~/.claude/skills/<name>` into a checkout 
 Run the tests of every skill you change, from the repo root:
 
 ```bash
-# course-research
-uv run --no-project --python 3.12 --with pytest --with langchain==1.5.2 --with langgraph==1.2.24 --with langchain-openai==1.8.5 --with python-dotenv==1.2.4 pytest skills/teaching/course-research/tests -q
-# slide-design
-uv run --no-project --python 3.12 --with pytest pytest skills/teaching/slide-design/tests -q
 # report-skill-issue
 uv run --no-project --python 3.12 --with pytest pytest skills/meta/report-skill-issue/tests -q
-# react-slides: run the npm lines first; its end-to-end pytest needs the template's node_modules
-npm --prefix skills/teaching/react-slides/template ci && npm --prefix skills/teaching/react-slides/template test && npm --prefix skills/teaching/react-slides/template run build
-uv run --no-project --python 3.12 --with pytest pytest skills/teaching/react-slides/tests -q
+# part-slides (pnpm): run the pnpm lines first; its end-to-end pytest needs the template's node_modules
+pnpm --dir skills/teaching/part-slides/template install --frozen-lockfile && pnpm --dir skills/teaching/part-slides/template test && pnpm --dir skills/teaching/part-slides/template run build
+uv run --no-project --python 3.12 --with pytest pytest skills/teaching/part-slides/tests -q
 ```
 
 Tests never call GitHub or a model provider.
@@ -37,7 +33,7 @@ Tests never call GitHub or a model provider.
 ## Conventions
 
 - **Language:** code, comments, docs, commit messages and issues are in English.
-- **Commits:** use Conventional Commits with the skill as the scope, such as `fix(slide-design): …` or `feat(report-skill-issue): …`. Make one commit per change.
+- **Commits:** use Conventional Commits with the skill as the scope, such as `fix(part-slides): …` or `feat(report-skill-issue): …`. Make one commit per change.
 
 ## A new skill
 
