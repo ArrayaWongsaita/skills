@@ -1,6 +1,6 @@
 ---
 name: report-skill-issue
-description: Use when a skill from the ArrayaWongsaita/skills repository (such as course-research or slide-design) went wrong or did not fit during a run, when the user asks to report a problem with one of those skills, or when a skill's "Reporting problems with this skill" section offers a report. It drafts one issue per problem, redacts secrets, checks for duplicates, shows the drafts to the user, and files only what the user approves in the private ArrayaWongsaita/skills-issues repository. Do not use for skills from other repositories, or for bugs in the user's own project.
+description: Use when a skill from the ArrayaWongsaita/skills repository (such as part-slides) went wrong or did not fit during a run, when the user asks to report a problem with one of those skills, or when a skill's "Reporting problems with this skill" section offers a report. It drafts one issue per problem, redacts secrets, checks for duplicates, shows the drafts to the user, and files only what the user approves in the private ArrayaWongsaita/skills-issues repository. Do not use for skills from other repositories, or for bugs in the user's own project.
 ---
 
 # Report a skill issue
@@ -100,14 +100,14 @@ Run the scripts with `python3` (3.11 or later). Posting needs the GitHub CLI `gh
 
 ```json
 {
-  "skill_dir": "~/.claude/skills/slide-design",
+  "skill_dir": "~/.claude/skills/part-slides",
   "kind": "bug",
-  "title": "validate_deck counts the newline between Items bullets toward the length limit",
-  "what_happened": "validate_deck.py reported slide 1-006 as too long, although each bullet was under the limit. The count included the newlines between bullets.",
-  "expected": "Each Items bullet is measured on its own.",
-  "steps": ["Assemble the deck for Part 1", "Run validate_deck.py <course_dir> 1"],
-  "evidence": [{"label": "validator output", "text": "error: 1-006: Items too long", "lang": "text"}],
-  "suggested_fix": "Measure each bullet separately in validate_deck.py.",
+  "title": "scaffold.py --sync-count treats the slide count as the Part number",
+  "what_happened": "scaffold.py --sync-count 32 failed with a bare 'Part 32 has no files'. The option takes the Part number, but its name suggested a slide count.",
+  "expected": "An option name or an error that says it takes the Part number.",
+  "steps": ["Build a Part with 32 slides", "Run scaffold.py <course_dir> --sync-count 32"],
+  "evidence": [{"label": "script output", "text": "error: Part 32 has no files in <web>/src/parts", "lang": "text"}],
+  "suggested_fix": "Name the option --sync-count PART and say so in the error.",
   "harness": "Claude Code",
   "model": "claude-opus-5-5"
 }
