@@ -2,7 +2,7 @@
 """Create a course's React app from the skill's template, add a Part skeleton, keep a Part's slide count right.
 
     scaffold.py <course_dir> [--title T] [--language L] [--part N --slug S --part-title T] [--skip-install]
-    scaffold.py <course_dir> --sync-count N
+    scaffold.py <course_dir> --sync-count PART
 
 It only ever creates files that are missing: a file you edited is never overwritten. The report is JSON on stdout.
 """
@@ -132,7 +132,7 @@ def sync_count(course_dir: Path, part: int) -> int:
     tsx = course_dir / WEB_DIR / "src" / "parts" / f"part-{nn}.tsx"
     data = course_dir / WEB_DIR / "src" / "parts" / f"part-{nn}.data.ts"
     if not tsx.is_file() or not data.is_file():
-        raise ScaffoldError(f"Part {part} has no files in {tsx.parent}")
+        raise ScaffoldError(f"Part {part} has no files in {tsx.parent}: --sync-count takes the Part number, not the number of slides")
     ids = set(re.findall(rf"(?<![\w-])id=[\"']({part}-\d{{3}})[\"']", tsx.read_text(encoding="utf-8")))
     text = data.read_text(encoding="utf-8")
     if not SLIDE_COUNT_RE.search(text):
@@ -150,7 +150,7 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--slug")
     parser.add_argument("--part-title")
     parser.add_argument("--skip-install", action="store_true")
-    parser.add_argument("--sync-count", type=int, metavar="N")
+    parser.add_argument("--sync-count", type=int, metavar="PART")
     args = parser.parse_args(argv)
     try:
         if args.sync_count is not None:

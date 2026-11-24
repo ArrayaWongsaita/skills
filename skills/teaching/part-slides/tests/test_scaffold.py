@@ -136,6 +136,13 @@ def test_sync_count_sets_slide_count_from_the_slide_ids(tmp_path, mini_template)
         scaffold.sync_count(course, 9)
 
 
+def test_sync_count_says_it_takes_the_part_number_when_given_a_number_with_no_part(tmp_path, mini_template):
+    course = tmp_path / "courses" / "c"
+    run(course, mini_template, part=1, slug="a", part_title="t")
+    with pytest.raises(scaffold.ScaffoldError, match="Part number"):
+        scaffold.sync_count(course, 32)  # an agent once passed the slide count, 32, here
+
+
 def test_main_prints_the_report_as_json_and_returns_one_on_an_error(tmp_path, mini_template, capsys, monkeypatch):
     monkeypatch.setattr(scaffold, "TEMPLATE_DIR", mini_template)
     assert scaffold.main([str(tmp_path / "courses" / "c"), "--skip-install", "--part", "1", "--slug", "a", "--part-title", "t"]) == 0
