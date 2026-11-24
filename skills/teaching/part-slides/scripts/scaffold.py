@@ -25,7 +25,7 @@ SKIP_NAMES = (".DS_Store",)
 WRITTEN_HERE = ("src/course.ts",)  # written by scaffold, with the course's own title
 SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 NPM_MISSING = "node and npm are needed to build the app: install Node.js 20 or later from https://nodejs.org"
-SLIDE_COUNT_RE = re.compile(r'"slideCount":\s*\d+')
+SLIDE_COUNT_RE = re.compile(r"""(?P<key>["']?slideCount["']?):\s*\d+""")  # as the skeleton writes it, or as a hand-edited data file may
 
 
 class ScaffoldError(Exception):
@@ -137,7 +137,7 @@ def sync_count(course_dir: Path, part: int) -> int:
     text = data.read_text(encoding="utf-8")
     if not SLIDE_COUNT_RE.search(text):
         raise ScaffoldError(f"no slideCount in {data.name}")
-    data.write_text(SLIDE_COUNT_RE.sub(f'"slideCount": {len(ids)}', text, count=1), encoding="utf-8")
+    data.write_text(SLIDE_COUNT_RE.sub(lambda m: f"{m.group('key')}: {len(ids)}", text, count=1), encoding="utf-8")
     return len(ids)
 
 

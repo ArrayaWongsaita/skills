@@ -138,3 +138,14 @@ def test_the_real_template_scaffolds_without_tests_or_fixtures(tmp_path):
     names = report["created"]
     assert "web/src/components/layouts.tsx" in names and "web/package.json" in names and "web/src/check/CheckPage.tsx" in names
     assert [n for n in names if n.endswith((".test.ts", ".test.tsx")) or "__fixtures__" in n or "node_modules" in n] == []
+
+
+@pytest.mark.parametrize("written", ["slideCount: 7", "'slideCount': 7", '"slideCount":7'])
+def test_sync_count_also_reads_a_data_file_written_by_hand(tmp_path, mini_template, written):
+    course = tmp_path / "courses" / "c"
+    run(course, mini_template, part=1, slug="a", part_title="t")
+    (course / "web/src/parts/part-01.tsx").write_text('<Cover id="1-001" /><Topic id="1-002" />', encoding="utf-8")
+    data = course / "web/src/parts/part-01.data.ts"
+    data.write_text(f"export const meta = {{ part: 1, {written} }};\n", encoding="utf-8")
+    assert scaffold.sync_count(course, 1) == 2
+    assert data.read_text(encoding="utf-8").count("2") == 1 and "7" not in data.read_text(encoding="utf-8")

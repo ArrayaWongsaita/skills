@@ -9,7 +9,7 @@ Each skill lives in `skills/<category>/<name>/`:
 - `references/`: the briefs and contracts that `SKILL.md` links to.
 - `scripts/`: stdlib Python, 3.11 or later. Each script puts its own folder on `sys.path`.
 - `tests/`: pytest. `conftest.py` puts `scripts/` on `sys.path`.
-- `template/` (react-slides only): the React app the skill copies into a course, with its own vitest tests.
+- `template/` (react-slides and part-slides): the React app the skill copies into a course, with its own vitest tests.
 - `evals/acceptance.md`: the acceptance checks.
 
 Designs and implementation plans are in `docs/superpowers/specs/` and `docs/superpowers/plans/`.
@@ -30,6 +30,9 @@ uv run --no-project --python 3.12 --with pytest pytest skills/meta/report-skill-
 # react-slides: run the npm lines first; its end-to-end pytest needs the template's node_modules
 npm --prefix skills/teaching/react-slides/template ci && npm --prefix skills/teaching/react-slides/template test && npm --prefix skills/teaching/react-slides/template run build
 uv run --no-project --python 3.12 --with pytest pytest skills/teaching/react-slides/tests -q
+# part-slides: run the npm lines first; its end-to-end pytest needs the template's node_modules
+npm --prefix skills/teaching/part-slides/template ci && npm --prefix skills/teaching/part-slides/template test && npm --prefix skills/teaching/part-slides/template run build
+uv run --no-project --python 3.12 --with pytest pytest skills/teaching/part-slides/tests -q
 ```
 
 Tests never call GitHub or a model provider.
