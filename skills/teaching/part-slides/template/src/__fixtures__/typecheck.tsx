@@ -54,8 +54,6 @@ export const missingRequiredProps = [
   <Example key="example" {...base} title={r} body={r} />,
   // @ts-expect-error labels is required
   <Assemble key="assemble" {...base} title={r} body={r} assembles="1.1" />,
-  // @ts-expect-error a visual is required on explain slides
-  <Explain key="explain-visual" {...base} title={r} body={r} />,
   // @ts-expect-error id is part of every slide
   <Summary key="summary-id" section="s" purpose="p" from={[]} sources={[]} title={r} items={[]} />,
 ];

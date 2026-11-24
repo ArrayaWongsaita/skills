@@ -57,7 +57,7 @@ export function Cover(props: Base & { title: Rich; body?: Rich; visual?: VisualP
   );
 }
 
-export function Focus(props: Base & { title: Rich; body: Rich; visual: VisualProp }) {
+export function Focus(props: Base & { title: Rich; body: Rich; visual?: VisualProp }) {
   return (
     <SlideFrame slide={props} title={props.title} visual={slot(props.visual)} className="rs-focus">
       <Field name="body">{props.body}</Field>
@@ -65,7 +65,7 @@ export function Focus(props: Base & { title: Rich; body: Rich; visual: VisualPro
   );
 }
 
-export function Explain(props: Base & { title: Rich; body: Rich; visual: VisualProp }) {
+export function Explain(props: Base & { title: Rich; body: Rich; visual?: VisualProp }) {
   return (
     <SlideFrame slide={props} title={props.title} visual={slot(props.visual)}>
       <Field name="body">{props.body}</Field>
@@ -73,7 +73,7 @@ export function Explain(props: Base & { title: Rich; body: Rich; visual: VisualP
   );
 }
 
-export function Steps(props: Base & { title: Rich; items: Rich[]; visual: VisualProp }) {
+export function Steps(props: Base & { title: Rich; items: Rich[]; visual?: VisualProp }) {
   return (
     <SlideFrame slide={props} title={props.title} visual={slot(props.visual)}>
       <Items items={props.items} ordered className="rs-steps" />

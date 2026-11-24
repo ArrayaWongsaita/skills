@@ -384,3 +384,15 @@ test('Example and Code show the whole listing and highlight nothing when given n
   expect(container.querySelectorAll('.rs-example .rs-row')).toHaveLength(6);
   expect(container.querySelectorAll('.rs-hl')).toHaveLength(0);
 });
+
+test('Focus, Explain and Steps may have no picture, and then have no visual column', () => {
+  const { container } = render(
+    <DeckFixture>
+      <Focus {...lean('1-001')} title={<>ก</>} body={<>ข</>} />
+      <Explain {...lean('1-002')} title={<>ค</>} body={<>ง</>} />
+      <Steps {...lean('1-003')} title={<>จ</>} items={[<>หนึ่ง</>, <>สอง</>]} />
+    </DeckFixture>,
+  );
+  expect(container.querySelectorAll('.rs-slide')).toHaveLength(3);
+  expect(container.querySelector('.rs-visual')).toBeNull();
+});
