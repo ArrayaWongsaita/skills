@@ -93,23 +93,29 @@ def test_a_bad_part_request_is_refused_before_anything_is_written(tmp_path, mini
 def test_install_runs_only_when_node_modules_is_missing(tmp_path, mini_template, monkeypatch):
     calls = []
     monkeypatch.setattr(scaffold, "_run", lambda cmd, cwd: calls.append((cmd, cwd)) or subprocess.CompletedProcess(cmd, 0, "", ""))
-    monkeypatch.setattr(scaffold.shutil, "which", lambda name: "/usr/bin/npm")
+    monkeypatch.setattr(scaffold.shutil, "which", lambda name: f"/usr/bin/{name}")
     course = tmp_path / "courses" / "c"
     assert run(course, mini_template, skip_install=False)["install"] == "ran"
-    assert calls == [(["npm", "install"], course / "web")]
+    assert calls == [(["pnpm", "install"], course / "web")]
     (course / "web/node_modules").mkdir()
     assert run(course, mini_template, skip_install=False)["install"] == "not-needed"
     assert len(calls) == 1
 
 
-def test_a_failed_install_is_reported_and_npm_missing_is_an_error(tmp_path, mini_template, monkeypatch):
+def test_a_failed_install_is_reported_and_pnpm_missing_is_an_error(tmp_path, mini_template, monkeypatch):
     monkeypatch.setattr(scaffold, "_run", lambda cmd, cwd: subprocess.CompletedProcess(cmd, 1, "boom\nnetwork down", ""))
-    monkeypatch.setattr(scaffold.shutil, "which", lambda name: "/usr/bin/npm")
+    monkeypatch.setattr(scaffold.shutil, "which", lambda name: f"/usr/bin/{name}")
     report = run(tmp_path / "courses" / "c", mini_template, skip_install=False)
     assert report["install"] == "failed" and "network down" in report["install_error"]
     monkeypatch.setattr(scaffold.shutil, "which", lambda name: None)
-    with pytest.raises(scaffold.ScaffoldError, match="Node.js"):
+    with pytest.raises(scaffold.ScaffoldError, match="pnpm"):
         run(tmp_path / "courses" / "d", mini_template, skip_install=False)
+
+
+def test_the_real_template_is_locked_with_pnpm_and_a_course_gets_the_lockfile():
+    assert (TEMPLATE / "pnpm-lock.yaml").is_file()
+    assert not (TEMPLATE / "package-lock.json").exists()
+    assert "pnpm-lock.yaml" in scaffold.template_files(TEMPLATE)
 
 
 def test_sync_count_sets_slide_count_from_the_slide_ids(tmp_path, mini_template):

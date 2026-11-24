@@ -30,8 +30,8 @@ uv run --no-project --python 3.12 --with pytest pytest skills/meta/report-skill-
 # react-slides: run the npm lines first; its end-to-end pytest needs the template's node_modules
 npm --prefix skills/teaching/react-slides/template ci && npm --prefix skills/teaching/react-slides/template test && npm --prefix skills/teaching/react-slides/template run build
 uv run --no-project --python 3.12 --with pytest pytest skills/teaching/react-slides/tests -q
-# part-slides: run the npm lines first; its end-to-end pytest needs the template's node_modules
-npm --prefix skills/teaching/part-slides/template ci && npm --prefix skills/teaching/part-slides/template test && npm --prefix skills/teaching/part-slides/template run build
+# part-slides (pnpm): run the pnpm lines first; its end-to-end pytest needs the template's node_modules
+pnpm --dir skills/teaching/part-slides/template install --frozen-lockfile && pnpm --dir skills/teaching/part-slides/template test && pnpm --dir skills/teaching/part-slides/template run build
 uv run --no-project --python 3.12 --with pytest pytest skills/teaching/part-slides/tests -q
 ```
 

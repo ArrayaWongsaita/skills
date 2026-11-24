@@ -36,6 +36,6 @@ def test_the_briefs_name_the_commands_the_scripts_really_have(skill_dir):
         assert flag in text, flag
     scaffold = _read(skill_dir, "scripts/scaffold.py")
     for flag in re.findall(r"(?<![-\w])(--[a-z][a-z-]*)", text):
-        if flag in {"--prefix", "--headless", "--screenshot", "--window-size", "--virtual-time-budget", "--dump-dom"}:
+        if flag in {"--dir", "--headless", "--screenshot", "--window-size", "--virtual-time-budget", "--dump-dom"}:
             continue
         assert flag in scaffold, f"{flag} is not a scaffold.py option"

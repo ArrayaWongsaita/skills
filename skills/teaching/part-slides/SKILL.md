@@ -32,13 +32,13 @@ Tell the user where it stands and offer to continue, or to redo a step.
 
 ## Step 1: interview
 
-Follow `references/interview.md`: one question at a time, with a proposal where you can make one, then write `<work>/brief.md`. As soon as you know the Part's title and a slug, create the app and the Part's skeleton, in the background (the first `npm install` takes a minute or two):
+Follow `references/interview.md`: one question at a time, with a proposal where you can make one, then write `<work>/brief.md`. As soon as you know the Part's title and a slug, create the app and the Part's skeleton, in the background (the first `pnpm install` takes a minute or two):
 
 ```bash
 python3 <skill>/scripts/scaffold.py <course_dir> --title "<course title>" --language <code> --part <N> --slug <slug> --part-title "<Part title>"
 ```
 
-It creates `<web>` from the template, `<work>`, and the Part's two files; it never overwrites a file, so running it again is safe. It needs Node.js 20 or later.
+It creates `<web>` from the template, `<work>`, and the Part's two files; it never overwrites a file, so running it again is safe. It needs Node.js 20 or later and pnpm.
 
 ## Step 2: research
 

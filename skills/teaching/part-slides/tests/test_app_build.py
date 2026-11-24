@@ -1,6 +1,6 @@
 """End to end: a scaffolded app with a small made-up Part compiles, passes its own check page and builds.
 
-Needs the template's node_modules (`npm ci` in the template); skipped otherwise.
+Needs the template's node_modules (`pnpm install --frozen-lockfile` in the template); skipped otherwise.
 """
 
 import shutil
@@ -14,8 +14,8 @@ from conftest import TEMPLATE
 
 HERE = Path(__file__).resolve().parent
 needs_node = pytest.mark.skipif(
-    not (TEMPLATE / "node_modules").is_dir() or shutil.which("npm") is None,
-    reason="run npm ci in skills/teaching/part-slides/template first",
+    not (TEMPLATE / "node_modules").is_dir() or shutil.which("pnpm") is None,
+    reason="run pnpm install --frozen-lockfile in skills/teaching/part-slides/template first",
 )
 
 
@@ -38,8 +38,8 @@ def test_a_scaffolded_app_with_a_fixture_part_builds_and_passes_its_own_check(tm
     shutil.copy(HERE / "fixtures" / "visuals-part-01.tsx", web / "src" / "visuals" / "part-01.tsx")
     assert scaffold.sync_count(course, 1) == 10
     shutil.copy(HERE / "app" / "check.test.tsx", web / "src" / "check.test.tsx")
-    output = _ok(["npx", "vitest", "run", "src/check.test.tsx"], web)
+    output = _ok(["pnpm", "exec", "vitest", "run", "src/check.test.tsx"], web)
     assert "1 passed" in output, output[-2000:]
-    _ok(["npm", "run", "build"], web)
+    _ok(["pnpm", "run", "build"], web)
     html = (web / "dist" / "index.html").read_text(encoding="utf-8")
     assert 'src="/' not in html and 'href="/' not in html  # relative assets: works from a sub-path

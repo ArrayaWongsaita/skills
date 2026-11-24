@@ -5,9 +5,9 @@ Read this after the slides are written, and again each time the user asks for a 
 ## Build
 
 ```bash
-python3 <skill>/scripts/scaffold.py <course_dir> --sync-count <N>   # keep slideCount right
-npm --prefix <course_dir>/web run build                              # tsc and vite: fix every error
-npm --prefix <course_dir>/web run preview                            # in the background: http://localhost:4173/
+python3 <skill>/scripts/scaffold.py <course_dir> --sync-count <N>   # keep slideCount right; N is the Part number, the count is worked out from the slide ids
+pnpm --dir <course_dir>/web run build                                # tsc and vite: fix every error
+pnpm --dir <course_dir>/web run preview                              # in the background: http://localhost:4173/
 ```
 
 A build error is yours to fix: read it, correct the file. A prop the layout does not know, or a required prop you left out, is a compile error here.

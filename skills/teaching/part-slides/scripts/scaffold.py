@@ -24,7 +24,7 @@ SKIP_DIRS = ("node_modules", "dist", "__fixtures__")
 SKIP_NAMES = (".DS_Store",)
 WRITTEN_HERE = ("src/course.ts",)  # written by scaffold, with the course's own title
 SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
-NPM_MISSING = "node and npm are needed to build the app: install Node.js 20 or later from https://nodejs.org"
+PNPM_MISSING = "node and pnpm are needed to build the app: install Node.js 20 or later from https://nodejs.org and pnpm from https://pnpm.io/installation"
 SLIDE_COUNT_RE = re.compile(r"""(?P<key>["']?slideCount["']?):\s*\d+""")  # as the skeleton writes it, or as a hand-edited data file may
 
 
@@ -94,8 +94,8 @@ def run(course_dir: Path, *, title: str | None, language: str | None, part: int 
             raise ScaffoldError("--part-title is needed with --part")
     if not template_dir.is_dir():
         raise ScaffoldError(f"the template is missing: {template_dir}")
-    if not skip_install and shutil.which("npm") is None:
-        raise ScaffoldError(NPM_MISSING)
+    if not skip_install and shutil.which("pnpm") is None:
+        raise ScaffoldError(PNPM_MISSING)
 
     report: dict = {"created": [], "skipped": [], "install": "skipped"}
     web = course_dir / WEB_DIR
@@ -117,7 +117,7 @@ def run(course_dir: Path, *, title: str | None, language: str | None, part: int 
     if (web / "node_modules").is_dir():
         report["install"] = "not-needed"
     elif not skip_install:
-        result = _run(["npm", "install"], web)
+        result = _run(["pnpm", "install"], web)
         if result.returncode == 0:
             report["install"] = "ran"
         else:

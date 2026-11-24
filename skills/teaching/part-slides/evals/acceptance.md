@@ -1,13 +1,13 @@
 # Acceptance checks
 
-The checks from the design (`docs/superpowers/specs/2026-11-24-part-slides-design.md`), and where each one is tested. Python tests are in `tests/`; template tests are in `template/src/` and run with `npm test` in the template.
+The checks from the design (`docs/superpowers/specs/2026-11-24-part-slides-design.md`), and where each one is tested. Python tests are in `tests/`; template tests are in `template/src/` and run with `pnpm test` in the template.
 
 Run them:
 
 ```bash
-npm --prefix skills/teaching/part-slides/template ci
-npm --prefix skills/teaching/part-slides/template test
-npm --prefix skills/teaching/part-slides/template run build
+pnpm --dir skills/teaching/part-slides/template install --frozen-lockfile
+pnpm --dir skills/teaching/part-slides/template test
+pnpm --dir skills/teaching/part-slides/template run build
 uv run --no-project --python 3.12 --with pytest pytest skills/teaching/part-slides/tests -q
 ```
 
