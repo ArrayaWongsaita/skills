@@ -18,8 +18,10 @@ either no file or the whole line. A file left by an earlier turn is removed when
 
 With `--detach` (which needs `--status-file`) the script starts itself in a new session and returns at once, so the
 caller's tool call does not have to stay open. It prints `started status-file=<path> log=<path> pid=<pid>` and exits 0,
-or exits 3 before starting anything when the folder or `opencode` is missing. The turn runs on; its end is the status
-file, and `kill -TERM <pid>` cancels it.
+or exits 3 before starting anything when the folder or `opencode` is missing, or the log or the status file's folder
+cannot be created. The log is created empty first, so its age says when the turn began even if the child dies at once,
+and the child's stderr goes to `<status-file>.err`. The turn runs on; its end is the status file, and `kill -TERM <pid>`
+cancels it.
 """
 import argparse
 import contextlib
@@ -145,9 +147,19 @@ def main(argv: list[str] | None = None) -> int:
             print("error: --detach needs --status-file, the file the finished turn is reported in", file=sys.stderr)
             return 3
         status_path = Path(args.status_file).resolve()
-        status_path.unlink(missing_ok=True)
-        child = subprocess.Popen(child_command(args), start_new_session=True, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        print(f"started status-file={status_path} log={Path(args.out).resolve()} pid={child.pid}")
+        log_path = Path(args.out).resolve()
+        try:
+            status_path.unlink(missing_ok=True)
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+            log_path.touch()  # its age marks the start, even when the child dies before it writes anything
+            status_path.parent.mkdir(parents=True, exist_ok=True)
+            crash = status_path.with_name(status_path.name + ".err").open("wb")  # what the child's stderr says if it crashes
+        except OSError as error:
+            print(f"error: cannot create the log, the status folder or the crash file: {error}", file=sys.stderr)
+            return 3
+        with crash:
+            child = subprocess.Popen(child_command(args), start_new_session=True, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=crash)
+        print(f"started status-file={status_path} log={log_path} pid={child.pid}")
         return 0
     log = Path(args.out)
     log.parent.mkdir(parents=True, exist_ok=True)

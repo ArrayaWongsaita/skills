@@ -54,5 +54,5 @@ def test_the_skill_no_longer_tells_the_reader_to_wait_for_the_harness_to_report(
 
 
 def test_the_skill_shows_how_to_start_wait_for_and_cancel_a_detached_turn(skill_md):
-    for needle in ("--detach", "status file", "kill -TERM", "status=cancelled"):
+    for needle in ("--detach", "status file", "kill -TERM", "status=cancelled", ".err"):
         assert needle in skill_md, needle

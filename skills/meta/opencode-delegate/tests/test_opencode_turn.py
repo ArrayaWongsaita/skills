@@ -4,6 +4,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -185,6 +186,40 @@ def test_detach_with_a_missing_opencode_or_folder_is_exit_3_before_any_process_s
     assert code == 3
     assert "not found" in capsys.readouterr().err
     assert not status.exists()
+
+
+def spy_on_popen(monkeypatch):
+    """Replace Popen with a recorder that starts nothing, and report what the parent had prepared when it was called."""
+    seen = {}
+
+    def popen(cmd, **kwargs):
+        seen["cmd"], seen["stderr"] = cmd, kwargs.get("stderr")
+        seen["stderr_name"] = getattr(kwargs.get("stderr"), "name", None)
+        return SimpleNamespace(pid=4242)
+
+    monkeypatch.setattr(opencode_turn.subprocess, "Popen", popen)
+    return seen
+
+
+def test_detach_creates_the_log_and_the_status_folder_and_keeps_the_childs_stderr_before_it_starts_the_child(fake_opencode, project, tmp_path, monkeypatch):
+    """A child that dies before it writes anything must still leave a log (its age says when the turn began) and a traceback."""
+    seen = spy_on_popen(monkeypatch)  # no child ever runs, so whatever exists afterwards the parent made
+    status = tmp_path / "sub" / "turn.status"
+    code = opencode_turn.main(detach_argv(fake_opencode("pass"), project, tmp_path, status))
+    assert code == 0
+    assert (tmp_path / "turn.log").exists() and status.parent.is_dir()
+    assert Path(seen["stderr_name"]).name == "turn.status.err"
+
+
+def test_detach_exits_3_when_the_log_or_the_status_folder_cannot_be_created(fake_opencode, project, tmp_path, capsys, monkeypatch):
+    seen = spy_on_popen(monkeypatch)
+    blocker = tmp_path / "blocker"
+    blocker.write_text("a file where a folder is needed", encoding="utf-8")
+    argv = detach_argv(fake_opencode("pass"), project, tmp_path, tmp_path / "turn.status")
+    argv[argv.index("--out") + 1] = str(blocker / "turn.log")
+    assert opencode_turn.main(argv) == 3
+    assert "cannot create" in capsys.readouterr().err
+    assert "cmd" not in seen
 
 
 def test_the_detached_child_is_built_from_the_parsed_args_and_never_detaches_again():
