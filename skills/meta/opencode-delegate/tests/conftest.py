@@ -2,6 +2,7 @@ import os
 import stat
 import sys
 import textwrap
+import time
 from pathlib import Path
 
 import pytest
@@ -35,3 +36,13 @@ def alive(pid: int) -> bool:
     except ProcessLookupError:
         return False
     return True
+
+
+def wait_until(predicate, seconds: float = 15) -> None:
+    """Poll until `predicate()` is true; fail the test if it is not true within `seconds`."""
+    deadline = time.monotonic() + seconds
+    while time.monotonic() < deadline:
+        if predicate():
+            return
+        time.sleep(0.05)
+    pytest.fail(f"condition not met within {seconds} s")

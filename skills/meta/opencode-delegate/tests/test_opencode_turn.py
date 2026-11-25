@@ -1,8 +1,11 @@
+import signal
+import subprocess
+import sys
 import time
 from pathlib import Path
 
 import opencode_turn
-from conftest import alive
+from conftest import alive, wait_until
 
 WAITING = r"print('\x1b[90mwaiting for 1 background job\x1b[0m', flush=True)"
 
@@ -98,3 +101,46 @@ def test_the_worker_sees_the_project_folder_in_PWD_not_the_callers(fake_opencode
     code, text = turn(fake, project, tmp_path)
     assert code == 0
     assert f"PWD {project.resolve()}" in text
+
+
+def test_the_status_line_is_written_to_the_status_file_when_the_turn_ends(fake_opencode, project, tmp_path, capsys):
+    status = tmp_path / "sub" / "turn.status"
+    code, _ = turn(fake_opencode("print('ok', flush=True)"), project, tmp_path, "--status-file", str(status))
+    assert code == 0
+    assert status.read_text(encoding="utf-8") == capsys.readouterr().out
+    assert not (status.parent / "turn.status.tmp").exists()
+
+
+def test_a_status_file_left_by_an_earlier_turn_is_removed_when_the_next_turn_starts(fake_opencode, project, tmp_path, monkeypatch):
+    status = tmp_path / "turn.status"
+    status.write_text("status=done exit=0 log=old\n", encoding="utf-8")
+    monkeypatch.setenv("STATUS", str(status))
+    fake = fake_opencode("print('GONE' if not os.path.exists(os.environ['STATUS']) else 'STILL THERE', flush=True)")
+    code, text = turn(fake, project, tmp_path, "--status-file", str(status))
+    assert code == 0
+    assert "GONE" in text
+
+
+def test_a_failed_turn_writes_status_failed_to_the_file(fake_opencode, project, tmp_path):
+    status = tmp_path / "turn.status"
+    code, _ = turn(fake_opencode("sys.exit(3)"), project, tmp_path, "--status-file", str(status))
+    assert code == 1
+    assert status.read_text(encoding="utf-8").startswith("status=failed exit=1")
+
+
+def test_sigterm_stops_opencode_and_its_children_and_writes_status_cancelled(fake_opencode, project, tmp_path):
+    childfile = tmp_path / "child"
+    fake = fake_opencode(
+        f"child = subprocess.Popen(['sleep', '60']); open({str(childfile)!r}, 'w').write(str(child.pid)); print('working', flush=True); time.sleep(60)"
+    )
+    status = tmp_path / "turn.status"
+    proc = subprocess.Popen([
+        sys.executable, opencode_turn.__file__, "--opencode", str(fake), "--dir", str(project),
+        "--session", "s", "--out", str(tmp_path / "turn.log"), "--status-file", str(status), "hi",
+    ])
+    wait_until(lambda: childfile.exists() and childfile.read_text() != "")
+    proc.send_signal(signal.SIGTERM)
+    assert proc.wait(timeout=20) == 4
+    assert status.read_text(encoding="utf-8").startswith("status=cancelled exit=4")
+    time.sleep(0.3)
+    assert not alive(int(childfile.read_text()))
