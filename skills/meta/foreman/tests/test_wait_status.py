@@ -83,6 +83,21 @@ def test_a_log_that_never_appears_is_stalled_once_the_limit_has_passed_since_the
     assert code == 11
 
 
+def test_a_detached_turn_whose_child_never_wrote_anything_is_stalled_with_the_documented_flags(tmp_path, monkeypatch):
+    """The wake-up check of waiting.md (`--max 0 --stall <interval>`) must not say "running" for ever when the detached child died at once."""
+    import opencode_turn
+
+    monkeypatch.setattr(opencode_turn.subprocess, "Popen", lambda cmd, **kwargs: type("Child", (), {"pid": 4242})())
+    fake = tmp_path / "opencode"
+    fake.write_text("#!/bin/sh\n", encoding="utf-8")
+    fake.chmod(0o755)
+    status, log = tmp_path / "turn.status", tmp_path / "turn.log"
+    assert opencode_turn.main(["--detach", "--opencode", str(fake), "--dir", str(tmp_path), "--session", "s", "--out", str(log), "--status-file", str(status), "hi"]) == 0
+    then = time.time() - 3000
+    os.utime(log, (then, then))
+    assert check(status, "--log", str(log), "--max", "0", "--stall", "2400") == 11
+
+
 def test_a_positive_max_returns_as_soon_as_the_status_file_appears(tmp_path, capsys):
     status = tmp_path / "turn.status"
     threading.Timer(0.3, lambda: status.write_text(DONE + "\n", encoding="utf-8")).start()

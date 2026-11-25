@@ -84,6 +84,18 @@ def test_run_loop_says_how_to_check_a_plan_only_round_and_how_to_end_a_worker_se
     assert "opencode session delete" in run_loop
 
 
+def test_the_stop_list_does_not_use_the_work_folder_for_two_things(everything):
+    """`<work>` is the run's state folder; the boundary of what the run may touch is the brief's "Where work may happen"."""
+    assert "outside the work folder" not in everything
+    assert 'outside what the brief\'s "Where work may happen" allows' in everything
+    assert "Deleting what this run created" in everything
+
+
+def test_block_mode_tells_the_agent_to_raise_its_shell_tools_timeout():
+    waiting = reference("waiting.md")
+    assert "set it above" in waiting and "lower `--max`" in waiting
+
+
 def test_skill_md_is_short(skill_md):
     assert len(skill_md.splitlines()) <= 120
 

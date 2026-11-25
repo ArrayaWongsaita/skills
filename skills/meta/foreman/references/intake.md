@@ -49,7 +49,7 @@ Headings of `brief.md`: Goal, Done checks, Input and scope, Handed over, Stop li
 A serious problem is one of these. The user edits the list at intake.
 
 - It needs a credential, a secret or a payment.
-- An irreversible or outward-facing action: delete, push, merge, deploy, send, anything outside the work folder.
+- An irreversible or outward-facing action: delete, push, merge, deploy, send, or anything outside what the brief's "Where work may happen" allows. Deleting what this run created (its scratch copies, its worker sessions, its own files under `<work>`) is not on the list.
 - A finding that changes what the user would get: the source contradicts the request, or the job cannot be done as asked.
 - A cap in the brief is reached (cost, time, retries) with the job unfinished.
 - A result you have no way to check, on which the job's success depends.

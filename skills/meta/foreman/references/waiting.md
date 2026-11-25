@@ -50,4 +50,4 @@ Nothing wakes you, so keep waiting in calls the harness will not cut off:
 python3 <skill>/scripts/wait_status.py --status-file <status> --log <log> --max <seconds> --stall 2400
 ```
 
-`<seconds>` is the shorter of the interval and the longest call your harness allows. Many cut a shell call at about 10 minutes; use 540 when you do not know. Exit 10 means call it again; exit 0 or 11 ends the wait. Run nothing else between the calls.
+`<seconds>` is the shorter of the interval and the longest call your harness allows. Many cut a shell call at about 10 minutes; use 540 when you do not know. A shell tool's default timeout can be shorter than the longest call it allows (some default to 2 minutes): if it takes a timeout setting, set it above `<seconds>`; if a call is still cut off, lower `--max`. Exit 10 means call it again; exit 0 or 11 ends the wait. Run nothing else between the calls.

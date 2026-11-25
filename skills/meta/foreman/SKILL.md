@@ -51,7 +51,7 @@ Follow `references/waiting.md`. You learn that a worker finished from its status
 - A worker's report is a claim. Run the check yourself, and say which check you ran.
 - A serious problem parks its unit as `blocked`; the other units go on. You stop only when nothing can go on, with one message that holds every open question and your recommendation for each.
 - An assumption of yours is written under Assumptions in `brief.md`, never as something the user said.
-- Do not push, merge, deploy, send or delete outside the work folder unless the brief says you may.
+- Do not push, merge, deploy, send or delete outside what the brief's "Where work may happen" allows, unless the brief says you may.
 - Clean up what the run started: worker sessions, servers, scratch copies.
 
 ## Reporting problems with this skill
