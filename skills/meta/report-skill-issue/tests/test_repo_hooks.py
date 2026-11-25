@@ -1,9 +1,44 @@
+import re
 import subprocess
 from pathlib import Path
 
 import pytest
 
 HOOK = "## Reporting problems with this skill"
+BAD_PLAIN_SCALAR = re.compile(r": |:$| #")
+QUOTED_OR_BLOCK = ('"', "'", "|", ">", "[", "{")
+
+
+def plain_scalar_problems(text: str) -> list[str]:
+    """Frontmatter lines whose unquoted value a YAML parser rejects: a `: ` or ` #` inside a plain scalar.
+
+    The installer parses frontmatter with a real YAML parser and skips a skill that fails, while
+    frontmatter.py splits on the first `: ` and accepts anything. This stdlib check covers that gap.
+    """
+    lines = text.split("\n")
+    end = lines.index("---", 1)
+    problems = []
+    for number, line in enumerate(lines[1:end], start=2):
+        key, sep, value = line.partition(": ")
+        value = value.strip()
+        if sep and value[:1] not in QUOTED_OR_BLOCK and BAD_PLAIN_SCALAR.search(value):
+            problems.append(f"line {number}: {key}")
+    return problems
+
+
+def test_every_skill_frontmatter_is_valid_yaml(skill_dir):
+    skills_root = skill_dir.parents[1]
+    found = sorted(skills_root.glob("*/*/SKILL.md"))
+    assert len(found) >= 2
+    problems = {str(p.relative_to(skills_root)): plain_scalar_problems(p.read_text(encoding="utf-8")) for p in found}
+    assert {path: lines for path, lines in problems.items() if lines} == {}
+
+
+def test_plain_scalar_check_catches_a_colon_inside_a_value():
+    assert plain_scalar_problems("---\nname: demo\ndescription: Use when a, b: c\n---\n") == ["line 3: description"]
+    assert plain_scalar_problems("---\nname: demo\ndescription: Use when a # b\n---\n") == ["line 3: description"]
+    assert plain_scalar_problems('---\nname: demo\ndescription: "Use when a, b: c"\n---\n') == []
+    assert plain_scalar_problems("---\nname: demo\ndescription: Use when a, b; c\n---\n") == []
 
 
 def test_every_skill_has_the_reporting_hook(skill_dir):
