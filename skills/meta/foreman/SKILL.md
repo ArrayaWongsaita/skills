@@ -1,6 +1,6 @@
 ---
 name: foreman
-description: Use when the user hands over a multi-step job to be run to the end while they are away, usually with a cheaper worker (OpenCode, a subagent) doing the bulk and you checking every result: you ask everything once up front, then decide, check and fix alone and stop only for a serious problem; also when a background worker finished and nobody noticed.
+description: Use when the user hands over a multi-step job to be run to the end while they are away, usually with a cheaper worker (OpenCode, a subagent) doing the bulk and each result needing a check; also when a background worker has finished and nobody noticed.
 ---
 
 # Foreman

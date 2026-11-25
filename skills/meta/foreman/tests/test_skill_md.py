@@ -29,7 +29,8 @@ def test_frontmatter_names_the_folder_and_says_when_to_use_it(skill_md):
     assert data["name"] == "foreman" == SKILL_DIR.name
     assert data["description"].startswith("Use when")
     assert len(data["description"]) <= 1024
-    assert "serious problem" in data["description"]
+    assert "while they are away" in data["description"]
+    assert "background worker has finished" in data["description"]
 
 
 def test_every_script_the_skill_names_exists(everything):
