@@ -102,3 +102,9 @@ def test_skill_md_is_short(skill_md):
 
 def test_the_skill_has_the_reporting_section(skill_md):
     assert "## Reporting problems with this skill" in skill_md
+
+
+def test_waiting_starts_a_turn_with_a_session_id_opencode_takes():
+    """opencode rejects a session id that does not start with "ses"."""
+    waiting = reference("waiting.md")
+    assert "--session ses_<unit>" in waiting and "--session <id>" not in waiting

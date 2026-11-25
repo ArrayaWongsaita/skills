@@ -17,7 +17,7 @@ uv run --no-project --python 3.12 --with pytest pytest skills/meta/opencode-dele
 | 7 | A run that keeps working after the waiting line is not stopped | `test_opencode_turn.py` |
 | 8 | What the run started in its process group dies with it | `test_opencode_turn.py` |
 | 9 | A run that does not finish times out with exit 2 and is killed | `test_opencode_turn.py` |
-| 10 | A missing `opencode` or project folder exits 3 with a message | `test_opencode_turn.py` |
+| 10 | A missing `opencode` or project folder, or a session id that does not start with `ses`, exits 3 with a message; a bad session id stops before any process starts, and `SKILL.md` and `--help` give the format | `test_opencode_turn.py`, `test_skill_md.py` |
 | 11 | `SKILL.md` warns that opencode follows `$PWD` and that a detached server outlives the turn | `test_skill_md.py` |
 | 12 | With `--status-file`, the printed status line is also written to the file when the turn ends, in one step (no `.tmp` left, missing folders created), and a file left by an earlier turn is removed when the next turn starts | `test_opencode_turn.py` |
 | 13 | `--detach` returns at once with `started status-file=… log=… pid=…`, and the status file appears when the turn ends | `test_opencode_turn.py` |
