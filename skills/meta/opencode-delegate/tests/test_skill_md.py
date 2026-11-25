@@ -36,6 +36,18 @@ def test_every_flag_the_skill_shows_is_one_the_script_takes(skill_md, flag):
     assert f'"{flag}"' in (SKILL_DIR / "scripts" / "opencode_turn.py").read_text(encoding="utf-8")
 
 
+def test_the_skill_says_what_a_session_id_looks_like(skill_md):
+    assert "starts with `ses`" in skill_md and "ses_fixlogin01" in skill_md
+
+
+def test_the_session_flag_help_gives_the_format(capsys):
+    import opencode_turn
+
+    with pytest.raises(SystemExit):
+        opencode_turn.parse(["--help"])
+    assert "ses_fixlogin01" in capsys.readouterr().out
+
+
 def test_the_skill_says_to_check_the_work_itself(skill_md):
     assert "Check its work yourself" in skill_md
     assert "opencode session export" in skill_md

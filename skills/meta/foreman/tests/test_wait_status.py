@@ -92,7 +92,7 @@ def test_a_detached_turn_whose_child_never_wrote_anything_is_stalled_with_the_do
     fake.write_text("#!/bin/sh\n", encoding="utf-8")
     fake.chmod(0o755)
     status, log = tmp_path / "turn.status", tmp_path / "turn.log"
-    assert opencode_turn.main(["--detach", "--opencode", str(fake), "--dir", str(tmp_path), "--session", "s", "--out", str(log), "--status-file", str(status), "hi"]) == 0
+    assert opencode_turn.main(["--detach", "--opencode", str(fake), "--dir", str(tmp_path), "--session", "ses_x", "--out", str(log), "--status-file", str(status), "hi"]) == 0
     then = time.time() - 3000
     os.utime(log, (then, then))
     assert check(status, "--log", str(log), "--max", "0", "--stall", "2400") == 11

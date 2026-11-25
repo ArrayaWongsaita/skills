@@ -6,12 +6,13 @@ OpenCode does not exit by itself when it has started a background job (a preview
 to a log, and when the log has ended on that line for `--grace` seconds it stops opencode and its process group.
 A process the worker detached from that group (`nohup`, `setsid`) is not stopped.
 
-    opencode_turn.py --session ID --out LOG [--dir PROJECT] [--model M] [--title T] [--archived]
+    opencode_turn.py --session ses_ID --out LOG [--dir PROJECT] [--model M] [--title T] [--archived]
                      [--grace 20] [--timeout 3600] [--status-file FILE] [--detach] [--opencode PATH] MESSAGE
 
 It prints one line, `status=<done|stopped|failed|timeout|cancelled> exit=<code> log=<path>`, and exits 0 when opencode
-finished or was stopped while waiting, 1 when opencode failed, 2 on a timeout, 3 when it could not start, 4 when the
-turn was cancelled with SIGTERM (opencode and what it started are stopped first).
+finished or was stopped while waiting, 1 when opencode failed, 2 on a timeout, 3 when it could not start (including a
+session id that does not start with "ses", which opencode rejects), 4 when the turn was cancelled with SIGTERM
+(opencode and what it started are stopped first).
 
 With `--status-file` the same line is also written to FILE when the turn ends, in one atomic step, so a reader sees
 either no file or the whole line. A file left by an earlier turn is removed when the turn starts.
@@ -39,6 +40,7 @@ WAITING = re.compile(r"waiting for \d+ background[^\n]*\s*$")
 TAIL_BYTES = 4096
 POLL_SECONDS = 0.2
 TERM_SECONDS = 5
+SESSION_PREFIX = "ses"  # opencode rejects any other id: 'Expected a string starting with "ses"'
 
 
 def command(args: argparse.Namespace) -> list[str]:
@@ -117,7 +119,7 @@ def child_command(args: argparse.Namespace) -> list[str]:
 def parse(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run one opencode turn and make sure it ends.")
     parser.add_argument("message", help="the message to send")
-    parser.add_argument("--session", required=True, help="session id: continued if it exists, created if not")
+    parser.add_argument("--session", required=True, help='session id starting with "ses", such as ses_fixlogin01: continued if it exists, created if not')
     parser.add_argument("--out", required=True, help="log file for everything opencode prints")
     parser.add_argument("--dir", default=".", help="project folder to run in (default: the current one)")
     parser.add_argument("--model", help="provider/model#variant; see `opencode models`")
@@ -133,6 +135,9 @@ def parse(argv: list[str] | None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse(argv)
+    if not args.session.startswith(SESSION_PREFIX):
+        print(f'error: --session must start with "{SESSION_PREFIX}", such as ses_fixlogin01 (ses_ then letters and digits); opencode rejects any other id', file=sys.stderr)
+        return 3
     project = Path(args.dir)
     if not project.is_dir():
         print(f"error: project folder not found: {project}", file=sys.stderr)

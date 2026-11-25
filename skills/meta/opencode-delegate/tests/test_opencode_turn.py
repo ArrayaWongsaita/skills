@@ -86,16 +86,43 @@ def test_a_run_that_does_not_finish_times_out_with_exit_2(fake_opencode, project
 
 def test_a_missing_opencode_is_exit_3_with_a_clear_message(project, tmp_path, capsys):
     log = tmp_path / "turn.log"
-    code = opencode_turn.main(["--opencode", str(tmp_path / "nope"), "--dir", str(project), "--session", "s", "--out", str(log), "hi"])
+    code = opencode_turn.main(["--opencode", str(tmp_path / "nope"), "--dir", str(project), "--session", "ses_x", "--out", str(log), "hi"])
     assert code == 3
     assert "not found" in capsys.readouterr().err
 
 
 def test_a_project_folder_that_does_not_exist_is_exit_3(fake_opencode, tmp_path, capsys):
     fake = fake_opencode("pass")
-    code = opencode_turn.main(["--opencode", str(fake), "--dir", str(tmp_path / "missing"), "--session", "s", "--out", str(tmp_path / "l"), "hi"])
+    code = opencode_turn.main(["--opencode", str(fake), "--dir", str(tmp_path / "missing"), "--session", "ses_x", "--out", str(tmp_path / "l"), "hi"])
     assert code == 3
     assert "missing" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("session", ["s", "my-task", "SES_x", "", "x_ses"])
+@pytest.mark.parametrize("detach", [False, True])
+def test_a_session_id_that_does_not_start_with_ses_is_exit_3_before_anything_starts(session, detach, fake_opencode, project, tmp_path, capsys, monkeypatch):
+    """opencode rejects such an id with 'Expected a string starting with "ses"', after the turn has already begun."""
+
+    def no_process(*args, **kwargs):
+        raise AssertionError("a process was started")
+
+    monkeypatch.setattr(opencode_turn.subprocess, "Popen", no_process)
+    log = tmp_path / "turn.log"
+    status = tmp_path / "turn.status"
+    argv = ["--opencode", str(fake_opencode("pass")), "--dir", str(project), "--session", session, "--out", str(log), "--status-file", str(status)]
+    code = opencode_turn.main([*argv, *(["--detach"] if detach else []), "hi"])
+    assert code == 3
+    err = capsys.readouterr().err
+    assert '"ses"' in err and "ses_fixlogin01" in err
+    assert not log.exists() and not status.exists()
+
+
+@pytest.mark.parametrize("session", ["ses", "ses_x", "ses_fixlogin01"])
+def test_a_session_id_that_starts_with_ses_is_passed_to_opencode(session, fake_opencode, project, tmp_path):
+    log = tmp_path / "turn.log"
+    code = opencode_turn.main(["--opencode", str(fake_opencode("print('ARGV', sys.argv[1:], flush=True)")), "--dir", str(project), "--session", session, "--out", str(log), "hi"])
+    assert code == 0
+    assert f"'-s', '{session}'" in log.read_text(encoding="utf-8")
 
 
 def test_the_worker_sees_the_project_folder_in_PWD_not_the_callers(fake_opencode, project, tmp_path, monkeypatch):
@@ -140,7 +167,7 @@ def test_sigterm_stops_opencode_and_its_children_and_writes_status_cancelled(fak
     status = tmp_path / "turn.status"
     proc = subprocess.Popen([
         sys.executable, opencode_turn.__file__, "--opencode", str(fake), "--dir", str(project),
-        "--session", "s", "--out", str(tmp_path / "turn.log"), "--status-file", str(status), "hi",
+        "--session", "ses_x", "--out", str(tmp_path / "turn.log"), "--status-file", str(status), "hi",
     ])
     wait_until(lambda: childfile.exists() and childfile.read_text() != "")
     proc.send_signal(signal.SIGTERM)
@@ -168,7 +195,7 @@ def test_detach_returns_at_once_prints_where_to_look_and_the_status_file_appears
 
 
 def test_detach_without_a_status_file_is_exit_3_with_a_message(fake_opencode, project, tmp_path, capsys):
-    code = opencode_turn.main(["--detach", "--opencode", str(fake_opencode("pass")), "--dir", str(project), "--session", "s", "--out", str(tmp_path / "l"), "hi"])
+    code = opencode_turn.main(["--detach", "--opencode", str(fake_opencode("pass")), "--dir", str(project), "--session", "ses_x", "--out", str(tmp_path / "l"), "hi"])
     assert code == 3
     assert "--status-file" in capsys.readouterr().err
 
