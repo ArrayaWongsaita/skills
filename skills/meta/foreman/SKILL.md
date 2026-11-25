@@ -33,7 +33,7 @@ Read the files first; they say where the run stands.
 
 ## Intake
 
-The only time you ask. Follow `references/intake.md`: look at what the job points at, ask one numbered round of questions, each with your proposal, write `brief.md`, show it, and wait for "go". Ask even when the job looks doable: a guess made silently is a decision the user never saw.
+The only time you ask. Follow `references/intake.md`: look at what the job points at, ask one numbered round of questions, each with your proposal; one reply with the answers and "go" starts the run, and you write `brief.md` from it. Ask even when the job looks doable: a guess made silently is a decision the user never saw.
 
 ## The run loop
 

@@ -2,7 +2,7 @@
 
 You learn that a worker finished from a status file that it writes when its turn ends. A harness may wake you when a background command ends, and in a real run it did not: the work finished and nobody noticed. So never rely on that alone.
 
-This page is for a worker you start as a command (OpenCode). A subagent your harness runs for you reports through the harness.
+This page is for a worker you start as a command (OpenCode). A subagent your harness runs for you reports through the harness. `<opencode-delegate>` below is the folder of the `opencode-delegate` skill.
 
 ## The wake modes
 

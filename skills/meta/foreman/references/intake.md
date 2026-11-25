@@ -10,6 +10,8 @@ Read what the job points at: the repository, the files, the links, the skills it
 
 One message. Numbered questions, each ending with `My proposal: …` so the user can reply "all as proposed". Ask even when the job looks doable: an agent that asked nothing guessed what "the answer file" meant, and the user only learned of the guess at the end.
 
+Ask only what would change the result. Put what the job makes uninteresting (the stop list, the caps, the wake mode, where the files go, the worker's model) into one question that proposes the defaults. Three to six questions is normal; nine means you are asking out of habit.
+
 Cover, as far as the job leaves them open:
 
 - the goal, and what "done" is as checks you can run yourself (a command and what it prints);
@@ -28,6 +30,8 @@ Before I start I need these answered once. After "go" I will not ask again unles
 
 1. What does "done" look like? My proposal: <a command and its expected output>.
 2. …
+
+Send your answers and "go" in one reply and I start at once. Whatever you leave open I decide and list as my assumption.
 ```
 
 ## 3. Answers
@@ -36,7 +40,7 @@ A question the user leaves open becomes an entry under Assumptions in `brief.md`
 
 ## 4. The brief
 
-Write `<work>/brief.md`, show it to the user, and wait. When they say "go", write `Status: go` in it. "Go" is the authority for everything after it.
+Write `<work>/brief.md` from the answers. If the reply carries the answers and "go" in one reply, write `Status: go` in it and start: the user sees the brief in your final report, where it is the first place to look. If the reply has answers but no "go", show the brief and wait for "go", then write `Status: go`. "Go" is the authority for everything after it.
 
 Headings of `brief.md`: Goal, Done checks, Input and scope, Handed over, Stop list, Workers, Where work may happen, Wake mode and interval, Caps, Assumptions, Status.
 

@@ -64,6 +64,26 @@ def test_the_skill_carries_the_rules_of_the_design(everything, needle):
     assert needle in everything
 
 
+def reference(name: str) -> str:
+    return (SKILL_DIR / "references" / name).read_text(encoding="utf-8")
+
+
+def test_intake_lets_one_reply_carry_the_answers_and_the_go_and_groups_the_defaults():
+    intake = reference("intake.md")
+    assert 'answers and "go" in one reply' in intake
+    assert "one question that proposes the defaults" in intake
+
+
+def test_waiting_says_where_opencode_delegate_is():
+    assert "folder of the `opencode-delegate` skill" in reference("waiting.md")
+
+
+def test_run_loop_says_how_to_check_a_plan_only_round_and_how_to_end_a_worker_session():
+    run_loop = reference("run-loop.md")
+    assert "plan-only round" in run_loop
+    assert "opencode session delete" in run_loop
+
+
 def test_skill_md_is_short(skill_md):
     assert len(skill_md.splitlines()) <= 120
 
