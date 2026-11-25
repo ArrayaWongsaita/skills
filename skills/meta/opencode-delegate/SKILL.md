@@ -24,16 +24,17 @@ Keep a decision that belongs to the user, anything outside the project folder, a
 
 ```bash
 python3 <skill>/scripts/opencode_turn.py --dir <project> --session <id> --out <log> \
-  [--model provider/model#variant] [--title <text>] [--archived] [--grace 20] [--timeout 3600] "<message>"
+  [--model provider/model#variant] [--title <text>] [--archived] [--grace 20] [--timeout 3600] \
+  [--status-file <file>] [--detach] "<message>"
 ```
 
-It runs `opencode run --auto -s <id> …` in `<project>`, writes everything opencode prints to `<log>`, and prints one line: `status=<done|stopped|failed|timeout> exit=<n> log=<path>`.
+It runs `opencode run --auto -s <id> …` in `<project>`, writes everything opencode prints to `<log>`, and prints one line: `status=<done|stopped|failed|timeout|cancelled> exit=<n> log=<path>`.
 
 - **Why not call `opencode run` yourself:** when a task starts a background job (a preview server, a watcher), opencode does not exit. It prints `waiting for 1 background job` and stays. The script stops it once the log has ended on that line for `--grace` seconds, and stops everything opencode started with it. A server it started as a background job dies with the turn; start your own afterwards if you need one. A server the worker detached itself (`nohup … &`, `setsid`) is outside that group and outlives the turn, so check `lsof -ti tcp:<port>` afterwards and stop what you find.
-- **Exit codes:** 0 finished or stopped while only waiting, 1 opencode failed, 2 timed out, 3 could not start (no `opencode`, no such folder).
+- **Exit codes:** 0 finished or stopped while only waiting, 1 opencode failed, 2 timed out, 3 could not start (no `opencode`, no such folder), 4 cancelled.
 - **`--session`:** continues that session if it exists and creates it if not. Use one id per task and reuse it for every follow-up turn.
 - **`--dir`:** opencode takes its folder from `$PWD`, so a plain `cd` in a shell works and a subprocess `cwd` alone does not. The script sets both. If you run `opencode run` yourself, `cd` into the project first.
-- A long turn runs in the background of your own shell tool; read `<log>` when it reports.
+- **Long turns:** start with `--detach --status-file <file>`. The call returns at once with `started status-file=… log=… pid=…`, and the turn runs on in its own session. The status file gets the `status=…` line when the turn ends, in one step, so it either does not exist or is whole. Nothing else tells you, so do not count on the harness to wake you: read the status file yourself, or wait on it with the `foreman` skill's `wait_status.py` if that skill is installed. Use one status file per turn. `kill -TERM <pid>` cancels the turn: opencode and what it started stop, and the file says `status=cancelled exit=4`.
 
 ## Two rounds: plan, then build
 

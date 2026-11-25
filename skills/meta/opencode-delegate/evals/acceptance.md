@@ -19,6 +19,11 @@ uv run --no-project --python 3.12 --with pytest pytest skills/meta/opencode-dele
 | 9 | A run that does not finish times out with exit 2 and is killed | `test_opencode_turn.py` |
 | 10 | A missing `opencode` or project folder exits 3 with a message | `test_opencode_turn.py` |
 | 11 | `SKILL.md` warns that opencode follows `$PWD` and that a detached server outlives the turn | `test_skill_md.py` |
+| 12 | With `--status-file`, the printed status line is also written to the file when the turn ends, in one step (no `.tmp` left, missing folders created), and a file left by an earlier turn is removed when the next turn starts | `test_opencode_turn.py` |
+| 13 | `--detach` returns at once with `started status-file=… log=… pid=…`, and the status file appears when the turn ends | `test_opencode_turn.py` |
+| 14 | `--detach` without `--status-file`, or with a missing `opencode` or folder, exits 3 before any process starts; the detached child is built from the parsed arguments, so an abbreviation such as `--det` cannot make it detach again | `test_opencode_turn.py` |
+| 15 | SIGTERM stops opencode and what it started, writes `status=cancelled exit=4` to the status file, and the script exits 4 | `test_opencode_turn.py` |
+| 16 | `SKILL.md` shows `--detach`, the status file and `kill -TERM`, and no longer tells the reader to wait for the harness to report | `test_skill_md.py` |
 
 The tests were also run against two deliberate breaks of the script: killing only opencode and not its group fails check 8, and never recognising the waiting line fails check 6.
 
@@ -31,3 +36,4 @@ The tests were also run against two deliberate breaks of the script: killing onl
    - With the skill linked in `.claude/skills/`, the agent loaded it, ran the job through `opencode_turn.py`, checked the file and the port itself, exported the session, and filed a problem line: a server the worker detached with `nohup` outlives the turn, which `SKILL.md` had said it did not. `SKILL.md` now says so.
    - Without the skill, the agent ran `opencode run` directly, redirected the output to files, and checked the result itself. It did not hang, because its worker detached the server with `nohup`.
    - This scenario does not separate the two: the hang only shows when the worker starts the server as an opencode background job (run 2). Not tested: a fresh agent facing that case without the skill, other models, other opencode versions.
+5. **Detached turn (v2.4.1).** A one-word task started with `--detach --status-file <file> --archived`: the call returned after under a second with the `started …` line and no status file yet; about two seconds later the file held `status=done exit=0 log=<path>`, and the log ended with the same line. The session was deleted afterwards.
