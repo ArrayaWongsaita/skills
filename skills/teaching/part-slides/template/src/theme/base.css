@@ -935,7 +935,11 @@ a {
   border: 2px solid var(--rs-piece, var(--rs-accent));
   border-radius: 10px;
   background: var(--rs-paper);
-  white-space: pre;
+  /* A piece wider than the strip wraps inside its own box, even with no space to break at, so it never runs off a phone. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .rs-piece[data-piece-n]::after {

@@ -54,7 +54,7 @@ Required props are first; optional ones are marked `?`. `visual` takes a figure,
 
 Also in the template and not used by this flow: `Setup`, `Terms`, `Practice`, `MapSlide`, `Assemble` (they belong to the old course pipeline), and `Field`, the wrapper the layouts use for their text.
 
-`Anatomy`: `pieces` is the line cut into `{ text, n? }`: the pieces joined must equal the line exactly, and a piece with `n` has its number on the line and in the legend `items[n-1]`. Pieces without `n` are plain text between them.
+`Anatomy`: `pieces` is the line cut into `{ text, n? }`: the pieces joined must equal the line exactly, and a piece with `n` has its number on the line and in the legend `items[n-1]`. Pieces without `n` are plain text between them. A piece wider than the screen wraps inside its box, which is harder to read: keep each piece to about 25 characters, which fit on one line on a phone, and cut a longer call into more pieces (the object, the method, each argument). The code in the strip does not count toward the slide's text.
 
 ## Pictures
 

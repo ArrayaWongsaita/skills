@@ -3,7 +3,7 @@ import { expect, test, vi } from 'vitest';
 import { MiniPart, miniMeta } from '../__fixtures__/MiniPart';
 import { TopicPart, topicMeta } from '../__fixtures__/TopicPart';
 import { Deck } from '../components/Deck';
-import { Code, Explain, Topic } from '../components/layouts';
+import { Anatomy, Code, Error as ErrorSlide, Explain, Topic } from '../components/layouts';
 import type { PartMeta } from '../components/types';
 import { CheckPage } from './CheckPage';
 
@@ -164,4 +164,25 @@ test('the page reports a slide whose id is not greater than the one before it', 
   await vi.waitFor(() => expect(window.__reactSlidesCheck?.done).toBe(true), { timeout: 6000 });
   const found = window.__reactSlidesCheck!.findings.filter((f) => f.kind === 'id-order');
   expect(found).toEqual([expect.objectContaining({ slide: '1-001', level: 'problem' })]);
+});
+
+// The text a reader takes in: the code in an Anatomy strip and the labels of an Error slide are not prose.
+const proseMeta: PartMeta = { course: 'c', part: 1, slug: 'prose', title: 'Prose', language: 'th', slideCount: 2 };
+const longCall = [{ text: 'basket.addFruit(', n: 1 }, { text: '"mango", { count: 3, ripe: true }', n: 2 }, { text: ').save()' }];
+function ProseParts() {
+  return (
+    <Deck meta={proseMeta} diagrams={{}} listings={{}} outputs={{}}>
+      <Anatomy id="1-001" section="Opening" title={<>ค</>} body={<>ก</>} pieces={longCall} items={[<>ข</>, <>ง</>]} />
+      <ErrorSlide id="1-002" section="Opening" title={<>ค</>} symptom={<>ง</>} cause={<>ก</>} fix={<>ข</>} />
+    </Deck>
+  );
+}
+
+test('the text count leaves out the code of an Anatomy strip and the labels of an Error slide', async () => {
+  const entry = { meta: proseMeta, load: () => Promise.resolve({ default: ProseParts }) };
+  render(<CheckPage entry={entry} />);
+  await vi.waitFor(() => expect(window.__reactSlidesCheck?.done).toBe(true), { timeout: 6000 });
+  const [anatomy, error] = window.__reactSlidesCheck!.slides;
+  expect(anatomy.chars).toBe('ค กขง'.length);
+  expect(error.chars).toBe('ค งกข'.length);
 });

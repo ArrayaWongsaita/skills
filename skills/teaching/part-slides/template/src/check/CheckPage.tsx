@@ -55,11 +55,14 @@ function measure(root: HTMLElement): Measurement[] {
   return out;
 }
 
-/** The prose a reader has to take in: the title and the text beside the picture, with code and its output left out. */
+/**
+ * The prose a reader has to take in: the title and the text beside the picture. Left out: code and its output, the
+ * code line of an Anatomy strip, and the template's own field labels (an Error slide's "symptom", "cause", "fix").
+ */
 function proseChars(slide: HTMLElement): number {
   const parts = [...slide.querySelectorAll<HTMLElement>('.rs-title, .rs-prose')].map((el) => {
     const copy = el.cloneNode(true) as HTMLElement;
-    for (const skip of copy.querySelectorAll('pre, .rs-codeblock, .rs-output, .rs-block')) skip.remove();
+    for (const skip of copy.querySelectorAll('pre, .rs-codeblock, .rs-output, .rs-block, .rs-anatomy-strip, .rs-label')) skip.remove();
     return copy.textContent ?? '';
   });
   return parts.join(' ').replace(/\s+/g, ' ').trim().length;
