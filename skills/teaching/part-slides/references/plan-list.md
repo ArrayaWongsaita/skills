@@ -27,6 +27,7 @@ The check page reports a `budget` finding when a Part breaks one of these, so pl
 - A topic has at most 9 slides including its divider; the Opening at most 3; the Part at most 40 (a note from 35).
 - A slide's text (title, body, items, not code) is at most 160 characters in Thai and 220 in other languages. More than that is two slides.
 - Phases run in order: know, parts, example, watchout, check. A topic starts with its divider.
+- Slide ids ascend in the order the slides run (an `id-order` finding when they do not).
 
 ## Rules for the content
 
@@ -67,7 +68,7 @@ Five to eight sentences: how the learner's understanding grows, topic by topic.
 …
 ```
 
-`#` is the slide's id (`<part>-<nnn>`). `layout` is a component of `slides.md`. `picture` says in words what the picture is, so the user can see it: a figure and its labels, "a drawing of …", "the code line, cut in 3 pieces", "the code and its output", or `none: <why>` (a divider, the Opening and the Sources need no reason).
+`#` is the slide's id (`<part>-<nnn>`). Number the rows in the order the slides run, phase order inside each topic, with no gaps. When an edit adds, removes or moves a row, renumber the rows after it; once slides exist, renumber them the same way and update every `revisit` that names a renumbered id. `layout` is a component of `slides.md`. `picture` says in words what the picture is, so the user can see it: a figure and its labels, "a drawing of …", "the code line, cut in 3 pieces", "the code and its output", or `none: <why>` (a divider, the Opening and the Sources need no reason).
 
 Choosing a layout:
 - `Explain` is the default: a title, a short paragraph and a picture beside it, and the layout of a topic's first `know` slide. `Focus` is for a single point or a hook. `Steps` is for 2 to 6 numbered items.

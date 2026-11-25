@@ -5,7 +5,7 @@ import { DeckModeContext, FrameContext } from '../components/Deck';
 import { neededHeight } from '../hooks';
 import type { PartEntry } from '../parts';
 import { consoleErrors } from './console';
-import { budgets } from './budgets';
+import { budgets, idOrder } from './budgets';
 import { type Finding, findings, type Frame, type Measurement, type SlideInfo } from './findings';
 import { countOverlaps } from './overlap';
 
@@ -104,7 +104,7 @@ export function CheckPage({ entry }: { entry: PartEntry }) {
       if (cancelled || !root.current) return;
       const measurements = measure(root.current);
       const slides = readSlides(root.current);
-      const budget = budgets(slides, entry.meta.language);
+      const budget = [...budgets(slides, entry.meta.language), ...idOrder(slides, part)];
       const all = findings(measurements, fonts, consoleErrors());
       const found = [...all.filter((f) => f.level === 'problem'), ...budget.filter((f) => f.level === 'problem'), ...all.filter((f) => f.level === 'note'), ...budget.filter((f) => f.level === 'note')];
       setResult(found);

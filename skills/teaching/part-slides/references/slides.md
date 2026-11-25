@@ -2,7 +2,7 @@
 
 Read this when the plan is approved, before you write the Part's files.
 
-A Part is written as typed React, directly, in the course's app (`<web>` is `<course_dir>/web`). The slides are the single source: a change to a slide is an edit to one element of one file. Write what the plan says, no more, and keep the slide ids and the order of the plan.
+A Part is written as typed React, directly, in the course's app (`<web>` is `<course_dir>/web`). The slides are the single source: a change to a slide is an edit to one element of one file. Write what the plan says, no more, and keep the slide ids and the order of the plan. When the phase order forces you to move a slide the plan put elsewhere, renumber the slides so the ids still run in file order, update every `revisit` that names a renumbered id, renumber the plan rows the same way, and tell the user which rows moved. The check page reports an id that does not run in order.
 
 ## The files
 

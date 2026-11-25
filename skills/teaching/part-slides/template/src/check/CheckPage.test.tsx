@@ -146,3 +146,22 @@ test('the page reports labels of a drawing that sit on top of each other, and on
     rect.mockRestore();
   }
 });
+
+// Slide ids that do not run in file order: the writer moved a slide and kept its planned id.
+const orderMeta: PartMeta = { course: 'c', part: 1, slug: 'order', title: 'Order', language: 'th', slideCount: 2 };
+function OutOfOrder() {
+  return (
+    <Deck meta={orderMeta} diagrams={{}} listings={{}} outputs={{}}>
+      <Explain id="1-002" section="Opening" title={<>สอง</>} body={<>b</>} />
+      <Explain id="1-001" section="Opening" title={<>หนึ่ง</>} body={<>b</>} />
+    </Deck>
+  );
+}
+
+test('the page reports a slide whose id is not greater than the one before it', async () => {
+  const entry = { meta: orderMeta, load: () => Promise.resolve({ default: OutOfOrder }) };
+  render(<CheckPage entry={entry} />);
+  await vi.waitFor(() => expect(window.__reactSlidesCheck?.done).toBe(true), { timeout: 6000 });
+  const found = window.__reactSlidesCheck!.findings.filter((f) => f.kind === 'id-order');
+  expect(found).toEqual([expect.objectContaining({ slide: '1-001', level: 'problem' })]);
+});
