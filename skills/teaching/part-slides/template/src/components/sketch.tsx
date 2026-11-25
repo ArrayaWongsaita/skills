@@ -43,20 +43,24 @@ function Paths({ drawables, style }: { drawables: Drawable[]; style: SketchStyle
   const fillOpacity = style.fillOpacity ?? (style.fillStyle === undefined ? TINT : undefined);
   return (
     <g className={style.className}>
-      {paths.map((path, index) => (
-        <path
-          key={index}
-          d={path.d}
-          stroke={path.stroke}
-          strokeWidth={path.strokeWidth}
-          fill={path.fill ?? 'none'}
-          fillOpacity={path.fill && path.fill !== 'none' ? fillOpacity : undefined}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          {...(style.dashed ? { strokeDasharray: '7 6' } : { pathLength: 1 })}
-          className={animate}
-        />
-      ))}
+      {paths.map((path, index) => {
+        const solid = Boolean(path.fill && path.fill !== 'none');
+        return (
+          <path
+            key={index}
+            d={path.d}
+            stroke={path.stroke}
+            strokeWidth={path.strokeWidth}
+            fill={path.fill ?? 'none'}
+            fillOpacity={solid ? fillOpacity : undefined}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            {...(style.dashed ? { strokeDasharray: '7 6' } : { pathLength: 1 })}
+            // A solid fill has no stroke to draw in, so it fades in as the outline ends.
+            className={animate && solid ? 'rs-fade' : animate}
+          />
+        );
+      })}
     </g>
   );
 }

@@ -60,3 +60,11 @@ test('an explicit solid fill stays opaque, and fillOpacity sets the opacity of a
   expect(filled(rect({ fillStyle: 'solid' }))[0].getAttribute('fill-opacity')).toBeNull();
   expect(filled(rect({ fillStyle: 'solid', fillOpacity: 0.5 }))[0].getAttribute('fill-opacity')).toBe('0.5');
 });
+
+test('with draw on, a tinted fill fades in after its outline draws in, instead of showing at once', () => {
+  const root = rect({ draw: true });
+  expect(filled(root)[0]).toHaveClass('rs-fade');
+  const outline = [...root.querySelectorAll('path')].filter((path) => path.getAttribute('stroke') === '#000');
+  expect(outline.length).toBeGreaterThan(0);
+  for (const path of outline) expect(path).toHaveClass('rs-draw');
+});
