@@ -19,10 +19,12 @@ Decide at intake which your harness offers, and write it in `brief.md`:
 ```bash
 python3 <opencode-delegate>/scripts/opencode_turn.py --detach \
   --status-file <work>/turns/<unit>-<n>.status --out <work>/turns/<unit>-<n>.log \
-  --dir <project> --session <id> "<message>"
+  --dir <project> --session ses_<unit> "<message>"
 ```
 
-It returns at once with `started status-file=… log=… pid=…`. Put the status file, the log and the pid in the unit's row in `progress.md`. One status file per turn: `<n>` counts the turns of the unit, so an old file is never mistaken for a new result.
+The session id is `ses_` and the unit's name in letters and digits (opencode takes no id that does not start with `ses`), the same for every turn of the unit.
+
+The call returns at once with `started status-file=… log=… pid=…`. Put the status file, the log and the pid in the unit's row in `progress.md`. One status file per turn: `<n>` counts the turns of the unit, so an old file is never mistaken for a new result.
 
 ## At each wake-up
 
