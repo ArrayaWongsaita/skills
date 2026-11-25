@@ -874,6 +874,7 @@ a {
 
 .rs-divider .rs-title {
   font-family: var(--rs-mono);
+  font-variant-ligatures: none;
   font-size: 3.2em;
   line-height: 1.1;
 }
@@ -926,6 +927,7 @@ a {
   gap: 0.9em 0.15em;
   margin: 1.4em 0 1.2em;
   font-family: var(--rs-mono);
+  font-variant-ligatures: none;
   font-size: 1.25em;
 }
 
