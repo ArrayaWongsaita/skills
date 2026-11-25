@@ -1,8 +1,11 @@
+import re
 import signal
 import subprocess
 import sys
 import time
 from pathlib import Path
+
+import pytest
 
 import opencode_turn
 from conftest import alive, wait_until
@@ -144,3 +147,53 @@ def test_sigterm_stops_opencode_and_its_children_and_writes_status_cancelled(fak
     assert status.read_text(encoding="utf-8").startswith("status=cancelled exit=4")
     time.sleep(0.3)
     assert not alive(int(childfile.read_text()))
+
+
+def detach_argv(fake, project, tmp_path, status):
+    return ["--detach", "--opencode", str(fake), "--dir", str(project), "--session", "ses_x", "--out", str(tmp_path / "turn.log"), "--status-file", str(status), "do the thing"]
+
+
+def test_detach_returns_at_once_prints_where_to_look_and_the_status_file_appears_when_the_turn_ends(fake_opencode, project, tmp_path, capsys):
+    fake = fake_opencode("time.sleep(1.5); print('late work', flush=True)")
+    status = tmp_path / "turn.status"
+    began = time.time()
+    code = opencode_turn.main(detach_argv(fake, project, tmp_path, status))
+    assert code == 0 and time.time() - began < 1.0
+    assert re.fullmatch(r"started status-file=\S+ log=\S+ pid=\d+\n", capsys.readouterr().out)
+    assert not status.exists()
+    wait_until(status.exists)
+    assert "status=done exit=0" in status.read_text(encoding="utf-8")
+    assert "late work" in (tmp_path / "turn.log").read_text(encoding="utf-8")
+
+
+def test_detach_without_a_status_file_is_exit_3_with_a_message(fake_opencode, project, tmp_path, capsys):
+    code = opencode_turn.main(["--detach", "--opencode", str(fake_opencode("pass")), "--dir", str(project), "--session", "s", "--out", str(tmp_path / "l"), "hi"])
+    assert code == 3
+    assert "--status-file" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("missing", ["opencode", "folder"])
+def test_detach_with_a_missing_opencode_or_folder_is_exit_3_before_any_process_starts(missing, fake_opencode, project, tmp_path, capsys, monkeypatch):
+    def no_process(*args, **kwargs):
+        raise AssertionError("a process was started")
+
+    monkeypatch.setattr(opencode_turn.subprocess, "Popen", no_process)
+    status = tmp_path / "turn.status"
+    fake = tmp_path / "nope" if missing == "opencode" else fake_opencode("pass")
+    folder = tmp_path / "missing" if missing == "folder" else project
+    code = opencode_turn.main(detach_argv(fake, folder, tmp_path, status))
+    assert code == 3
+    assert "not found" in capsys.readouterr().err
+    assert not status.exists()
+
+
+def test_the_detached_child_is_built_from_the_parsed_args_and_never_detaches_again():
+    """`--det` is an abbreviation argparse accepts; filtering sys.argv for "--detach" would miss it and start the script forever."""
+    args = opencode_turn.parse(["--det", "--session", "s", "--out", "o.log", "--status-file", "s.status", "--model", "p/m#max", "--archived", "--", "-hello"])
+    cmd = opencode_turn.child_command(args)
+    assert cmd[0] == sys.executable
+    assert cmd[1] == str(Path(opencode_turn.__file__).resolve())
+    assert "--detach" not in cmd and "--det" not in cmd
+    assert cmd[cmd.index("--status-file") + 1].endswith("s.status")
+    assert "--model" in cmd and "--archived" in cmd
+    assert cmd[-2:] == ["--", "-hello"]

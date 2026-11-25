@@ -7,7 +7,7 @@ to a log, and when the log has ended on that line for `--grace` seconds it stops
 A process the worker detached from that group (`nohup`, `setsid`) is not stopped.
 
     opencode_turn.py --session ID --out LOG [--dir PROJECT] [--model M] [--title T] [--archived]
-                     [--grace 20] [--timeout 3600] [--status-file FILE] [--opencode PATH] MESSAGE
+                     [--grace 20] [--timeout 3600] [--status-file FILE] [--detach] [--opencode PATH] MESSAGE
 
 It prints one line, `status=<done|stopped|failed|timeout|cancelled> exit=<code> log=<path>`, and exits 0 when opencode
 finished or was stopped while waiting, 1 when opencode failed, 2 on a timeout, 3 when it could not start, 4 when the
@@ -15,6 +15,11 @@ turn was cancelled with SIGTERM (opencode and what it started are stopped first)
 
 With `--status-file` the same line is also written to FILE when the turn ends, in one atomic step, so a reader sees
 either no file or the whole line. A file left by an earlier turn is removed when the turn starts.
+
+With `--detach` (which needs `--status-file`) the script starts itself in a new session and returns at once, so the
+caller's tool call does not have to stay open. It prints `started status-file=<path> log=<path> pid=<pid>` and exits 0,
+or exits 3 before starting anything when the folder or `opencode` is missing. The turn runs on; its end is the status
+file, and `kill -TERM <pid>` cancels it.
 """
 import argparse
 import contextlib
@@ -87,6 +92,26 @@ def cancel_flag():
         signal.signal(signal.SIGTERM, previous)
 
 
+def child_command(args: argparse.Namespace) -> list[str]:
+    """The command that runs this script again, without `--detach`, as the detached child.
+
+    Built from the parsed arguments, not from `sys.argv`: argparse accepts abbreviations such as `--det`, and
+    filtering the raw arguments for "--detach" would miss one and start the script again and again."""
+    cmd = [
+        sys.executable, str(Path(__file__).resolve()),
+        "--session", args.session, "--out", str(Path(args.out).resolve()), "--dir", str(Path(args.dir).resolve()),
+        "--grace", str(args.grace), "--timeout", str(args.timeout),
+        "--status-file", str(Path(args.status_file).resolve()), "--opencode", args.opencode,
+    ]
+    if args.model:
+        cmd += ["--model", args.model]
+    if args.title:
+        cmd += ["--title", args.title]
+    if args.archived:
+        cmd.append("--archived")
+    return cmd + ["--", args.message]
+
+
 def parse(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run one opencode turn and make sure it ends.")
     parser.add_argument("message", help="the message to send")
@@ -99,6 +124,7 @@ def parse(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--grace", type=float, default=20, help="seconds the log must end on the waiting line before opencode is stopped")
     parser.add_argument("--timeout", type=float, default=3600, help="seconds before the turn is stopped as a timeout")
     parser.add_argument("--status-file", help="also write the final status line to this file when the turn ends")
+    parser.add_argument("--detach", action="store_true", help="start the turn in the background and return at once; needs --status-file")
     parser.add_argument("--opencode", default="opencode", help="the opencode binary")
     return parser.parse_args(argv)
 
@@ -114,6 +140,15 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: opencode not found: {args.opencode}", file=sys.stderr)
         return 3
     args.opencode = binary
+    if args.detach:
+        if not args.status_file:
+            print("error: --detach needs --status-file, the file the finished turn is reported in", file=sys.stderr)
+            return 3
+        status_path = Path(args.status_file).resolve()
+        status_path.unlink(missing_ok=True)
+        child = subprocess.Popen(child_command(args), start_new_session=True, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        print(f"started status-file={status_path} log={Path(args.out).resolve()} pid={child.pid}")
+        return 0
     log = Path(args.out)
     log.parent.mkdir(parents=True, exist_ok=True)
     status_file = Path(args.status_file) if args.status_file else None
