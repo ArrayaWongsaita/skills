@@ -61,7 +61,7 @@ Also in the template and not used by this flow: `Setup`, `Terms`, `Practice`, `M
 A picture earns its place: it shows the thing, it does not decorate. Choose in this order:
 
 1. **A figure,** when the idea has one of these shapes (they take plain labels and draw themselves): `Flow` (steps in order), `Pipeline` (stages with a note each), `Nested` (a set inside a set), `Cells` (a row of values with positions and pointers), `Bars` (a few numbers compared), `Network` (layers of nodes), `Cycle` (a loop). `highlight` marks the one element the slide is about.
-2. **Your own drawing,** in `src/visuals/part-NN.tsx`, from the sketch primitives `SketchRect`, `SketchEllipse`, `SketchLine`, `SketchPath`, `SketchArrow` (each takes a fixed `seedKey`, `stroke`, and optionally `strokeWidth`, `fill`, `fillStyle`, `dashed`), plain `<text>` and `<g>`, with `roleColour('primary' | 'secondary' | 'accent' | 'success' | 'warning' | 'danger' | 'neutral')` for colours.
+2. **Your own drawing,** in `src/visuals/part-NN.tsx`, from the sketch primitives `SketchRect`, `SketchEllipse`, `SketchLine`, `SketchPath`, `SketchArrow` (each takes a fixed `seedKey`, `stroke`, and optionally `strokeWidth`, `fill`, `fillStyle`, `fillOpacity`, `dashed`, and `draw` to draw it in as a build step), plain `<text>` and `<g>`, with `roleColour('primary' | 'secondary' | 'accent' | 'success' | 'warning' | 'danger' | 'neutral')` for colours.
 3. **An image file** the user supplies, in `src/assets/images/part-NN/<name>.png`, shown by a node you write.
 
 Rules for a drawing:

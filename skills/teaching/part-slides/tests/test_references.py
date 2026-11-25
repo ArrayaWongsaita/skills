@@ -59,4 +59,6 @@ def test_slides_md_says_how_long_an_anatomy_piece_may_be(skill_dir):
 
 
 def test_slides_md_says_never_to_put_a_label_on_a_hachure_fill(skill_dir):
-    assert "never put a label on a hachure fill" in _read(skill_dir, "references/slides.md").lower()
+    slides = _read(skill_dir, "references/slides.md")
+    assert "never put a label on a hachure fill" in slides.lower()
+    assert "`fillOpacity`" in slides
