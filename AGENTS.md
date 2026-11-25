@@ -10,6 +10,7 @@ Each skill lives in `skills/<category>/<name>/`:
 - `scripts/`: stdlib Python, 3.11 or later. Each script puts its own folder on `sys.path`.
 - `tests/`: pytest. `conftest.py` puts `scripts/` on `sys.path`.
 - `template/` (part-slides): the React app the skill copies into a course, with its own vitest tests.
+- `template-versions.json` (part-slides): every version of each template file, so `scaffold.py` can bring a course's unchanged copy up to date. After you change a file in `template/`, run `python3 skills/teaching/part-slides/scripts/record_template_versions.py` and commit the JSON with the change. A test fails until you do.
 - `evals/acceptance.md`: the acceptance checks.
 
 Designs and implementation plans are in `docs/superpowers/specs/` and `docs/superpowers/plans/`.

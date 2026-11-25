@@ -4,10 +4,14 @@
     scaffold.py <course_dir> [--title T] [--language L] [--part N --slug S --part-title T] [--skip-install]
     scaffold.py <course_dir> --sync-count PART
 
-It only ever creates files that are missing: a file you edited is never overwritten. The report is JSON on stdout.
+It creates what is missing and brings the course's copy of the template up to date: a template file the course has
+not changed (one that matches a version in template-versions.json) is replaced by the current version, or removed when
+the template dropped it. A file the course changed is never overwritten: the report lists it under `kept`. The report
+is JSON on stdout.
 """
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -23,6 +27,8 @@ WEB_DIR = "web"
 SKIP_DIRS = ("node_modules", "dist", "__fixtures__")
 SKIP_NAMES = (".DS_Store",)
 WRITTEN_HERE = ("src/course.ts",)  # written by scaffold, with the course's own title
+VERSIONS_FILE = "template-versions.json"  # beside the template: every version of each template file a course may hold
+PACKAGE_FILES = ("package.json", "pnpm-lock.yaml")  # a new or updated one needs an install
 SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 PNPM_MISSING = "node and pnpm are needed to build the app: install Node.js 20 or later from https://nodejs.org and pnpm from https://pnpm.io/installation"
 SLIDE_COUNT_RE = re.compile(r"""(?P<key>["']?slideCount["']?):\s*\d+""")  # as the skeleton writes it, or as a hand-edited data file may
@@ -47,6 +53,52 @@ def template_files(template_dir: Path) -> dict[str, str]:
                 continue
             files[rel] = (Path(root) / name).read_text(encoding="utf-8")
     return files
+
+
+def text_hash(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def load_versions(template_dir: Path) -> dict[str, list[str]]:
+    """Each template file, relative to the template's root, with the hash of every version of it that shipped."""
+    path = template_dir.parent / VERSIONS_FILE
+    return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+
+
+def _course_text(path: Path) -> str | None:
+    try:
+        return path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        return None
+
+
+def _sync(path: Path, text: str, shipped: list[str], root: Path, report: dict) -> None:
+    """Create a missing template file, or replace a copy the course has not changed; keep one it changed."""
+    rel = path.relative_to(root).as_posix()
+    if not path.exists():
+        _write_missing(path, text, root, report)
+        return
+    current = _course_text(path)
+    if current == text:
+        report["skipped"].append(rel)
+    elif current is not None and text_hash(current) in shipped:
+        path.write_text(text, encoding="utf-8")
+        report["updated"].append(rel)
+    else:
+        report["kept"].append(rel)
+
+
+def _drop(path: Path, shipped: list[str], root: Path, report: dict) -> None:
+    """Remove a course's unchanged copy of a file the template no longer has; keep one it changed."""
+    if not path.is_file():
+        return
+    current = _course_text(path)
+    rel = path.relative_to(root).as_posix()
+    if current is not None and text_hash(current) in shipped:
+        path.unlink()
+        report["removed"].append(rel)
+    else:
+        report["kept"].append(rel)
 
 
 def _write_missing(path: Path, text: str, root: Path, report: dict) -> None:
@@ -97,12 +149,16 @@ def run(course_dir: Path, *, title: str | None, language: str | None, part: int 
     if not skip_install and shutil.which("pnpm") is None:
         raise ScaffoldError(PNPM_MISSING)
 
-    report: dict = {"created": [], "skipped": [], "install": "skipped"}
+    report: dict = {"created": [], "updated": [], "removed": [], "kept": [], "skipped": [], "install": "skipped"}
     web = course_dir / WEB_DIR
     course = course_dir.name
     course_title = title or course
-    for rel, text in template_files(template_dir).items():
-        _write_missing(web / rel, text, course_dir, report)
+    files = template_files(template_dir)
+    versions = load_versions(template_dir)
+    for rel, text in files.items():
+        _sync(web / rel, text, versions.get(rel, []), course_dir, report)
+    for rel in sorted(set(versions) - set(files)):
+        _drop(web / rel, versions[rel], course_dir, report)
     course_ts = f"// Written once by part-slides. It is yours: the skill never overwrites it.\nexport const course = {{ slug: {json.dumps(course)}, title: {json.dumps(course_title, ensure_ascii=False)} }};\n"
     _write_missing(web / "src/course.ts", course_ts, course_dir, report)
 
@@ -114,7 +170,8 @@ def run(course_dir: Path, *, title: str | None, language: str | None, part: int 
         for rel, text in _part_files(course, part, slug, part_title, language or "en").items():
             _write_missing(web / rel, text, course_dir, report)
 
-    if (web / "node_modules").is_dir():
+    package_changed = any(f"{WEB_DIR}/{name}" in report["updated"] + report["created"] for name in PACKAGE_FILES)
+    if (web / "node_modules").is_dir() and not package_changed:
         report["install"] = "not-needed"
     elif not skip_install:
         result = _run(["pnpm", "install"], web)
