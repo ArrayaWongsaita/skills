@@ -6,12 +6,18 @@ import { seedOf } from './seed';
 
 const generator = rough.generator();
 
+/** The opacity of a fill whose `fillStyle` is left out: a pale tint that a label can sit on. Hatch lines would cross the label. */
+export const TINT = 0.18;
+
 export type SketchStyle = {
   seedKey: string;
   stroke: string;
   strokeWidth?: number;
+  /** Without `fillStyle`, a pale solid tint (`TINT`); give `fillStyle` for another look, such as hachure on a shape with no text. */
   fill?: string;
   fillStyle?: 'hachure' | 'solid' | 'zigzag' | 'cross-hatch' | 'dots';
+  /** The opacity of a solid fill; the default is `TINT` when `fillStyle` is left out and opaque otherwise. */
+  fillOpacity?: number;
   roughness?: number;
   /** Draw the strokes in, as a build step. */
   draw?: boolean;
@@ -27,13 +33,14 @@ function options(style: SketchStyle): Options {
     strokeWidth: style.strokeWidth ?? 1.6,
     roughness: style.roughness ?? 1.1,
     bowing: 1,
-    ...(style.fill ? { fill: style.fill, fillStyle: style.fillStyle ?? 'hachure', hachureGap: 7, fillWeight: 1 } : {}),
+    ...(style.fill ? { fill: style.fill, fillStyle: style.fillStyle ?? 'solid', hachureGap: 7, fillWeight: 1 } : {}),
   };
 }
 
 function Paths({ drawables, style }: { drawables: Drawable[]; style: SketchStyle }) {
   const paths = drawables.flatMap((drawable) => generator.toPaths(drawable));
   const animate = style.draw ? (style.dashed ? 'rs-fade' : 'rs-draw') : undefined;
+  const fillOpacity = style.fillOpacity ?? (style.fillStyle === undefined ? TINT : undefined);
   return (
     <g className={style.className}>
       {paths.map((path, index) => (
@@ -43,6 +50,7 @@ function Paths({ drawables, style }: { drawables: Drawable[]; style: SketchStyle
           stroke={path.stroke}
           strokeWidth={path.strokeWidth}
           fill={path.fill ?? 'none'}
+          fillOpacity={path.fill && path.fill !== 'none' ? fillOpacity : undefined}
           strokeLinecap="round"
           strokeLinejoin="round"
           {...(style.dashed ? { strokeDasharray: '7 6' } : { pathLength: 1 })}

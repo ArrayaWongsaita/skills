@@ -67,6 +67,7 @@ A picture earns its place: it shows the thing, it does not decorate. Choose in t
 Rules for a drawing:
 - `<svg viewBox="0 0 460 330">` (or similar) with the class name `rs-figure`, so it scales to the picture column; keep 12 units clear at every edge.
 - Text at `fontSize` 16 or more. No two labels closer than the width of the longer one. A label names a thing; it does not explain.
+- A `fill` without a `fillStyle` is a pale tint that a label can sit on: mark a highlight with it and a thicker stroke. Never put a label on a hachure fill: its lines cross the text. Use `fillStyle="hachure"` only for a shape with no text inside.
 - A box has one label in its centre. A second line inside the same box goes at least 1.6 × `fontSize` below the first (Thai marks need that room), and the first line moves up to make room: never put a second label on the box's centre. The check page reports labels of one drawing that sit on top of each other as a `text-overlap` problem.
 - Words in a drawing are labels: keep each next to the thing it names (a note about an arrow goes on the arrow, a note about a box goes in or beside that box), and put any sentence in the slide's text. A drawing says one thing: when it needs a second picture, make a second slide.
 - Give the drawing the props the slides need (`highlight`, `current`), so one drawing serves several slides: the same picture for the same concept, with the part under discussion highlighted, is what keeps a learner oriented.

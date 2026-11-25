@@ -172,7 +172,7 @@ export function Bars({ bars, max }: { bars: { label: Label; value: number }[]; m
             <Text x={PAD + labelWidth - 12} y={y + 17} anchor="end" extra={{ 'data-label': '' }}>
               {bar.label}
             </Text>
-            {length > 0 ? <SketchRect seedKey={`fig/bars/${index}`} x={PAD + labelWidth} y={y + 3} w={length} h={28} stroke={roleColour('primary')} strokeWidth={1.8} fill={roleColour('primary')} /> : null}
+            {length > 0 ? <SketchRect seedKey={`fig/bars/${index}`} x={PAD + labelWidth} y={y + 3} w={length} h={28} stroke={roleColour('primary')} strokeWidth={1.8} fill={roleColour('primary')} fillStyle="hachure" /> : null}
             <Text x={PAD + labelWidth + length + 10} y={y + 17} anchor="start" size={18} fill={MUTED} extra={{ 'data-value': '' }}>
               {String(bar.value)}
             </Text>
