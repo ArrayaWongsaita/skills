@@ -1,4 +1,6 @@
-// The readability budgets of a Part, from what the check page read off its slides. Pure, so the rules are tested without a browser.
+// The readability budgets of a Part and the order of its slide ids, from what the check page read off its slides. Pure, so the rules are
+// tested without a browser. The id check lives here, not in a file of its own: scaffold.py adds only missing files to an existing course,
+// and a new file that needs this version of findings.ts would break the build of a course made before it.
 import type { Phase } from '../components/types';
 import type { Finding, SlideInfo } from './findings';
 
@@ -44,5 +46,25 @@ export function budgets(slides: SlideInfo[], language: string): Finding[] {
 
   if (slides.length > PART_MAX) found.push(problem('', `the Part has ${slides.length} slides; at most ${PART_MAX}`));
   else if (slides.length > PART_NOTE_FROM) found.push({ slide: '', frame: '', kind: 'budget', level: 'note', detail: `the Part has ${slides.length} slides; it is near the ${PART_MAX} limit` });
+  return found;
+}
+
+const idProblem = (slide: string, detail: string): Finding => ({ slide, frame: '', kind: 'id-order', level: 'problem', detail });
+
+/** Each slide, in file order, whose id is not `<part>-<nnn>` or is not greater than the valid id just before it, so one moved slide is one finding. */
+export function idOrder(slides: SlideInfo[], part: number): Finding[] {
+  const found: Finding[] = [];
+  const shape = new RegExp(`^${part}-(\\d{3})$`);
+  let previous: { id: string; n: number } | undefined;
+  for (const { id } of slides) {
+    const match = shape.exec(id);
+    if (!match) {
+      found.push(idProblem(id, `id "${id}" is not ${part}-<nnn>: number the slides of Part ${part} as ${part}-001, ${part}-002, …`));
+      continue;
+    }
+    const n = Number(match[1]);
+    if (previous && n <= previous.n) found.push(idProblem(id, `id ${id} comes after ${previous.id} in the file: renumber the slides so the ids run in the order the slides run`));
+    previous = { id, n };
+  }
   return found;
 }

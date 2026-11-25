@@ -2,7 +2,7 @@
 
 Read this when the plan is approved, before you write the Part's files.
 
-A Part is written as typed React, directly, in the course's app (`<web>` is `<course_dir>/web`). The slides are the single source: a change to a slide is an edit to one element of one file. Write what the plan says, no more, and keep the slide ids and the order of the plan.
+A Part is written as typed React, directly, in the course's app (`<web>` is `<course_dir>/web`). The slides are the single source: a change to a slide is an edit to one element of one file. Write what the plan says, no more, and keep the slide ids and the order of the plan. When the phase order forces you to move a slide the plan put elsewhere, renumber the slides so the ids still run in file order, update every `revisit` that names a renumbered id, renumber the plan rows the same way, and tell the user which rows moved. The check page reports an id that does not run in order.
 
 ## The files
 
@@ -54,19 +54,20 @@ Required props are first; optional ones are marked `?`. `visual` takes a figure,
 
 Also in the template and not used by this flow: `Setup`, `Terms`, `Practice`, `MapSlide`, `Assemble` (they belong to the old course pipeline), and `Field`, the wrapper the layouts use for their text.
 
-`Anatomy`: `pieces` is the line cut into `{ text, n? }`: the pieces joined must equal the line exactly, and a piece with `n` has its number on the line and in the legend `items[n-1]`. Pieces without `n` are plain text between them.
+`Anatomy`: `pieces` is the line cut into `{ text, n? }`: the pieces joined must equal the line exactly, and a piece with `n` has its number on the line and in the legend `items[n-1]`. Pieces without `n` are plain text between them. A piece wider than the screen wraps inside its box, which is harder to read: keep each piece to about 25 characters, which fit on one line on a phone, and cut a longer call into more pieces (the object, the method, each argument). The code in the strip does not count toward the slide's text.
 
 ## Pictures
 
 A picture earns its place: it shows the thing, it does not decorate. Choose in this order:
 
 1. **A figure,** when the idea has one of these shapes (they take plain labels and draw themselves): `Flow` (steps in order), `Pipeline` (stages with a note each), `Nested` (a set inside a set), `Cells` (a row of values with positions and pointers), `Bars` (a few numbers compared), `Network` (layers of nodes), `Cycle` (a loop). `highlight` marks the one element the slide is about.
-2. **Your own drawing,** in `src/visuals/part-NN.tsx`, from the sketch primitives `SketchRect`, `SketchEllipse`, `SketchLine`, `SketchPath`, `SketchArrow` (each takes a fixed `seedKey`, `stroke`, and optionally `strokeWidth`, `fill`, `fillStyle`, `dashed`), plain `<text>` and `<g>`, with `roleColour('primary' | 'secondary' | 'accent' | 'success' | 'warning' | 'danger' | 'neutral')` for colours.
+2. **Your own drawing,** in `src/visuals/part-NN.tsx`, from the sketch primitives `SketchRect`, `SketchEllipse`, `SketchLine`, `SketchPath`, `SketchArrow` (each takes a fixed `seedKey`, `stroke`, and optionally `strokeWidth`, `fill`, `fillStyle`, `fillOpacity`, `dashed`, and `draw` to draw it in as a build step), plain `<text>` and `<g>`, with `roleColour('primary' | 'secondary' | 'accent' | 'success' | 'warning' | 'danger' | 'neutral')` for colours.
 3. **An image file** the user supplies, in `src/assets/images/part-NN/<name>.png`, shown by a node you write.
 
 Rules for a drawing:
 - `<svg viewBox="0 0 460 330">` (or similar) with the class name `rs-figure`, so it scales to the picture column; keep 12 units clear at every edge.
 - Text at `fontSize` 16 or more. No two labels closer than the width of the longer one. A label names a thing; it does not explain.
+- A `fill` without a `fillStyle` is a pale tint that a label can sit on: mark a highlight with it and a thicker stroke. Never put a label on a hachure fill: its lines cross the text. Use `fillStyle="hachure"` only for a shape with no text inside.
 - A box has one label in its centre. A second line inside the same box goes at least 1.6 × `fontSize` below the first (Thai marks need that room), and the first line moves up to make room: never put a second label on the box's centre. The check page reports labels of one drawing that sit on top of each other as a `text-overlap` problem.
 - Words in a drawing are labels: keep each next to the thing it names (a note about an arrow goes on the arrow, a note about a box goes in or beside that box), and put any sentence in the slide's text. A drawing says one thing: when it needs a second picture, make a second slide.
 - Give the drawing the props the slides need (`highlight`, `current`), so one drawing serves several slides: the same picture for the same concept, with the part under discussion highlighted, is what keeps a learner oriented.

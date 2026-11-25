@@ -1,6 +1,8 @@
 import { render } from '@testing-library/react';
 import { expect, test } from 'vitest';
+import { roleColour } from '../theme/roles';
 import { Bars, Cells, Cycle, Flow, Nested, Network, Pipeline } from './figures';
+import { TINT } from './sketch';
 
 const AWKWARD = ['.map(', '<T>', 'a && b', 'x => x * 2', 'ข้อมูลเข้า'];
 
@@ -135,4 +137,21 @@ test('the same figure draws the same way every time', () => {
   const first = render(<Flow steps={['a', 'b']} highlight={0} />).container.innerHTML;
   const second = render(<Flow steps={['a', 'b']} highlight={0} />).container.innerHTML;
   expect(second).toBe(first);
+});
+
+test.each([
+  ['cells', <Cells cells={['3', '1', '4']} highlight={1} />],
+  ['flow', <Flow steps={['a', 'b', 'c']} highlight={1} />],
+  ['pipeline', <Pipeline stages={[{ label: 'a' }, { label: 'b' }]} highlight={1} />],
+])('a highlighted %s box is tinted behind its label, with no hatch lines', (name, element) => {
+  const lit = highlighted(figure(render(element).container, name))[0];
+  const paths = [...lit.querySelectorAll('path')];
+  expect(paths.some((path) => path.getAttribute('fill') === roleColour('accent') && path.getAttribute('fill-opacity') === String(TINT))).toBe(true);
+  expect(paths.filter((path) => path.getAttribute('stroke') === roleColour('accent') && path.getAttribute('stroke-width') === '1')).toEqual([]);
+});
+
+test('bars keep their hachure fill: their labels sit beside the bar, not on it', () => {
+  const bar = figure(render(<Bars bars={[{ label: 'a', value: 2 }]} />).container, 'bars').querySelector('[data-el]')!;
+  const hatch = [...bar.querySelectorAll('path')].filter((path) => path.getAttribute('stroke') === roleColour('primary') && path.getAttribute('stroke-width') === '1');
+  expect(hatch.length).toBeGreaterThan(0);
 });

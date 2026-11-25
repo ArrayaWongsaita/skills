@@ -28,6 +28,8 @@ Read `<course_dir>/course-notes.md` if it exists: it says who the learner is and
 | approved, and the Part still has only its cover | step 4 |
 | the Part is built | step 5: ask what the user wants to change |
 
+When `<web>` exists, first run `python3 <skill>/scripts/scaffold.py <course_dir>`: it brings the course's copy of the template up to date with this version of the skill, and installs again only when the template's packages changed. Its report lists `updated` and `removed`, the template files it replaced or deleted (tell the user that slides built earlier may look a little different), and `kept`, the template files the course changed, left as they are. A kept file can miss a fix, or break the build next to the updated files: compare it with the same path under `<skill>/template/` (without `web/`), carry the template's change into it while keeping the course's own change, and tell the user.
+
 Tell the user where it stands and offer to continue, or to redo a step.
 
 ## Step 1: interview
@@ -38,7 +40,7 @@ Follow `references/interview.md`: one question at a time, with a proposal where 
 python3 <skill>/scripts/scaffold.py <course_dir> --title "<course title>" --language <code> --part <N> --slug <slug> --part-title "<Part title>"
 ```
 
-It creates `<web>` from the template, `<work>`, and the Part's two files; it never overwrites a file, so running it again is safe. It needs Node.js 20 or later and pnpm.
+It creates `<web>` from the template, `<work>`, and the Part's two files; it never overwrites a file the course changed, so running it again is safe. It needs Node.js 20 or later and pnpm.
 
 ## Step 2: research
 

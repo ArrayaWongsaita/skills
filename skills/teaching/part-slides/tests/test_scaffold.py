@@ -47,8 +47,9 @@ def test_a_second_run_creates_nothing_and_keeps_an_edited_file(tmp_path, mini_te
     edited = course / "web/src/components/Deck.tsx"
     edited.write_text("// my edit\n", encoding="utf-8")
     second = run(course, mini_template)
-    assert second["created"] == []
-    assert "web/src/components/Deck.tsx" in second["skipped"]
+    assert second["created"] == [] and second["updated"] == []
+    assert "web/src/components/Deck.tsx" in second["kept"]
+    assert "web/src/main.tsx" in second["skipped"]
     assert edited.read_text(encoding="utf-8") == "// my edit\n"
 
 
@@ -168,3 +169,106 @@ def test_sync_count_also_reads_a_data_file_written_by_hand(tmp_path, mini_templa
     data.write_text(f"export const meta = {{ part: 1, {written} }};\n", encoding="utf-8")
     assert scaffold.sync_count(course, 1) == 2
     assert data.read_text(encoding="utf-8").count("2") == 1 and "7" not in data.read_text(encoding="utf-8")
+
+
+def change_template(template: Path, files: dict[str, str | None]) -> None:
+    """A newer template: write or delete files, and record every version that shipped, as record_template_versions.py does."""
+    versions_file = template.parent / scaffold.VERSIONS_FILE
+    versions = json.loads(versions_file.read_text(encoding="utf-8")) if versions_file.is_file() else {}
+    for rel, text in scaffold.template_files(template).items():
+        versions.setdefault(rel, []).append(scaffold.text_hash(text))
+    for rel, text in files.items():
+        path = template / rel
+        if text is None:
+            path.unlink()
+        else:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+    for rel, text in scaffold.template_files(template).items():
+        versions.setdefault(rel, []).append(scaffold.text_hash(text))
+    versions_file.write_text(json.dumps(versions), encoding="utf-8")
+
+
+def test_a_course_from_an_older_template_gets_its_unchanged_files_updated_and_new_files_created(tmp_path, mini_template):
+    """A new file that needs a newer version of an old one must not arrive without it, or the course stops building."""
+    course = tmp_path / "courses" / "c"
+    run(course, mini_template)
+    change_template(mini_template, {"src/components/Deck.tsx": "export const kind = 'new';\n", "src/components/uses.ts": "import { kind } from './Deck';\n"})
+    report = run(course, mini_template, part=2, slug="two", part_title="Two")
+    assert report["updated"] == ["web/src/components/Deck.tsx"]
+    assert "web/src/components/uses.ts" in report["created"]
+    assert (course / "web/src/components/Deck.tsx").read_text(encoding="utf-8") == "export const kind = 'new';\n"
+    assert report["kept"] == [] and report["removed"] == []
+
+
+def test_a_template_file_the_course_changed_is_kept_and_listed(tmp_path, mini_template):
+    course = tmp_path / "courses" / "c"
+    run(course, mini_template)
+    (course / "web/src/components/Deck.tsx").write_text("// my edit\n", encoding="utf-8")
+    change_template(mini_template, {"src/components/Deck.tsx": "export const kind = 'new';\n"})
+    report = run(course, mini_template)
+    assert report["kept"] == ["web/src/components/Deck.tsx"] and report["updated"] == []
+    assert (course / "web/src/components/Deck.tsx").read_text(encoding="utf-8") == "// my edit\n"
+
+
+def test_an_unchanged_copy_of_a_file_the_template_dropped_is_removed_and_a_changed_one_kept(tmp_path, mini_template):
+    (mini_template / "src/old.ts").write_text("export const old = 1;\n", encoding="utf-8")
+    (mini_template / "src/also-old.ts").write_text("export const alsoOld = 1;\n", encoding="utf-8")
+    course = tmp_path / "courses" / "c"
+    run(course, mini_template)
+    (course / "web/src/also-old.ts").write_text("// my edit\n", encoding="utf-8")
+    change_template(mini_template, {"src/old.ts": None, "src/also-old.ts": None})
+    report = run(course, mini_template)
+    assert report["removed"] == ["web/src/old.ts"] and not (course / "web/src/old.ts").exists()
+    assert report["kept"] == ["web/src/also-old.ts"] and (course / "web/src/also-old.ts").exists()
+
+
+def test_a_course_file_that_is_not_utf8_is_kept(tmp_path, mini_template):
+    course = tmp_path / "courses" / "c"
+    run(course, mini_template)
+    (course / "web/src/main.tsx").write_bytes(b"\xff\xfe")
+    change_template(mini_template, {"src/main.tsx": "export const v = 2;\n"})
+    assert run(course, mini_template)["kept"] == ["web/src/main.tsx"]
+
+
+def test_an_updated_package_file_runs_install_again(tmp_path, mini_template, monkeypatch):
+    calls = []
+    monkeypatch.setattr(scaffold, "_run", lambda cmd, cwd: calls.append(cmd) or subprocess.CompletedProcess(cmd, 0, "", ""))
+    monkeypatch.setattr(scaffold.shutil, "which", lambda name: f"/usr/bin/{name}")
+    course = tmp_path / "courses" / "c"
+    run(course, mini_template)
+    (course / "web/node_modules").mkdir()
+    change_template(mini_template, {"package.json": '{"name": "course-slides", "version": "2.1.0"}\n'})
+    assert run(course, mini_template, skip_install=False)["install"] == "ran"
+    assert calls == [["pnpm", "install"]]
+
+
+def test_every_version_of_the_real_template_is_recorded():
+    """scaffold.py updates a course's copy only when it is a recorded version, so a template change must be recorded."""
+    versions = scaffold.load_versions(TEMPLATE)
+    missing = [rel for rel, text in scaffold.template_files(TEMPLATE).items() if scaffold.text_hash(text) not in versions.get(rel, [])]
+    assert missing == [], "run python3 skills/teaching/part-slides/scripts/record_template_versions.py, then commit template-versions.json"
+
+
+def test_the_recorder_adds_the_current_versions_once_and_keeps_the_old_ones(tmp_path, mini_template):
+    import record_template_versions
+
+    versions_file = mini_template.parent / scaffold.VERSIONS_FILE
+    versions_file.write_text(json.dumps({"src/main.tsx": ["0" * 64], "package-lock.json": ["1" * 64]}), encoding="utf-8")
+    assert "src/main.tsx" in record_template_versions.record(mini_template)
+    assert record_template_versions.record(mini_template) == []
+    versions = json.loads(versions_file.read_text(encoding="utf-8"))
+    assert versions["src/main.tsx"] == ["0" * 64, scaffold.text_hash("export {};\n")]
+    assert versions["package-lock.json"] == ["1" * 64]
+    assert list(versions) == sorted(versions)
+
+
+def test_a_new_package_file_runs_install_again(tmp_path, mini_template, monkeypatch):
+    calls = []
+    monkeypatch.setattr(scaffold, "_run", lambda cmd, cwd: calls.append(cmd) or subprocess.CompletedProcess(cmd, 0, "", ""))
+    monkeypatch.setattr(scaffold.shutil, "which", lambda name: f"/usr/bin/{name}")
+    course = tmp_path / "courses" / "c"
+    run(course, mini_template)
+    (course / "web/node_modules").mkdir()
+    change_template(mini_template, {"pnpm-lock.yaml": "lockfileVersion: '9.0'\n"})
+    assert run(course, mini_template, skip_install=False)["install"] == "ran"

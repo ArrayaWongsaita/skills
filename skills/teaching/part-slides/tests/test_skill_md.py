@@ -47,3 +47,12 @@ def test_it_does_not_depend_on_the_old_pipeline(skill_dir):
         text = path.read_text(encoding="utf-8")
         for name in ("course-research", "slide-design", "react-slides", "deck@"):
             assert name not in text, f"{path.name} mentions {name}"
+
+
+def test_it_brings_an_existing_course_up_to_date_and_says_what_to_do_with_a_kept_file(skill_dir):
+    text = _text(skill_dir)
+    assert "When `<web>` exists, first run `python3 <skill>/scripts/scaffold.py <course_dir>`" in text
+    for listed in ("`updated`", "`removed`", "`kept`"):
+        assert listed in text
+    assert "<skill>/template/" in text
+    assert "never overwrites a file the course changed" in text

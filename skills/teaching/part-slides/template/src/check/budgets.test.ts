@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { budgets } from './budgets';
+import { budgets, idOrder } from './budgets';
 import type { SlideInfo } from './findings';
 
 let n = 0;
@@ -75,4 +75,38 @@ test('a slide with no phase inside a topic does not break the order', () => {
 
 test('a Part with only an Opening and a Closing has no findings', () => {
   expect(budgets([slide('Opening'), slide('Opening'), slide('Closing'), slide('Closing')], 'th')).toEqual([]);
+});
+
+// Slide ids run in the order the slides run.
+const ids = (...list: string[]): SlideInfo[] => list.map((id) => ({ id, section: 'Topic', divider: false, title: 't', chars: 10 }));
+const flagged = (found: ReturnType<typeof idOrder>) => found.map((f) => f.slide);
+
+test('ids that ascend have no findings, gaps included', () => {
+  expect(idOrder(ids('1-001', '1-002', '1-010'), 1)).toEqual([]);
+});
+
+test('a slide whose id is not greater than the one before is reported, and only that slide', () => {
+  expect(flagged(idOrder(ids('3-014', '3-016', '3-015', '3-017'), 3))).toEqual(['3-015']);
+});
+
+test('one slide moved far ahead is one finding, not one for every slide after it', () => {
+  expect(flagged(idOrder(ids('1-001', '1-009', '1-002', '1-003'), 1))).toEqual(['1-002']);
+});
+
+test('a repeated id is reported', () => {
+  expect(flagged(idOrder(ids('1-001', '1-002', '1-002'), 1))).toEqual(['1-002']);
+});
+
+test.each(['1-5', 'x', '2-005', '1-0001', ''])('an id that is not <part>-<nnn> for this Part is reported: "%s"', (bad) => {
+  expect(idOrder(ids('1-001', bad, '1-003'), 1)).toEqual([expect.objectContaining({ slide: bad, frame: '', kind: 'id-order', level: 'problem' })]);
+});
+
+test('the detail names the slide before and says to renumber', () => {
+  const [finding] = idOrder(ids('1-002', '1-001'), 1);
+  expect(finding).toMatchObject({ slide: '1-001', kind: 'id-order', level: 'problem' });
+  expect(finding.detail).toMatch(/1-001.*1-002.*renumber/);
+});
+
+test('an empty Part has no findings', () => {
+  expect(idOrder([], 1)).toEqual([]);
 });

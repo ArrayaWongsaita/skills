@@ -39,3 +39,26 @@ def test_the_briefs_name_the_commands_the_scripts_really_have(skill_dir):
         if flag in {"--dir", "--headless", "--screenshot", "--window-size", "--virtual-time-budget", "--dump-dom"}:
             continue
         assert flag in scaffold, f"{flag} is not a scaffold.py option"
+
+
+def test_the_briefs_say_to_number_slides_in_the_order_they_run_and_to_renumber(skill_dir):
+    plan = _read(skill_dir, "references/plan-list.md")
+    assert "in the order the slides run" in plan and "renumber" in plan
+    assert "renumber" in _read(skill_dir, "references/slides.md")
+    assert "`id-order`" in _read(skill_dir, "references/check-and-revise.md")
+    # An Answer's `revisit` names a slide by id, so a renumber that leaves it alone sends the learner to the wrong slide.
+    slides = _read(skill_dir, "references/slides.md")
+    assert "update every `revisit` that names a renumbered id" in slides and "update every `revisit` that names a renumbered id" in plan
+    assert "renumber the plan rows the same way" in slides
+
+
+def test_slides_md_says_how_long_an_anatomy_piece_may_be(skill_dir):
+    slides = _read(skill_dir, "references/slides.md")
+    assert "cut a longer call into more pieces" in slides
+    assert "does not count toward the slide's text" in slides
+
+
+def test_slides_md_says_never_to_put_a_label_on_a_hachure_fill(skill_dir):
+    slides = _read(skill_dir, "references/slides.md")
+    assert "never put a label on a hachure fill" in slides.lower()
+    assert "`fillOpacity`" in slides

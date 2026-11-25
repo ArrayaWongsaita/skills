@@ -16,7 +16,7 @@ export type Measurement = {
   textOverlaps: number;
   fallback: boolean;
 };
-export type FindingKind = 'prose-overflow' | 'out-of-canvas' | 'fallback' | 'font-missing' | 'console-error' | 'scrolling-block' | 'highlight' | 'text-overlap' | 'budget';
+export type FindingKind = 'prose-overflow' | 'out-of-canvas' | 'fallback' | 'font-missing' | 'console-error' | 'scrolling-block' | 'highlight' | 'text-overlap' | 'budget' | 'id-order';
 export type Finding = { slide: string; frame: string; kind: FindingKind; level: 'problem' | 'note'; detail: string };
 /** What the check page knows about one slide, for the readability budgets and for the agent's slide list. */
 export type SlideInfo = { id: string; section: string; phase?: Phase; divider: boolean; title: string; chars: number };

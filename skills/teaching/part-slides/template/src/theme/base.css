@@ -874,6 +874,7 @@ a {
 
 .rs-divider .rs-title {
   font-family: var(--rs-mono);
+  font-variant-ligatures: none;
   font-size: 3.2em;
   line-height: 1.1;
 }
@@ -926,6 +927,7 @@ a {
   gap: 0.9em 0.15em;
   margin: 1.4em 0 1.2em;
   font-family: var(--rs-mono);
+  font-variant-ligatures: none;
   font-size: 1.25em;
 }
 
@@ -935,7 +937,11 @@ a {
   border: 2px solid var(--rs-piece, var(--rs-accent));
   border-radius: 10px;
   background: var(--rs-paper);
-  white-space: pre;
+  /* A piece wider than the strip wraps inside its own box, even with no space to break at, so it never runs off a phone. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .rs-piece[data-piece-n]::after {
