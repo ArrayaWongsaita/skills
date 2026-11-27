@@ -90,3 +90,19 @@ def test_a_unit_that_changes_a_file_the_user_is_editing_commits_nothing(git_play
         apply_unit.apply(git_playground, "02")
     assert (git(repo, "rev-parse", "main"), git(repo, "rev-parse", "solutions")) == heads
     assert readme.read_text(encoding="utf-8") == "my own edit\n"
+
+
+def test_check_only_runs_everything_and_commits_nothing(git_playground, capsys):
+    repo = git_playground / "playground"
+    heads = (git(repo, "rev-parse", "main"), git(repo, "rev-parse", "solutions"))
+    stage(git_playground)
+    assert apply_unit.main([str(git_playground), "02", "--check"]) == 0
+    assert "chapter 02: passed" in capsys.readouterr().out
+    assert (git(repo, "rev-parse", "main"), git(repo, "rev-parse", "solutions")) == heads
+    assert course_md.read(git_playground).chapter("02").status == "outline"
+    assert len(git(repo, "worktree", "list").splitlines()) == 1
+
+
+def test_check_only_reports_a_failing_unit(git_playground):
+    stage(git_playground, solved_text="// ข้อ 1: แรก\n// แนวทาง: x\nFAIL\n")
+    assert apply_unit.main([str(git_playground), "02", "--check"]) == 1

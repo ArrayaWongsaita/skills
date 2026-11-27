@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Bring one worker's chapter into the playground, on both branches, only when it passes.
 
-    apply_unit.py <course_dir> <NN>
+    apply_unit.py <course_dir> <NN> [--check]
 
 A worker writes the chapter's files as they should be on each branch into <course_dir>/units/<NN>/main/ and
 <course_dir>/units/<NN>/solutions/, with paths relative to the playground root. This script copies each into a
 temporary worktree of its branch (the chapter's folder is replaced, not merged), checks the chapter's shape and runs
 its commands there. Only when both branches pass does it commit "feat: chapter <NN> <slug>" on each branch that
 changed and set the chapter's status in course.md to `review`. If either branch fails, nothing is committed.
+With --check it does every check and commits nothing: the done-command a worker runs on its own chapter.
 
 The user's own checkout is never switched. If it is on one of the two branches, it is moved forward like a
 fast-forward pull; a unit that changes a file the user has uncommitted edits in is refused before anything moves.
@@ -54,7 +55,8 @@ def _dirty_paths(repo: Path) -> set[str]:
     return paths
 
 
-def apply(course_dir: Path, nn: str) -> str:
+def apply(course_dir: Path, nn: str, commit: bool = True) -> str:
+    """"committed", "unchanged", or with commit=False "passed"; raises ApplyError when a branch fails."""
     course_dir = Path(course_dir)
     try:
         course = course_md.read(course_dir)
@@ -77,7 +79,7 @@ def apply(course_dir: Path, nn: str) -> str:
             _out(trees[branch], "add", "-A")
             if _out(trees[branch], "status", "--porcelain"):
                 changed.append(branch)
-        if not changed:
+        if not changed and commit:
             return "unchanged"
 
         found = []
@@ -85,6 +87,8 @@ def apply(course_dir: Path, nn: str) -> str:
             found.extend(f for f in check_branch_tree(trees[branch], course, branch, nn, True, None) if f.kind not in NOTES)
         if found:
             raise ApplyError("nothing was committed:\n" + "\n".join(f.line() for f in found))
+        if not commit:
+            return "passed"
 
         commits = {}
         for branch in changed:
@@ -110,15 +114,17 @@ def apply(course_dir: Path, nn: str) -> str:
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 2:
+    check_only = "--check" in argv
+    args = [a for a in argv if a != "--check"]
+    if len(args) != 2 or len(argv) - len(args) > 1:
         print(__doc__)
         return 2
     try:
-        result = apply(Path(argv[0]), argv[1])
+        result = apply(Path(args[0]), args[1], commit=not check_only)
     except ApplyError as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
-    print(f"chapter {argv[1]}: {result}")
+    print(f"chapter {args[1]}: {result}")
     return 0
 
 
