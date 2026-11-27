@@ -7,7 +7,7 @@
 
 ## Intent
 
-A 33-Part Thai course run (894 slides, OpenCode workers and a foreman session) filed eight issues. In most of them the skill let an agent build something wrong without saying so: the check page said `problems=0` on clipped slides, a status said `failed` on finished work, a rule had no answer for a real topic. Each fix makes the skill report the problem itself or answer the case, so the next run does not need trial and error or a re-check by hand.
+One long course run with OpenCode workers and a foreman session filed eight issues. In most of them the skill let an agent build something wrong without saying so: the check page said `problems=0` on clipped slides, a status said `failed` on finished work, a rule had no answer for a real topic. Each fix makes the skill report the problem itself or answer the case, so the next run does not need trial and error or a re-check by hand.
 
 ## Goals
 
