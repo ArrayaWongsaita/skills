@@ -5,6 +5,7 @@ Read this after the slides are written, and again each time the user asks for a 
 ## Build
 
 ```bash
+python3 <skill>/scripts/sync_listings.py <course_dir> --part <N>     # only for a Part of a course with a playground: its code, from the playground
 python3 <skill>/scripts/scaffold.py <course_dir> --sync-count <N>   # keep slideCount right; N is the Part number, the count is worked out from the slide ids
 pnpm --dir <course_dir>/web run build                                # tsc and vite: fix every error
 pnpm --dir <course_dir>/web run preview --strictPort                # in the background: http://localhost:4173/; it stops if the port is taken
@@ -12,7 +13,7 @@ pnpm --dir <course_dir>/web run preview --strictPort                # in the bac
 
 When the preview stops because port 4173 is taken, an earlier run's server is probably still on it, serving another course. Stop it (`lsof -ti tcp:4173`, then `kill` what that prints if it is yours), or start the preview with `--port <a free port>` and use that port in every address below.
 
-A build error is yours to fix: read it, correct the file. A prop the layout does not know, or a required prop you left out, is a compile error here.
+A build error is yours to fix: read it, correct the file. For a Part with a playground, `python3 <skill>/scripts/sync_listings.py <course_dir> --part <N> --check` writes nothing and names each listing whose code no longer matches the playground: run it again without `--check`. A prop the layout does not know, or a required prop you left out, is a compile error here.
 
 ## The check page
 

@@ -17,7 +17,7 @@ An **opening** of at most 3 slides, then **topics**, then a **closing**. Each to
 
 ## Start or resume
 
-Read `<course_dir>/course-notes.md` if it exists: it says who the learner is and what earlier Parts taught. Then let the files say where the run stands:
+Read `<course_dir>/course-notes.md` if it exists: it says who the learner is and what earlier Parts taught. When `<course_dir>/course.md` exists and has a row for this Part, the Part is a chapter of a course built with `course-builder`: step 1 writes the brief from that row instead of interviewing, every step follows `<course_dir>/pattern.md`, and the code comes from the playground (`references/interview.md`, A Part of a course). Then let the files say where the run stands:
 
 | What exists | Where you are |
 |---|---|

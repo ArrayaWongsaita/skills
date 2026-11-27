@@ -36,6 +36,16 @@ Assumed: …   (every answer you proposed because the user did not know)
 
 Show it in one short message and ask whether it is right, then go on to research. Do not wait for a long approval: the real checkpoints come later.
 
+## A Part of a course
+
+When `<course_dir>/course.md` has a row for this Part (`course-builder` made it; Part N is chapter NN), write the brief from it instead of interviewing:
+
+- `Subject:` the row's title and what it practises; `Learner:` and `Goal:` from the top of `course.md`, narrowed to this chapter; `Language:` its slides language, and `Code:` the stack's language.
+- `Must / must not:` the row's `under test`, what it `builds on`, and the rules of `<course_dir>/pattern.md` that bear on slides.
+- Ask the user only what is still open after that, if anything. In a wave run by `foreman` nobody is there to ask: put it under `Assumed:`.
+
+The playground already holds the chapter's code and its runs: research only what it does not show, and take every listing from it with `sync_listings.py` (`references/slides.md`, Code).
+
 ## When you cannot ask
 
 A harness with no way to ask the user (a non-interactive run) cannot interview. Write the brief with an `Assumed:` entry for every line, say so at the top of your report ("nobody answered these; I assumed them"), and never present an assumption as something the user said.
