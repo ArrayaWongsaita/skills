@@ -62,3 +62,9 @@ def test_slides_md_says_never_to_put_a_label_on_a_hachure_fill(skill_dir):
     slides = _read(skill_dir, "references/slides.md")
     assert "never put a label on a hachure fill" in slides.lower()
     assert "`fillOpacity`" in slides
+
+
+def test_the_plan_says_what_to_do_when_parts_exceed_the_cap(skill_dir):
+    plan = _read(skill_dir, "references/plan-list.md")
+    parts = next(line for line in plan.splitlines() if "**parts**" in line)
+    assert "merge" in parts and "split the topic" in parts
