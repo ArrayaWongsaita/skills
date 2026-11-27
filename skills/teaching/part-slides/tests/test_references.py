@@ -38,8 +38,8 @@ def test_the_briefs_name_the_commands_the_scripts_really_have(skill_dir):
     for line in text.splitlines():
         script = "sync_listings.py" if "sync_listings.py" in line else "scaffold.py"
         source = _read(skill_dir, f"scripts/{script}")
-        for flag in re.findall(r"(?<![-\w])(--[a-z][a-z-]*)", line):
-            if flag in {"--dir", "--headless", "--screenshot", "--window-size", "--virtual-time-budget", "--dump-dom"}:
+        for flag in re.findall(r"(?<![-\w])(--[a-z][a-zA-Z-]*)", line):
+            if flag in {"--dir", "--strictPort", "--port", "--headless", "--screenshot", "--window-size", "--virtual-time-budget", "--dump-dom"}:
                 continue
             assert f'"{flag}"' in source, f"{flag} is not a {script} option"
 
@@ -72,3 +72,27 @@ def test_slides_md_says_never_to_put_a_label_on_a_hachure_fill(skill_dir):
     slides = _read(skill_dir, "references/slides.md")
     assert "never put a label on a hachure fill" in slides.lower()
     assert "`fillOpacity`" in slides
+
+
+def test_the_preview_refuses_a_busy_port(skill_dir):
+    check = _read(skill_dir, "references/check-and-revise.md")
+    assert "--strictPort" in check and "`course`" in check
+
+
+def test_the_plan_says_a_two_idea_topic_is_two_topics(skill_dir):
+    plan = _read(skill_dir, "references/plan-list.md")
+    shape = plan[plan.index("## What a Part looks like"):plan.index("## The budgets")]
+    assert "two ideas" in shape and "two topics" in shape
+
+
+def test_the_plan_says_what_to_do_when_parts_exceed_the_cap(skill_dir):
+    plan = _read(skill_dir, "references/plan-list.md")
+    parts = next(line for line in plan.splitlines() if "**parts**" in line)
+    assert "merge" in parts and "split the topic" in parts
+
+
+def test_the_budget_lists_what_the_check_page_counts(skill_dir):
+    plan = _read(skill_dir, "references/plan-list.md")
+    budgets = plan[plan.index("## The budgets"):plan.index("## Rules for the content")]
+    for word in ("notice", "symptom", "cause", "fix", "takeaway", "not code"):
+        assert word in budgets, word

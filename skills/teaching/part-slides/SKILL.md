@@ -40,7 +40,7 @@ Follow `references/interview.md`: one question at a time, with a proposal where 
 python3 <skill>/scripts/scaffold.py <course_dir> --title "<course title>" --language <code> --part <N> --slug <slug> --part-title "<Part title>"
 ```
 
-It creates `<web>` from the template, `<work>`, and the Part's two files; it never overwrites a file the course changed, so running it again is safe. It needs Node.js 20 or later and pnpm.
+The first Part needs `--language`; a later Part takes the language of the course's existing Parts when you leave it out. It creates `<web>` from the template, `<work>`, and the Part's two files; it never overwrites a file the course changed, so running it again is safe. It needs Node.js 20 or later and pnpm.
 
 ## Step 2: research
 

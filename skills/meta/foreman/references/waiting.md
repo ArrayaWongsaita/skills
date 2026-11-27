@@ -37,7 +37,7 @@ python3 <skill>/scripts/wait_status.py --status-file <work>/turns/<unit>-<n>.sta
 
 | Output | Exit | What you do |
 |---|---|---|
-| `status=done …` (or `failed`, `stopped`, `timeout`, `cancelled`) | 0 | The turn ended. Verify (`run-loop.md`). For `failed` or `timeout`, read the end of the log, then resend or take over. |
+| `status=done …` (or `failed`, `stopped`, `timeout`, `cancelled`) | 0 | The turn ended. Verify (`run-loop.md`) whatever the status. A `failed` with `cause=input-cancelled` or `cause=connection-reset`, or a `stopped`, may be finished: when the files are complete, accept it. Otherwise, for `failed` or `timeout`, read the end of the log, then resend or take over. |
 | `running log-age=<n>s` | 10 | The worker is alive and its log moved within the limit. Set the next wake-up, another 40 minutes, and do nothing until then. |
 | `stalled log-age=<n>s` | 11 | The log has not changed for the whole interval. `kill -TERM <pid>` (the status file then says `status=cancelled exit=4`), then resend a smaller task or take the unit over. |
 | a message on stderr | 3 | The call was wrong: `--stall` needs `--log`. |

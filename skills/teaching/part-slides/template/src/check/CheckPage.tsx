@@ -2,6 +2,7 @@
 // The agent reads window.__reactSlidesCheck through its browser tool; a person reads the table.
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { DeckModeContext, FrameContext } from '../components/Deck';
+import type { BoxOverflow } from '../components/overflow';
 import { neededHeight } from '../hooks';
 import type { PartEntry } from '../parts';
 import { consoleErrors } from './console';
@@ -30,6 +31,20 @@ async function fontLoads(spec: string): Promise<boolean> {
   }
 }
 
+/** What a code or output box wrote about itself (see `useScrolls` in components/code.tsx). */
+function readOverflow(box: HTMLElement): BoxOverflow {
+  const list = (value: string | undefined) => (value ? value.split(',') : []);
+  return {
+    hiddenRows: Number(box.dataset.hiddenRows ?? '0'),
+    hiddenHighlight: list(box.dataset.hiddenHighlight).map(Number),
+    wideLines: list(box.dataset.wideLines).map((entry) => {
+      const [line, chars] = entry.split(':');
+      return { line: line === '-' ? null : Number(line), chars: Number(chars) };
+    }),
+    fits: Number(box.dataset.fits ?? '0'),
+  };
+}
+
 function measure(root: HTMLElement): Measurement[] {
   const out: Measurement[] = [];
   for (const frameEl of root.querySelectorAll<HTMLElement>('[data-frame]')) {
@@ -43,7 +58,7 @@ function measure(root: HTMLElement): Measurement[] {
         prose: slide
           ? [{ scrollW: slide.scrollWidth, clientW: slide.clientWidth, scrollH: neededHeight(slide), clientH: slide.clientHeight, fit: Number(slide.dataset.fit ?? '1') }]
           : [],
-        scrollingBlocks: stage.querySelectorAll('[data-scrolls="true"], [data-scrolls-x="true"]').length,
+        blocks: [...stage.querySelectorAll<HTMLElement>('[data-scrolls="true"], [data-scrolls-x="true"]')].map(readOverflow),
         codeRows: stage.querySelectorAll('.rs-codeblock .rs-row').length,
         highlightedRows: stage.querySelectorAll('.rs-codeblock .rs-hl').length,
         textOverlaps: [...stage.querySelectorAll('svg')].reduce((sum, svg) => sum + countOverlaps([...svg.querySelectorAll('text')].map((label) => label.getBoundingClientRect())), 0),
@@ -91,10 +106,11 @@ export function CheckPage({ entry }: { entry: PartEntry }) {
   const root = useRef<HTMLDivElement>(null);
   const [result, setResult] = useState<Finding[] | null>(null);
   const part = entry.meta.part;
+  const course = entry.meta.course;
 
   useEffect(() => {
     let cancelled = false;
-    window.__reactSlidesCheck = { part, done: false, findings: [], measurements: [], slides: [] };
+    window.__reactSlidesCheck = { course, part, done: false, findings: [], measurements: [], slides: [] };
     (async () => {
       const expected = entry.meta.slideCount * FRAMES.length;
       for (let waited = 0; waited < WAIT_LIMIT_MS; waited += WAIT_MS) {
@@ -111,12 +127,12 @@ export function CheckPage({ entry }: { entry: PartEntry }) {
       const all = findings(measurements, fonts, consoleErrors());
       const found = [...all.filter((f) => f.level === 'problem'), ...budget.filter((f) => f.level === 'problem'), ...all.filter((f) => f.level === 'note'), ...budget.filter((f) => f.level === 'note')];
       setResult(found);
-      window.__reactSlidesCheck = { part, done: true, findings: found, measurements, slides };
+      window.__reactSlidesCheck = { course, part, done: true, findings: found, measurements, slides };
     })();
     return () => {
       cancelled = true;
     };
-  }, [entry, part]);
+  }, [entry, course, part]);
 
   return (
     <div className="rs-check" ref={root}>
