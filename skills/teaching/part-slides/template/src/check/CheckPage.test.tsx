@@ -20,6 +20,7 @@ test('the check page lays out every slide twice and publishes its findings', asy
   expect(container.querySelectorAll('[data-frame="desktop"] [data-check-slide]')).toHaveLength(3);
   expect(container.querySelectorAll('[data-frame="phone"] [data-check-slide]')).toHaveLength(3);
   expect(window.__reactSlidesCheck!.part).toBe(1);
+  expect(window.__reactSlidesCheck!.course).toBe(miniMeta.course);
   expect(Array.isArray(window.__reactSlidesCheck!.findings)).toBe(true);
   expect(screen.getByRole('table')).toBeInTheDocument();
   expect(container.querySelector('.rs-nav')).toBeNull();

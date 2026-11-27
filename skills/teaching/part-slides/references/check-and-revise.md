@@ -7,14 +7,16 @@ Read this after the slides are written, and again each time the user asks for a 
 ```bash
 python3 <skill>/scripts/scaffold.py <course_dir> --sync-count <N>   # keep slideCount right; N is the Part number, the count is worked out from the slide ids
 pnpm --dir <course_dir>/web run build                                # tsc and vite: fix every error
-pnpm --dir <course_dir>/web run preview                              # in the background: http://localhost:4173/
+pnpm --dir <course_dir>/web run preview --strictPort                # in the background: http://localhost:4173/; it stops if the port is taken
 ```
+
+When the preview stops because port 4173 is taken, an earlier run's server is probably still on it, serving another course. Stop it (`lsof -ti tcp:4173`, then `kill` what that prints if it is yours), or start the preview with `--port <a free port>` and use that port in every address below.
 
 A build error is yours to fix: read it, correct the file. A prop the layout does not know, or a required prop you left out, is a compile error here.
 
 ## The check page
 
-Open `http://localhost:4173/#/check/part-NN` and wait until `window.__reactSlidesCheck.done` is true (with a browser tool, evaluate it; otherwise load the page in headless Chrome with `--headless=new --virtual-time-budget=15000 --dump-dom` and read the table). It lays every slide out twice (1280 × 720 and a 390 × 844 phone) and reports:
+Open `http://localhost:4173/#/check/part-NN` and wait until `window.__reactSlidesCheck.done` is true (with a browser tool, evaluate it; otherwise load the page in headless Chrome with `--headless=new --virtual-time-budget=15000 --dump-dom` and read the table). First check that its `course` and `part` are this course's slug and this Part: if they are not, another server answered, so go back to Build. It lays every slide out twice (1280 × 720 and a 390 × 844 phone) and reports:
 
 - `findings`: the problems and notes. Fix every `problem`. A `prose-overflow` means the text does not fit: split the slide, do not shrink it. A `budget` finding means the Part is outside the readability budgets: restructure (merge slides, drop a phase that adds nothing) and tell the user when it changes the approved plan. A `clipped-code` problem means rows of a code or output box are cut off at the bottom (it says how many, and names a highlighted line that is hidden): show fewer lines with `lines`, shorten the output or drop the body. A `wide-line` problem means a line is wider than the box at 1280 × 720 (it gives the line number, its length and what the box fits): excerpt it, or break it over several lines in the program and run it again. A `scrolling-block` note means a line scrolls sideways on the phone only, which a long line often does; check that the part that matters is in view. A `text-overlap` problem means two labels of one drawing sit on top of each other: move them apart. An `id-order` problem means a slide's id is not `<part>-<nnn>` or is not greater than the id before it: renumber the slides so the ids run in file order. `fallback` and `out-of-canvas` come from a picture.
 - `slides`: every slide, with its section, phase, divider flag, title and text length: the real slide list.
