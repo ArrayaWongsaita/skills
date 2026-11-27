@@ -382,3 +382,24 @@ test('an Error slide can carry a picture, and is then a two-column slide like Ex
   expect(slideOf(plain.container, '1-008')).toHaveClass('rs-wide');
   expect(plain.container.querySelector('.rs-visual')).toBeNull();
 });
+
+test('a Compare with a visual shows the picture beside the two panels', () => {
+  const { container } = render(
+    <DeckFixture>
+      <Compare {...lean('1-001')} title={<>เทียบ</>} left={<>ซ้าย</>} right={<>ขวา</>} takeaway={<>สรุป</>} visual={own} />
+    </DeckFixture>,
+  );
+  expect(container.querySelector('.rs-visual [data-testid="own"]')).not.toBeNull();
+  expect(container.querySelector('.rs-slide')).not.toHaveClass('rs-wide');
+  expect(container.querySelectorAll('.rs-panel')).toHaveLength(2);
+});
+
+test('a Compare without a visual is a wide slide as before', () => {
+  const { container } = render(
+    <DeckFixture>
+      <Compare {...lean('1-001')} title={<>เทียบ</>} left={<>ซ้าย</>} right={<>ขวา</>} takeaway={<>สรุป</>} />
+    </DeckFixture>,
+  );
+  expect(container.querySelector('.rs-slide')).toHaveClass('rs-wide');
+  expect(container.querySelector('.rs-visual')).toBeNull();
+});

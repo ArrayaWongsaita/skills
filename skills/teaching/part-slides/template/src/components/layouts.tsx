@@ -81,10 +81,10 @@ export function Steps(props: Base & { title: Rich; items: Rich[]; visual?: Visua
   );
 }
 
-export function Compare(props: Base & { title: Rich; left: Rich; right: Rich; takeaway: Rich; leftBlocks?: Block[]; rightBlocks?: Block[] }) {
+export function Compare(props: Base & { title: Rich; left: Rich; right: Rich; takeaway: Rich; leftBlocks?: Block[]; rightBlocks?: Block[]; visual?: VisualProp }) {
   const { meta } = useDeck();
   return (
-    <SlideFrame slide={props} title={props.title} wide>
+    <SlideFrame slide={props} title={props.title} wide={props.visual === undefined} visual={slot(props.visual)}>
       <div className="rs-compare">
         <div className="rs-panel">
           <Field name="left">{props.left}</Field>
