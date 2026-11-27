@@ -1,0 +1,62 @@
+import re
+
+from conftest import SKILL_DIR
+
+
+def _texts():
+    return {p.relative_to(SKILL_DIR).as_posix(): p.read_text(encoding="utf-8") for p in [SKILL_DIR / "SKILL.md", *sorted((SKILL_DIR / "references").glob("*.md"))]}
+
+
+def test_frontmatter_names_the_folder():
+    head = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8").split("---")[1]
+    assert re.search(r"^name: course-builder$", head, re.M)
+    assert re.search(r"^description: Use when ", head, re.M)
+
+
+def test_every_script_the_skill_names_exists():
+    named = {name for text in _texts().values() for name in re.findall(r"<skill>/scripts/([\w-]+\.py)", text)}
+    assert {"course_md.py", "check_playground.py", "init_playground.py", "apply_unit.py"} <= named
+    assert [n for n in sorted(named) if not (SKILL_DIR / "scripts" / n).is_file()] == []
+
+
+def test_every_flag_shown_is_one_the_script_takes():
+    for rel, text in _texts().items():
+        for line in text.splitlines():
+            for script in re.findall(r"<skill>/scripts/([\w-]+\.py)", line):
+                source = (SKILL_DIR / "scripts" / script).read_text(encoding="utf-8")
+                for flag in re.findall(r"(?<![-\w])(--[a-z][a-z-]*)", line):
+                    assert f'"{flag}"' in source, f"{rel}: {flag} is not an option of {script}"
+
+
+def test_every_reference_starts_with_a_heading_and_says_who_reads_it():
+    for path in sorted((SKILL_DIR / "references").glob("*.md")):
+        lines = path.read_text(encoding="utf-8").splitlines()
+        assert lines[0].startswith("# "), path.name
+        assert lines[2].startswith("Read this"), f"{path.name}: line 3 must say when to read it"
+
+
+def test_skill_md_points_at_every_reference():
+    skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+    assert [p.name for p in sorted((SKILL_DIR / "references").glob("*.md")) if f"references/{p.name}" not in skill] == []
+
+
+def test_the_skill_never_pushes():
+    texts = _texts()
+    assert "never push" in texts["SKILL.md"].lower()
+    assert [rel for rel, text in texts.items() if "git push" in text] == []
+
+
+def test_the_worker_brief_names_the_course_files_and_asks_for_skill_problems():
+    waves = (SKILL_DIR / "references" / "waves.md").read_text(encoding="utf-8")
+    brief = waves.split("```")[1]
+    for needle in ("course.md", "pattern.md", "units/", "--check", "Skill problem:"):
+        assert needle in brief, needle
+
+
+def test_the_outline_reference_shows_the_format_the_parser_reads(tmp_path):
+    import course_md
+
+    outline = (SKILL_DIR / "references" / "outline.md").read_text(encoding="utf-8")
+    example = re.search(r"```markdown\n(.*?)```", outline, re.S).group(1)
+    course = course_md.parse(example)
+    assert course.chapters and set(course.commands) == {"install", "setup", "chapter"}
