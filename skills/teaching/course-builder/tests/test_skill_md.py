@@ -59,7 +59,7 @@ def test_the_outline_reference_shows_the_format_the_parser_reads(tmp_path):
     outline = (SKILL_DIR / "references" / "outline.md").read_text(encoding="utf-8")
     example = re.search(r"```markdown\n(.*?)```", outline, re.S).group(1)
     course = course_md.parse(example)
-    assert course.chapters and set(course.commands) == {"install", "setup", "chapter"}
+    assert course.chapters and set(course.commands) == {"install", "setup", "chapter", "all"}
 
 
 def test_the_worker_brief_keeps_the_worker_away_from_sync_and_the_finish_has_its_own_unit():

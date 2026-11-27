@@ -75,7 +75,7 @@ def test_unbuilt_chapters_are_not_checked(tmp_path):
 
 def test_a_missing_folder_and_a_missing_exercise_are_named(tmp_path):
     root = make_tree(tmp_path, {"01-first": "no exercises here\n"}, "01-first 02-second")
-    kinds = sorted((f.kind, f.chapter) for f in cp.check_tree(root, course(("01", "first", "pilot"), ("02", "second", "building")), "main"))
+    kinds = sorted((f.kind, f.chapter) for f in cp.check_tree(root, course(("01", "first", "pilot"), ("02", "second", "review")), "main"))
     assert kinds == [("missing-folder", "02"), ("no-exercise", "01")]
 
 
@@ -106,3 +106,30 @@ def test_solutions_copies_in_a_dot_folder_are_not_the_exercise_file(tmp_path):
     (root / "lessons" / "01-first" / ".solutions").mkdir()
     (root / "lessons" / "01-first" / ".solutions" / "a.test.ts").write_text(SOLVED, encoding="utf-8")
     assert cp.check_tree(root, course(("01", "first", "pilot")), "main") == []
+
+
+def test_a_building_chapter_not_applied_yet_is_not_a_missing_folder(tmp_path):
+    root = make_tree(tmp_path, {"01-first": EXERCISE}, "01-first 02-second")
+    assert cp.check_tree(root, course(("01", "first", "done"), ("02", "second", "building")), "main") == []
+    [finding] = cp.check_tree(root, course(("01", "first", "done"), ("02", "second", "review")), "main")
+    assert finding.kind == "missing-folder"
+
+
+def test_the_readme_check_matches_whole_folder_names(tmp_path):
+    root = make_tree(tmp_path, {"01-intro": EXERCISE}, "| 101-intro |")
+    [finding] = cp.check_tree(root, course(("01", "intro", "pilot")), "main")
+    assert finding.kind == "readme" and "01-intro" in finding.detail
+
+
+def test_one_chapter_check_still_needs_every_built_chapter_in_the_readme(tmp_path):
+    root = make_tree(tmp_path, {"01-first": EXERCISE, "02-second": EXERCISE}, "only 02-second")
+    [finding] = cp.check_tree(root, course(("01", "first", "done"), ("02", "second", "building")), "main", only="02")
+    assert finding.kind == "readme" and "01-first" in finding.detail
+
+
+def test_the_readme_must_name_the_setup_check_and_the_solutions_branch(tmp_path):
+    c = course(("01", "first", "pilot"))
+    c.commands["setup"] = "pnpm test setup-check"
+    root = make_tree(tmp_path, {"01-first": EXERCISE}, "01-first")
+    kinds = [f.detail for f in cp.check_tree(root, c, "main", readme_sections=True)]
+    assert any("pnpm test setup-check" in d for d in kinds) and any("solutions" in d for d in kinds)

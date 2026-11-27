@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -61,9 +62,18 @@ def sources(course_dir: Path, part: int) -> dict[str, dict[str, str]]:
     return data
 
 
+class NotText(Exception):
+    pass
+
+
 def _show(repo: Path, branch: str, path: str) -> str | None:
     result = subprocess.run(["git", "-C", str(repo), "show", f"{branch}:{path}"], capture_output=True)
-    return result.stdout.decode("utf-8") if result.returncode == 0 else None
+    if result.returncode != 0:
+        return None
+    try:
+        return result.stdout.decode("utf-8")
+    except UnicodeDecodeError as error:
+        raise NotText(str(error)) from error
 
 
 def _one_newline_off(text: str) -> str:
@@ -78,7 +88,11 @@ def entries(course_dir: Path, srcs: dict[str, dict[str, str]]) -> tuple[dict[str
     listings, outputs, problems = {}, {}, []
     for name, source in srcs.items():
         where = f"{source['branch']}:{source['path']}"
-        code = _show(repo, source["branch"], source["path"])
+        try:
+            code = _show(repo, source["branch"], source["path"])
+        except NotText:
+            problems.append(f"listing {name}: {where} is not UTF-8 text")
+            continue
         if code is None:
             problems.append(f"listing {name}: {where} is not in the playground")
             continue
@@ -122,9 +136,13 @@ def main(argv: list[str]) -> int:
         if not target.is_file():
             print(f"{target.name} does not exist: run sync_listings.py without --check")
             return 1
-        have = set(target.read_text(encoding="utf-8").splitlines())
+        text = target.read_text(encoding="utf-8")
+        have = set(text.splitlines())
         drifted = [f"listing {name}" for name, line in listings.items() if line not in have]
         drifted += [f"output {name}" for name, line in outputs.items() if line not in have]
+        # A name the generated file still has but the sources no longer declare.
+        written = {json.loads(m) for m in re.findall(r'^  ("(?:[^"\\]|\\.)*"): \{', text, re.M)}
+        drifted += [f"listing {name}" for name in sorted(written - set(listings) - set(outputs))]
         for item in drifted:
             print(f"drift {item}: differs from the playground; run sync_listings.py --part {args.part}")
         if not drifted:

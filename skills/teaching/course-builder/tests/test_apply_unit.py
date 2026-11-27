@@ -121,3 +121,26 @@ def test_the_finish_unit_is_applied_without_changing_any_status(git_playground):
     assert git(repo, "log", "-1", "--format=%s", "main") == "docs: finish the course"
     assert [c.status for c in course_md.read(git_playground).chapters] == ["pilot", "done"]
     assert (git_playground / "units" / "02" / "main").is_dir()
+
+
+def test_a_unit_whose_readme_drops_a_chapter_commits_nothing(git_playground):
+    stage(git_playground)
+    for branch in ("main", "solutions"):
+        (git_playground / "units" / "02" / branch / "README.md").write_text("| 02 | `02-second` |\n", encoding="utf-8")
+    with pytest.raises(apply_unit.ApplyError, match="01-first"):
+        apply_unit.apply(git_playground, "02")
+
+
+def test_no_solutions_branch_is_an_error_message_not_a_traceback(git_playground, capsys):
+    git(git_playground / "playground", "branch", "-q", "-D", "solutions")
+    stage(git_playground)
+    assert apply_unit.main([str(git_playground), "02"]) == 1
+    assert "solutions" in capsys.readouterr().err
+
+
+def test_apply_says_the_users_uncommitted_changes_were_not_checked(git_playground, capsys):
+    readme = git_playground / "playground" / "README.md"
+    readme.write_text(readme.read_text(encoding="utf-8") + "my note\n", encoding="utf-8")
+    stage(git_playground)
+    assert apply_unit.main([str(git_playground), "02", "--check"]) == 0
+    assert "uncommitted" in capsys.readouterr().out

@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 STATUSES = ("outline", "pilot", "building", "review", "done")
 BUILT = ("pilot", "building", "review", "done")
 COMMAND_KEYS = {"Install": "install", "Setup check": "setup", "Run chapter": "chapter"}
+OPTIONAL_KEYS = {"Run all": "all"}
 COLUMNS = ("NN", "slug", "title", "practises", "builds on", "under test", "status")
 SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 NN_RE = re.compile(r"^\d{2,3}$")
@@ -90,6 +91,9 @@ def parse(text: str) -> Course:
         if not settings.get(key):
             raise CourseError(f"course.md, ## Playground: '{key}:' is missing")
         commands[name] = settings[key]
+    for key, name in OPTIONAL_KEYS.items():
+        if settings.get(key):
+            commands[name] = settings[key]
 
     table = [line for line in _section(lines, "Outline") if line.strip().startswith("|")]
     if len(table) < 2 or tuple(c.lower() for c in _cells(table[0])) != tuple(c.lower() for c in COLUMNS):

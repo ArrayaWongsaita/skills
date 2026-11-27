@@ -78,3 +78,29 @@ def test_saved_output_does_not_show_the_temporary_worktree(git_playground, tmp_p
     cp.check(git_playground, save_output=out)
     text = (out / "01-main.txt").read_text(encoding="utf-8")
     assert "playground-" not in text and text.startswith("in . .")
+
+
+def test_a_timed_out_command_leaves_no_process_behind(tmp_path):
+    import os
+    import time
+
+    code, _ = cp.run("python3 -c \"import os, time; open('pid', 'w').write(str(os.getpid())); time.sleep(30)\"; true", tmp_path, timeout=2)
+    assert code == 124
+    pid = int((tmp_path / "pid").read_text())
+    time.sleep(0.5)
+    try:
+        os.kill(pid, 0)
+        alive = True
+    except ProcessLookupError:
+        alive = False
+    assert not alive
+
+
+def test_run_all_runs_on_both_branches_in_a_whole_check(git_playground):
+    course_md_path = git_playground / "course.md"
+    text = course_md_path.read_text(encoding="utf-8")
+    course_md_path.write_text(text.replace("Run chapter:", "Run all: python3 -c \"raise SystemExit(4)\"\nRun chapter:"), encoding="utf-8")
+    found = cp.check(git_playground)
+    assert sorted((f.kind, f.branch) for f in found) == [("run-failed", "main"), ("run-failed", "solutions")]
+    assert all("exited 4" in f.detail for f in found)
+    assert cp.check(git_playground, chapter="01") == []

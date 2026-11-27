@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import os
 import re
+import signal
 import socket
 import subprocess
 import sys
@@ -75,11 +76,21 @@ def _checked(course: Course, only: str | None) -> list[course_md.Chapter]:
     return [chapter for chapter in course.chapters if chapter.status in BUILT]
 
 
-def check_tree(root: Path, course: Course, branch: str, only: str | None = None) -> list[Finding]:
+def _names(text: str, name: str) -> bool:
+    """`name` appears as a whole folder name: `01-intro` is not found inside `101-intro`."""
+    return re.search(rf"(?<![\w-]){re.escape(name)}(?![\w-])", text) is not None
+
+
+def check_tree(root: Path, course: Course, branch: str, only: str | None = None, readme_sections: bool = False) -> list[Finding]:
+    """The shape of one branch's tree. A whole check skips a `building` chapter not applied yet; the README must name
+    every built chapter even in a one-chapter check, since a unit may bring its own README; with readme_sections it
+    must also give the setup check and say where the answers are."""
     found: list[Finding] = []
     chapters = _checked(course, only)
     for chapter in chapters:
         folder = root / course.chapters_dir / chapter.folder_name
+        if not folder.is_dir() and only is None and chapter.status == "building":
+            continue
         if not folder.is_dir():
             found.append(Finding("missing-folder", chapter.nn, branch, f"{course.chapters_dir}/{chapter.folder_name} does not exist"))
             continue
@@ -95,9 +106,15 @@ def check_tree(root: Path, course: Course, branch: str, only: str | None = None)
             found.append(Finding("leftover-marker", chapter.nn, branch, f"{name} still has {markers} {MARKER} line(s): the solution is not written there"))
     readme = root / "README.md"
     text = _text(readme) if readme.is_file() else ""
-    missing = [chapter.folder_name for chapter in chapters if chapter.folder_name not in text]
+    named = [c for c in course.chapters if c.status in BUILT or c in chapters]
+    missing = [chapter.folder_name for chapter in named if not _names(text, chapter.folder_name)]
     if missing:
         found.append(Finding("readme", None, branch, f"README.md does not name {', '.join(missing)}"))
+    if readme_sections:
+        if course.commands["setup"] not in text:
+            found.append(Finding("readme", None, branch, f"README.md does not give the setup check `{course.commands['setup']}`"))
+        if "solutions" not in text:
+            found.append(Finding("readme", None, branch, "README.md does not say the answers are on the `solutions` branch"))
     return found
 
 
@@ -130,11 +147,18 @@ def free_port() -> int:
 def run(cmd: str, cwd: Path, timeout: int = 900) -> tuple[int, str]:
     """Run a playground command. PLAYGROUND_PORT is a free port of its own, so two checks at once never share a dev server."""
     env = {**os.environ, "PLAYGROUND_PORT": str(free_port())}
+    # Its own process group, so a timeout also stops what the shell started (a dev server keeps its port otherwise).
+    proc = subprocess.Popen(cmd, cwd=cwd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env, start_new_session=True)
     try:
-        result = subprocess.run(cmd, cwd=cwd, shell=True, capture_output=True, text=True, timeout=timeout, env=env)
+        output, _ = proc.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        proc.communicate()
         return 124, f"timed out after {timeout} s: {cmd}"
-    return result.returncode, (result.stdout or "") + (result.stderr or "")
+    return proc.returncode, output or ""
 
 
 def _clean(output: str, tree: Path) -> str:
@@ -161,7 +185,7 @@ def run_chapter(tree: Path, course: Course, chapter: course_md.Chapter, branch: 
 
 def check_branch_tree(tree: Path, course: Course, branch: str, chapter: str | None, run_commands: bool, save_output: Path | None) -> list[Finding]:
     """Everything check() does for one branch, on a tree that is already checked out."""
-    found = check_tree(tree, course, branch, only=chapter)
+    found = check_tree(tree, course, branch, only=chapter, readme_sections=chapter is None)
     if not run_commands:
         return found
     code, output = run(course.commands["install"], tree)
@@ -174,6 +198,10 @@ def check_branch_tree(tree: Path, course: Course, branch: str, chapter: str | No
     for each in _checked(course, chapter):
         if (tree / course.chapters_dir / each.folder_name).is_dir():
             found.extend(run_chapter(tree, course, each, branch, save_output))
+    if chapter is None and course.commands.get("all"):
+        code, output = run(course.commands["all"], tree)
+        if code != 0:
+            found.append(Finding("run-failed", None, branch, f"`{course.commands['all']}` exited {code}:\n{_tail(_clean(output, tree))}"))
     return found
 
 

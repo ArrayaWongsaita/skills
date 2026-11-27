@@ -20,6 +20,7 @@ Chapters folder: lessons
 Install: pnpm install
 Setup check: pnpm test setup-check
 Run chapter: pnpm vitest run {folder}
+Run all: pnpm vitest run
 
 ## Stages
 
@@ -34,6 +35,7 @@ Run chapter: pnpm vitest run {folder}
 | 02 | find-by-role | หาด้วยบทบาท | getByRole, name | 01 | Greeting.tsx | outline |
 ```
 
+- `Run all:` is optional: a whole check (`check_playground.py` with no `--chapter`) runs it on both branches too.
 - `Run chapter:` may use `{folder}` (`lessons/01-first-render`), `{nn}` (`01`) and `{slug}`.
 - `slug` is lowercase letters, digits and hyphens; the chapter's folder is `<Chapters folder>/NN-<slug>`.
 - `builds on` names the chapters this one needs, or `–`.

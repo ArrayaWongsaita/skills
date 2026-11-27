@@ -20,6 +20,9 @@ uv run --no-project --python 3.12 --with pytest pytest skills/teaching/course-bu
 | 10 | `--check` runs every check and commits nothing | `test_apply_unit.py` |
 | 11 | Every script and flag the skill shows exists; every reference is linked and says who reads it; the worker brief names `course.md`, `pattern.md`, `units/` and asks for `Skill problem:`; the skill never pushes | `test_skill_md.py` |
 | 12 | The outline example in `references/outline.md` parses | `test_skill_md.py` |
+| 13 | A whole check skips a `building` chapter not applied yet; the README must name every built chapter by its whole folder name, give the setup check and name `solutions`; `Run all:` runs on both branches | `test_check_structure.py`, `test_check_playground.py` |
+| 14 | Every command gets its own free `PLAYGROUND_PORT`; a timed-out command leaves no process behind; saved output never shows the temporary worktree | `test_check_playground.py` |
+| 15 | `init_playground.py` refuses to commit what the install made unless `.gitignore` leaves it out; `apply_unit.py` names the user's uncommitted changes and reports a missing branch as a message; `finish` changes no status | `test_init_playground.py`, `test_apply_unit.py` |
 
 Checked by hand, on a real course:
 

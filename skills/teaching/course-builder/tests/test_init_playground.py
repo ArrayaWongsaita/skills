@@ -45,3 +45,15 @@ def test_init_reports_a_failing_setup_check(tmp_path):
     with pytest.raises(course_md.CourseError, match="missing tool"):
         init_playground.init(course_dir)
     assert not (course_dir / "playground" / ".git").exists()
+
+
+def test_init_refuses_to_commit_what_the_install_made_unless_it_is_ignored(tmp_path):
+    course_dir = skeleton(tmp_path)
+    md = course_dir / "course.md"
+    md.write_text(md.read_text(encoding="utf-8").replace("Install: true", "Install: mkdir -p node_modules/pkg && touch node_modules/pkg/index.js"), encoding="utf-8")
+    with pytest.raises(course_md.CourseError, match="node_modules"):
+        init_playground.init(course_dir)
+    assert not (course_dir / "playground" / ".git").exists()
+    (course_dir / "playground" / ".gitignore").write_text("node_modules/\n", encoding="utf-8")
+    init_playground.init(course_dir)
+    assert "node_modules" not in git(course_dir / "playground", "ls-files")

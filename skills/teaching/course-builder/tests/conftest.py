@@ -68,7 +68,7 @@ def git_playground(tmp_path):
     (course_dir / "course.md").write_text(COURSE_MD, encoding="utf-8")
     (repo / "run_chapter.py").write_text(RUN_CHAPTER, encoding="utf-8")
     (repo / "check_setup.py").write_text("print('setup ok')\n", encoding="utf-8")
-    (repo / "README.md").write_text("| 01 | `01-first` |\n| 02 | `02-second` |\n", encoding="utf-8")
+    (repo / "README.md").write_text("Run `python3 check_setup.py` first; the answers are on the `solutions` branch.\n\n| 01 | `01-first` |\n| 02 | `02-second` |\n", encoding="utf-8")
     write_chapter(repo, "01-first", EXERCISE.format(nn="01"))
     git(repo, "init", "-q", "-b", "main")
     git(repo, "config", "user.email", "test@example.com")

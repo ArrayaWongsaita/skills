@@ -72,3 +72,9 @@ def test_set_status_refuses_an_unknown_chapter_or_status(tmp_path):
 def test_chapter_command_leaves_shell_variables_alone():
     course = course_md.parse(COURSE.replace("pnpm test {folder}", "PORT=${PLAYGROUND_PORT} run {folder} {nn}"))
     assert course_md.chapter_command(course, course.chapters[0]) == "PORT=${PLAYGROUND_PORT} run lessons/01-first-render 01"
+
+
+def test_run_all_is_optional():
+    assert "all" not in course_md.parse(COURSE).commands
+    course = course_md.parse(COURSE.replace("Run chapter:", "Run all: pnpm test\nRun chapter:"))
+    assert course.commands["all"] == "pnpm test"

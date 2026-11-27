@@ -118,3 +118,21 @@ def test_the_users_checkout_is_not_switched(course):
     sync_listings.main([str(course), "--part", "3"])
     assert git(repo, "rev-parse", "--abbrev-ref", "HEAD") == "main"
     assert git(repo, "status", "--porcelain") == ""
+
+
+def test_check_names_a_listing_removed_from_the_sources(course, capsys):
+    sync_listings.main([str(course), "--part", "3"])
+    parts = course / "web" / "src" / "parts"
+    sources = json.loads((parts / "part-03.sources.json").read_text(encoding="utf-8"))
+    del sources["exercise"]
+    (parts / "part-03.sources.json").write_text(json.dumps(sources), encoding="utf-8")
+    assert sync_listings.main([str(course), "--part", "3", "--check"]) == 1
+    assert "exercise" in capsys.readouterr().out
+
+
+def test_a_file_that_is_not_utf8_is_named_not_a_crash(course, capsys):
+    repo = course / "playground"
+    (repo / "lessons" / "03-click" / "Click.test.tsx").write_bytes(b"\xff\xfe bad")
+    git(repo, "commit", "-qam", "binary")
+    assert sync_listings.main([str(course), "--part", "3"]) == 1
+    assert "UTF-8" in capsys.readouterr().err

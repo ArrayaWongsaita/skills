@@ -28,6 +28,8 @@ and <course_skill>/references/playground.md (what a chapter must contain).
    - <course_dir>/units/<NN>/main/<chapters folder>/<NN>-<slug>/…  (exercises pending, a 👉 line each)
    - <course_dir>/units/<NN>/solutions/<chapters folder>/<NN>-<slug>/…  (the same files, tests written, no 👉)
    Your row's "under test" is the thing the exercises test; use only what the "builds on" chapters taught.
+   If the thing under test lives outside the chapter folder (a page the test tool serves, say), put it in the
+   unit too, at its own path from the playground's root.
    Check it, as often as you need:
      python3 <course_skill>/scripts/apply_unit.py <course_dir> <NN> --check
    It must print "chapter <NN>: passed". It commits nothing; never run git in <course_dir>/playground yourself.
@@ -51,7 +53,7 @@ When a worker is finished, one chapter at a time:
 
 1. `python3 <skill>/scripts/apply_unit.py <course_dir> NN`: must print `committed` or `unchanged`; the chapter is now `review`.
 2. `python3 <skill>/scripts/check_playground.py <course_dir> --chapter NN --save-output <course_dir>/runs`: must print `ok`.
-3. `part-slides`' `sync_listings.py <course_dir> --part N`, then its `scaffold.py --sync-count`, the build and the check page (its `references/check-and-revise.md`): no problems.
+3. `part-slides`' `sync_listings.py <course_dir> --part N`, then its `scaffold.py <course_dir> --sync-count <N>`, the build and the check page (its `references/check-and-revise.md`): no problems.
 4. `sync_listings.py <course_dir> --part N --check`: no listing differs from the playground.
 5. `python3 <skill>/scripts/course_md.py <course_dir> --set NN done`
 

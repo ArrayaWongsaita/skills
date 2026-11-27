@@ -9,14 +9,14 @@ No stack is built in. This page says what each part of a playground must do; you
 Write these into `<playground>/` before `init_playground.py`:
 
 - **The package files** for the stack (`package.json` and lockfile, `pyproject.toml`, …) with exact versions, and the test tool's config.
-- **A `.gitignore`** that leaves out installed packages, build output and test reports: `init_playground.py` commits everything else.
+- **A `.gitignore`** that leaves out installed packages, build output and test reports: `init_playground.py` refuses to commit when the install or the setup check made something it does not leave out.
 - **A setup check**: one tiny test or script that passes only when the install works (in the examples, `pnpm test setup-check`). The learner runs it first.
 - **`README.md`**, in the playground's language:
   - what the repo is and who it is for;
   - install, then the setup check, which must pass;
   - how to do an exercise: open the chapter's exercise file, read the header, write the test under each `👉`;
   - how to run one chapter and all of them, and how to read the result (a pending test is not a failure);
-  - how to look at the answers: the `solutions` branch;
+  - how to look at the answers: the `solutions` branch (a whole check fails when the README does not name it, or does not give the setup-check command exactly as `course.md` has it);
   - **the contents table, grouped by stage, with every chapter of the outline**, each naming its folder (`01-first-render`). Writing every row now means a chapter's unit never has to touch the README.
 - **`docs/cheatsheet.md`**: a short skeleton; the finish step fills it.
 - **The chapters folder** (`Chapters folder:` in `course.md`), empty.
@@ -27,7 +27,8 @@ Record in `course.md` under `## Playground`:
 
 - `Install:` the install command;
 - `Setup check:` the setup check;
-- `Run chapter:` the command that runs one chapter's folder, with `{folder}`.
+- `Run chapter:` the command that runs one chapter's folder, with `{folder}`;
+- `Run all:` (optional) the command that runs every chapter.
 
 Each must exit 0 when things are right, from the playground's root, with no prompt.
 
@@ -37,7 +38,7 @@ Each must exit 0 when things are right, from the playground's root, with no prom
 
 What `check_playground.py` checks, and what a worker writes:
 
-- one folder per chapter, `<Chapters folder>/NN-<slug>`, holding the small thing under test and **one exercise file**;
+- one folder per chapter, `<Chapters folder>/NN-<slug>`, holding the small thing under test and **one exercise file**. When the tool needs the thing under test elsewhere (a page its server serves), it goes there, at its own path, in the same unit;
 - the exercise file opens with a header comment: the chapter, what it practises, the idea in a few lines, and one worked example;
 - then numbered exercises, `ข้อ N: <what to do>`, about three, each with:
   - one line `แนวทาง: <a hint>`;

@@ -128,10 +128,12 @@ def main(argv: list[str]) -> int:
         return 2
     try:
         result = apply(Path(args[0]), args[1], commit=not check_only)
-    except ApplyError as error:
+    except (ApplyError, CourseError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
     print(f"chapter {args[1]}: {result}")
+    if _dirty_paths(Path(args[0]) / "playground"):
+        print("note: the playground has uncommitted changes; they were not checked (only committed branches are)")
     return 0
 
 
