@@ -516,10 +516,26 @@ a {
   border: 1.5px solid #e6e1d6;
 }
 
+/* The fade starts at 85 %: keep it equal to FADE_FROM in components/overflow.ts, which counts a row in the fade as hidden. */
 .rs-code[data-scrolls='true'],
 .rs-output pre[data-scrolls='true'] {
   -webkit-mask-image: linear-gradient(to bottom, #000 85%, transparent);
   mask-image: linear-gradient(to bottom, #000 85%, transparent);
+}
+
+/* A line wider than the box fades out at the right edge, so a cut line reads as "there is more", not as the end of the line. */
+.rs-code[data-scrolls-x='true'],
+.rs-output pre[data-scrolls-x='true'] {
+  -webkit-mask-image: linear-gradient(to right, #000 92%, transparent);
+  mask-image: linear-gradient(to right, #000 92%, transparent);
+}
+
+.rs-code[data-scrolls='true'][data-scrolls-x='true'],
+.rs-output pre[data-scrolls='true'][data-scrolls-x='true'] {
+  -webkit-mask-image: linear-gradient(to bottom, #000 85%, transparent), linear-gradient(to right, #000 92%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to bottom, #000 85%, transparent), linear-gradient(to right, #000 92%, transparent);
+  mask-composite: intersect;
 }
 
 .rs-row {

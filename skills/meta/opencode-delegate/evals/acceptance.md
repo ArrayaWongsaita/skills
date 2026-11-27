@@ -25,6 +25,7 @@ uv run --no-project --python 3.12 --with pytest pytest skills/meta/opencode-dele
 | 14b | `--detach` creates the log (empty) and the status file's folder before it starts the child, and sends the child's stderr to `<status-file>.err`, so a child that dies at once leaves a log whose age marks the start and a traceback | `test_opencode_turn.py` |
 | 15 | SIGTERM stops opencode and what it started, writes `status=cancelled exit=4` to the status file, and the script exits 4 | `test_opencode_turn.py` |
 | 16 | `SKILL.md` shows `--detach`, the status file and `kill -TERM`, and no longer tells the reader to wait for the harness to report | `test_skill_md.py` |
+| 17 | A failed turn whose last lines show a cancelled input request or an `ECONNRESET` prints `cause=input-cancelled` or `cause=connection-reset` before `log=`, in the status line and the status file; one earlier in the log, or on a turn that did not fail, gives no `cause=`; `SKILL.md` says such a turn may be finished and to read the files | `test_opencode_turn.py`, `test_skill_md.py` |
 
 The tests were also run against two deliberate breaks of the script: killing only opencode and not its group fails check 8, and never recognising the waiting line fails check 6.
 
