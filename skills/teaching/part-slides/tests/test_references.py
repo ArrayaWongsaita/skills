@@ -64,6 +64,12 @@ def test_slides_md_says_never_to_put_a_label_on_a_hachure_fill(skill_dir):
     assert "`fillOpacity`" in slides
 
 
+def test_the_plan_says_a_two_idea_topic_is_two_topics(skill_dir):
+    plan = _read(skill_dir, "references/plan-list.md")
+    shape = plan[plan.index("## What a Part looks like"):plan.index("## The budgets")]
+    assert "two ideas" in shape and "two topics" in shape
+
+
 def test_the_plan_says_what_to_do_when_parts_exceed_the_cap(skill_dir):
     plan = _read(skill_dir, "references/plan-list.md")
     parts = next(line for line in plan.splitlines() if "**parts**" in line)
