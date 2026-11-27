@@ -41,7 +41,7 @@ Required props are first; optional ones are marked `?`. `visual` takes a figure,
 | `Focus` | `title`, `body`, `visual?` | one point or a hook |
 | `Explain` | `title`, `body`, `visual?` | the default explanation |
 | `Steps` | `title`, `items` (2–6), `visual?` | a process or a list of parts |
-| `Compare` | `title`, `left`, `right`, `takeaway`, `leftBlocks?`, `rightBlocks?` | two things side by side |
+| `Compare` | `title`, `left`, `right`, `takeaway`, `leftBlocks?`, `rightBlocks?`, `visual?` | two things side by side; with a `visual`, the topic's picture beside them (keep each side to a sentence or two, and leave code for a slide of its own) |
 | `Anatomy` | `title`, `pieces`, `items` (2–6), `body?`, `notice?` | a call or a formula in numbered pieces |
 | `Example` | `title`, `body`, `snippet`, `lines?`, `highlight?`, `notice?` | code with its output |
 | `Code` | `title`, `body`, `snippet`, `lines?`, `highlight?`, `notice?` | code alone |
