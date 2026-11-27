@@ -10,13 +10,13 @@ The plan list is the one thing the user approves. It shows each slide in words, 
 - **Each topic, a segment that always runs the same way, at most 9 slides including its divider:**
   1. a **divider** (`Topic`): the topic's name, an optional tagline and **the topic's picture**: the same drawing its `know` slide draws in full, shown here so the learner sees what the topic is about before it starts. Nothing else.
   2. **know** (รู้จัก), 1 or 2 slides, **the picture comes first**: the first slide draws the idea with the course's own example (what goes in, what comes out, what changes) and gives it its name, with no code on it. When the topic has code, a second `know` slide then shows the smallest program that does the same thing, with its real output. The picture explains; the code proves it. A code slide is never the learner's first meeting with an idea. The divider already shows this picture, so the `know` slide must add to it: trace one thing through it (one item highlighted on its way, and what happens to it), not the same picture again.
-  3. **parts** (ส่วนประกอบ): one slide per part, each with its own picture or its own line of code. An `Anatomy` slide cuts a call or a formula into numbered pieces.
+  3. **parts** (ส่วนประกอบ): one slide per part, each with its own picture or its own line of code. An `Anatomy` slide cuts a call or a formula into numbered pieces. When a topic has more parts than its 9 slides allow, merge parts the learner uses together into one slide and name each merged pair in the plan row, or split the topic in two: say which you propose when you present the plan, and let the user choose.
   4. **example** (ตัวอย่าง): one working example. For code, the code and its real output on one slide.
   5. **watchout** (ระวัง): only for a mistake a beginner really makes at that point, and never about something not yet taught. Draw the mistake: the topic's picture with the wrong thing highlighted, or the wrong way next to the right way. The code and its output may come on the same slide.
   6. **check** (ทบทวน): off unless the user asks for it.
 - **Closing:** what the learner can now do, the bridge to the next Part, and one sources slide (the only place source names and URLs appear).
 
-A phase with nothing to say is left out. Fewer slides is better: a topic of five slides that is clear beats nine that repeat.
+A topic that carries two ideas that each need their own picture (such as what a cache is, and when to clear it) is two topics, each with its own divider and its own know, parts and example: the know rhythm has room for one picture. A phase with nothing to say is left out. Fewer slides is better: a topic of five slides that is clear beats nine that repeat.
 
 ## The budgets
 
@@ -25,7 +25,7 @@ The check page reports a `budget` finding when a Part breaks one of these, so pl
 <!-- budgets: topic 9 · opening 3 · part 40 · note 35 · prose th 160 · prose other 220 -->
 
 - A topic has at most 9 slides including its divider; the Opening at most 3; the Part at most 40 (a note from 35).
-- A slide's text (title, body, items, not code) is at most 160 characters in Thai and 220 in other languages. More than that is two slides.
+- A slide's text is at most 160 characters in Thai and 220 in other languages. More than that is two slides. The text is the title and everything written beside the picture: the body, the items, a notice, a `Compare`'s left, right and takeaway, an `Error`'s symptom, cause and fix, a `Question`'s question and an `Answer`'s answer and why. It is not code, its output, an `Anatomy` strip, or the labels the template prints (such as "symptom").
 - Phases run in order: know, parts, example, watchout, check. A topic starts with its divider.
 - Slide ids ascend in the order the slides run (an `id-order` finding when they do not).
 

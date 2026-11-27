@@ -68,7 +68,7 @@ def test_part_creates_the_work_folder_and_the_skeleton_files(tmp_path, mini_temp
 
 def test_part_numbers_are_padded_below_ten_only(tmp_path, mini_template):
     course = tmp_path / "courses" / "c"
-    run(course, mini_template, part=3, slug="a-b", part_title="t")
+    run(course, mini_template, part=3, slug="a-b", part_title="t", language="en")
     run(course, mini_template, part=10, slug="c-d", part_title="t")
     assert (course / "web/src/parts/part-03.tsx").is_file() and (course / "web/src/parts/part-10.tsx").is_file()
     assert (course / "parts/03-a-b").is_dir() and (course / "parts/10-c-d").is_dir()
@@ -76,7 +76,7 @@ def test_part_numbers_are_padded_below_ten_only(tmp_path, mini_template):
 
 def test_an_existing_part_file_is_skipped(tmp_path, mini_template):
     course = tmp_path / "courses" / "c"
-    run(course, mini_template, part=1, slug="a", part_title="t")
+    run(course, mini_template, part=1, slug="a", part_title="t", language="en")
     (course / "web/src/parts/part-01.tsx").write_text("// mine\n", encoding="utf-8")
     report = run(course, mini_template, part=1, slug="a", part_title="t")
     assert "web/src/parts/part-01.tsx" in report["skipped"]
@@ -127,7 +127,7 @@ def test_a_course_gets_the_default_icon_the_user_can_replace():
 
 def test_sync_count_sets_slide_count_from_the_slide_ids(tmp_path, mini_template):
     course = tmp_path / "courses" / "c"
-    run(course, mini_template, part=2, slug="a", part_title="t")
+    run(course, mini_template, part=2, slug="a", part_title="t", language="en")
     tsx = course / "web/src/parts/part-02.tsx"
     tsx.write_text('<Cover id="2-001" />\n<Explain id="2-002" visual={<svg id="not-a-slide" />} />\n<Topic id="2-003" />\n<Topic id="2-003" />\n<A id="1-009" />\n', encoding="utf-8")
     assert scaffold.sync_count(course, 2) == 3  # 2-001, 2-002, 2-003; a repeated id and another Part's id do not count
@@ -139,14 +139,14 @@ def test_sync_count_sets_slide_count_from_the_slide_ids(tmp_path, mini_template)
 
 def test_sync_count_says_it_takes_the_part_number_when_given_a_number_with_no_part(tmp_path, mini_template):
     course = tmp_path / "courses" / "c"
-    run(course, mini_template, part=1, slug="a", part_title="t")
+    run(course, mini_template, part=1, slug="a", part_title="t", language="en")
     with pytest.raises(scaffold.ScaffoldError, match="Part number"):
         scaffold.sync_count(course, 32)  # an agent once passed the slide count, 32, here
 
 
 def test_main_prints_the_report_as_json_and_returns_one_on_an_error(tmp_path, mini_template, capsys, monkeypatch):
     monkeypatch.setattr(scaffold, "TEMPLATE_DIR", mini_template)
-    assert scaffold.main([str(tmp_path / "courses" / "c"), "--skip-install", "--part", "1", "--slug", "a", "--part-title", "t"]) == 0
+    assert scaffold.main([str(tmp_path / "courses" / "c"), "--skip-install", "--part", "1", "--slug", "a", "--part-title", "t", "--language", "en"]) == 0
     assert "web/src/parts/part-01.tsx" in json.loads(capsys.readouterr().out)["created"]
     assert scaffold.main([str(tmp_path / "courses" / "d"), "--skip-install", "--part", "0", "--slug", "a", "--part-title", "t"]) == 1
     captured = capsys.readouterr()
@@ -163,7 +163,7 @@ def test_the_real_template_scaffolds_without_tests_or_fixtures(tmp_path):
 @pytest.mark.parametrize("written", ["slideCount: 7", "'slideCount': 7", '"slideCount":7'])
 def test_sync_count_also_reads_a_data_file_written_by_hand(tmp_path, mini_template, written):
     course = tmp_path / "courses" / "c"
-    run(course, mini_template, part=1, slug="a", part_title="t")
+    run(course, mini_template, part=1, slug="a", part_title="t", language="en")
     (course / "web/src/parts/part-01.tsx").write_text('<Cover id="1-001" /><Topic id="1-002" />', encoding="utf-8")
     data = course / "web/src/parts/part-01.data.ts"
     data.write_text(f"export const meta = {{ part: 1, {written} }};\n", encoding="utf-8")
@@ -194,7 +194,7 @@ def test_a_course_from_an_older_template_gets_its_unchanged_files_updated_and_ne
     course = tmp_path / "courses" / "c"
     run(course, mini_template)
     change_template(mini_template, {"src/components/Deck.tsx": "export const kind = 'new';\n", "src/components/uses.ts": "import { kind } from './Deck';\n"})
-    report = run(course, mini_template, part=2, slug="two", part_title="Two")
+    report = run(course, mini_template, part=2, slug="two", part_title="Two", language="en")
     assert report["updated"] == ["web/src/components/Deck.tsx"]
     assert "web/src/components/uses.ts" in report["created"]
     assert (course / "web/src/components/Deck.tsx").read_text(encoding="utf-8") == "export const kind = 'new';\n"
@@ -272,3 +272,55 @@ def test_a_new_package_file_runs_install_again(tmp_path, mini_template, monkeypa
     (course / "web/node_modules").mkdir()
     change_template(mini_template, {"pnpm-lock.yaml": "lockfileVersion: '9.0'\n"})
     assert run(course, mini_template, skip_install=False)["install"] == "ran"
+
+
+def test_a_new_part_without_language_takes_the_language_of_the_existing_parts(tmp_path, mini_template):
+    course = tmp_path / "c"
+    run(course, mini_template, part=1, slug="one", part_title="One", language="th")
+    run(course, mini_template, part=2, slug="two", part_title="Two")
+    assert '"language": "th"' in (course / "web/src/parts/part-02.data.ts").read_text(encoding="utf-8")
+
+
+def test_the_first_part_without_language_is_refused(tmp_path, mini_template):
+    with pytest.raises(scaffold.ScaffoldError, match="--language"):
+        run(tmp_path / "c", mini_template, part=1, slug="one", part_title="One")
+    assert not (tmp_path / "c/web/src/parts/part-01.data.ts").exists()
+
+
+def test_parts_in_different_languages_ask_for_language(tmp_path, mini_template):
+    course = tmp_path / "c"
+    run(course, mini_template, part=1, slug="one", part_title="One", language="th")
+    run(course, mini_template, part=2, slug="two", part_title="Two", language="en")
+    with pytest.raises(scaffold.ScaffoldError, match="--language"):
+        run(course, mini_template, part=3, slug="three", part_title="Three")
+
+
+def test_language_given_wins_over_the_existing_parts(tmp_path, mini_template):
+    course = tmp_path / "c"
+    run(course, mini_template, part=1, slug="one", part_title="One", language="th")
+    run(course, mini_template, part=2, slug="two", part_title="Two", language="en")
+    assert '"language": "en"' in (course / "web/src/parts/part-02.data.ts").read_text(encoding="utf-8")
+
+
+def test_a_hand_written_data_file_gives_its_language(tmp_path, mini_template):
+    course = tmp_path / "c"
+    run(course, mini_template)
+    (course / "web/src/parts").mkdir(parents=True, exist_ok=True)
+    (course / "web/src/parts/part-01.data.ts").write_text("export const meta = { course: 'c', part: 1, language: 'th', slideCount: 3 };\n", encoding="utf-8")
+    run(course, mini_template, part=2, slug="two", part_title="Two")
+    assert '"language": "th"' in (course / "web/src/parts/part-02.data.ts").read_text(encoding="utf-8")
+
+
+def test_rerunning_an_existing_part_without_language_keeps_it(tmp_path, mini_template):
+    course = tmp_path / "c"
+    run(course, mini_template, part=1, slug="one", part_title="One", language="th")
+    report = run(course, mini_template, part=1, slug="one", part_title="One")
+    assert "web/src/parts/part-01.data.ts" in report["skipped"]
+
+
+def test_rerunning_a_part_in_a_course_of_two_languages_takes_that_parts_language(tmp_path, mini_template):
+    course = tmp_path / "c"
+    run(course, mini_template, part=1, slug="one", part_title="One", language="th")
+    run(course, mini_template, part=2, slug="two", part_title="Two", language="en")
+    report = run(course, mini_template, part=1, slug="one", part_title="One")
+    assert "web/src/parts/part-01.data.ts" in report["skipped"]
