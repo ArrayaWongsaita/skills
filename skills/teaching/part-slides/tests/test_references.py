@@ -62,3 +62,9 @@ def test_slides_md_says_never_to_put_a_label_on_a_hachure_fill(skill_dir):
     slides = _read(skill_dir, "references/slides.md")
     assert "never put a label on a hachure fill" in slides.lower()
     assert "`fillOpacity`" in slides
+
+
+def test_the_plan_says_a_two_idea_topic_is_two_topics(skill_dir):
+    plan = _read(skill_dir, "references/plan-list.md")
+    shape = plan[plan.index("## What a Part looks like"):plan.index("## The budgets")]
+    assert "two ideas" in shape and "two topics" in shape

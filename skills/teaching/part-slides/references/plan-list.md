@@ -16,7 +16,7 @@ The plan list is the one thing the user approves. It shows each slide in words, 
   6. **check** (ทบทวน): off unless the user asks for it.
 - **Closing:** what the learner can now do, the bridge to the next Part, and one sources slide (the only place source names and URLs appear).
 
-A phase with nothing to say is left out. Fewer slides is better: a topic of five slides that is clear beats nine that repeat.
+A topic that carries two ideas that each need their own picture (such as what a cache is, and when to clear it) is two topics, each with its own divider and its own know, parts and example: the know rhythm has room for one picture. A phase with nothing to say is left out. Fewer slides is better: a topic of five slides that is clear beats nine that repeat.
 
 ## The budgets
 
