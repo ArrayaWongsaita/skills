@@ -109,3 +109,8 @@ def test_waiting_starts_a_turn_with_a_session_id_opencode_takes():
     """opencode rejects a session id that does not start with "ses"."""
     waiting = reference("waiting.md")
     assert "--session ses_<unit>" in waiting and "--session <id>" not in waiting
+
+
+def test_waiting_says_a_failed_turn_with_a_cause_may_be_finished():
+    waiting = reference("waiting.md")
+    assert "cause=" in waiting and "may be finished" in waiting
