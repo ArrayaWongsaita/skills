@@ -3,7 +3,7 @@ import { findings, type Measurement } from './findings';
 
 const fonts = { mali: true, mono: true };
 const prose = (over: Partial<Measurement['prose'][number]> = {}) => ({ scrollW: 1200, clientW: 1200, scrollH: 600, clientH: 600, fit: 1, ...over });
-const m = (over: Partial<Measurement> = {}): Measurement => ({ slide: '1-001', frame: 'desktop', prose: [prose()], scrollingBlocks: 0, codeRows: 0, highlightedRows: 0, outOfCanvas: [], textOverlaps: 0, fallback: false, ...over });
+const m = (over: Partial<Measurement> = {}): Measurement => ({ slide: '1-001', frame: 'desktop', prose: [prose()], blocks: [], codeRows: 0, highlightedRows: 0, outOfCanvas: [], textOverlaps: 0, fallback: false, ...over });
 
 test('a clean Part has no findings', () => {
   expect(findings([m(), m({ frame: 'phone', prose: [prose({ clientW: 358, scrollW: 358, scrollH: 2000 })] })], fonts, [])).toEqual([]);
@@ -25,10 +25,33 @@ test('phone height is fine but width is not', () => {
   expect(finding).toMatchObject({ frame: 'phone', kind: 'prose-overflow', level: 'problem' });
 });
 
-test('scrolling blocks are notes', () => {
-  expect(findings([m({ scrollingBlocks: 1 })], fonts, [])).toEqual([
-    expect.objectContaining({ kind: 'scrolling-block', level: 'note' }),
-  ]);
+const block = (over: Partial<Measurement['blocks'][number]> = {}): Measurement['blocks'][number] => ({ hiddenRows: 0, hiddenHighlight: [], wideLines: [], fits: 96, ...over });
+
+test('a clipped box on the desktop is a problem with the hidden rows', () => {
+  const found = findings([m({ blocks: [block({ hiddenRows: 2 })] })], fonts, []);
+  expect(found).toEqual([expect.objectContaining({ kind: 'clipped-code', level: 'problem', frame: 'desktop' })]);
+  expect(found[0]!.detail).toContain('2 row(s)');
+});
+
+test('a hidden highlighted line is named in the detail', () => {
+  const [finding] = findings([m({ blocks: [block({ hiddenRows: 1, hiddenHighlight: [21] })] })], fonts, []);
+  expect(finding!.detail).toContain('highlighted line 21 is hidden');
+});
+
+test('a wide line on the desktop is a problem with its line number', () => {
+  const found = findings([m({ blocks: [block({ wideLines: [{ line: 18, chars: 141 }] })] })], fonts, []);
+  expect(found).toEqual([expect.objectContaining({ kind: 'wide-line', level: 'problem' })]);
+  expect(found[0]!.detail).toContain('line 18 is 141 characters, the box fits 96');
+});
+
+test('a wide line on the phone is a note', () => {
+  const found = findings([m({ frame: 'phone', prose: [prose({ clientW: 358, scrollW: 358 })], blocks: [block({ wideLines: [{ line: 18, chars: 141 }] })] })], fonts, []);
+  expect(found).toEqual([expect.objectContaining({ kind: 'scrolling-block', level: 'note', frame: 'phone' })]);
+});
+
+test('a clipped box on the phone is a problem', () => {
+  const found = findings([m({ frame: 'phone', prose: [prose({ clientW: 358, scrollW: 358 })], blocks: [block({ hiddenRows: 1 })] })], fonts, []);
+  expect(found).toEqual([expect.objectContaining({ kind: 'clipped-code', level: 'problem', frame: 'phone' })]);
 });
 
 test('fallback, canvas, fonts and console errors are problems', () => {

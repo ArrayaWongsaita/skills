@@ -82,7 +82,7 @@ A topic with code shows the real program and its real output.
 2. **Run it** with the real interpreter (Bash). Put exactly what it printed in `outputs.<name> = { lang: 'text', info: 'text', text: '…' }`.
 3. When you cannot run it, set `status: 'unverified'`, give a `reason`, mark the output `info: 'text illustrative'` and put a `notice` on the slide that says so. Tell the user.
 4. `<Example snippet="name" highlight={[[2, 3]]} …/>` shows the lines; `lines` picks an excerpt (whole listing by default). The one copy button copies exactly what the slide shows.
-5. **Room on an `Example` slide:** with a body line it fits about 8 lines of code and 4 lines of output, and 7 and 4 when it also has a notice (measured at 1280 × 720). More than that makes the code box scroll and the check page notes it: show fewer lines with `lines`, or drop the body. Two runs hit this with a 9-line program.
+5. **Room on an `Example` slide:** as a starting point, with a body and a notice it holds about 5 rows of code and 3 rows of output at 1280 × 720, and each `⋯` marker between two ranges of `lines` takes a row. A line longer than about 100 characters does not fit across at 1280 (about 37 on a phone). The check page measures each box and is the judge: `clipped-code` names the rows cut off at the bottom (and a highlighted line among them), `wide-line` the line wider than the box. Show fewer lines with `lines`, shorten the output, drop the body, or break a long line in the program.
 6. **Highlight only the one place the learner must look at** (a line or two). When most of the lines matter, highlight none: a highlight on everything points at nothing. The check page reports a highlight on more than half of the shown lines.
 
 ## Writing the text

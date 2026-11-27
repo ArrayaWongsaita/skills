@@ -10,6 +10,7 @@ import typescript from 'highlight.js/lib/languages/typescript';
 import xml from 'highlight.js/lib/languages/xml';
 import yaml from 'highlight.js/lib/languages/yaml';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { boxOverflow, type BoxGeometry, type RowGeometry } from './overflow';
 import { type StringKey, t } from '../strings';
 import type { Block, Listing, Range } from './types';
 
@@ -108,8 +109,9 @@ function CopyButton({ text, label, language }: { text: string; label: StringKey;
 }
 
 /**
- * Marks a box whose content does not fit its space, so the check page can count it: `data-scrolls` when it is taller (it scrolls with a
- * visible cue), `data-scrolls-x` when a line is wider.
+ * Marks a box whose content does not fit its space, so the check page can report it: `data-scrolls` when it is taller (it scrolls with a
+ * fade at the bottom), `data-scrolls-x` when a line is wider (a fade at the right edge), and what is out of sight: `data-hidden-rows`,
+ * `data-hidden-highlight`, `data-wide-lines` (`<line>:<chars>`, `-` for a box without line numbers) and `data-fits` (characters).
  */
 function useScrolls<T extends HTMLElement>() {
   const ref = useRef<T>(null);
@@ -119,6 +121,11 @@ function useScrolls<T extends HTMLElement>() {
     const measure = () => {
       element.dataset.scrolls = String(element.scrollHeight > element.clientHeight + 1);
       element.dataset.scrollsX = String(element.scrollWidth > element.clientWidth + 1);
+      const found = boxOverflow(geometry(element));
+      element.dataset.hiddenRows = String(found.hiddenRows);
+      element.dataset.hiddenHighlight = found.hiddenHighlight.join(',');
+      element.dataset.wideLines = found.wideLines.map(({ line, chars }) => `${line ?? '-'}:${chars}`).join(',');
+      element.dataset.fits = String(found.fits);
     };
     measure();
     const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
@@ -126,6 +133,34 @@ function useScrolls<T extends HTMLElement>() {
     return () => observer?.disconnect();
   }, []);
   return ref;
+}
+
+/** The box and its rows, in px from the top left of its visible area. */
+function geometry(element: HTMLElement): BoxGeometry {
+  const box = element.getBoundingClientRect();
+  const top = box.top + element.clientTop;
+  const left = box.left + element.clientLeft;
+  let charWidth = 0;
+  let widest = 0;
+  let textLeft = Number.parseFloat(getComputedStyle(element).paddingLeft) || 0;
+  const rows = [...element.querySelectorAll<HTMLElement>('.rs-row, .rs-gap')].map((row): RowGeometry => {
+    const source = row.querySelector<HTMLElement>('.rs-src') ?? row;
+    const rect = source.getBoundingClientRect();
+    const chars = (source.textContent ?? '').length;
+    if (row.dataset.line && chars > widest) {
+      widest = chars;
+      charWidth = rect.width / chars;
+      textLeft = rect.left - left;
+    }
+    return { line: row.dataset.line ? Number(row.dataset.line) : null, bottom: row.getBoundingClientRect().bottom - top, right: rect.right - left, chars, highlighted: row.classList.contains('rs-hl') };
+  });
+  const longestLine = Math.max(0, ...(element.textContent ?? '').split('\n').map((line) => line.length));
+  if (rows.length === 0 && longestLine > 0) charWidth = element.scrollWidth / longestLine;
+  const lineHeight = Number.parseFloat(getComputedStyle(element).lineHeight);
+  return {
+    width: element.clientWidth, height: element.clientHeight, scrollHeight: element.scrollHeight, scrollWidth: element.scrollWidth,
+    longestLine, lineHeight: lineHeight > 0 ? lineHeight : 20, charWidth, textLeft, rows,
+  };
 }
 
 const inRanges = (n: number, ranges: Range[]) => ranges.some(([first, last]) => n >= first && n <= last);
