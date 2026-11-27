@@ -62,3 +62,10 @@ def test_slides_md_says_never_to_put_a_label_on_a_hachure_fill(skill_dir):
     slides = _read(skill_dir, "references/slides.md")
     assert "never put a label on a hachure fill" in slides.lower()
     assert "`fillOpacity`" in slides
+
+
+def test_the_budget_lists_what_the_check_page_counts(skill_dir):
+    plan = _read(skill_dir, "references/plan-list.md")
+    budgets = plan[plan.index("## The budgets"):plan.index("## Rules for the content")]
+    for word in ("notice", "symptom", "cause", "fix", "takeaway", "not code"):
+        assert word in budgets, word
