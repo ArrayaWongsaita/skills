@@ -56,3 +56,13 @@ def test_it_brings_an_existing_course_up_to_date_and_says_what_to_do_with_a_kept
         assert listed in text
     assert "<skill>/template/" in text
     assert "never overwrites a file the course changed" in text
+
+
+def test_a_part_of_a_course_takes_its_brief_from_course_md(skill_dir):
+    skill = _text(skill_dir)
+    assert "course.md" in skill and "pattern.md" in skill
+    interview = (skill_dir / "references" / "interview.md").read_text(encoding="utf-8")
+    assert "## A Part of a course" in interview
+    section = interview.split("## A Part of a course")[1]
+    for needle in ("course.md", "instead of interviewing", "pattern.md", "sync_listings.py"):
+        assert needle in section, needle
