@@ -3,7 +3,7 @@ import { expect, test, vi } from 'vitest';
 import { MiniPart, miniMeta } from '../__fixtures__/MiniPart';
 import { TopicPart, topicMeta } from '../__fixtures__/TopicPart';
 import { Deck } from '../components/Deck';
-import { Anatomy, Code, Error as ErrorSlide, Explain, Topic } from '../components/layouts';
+import { Anatomy, Code, Error as ErrorSlide, Explain, Output, Topic } from '../components/layouts';
 import type { PartMeta } from '../components/types';
 import { CheckPage } from './CheckPage';
 
@@ -101,20 +101,51 @@ test('the page reports a highlight on most of the code, and only that one', asyn
   expect(found[0]!.detail).toContain('5 of 6');
 });
 
-test('a code line wider than its box is a scrolling-block note, though the code never grows taller', async () => {
+test('a code line wider than its box is a wide-line problem on the desktop and a note on the phone', async () => {
   const isCode = (el: Element) => el.classList.contains('rs-code');
   const content = vi.spyOn(Element.prototype, 'scrollWidth', 'get').mockImplementation(function (this: Element) { return isCode(this) ? 900 : 100; });
   const box = vi.spyOn(Element.prototype, 'clientWidth', 'get').mockImplementation(function (this: Element) { return isCode(this) ? 600 : 100; });
+  const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+    const right = this.classList.contains('rs-src') && this.closest('.rs-row')?.getAttribute('data-line') === '2' ? 900 : 100;
+    return { top: 0, left: 0, bottom: 10, right, width: right, height: 10, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
+  });
   try {
     const entry = { meta: hlMeta, load: () => Promise.resolve({ default: Highlighted }) };
     render(<CheckPage entry={entry} />);
     await vi.waitFor(() => expect(window.__reactSlidesCheck?.done).toBe(true), { timeout: 6000 });
-    const found = window.__reactSlidesCheck!.findings.filter((f) => f.kind === 'scrolling-block' && f.slide === '1-002');
-    expect(found.length).toBeGreaterThan(0);
-    expect(found[0]!.detail).toContain('1 block');
+    const mine = window.__reactSlidesCheck!.findings.filter((f) => f.slide === '1-002');
+    expect(mine).toContainEqual(expect.objectContaining({ kind: 'wide-line', level: 'problem', frame: 'desktop' }));
+    expect(mine.find((f) => f.kind === 'wide-line')!.detail).toContain('line 2 is 5 characters');
+    expect(mine).toContainEqual(expect.objectContaining({ kind: 'scrolling-block', level: 'note', frame: 'phone' }));
+    expect(mine.filter((f) => f.kind === 'scrolling-block' && f.frame === 'desktop')).toEqual([]);
   } finally {
     content.mockRestore();
     box.mockRestore();
+    rect.mockRestore();
+  }
+});
+
+const outMeta: PartMeta = { course: 'c', part: 1, slug: 'out', title: 'Output', language: 'th', slideCount: 1 };
+function LongOutput() {
+  return (
+    <Deck meta={outMeta} diagrams={{}} listings={{}} outputs={{ long: { lang: 'text', info: 'text', text: 'a\nb\nc\nd\ne' } }}>
+      <Output id="1-001" section="Opening" title={<>ผลลัพธ์</>} body={<>b</>} snippet="long" />
+    </Deck>
+  );
+}
+
+test('an output box that is too tall is clipped-code', async () => {
+  const isOutput = (el: Element) => el.tagName === 'PRE' && el.parentElement?.classList.contains('rs-output') === true;
+  const tall = vi.spyOn(Element.prototype, 'scrollHeight', 'get').mockImplementation(function (this: Element) { return isOutput(this) ? 200 : 0; });
+  const space = vi.spyOn(Element.prototype, 'clientHeight', 'get').mockImplementation(function (this: Element) { return isOutput(this) ? 100 : 0; });
+  try {
+    const entry = { meta: outMeta, load: () => Promise.resolve({ default: LongOutput }) };
+    render(<CheckPage entry={entry} />);
+    await vi.waitFor(() => expect(window.__reactSlidesCheck?.done).toBe(true), { timeout: 6000 });
+    expect(window.__reactSlidesCheck!.findings).toContainEqual(expect.objectContaining({ slide: '1-001', kind: 'clipped-code', level: 'problem' }));
+  } finally {
+    tall.mockRestore();
+    space.mockRestore();
   }
 });
 

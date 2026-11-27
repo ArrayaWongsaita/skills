@@ -25,7 +25,7 @@ The check page reports a `budget` finding when a Part breaks one of these, so pl
 <!-- budgets: topic 9 · opening 3 · part 40 · note 35 · prose th 160 · prose other 220 -->
 
 - A topic has at most 9 slides including its divider; the Opening at most 3; the Part at most 40 (a note from 35).
-- A slide's text (title, body, items, not code) is at most 160 characters in Thai and 220 in other languages. More than that is two slides.
+- A slide's text is at most 160 characters in Thai and 220 in other languages. More than that is two slides. The text is the title and everything written beside the picture: the body, the items, a notice, a `Compare`'s left, right and takeaway, an `Error`'s symptom, cause and fix, a `Question`'s question and an `Answer`'s answer and why. It is not code, its output, an `Anatomy` strip, or the labels the template prints (such as "symptom").
 - Phases run in order: know, parts, example, watchout, check. A topic starts with its divider.
 - Slide ids ascend in the order the slides run (an `id-order` finding when they do not).
 
@@ -33,7 +33,7 @@ The check page reports a `budget` finding when a Part breaks one of these, so pl
 
 - Concrete before abstract: show a thing, then name it.
 - **Picture first.** A slide that explains or tells a story (`know`, `parts`, `watchout`, and a bridge in the Closing) is a picture slide unless you tried and nothing can be drawn. Before you write such a row, ask: what would I sketch on a whiteboard for someone who cannot picture this? Take a figure of `slides.md` when its shape fits, else plan your own drawing of the course's own example. Use plain text only for what has no shape (a rule, a condition, a definition), and say why in the picture column: `none: a rule, not a shape`. "The code shows it" is not a reason: the code is shown on its own slide, and the cause of a mistake can almost always be drawn. A learner who has to imagine it from text often cannot.
-- **One picture per topic.** The picture that first explains a topic is the one on its divider, and the same drawing comes back in the `parts` and `watchout` slides with the part under discussion highlighted, wherever the idea fits it. Plan a new drawing only for an idea of a different shape. The learner then learns one picture per topic, and you draw fewer. Name it on the divider row and refer to it by that name in the later rows.
+- **One picture per topic.** The picture that first explains a topic is the one on its divider, and the same drawing comes back in the `parts` and `watchout` slides with the part under discussion highlighted, wherever the idea fits it. A comparison that needs the topic's picture is a `Compare` with that picture as its `visual`. Plan a new drawing only for an idea of a different shape. The learner then learns one picture per topic, and you draw fewer. Name it on the divider row and refer to it by that name in the later rows.
 - **Code slides stay code slides.** They show the program and its real output, after the picture that explains it, and need no picture of their own.
 - A term is explained on the first slide that needs it, in the learner's words. No up-front glossary.
 - One new idea per slide. The same picture is reused for the same idea, with the part under discussion highlighted.

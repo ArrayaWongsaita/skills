@@ -9,10 +9,11 @@ A process the worker detached from that group (`nohup`, `setsid`) is not stopped
     opencode_turn.py --session ses_ID --out LOG [--dir PROJECT] [--model M] [--title T] [--archived]
                      [--grace 20] [--timeout 3600] [--status-file FILE] [--detach] [--opencode PATH] MESSAGE
 
-It prints one line, `status=<done|stopped|failed|timeout|cancelled> exit=<code> log=<path>`, and exits 0 when opencode
+It prints one line, `status=<done|stopped|failed|timeout|cancelled> exit=<code> [cause=<cause>] log=<path>`, and exits 0 when opencode
 finished or was stopped while waiting, 1 when opencode failed, 2 on a timeout, 3 when it could not start (including a
 session id that does not start with "ses", which opencode rejects), 4 when the turn was cancelled with SIGTERM
-(opencode and what it started are stopped first).
+(opencode and what it started are stopped first). A failed turn whose last lines show a cancelled input request or a
+dropped connection gets `cause=input-cancelled` or `cause=connection-reset`: the work may still be finished.
 
 With `--status-file` the same line is also written to FILE when the turn ends, in one atomic step, so a reader sees
 either no file or the whole line. A file left by an earlier turn is removed when the turn starts.
@@ -38,6 +39,11 @@ from pathlib import Path
 ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 WAITING = re.compile(r"waiting for \d+ background[^\n]*\s*$")
 TAIL_BYTES = 4096
+CAUSE_LINES = 5  # a cause counts only in the last few lines of output: an earlier one was followed by more work
+CAUSES = (
+    ("input-cancelled", re.compile(r"Cancelled a request for input")),
+    ("connection-reset", re.compile(r"ECONNRESET")),
+)
 POLL_SECONDS = 0.2
 TERM_SECONDS = 5
 SESSION_PREFIX = "ses"  # opencode rejects any other id: 'Expected a string starting with "ses"'
@@ -54,13 +60,23 @@ def command(args: argparse.Namespace) -> list[str]:
     return cmd + [args.message]
 
 
-def ends_waiting(log: Path) -> bool:
-    """True when the last text in the log is opencode's "waiting for N background job" line."""
+def log_tail(log: Path) -> str:
+    """The last TAIL_BYTES of the log, without terminal colour codes."""
     with log.open("rb") as handle:
         handle.seek(0, os.SEEK_END)
         handle.seek(max(0, handle.tell() - TAIL_BYTES))
-        tail = handle.read().decode("utf-8", errors="replace")
-    return WAITING.search(ANSI.sub("", tail)) is not None
+        return ANSI.sub("", handle.read().decode("utf-8", errors="replace"))
+
+
+def ends_waiting(log: Path) -> bool:
+    """True when the last text in the log is opencode's "waiting for N background job" line."""
+    return WAITING.search(log_tail(log)) is not None
+
+
+def failure_cause(log: Path) -> str | None:
+    """A known cause in the last lines of a failed turn's log that can come after the work was done, or None."""
+    last = "\n".join([line for line in log_tail(log).splitlines() if line.strip()][-CAUSE_LINES:])
+    return next((name for name, pattern in CAUSES if pattern.search(last)), None)
 
 
 def stop(proc: subprocess.Popen) -> None:
@@ -202,7 +218,8 @@ def main(argv: list[str] | None = None) -> int:
                 waiting_since = None
             time.sleep(POLL_SECONDS)
 
-    summary = f"status={status} exit={exit_code} log={log}"
+    cause = failure_cause(log) if status == "failed" else None
+    summary = f"status={status} exit={exit_code}{f' cause={cause}' if cause else ''} log={log}"
     with log.open("ab") as sink:
         if status == "stopped":
             sink.write(b"\n[opencode_turn] stopped by opencode_turn: opencode was only waiting for its own background job\n")

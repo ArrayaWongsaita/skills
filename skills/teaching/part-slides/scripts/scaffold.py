@@ -6,7 +6,8 @@
 
 It creates what is missing and brings the course's copy of the template up to date: a template file the course has
 not changed (one that matches a version in template-versions.json) is replaced by the current version, or removed when
-the template dropped it. A file the course changed is never overwritten: the report lists it under `kept`. The report
+the template dropped it. A file the course changed is never overwritten: the report lists it under `kept`. A new Part takes
+the language of the existing Parts unless --language is given; the first Part needs --language. The report
 is JSON on stdout.
 """
 
@@ -31,6 +32,7 @@ VERSIONS_FILE = "template-versions.json"  # beside the template: every version o
 PACKAGE_FILES = ("package.json", "pnpm-lock.yaml")  # a new or updated one needs an install
 SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 PNPM_MISSING = "node and pnpm are needed to build the app: install Node.js 20 or later from https://nodejs.org and pnpm from https://pnpm.io/installation"
+LANGUAGE_RE = re.compile(r"""["']?language["']?:\s*["']([^"']+)["']""")  # as the skeleton writes it, or as a hand-edited data file may
 SLIDE_COUNT_RE = re.compile(r"""(?P<key>["']?slideCount["']?):\s*\d+""")  # as the skeleton writes it, or as a hand-edited data file may
 
 
@@ -135,6 +137,24 @@ def _part_files(course: str, part: int, slug: str, title: str, language: str) ->
     return {f"src/parts/part-{nn}.data.ts": data, f"src/parts/part-{nn}.tsx": tsx}
 
 
+def course_language(web: Path, part: int | None = None) -> str | None:
+    """The language of Part `part` when it exists, else the one language the course's Parts use; None when there is no Part yet.
+    Parts in more than one language need --language."""
+    own = web / f"src/parts/part-{part:02d}.data.ts" if part is not None else None
+    if own is not None and own.is_file():
+        match = LANGUAGE_RE.search(own.read_text(encoding="utf-8", errors="replace"))
+        if match:
+            return match.group(1)
+    found = set()
+    for data in sorted((web / "src/parts").glob("part-*.data.ts")):
+        match = LANGUAGE_RE.search(data.read_text(encoding="utf-8", errors="replace"))
+        if match:
+            found.add(match.group(1))
+    if len(found) > 1:
+        raise ScaffoldError(f"--language is needed: the Parts use more than one language ({', '.join(sorted(found))})")
+    return found.pop() if found else None
+
+
 def run(course_dir: Path, *, title: str | None, language: str | None, part: int | None, slug: str | None, part_title: str | None,
         skip_install: bool, template_dir: Path = TEMPLATE_DIR) -> dict:
     if part is not None:
@@ -144,6 +164,10 @@ def run(course_dir: Path, *, title: str | None, language: str | None, part: int 
             raise ScaffoldError("--slug must be lowercase letters, digits and hyphens, such as what-is-ml")
         if not part_title:
             raise ScaffoldError("--part-title is needed with --part")
+    if part is not None and language is None:
+        language = course_language(course_dir / WEB_DIR, part)
+        if language is None:
+            raise ScaffoldError("--language is needed: the course has no Part yet to take it from")
     if not template_dir.is_dir():
         raise ScaffoldError(f"the template is missing: {template_dir}")
     if not skip_install and shutil.which("pnpm") is None:
@@ -167,7 +191,7 @@ def run(course_dir: Path, *, title: str | None, language: str | None, part: int 
         if not work.exists():
             work.mkdir(parents=True)
             report["created"].append(work.relative_to(course_dir).as_posix())
-        for rel, text in _part_files(course, part, slug, part_title, language or "en").items():
+        for rel, text in _part_files(course, part, slug, part_title, language).items():
             _write_missing(web / rel, text, course_dir, report)
 
     package_changed = any(f"{WEB_DIR}/{name}" in report["updated"] + report["created"] for name in PACKAGE_FILES)
@@ -202,7 +226,7 @@ def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("course_dir", type=Path)
     parser.add_argument("--title")
-    parser.add_argument("--language")
+    parser.add_argument("--language", help="the language of a new Part, such as th; by default the language of the course's existing Parts, and needed for the first Part")
     parser.add_argument("--part", type=int)
     parser.add_argument("--slug")
     parser.add_argument("--part-title")

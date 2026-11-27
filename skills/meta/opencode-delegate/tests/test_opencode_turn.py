@@ -259,3 +259,41 @@ def test_the_detached_child_is_built_from_the_parsed_args_and_never_detaches_aga
     assert cmd[cmd.index("--status-file") + 1].endswith("s.status")
     assert "--model" in cmd and "--archived" in cmd
     assert cmd[-2:] == ["--", "-hello"]
+
+
+def test_a_failed_turn_after_a_cancelled_input_request_says_so(fake_opencode, project, tmp_path, capsys):
+    fake = fake_opencode("print('wrote the files', flush=True); print('Cancelled a request for input this run cannot answer', flush=True); sys.exit(1)")
+    code, _ = turn(fake, project, tmp_path)
+    assert code == 1
+    assert re.search(r"^status=failed exit=1 cause=input-cancelled log=", capsys.readouterr().out, re.M)
+
+
+def test_a_failed_turn_that_ends_in_a_connection_reset_says_so(fake_opencode, project, tmp_path, capsys):
+    fake = fake_opencode("print('wrote the files', flush=True); print('Error: read ECONNRESET', flush=True); sys.exit(1)")
+    turn(fake, project, tmp_path)
+    assert "cause=connection-reset" in capsys.readouterr().out
+
+
+def test_the_status_file_gets_the_cause_too(fake_opencode, project, tmp_path):
+    fake = fake_opencode("print('Error: read ECONNRESET', flush=True); sys.exit(1)")
+    status = tmp_path / "turn.status"
+    turn(fake, project, tmp_path, "--status-file", str(status))
+    assert "status=failed exit=1 cause=connection-reset log=" in status.read_text(encoding="utf-8")
+
+
+def test_an_early_connection_reset_gives_no_cause(fake_opencode, project, tmp_path, capsys):
+    fake = fake_opencode(f"print('Error: read ECONNRESET', flush=True); print('x' * {opencode_turn.TAIL_BYTES + 1000}, flush=True); print('TypeError: boom', flush=True); sys.exit(1)")
+    turn(fake, project, tmp_path)
+    assert "cause=" not in capsys.readouterr().out
+
+
+def test_a_connection_reset_followed_by_more_output_gives_no_cause(fake_opencode, project, tmp_path, capsys):
+    fake = fake_opencode("print('Error: read ECONNRESET', flush=True); [print(f'step {n}', flush=True) for n in range(10)]; print('TypeError: boom', flush=True); sys.exit(1)")
+    turn(fake, project, tmp_path)
+    assert "cause=" not in capsys.readouterr().out
+
+
+def test_a_done_turn_never_gets_a_cause(fake_opencode, project, tmp_path, capsys):
+    fake = fake_opencode("print('Error: read ECONNRESET', flush=True)")
+    turn(fake, project, tmp_path)
+    assert "cause=" not in capsys.readouterr().out
