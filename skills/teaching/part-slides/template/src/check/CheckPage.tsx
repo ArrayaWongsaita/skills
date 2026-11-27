@@ -106,10 +106,11 @@ export function CheckPage({ entry }: { entry: PartEntry }) {
   const root = useRef<HTMLDivElement>(null);
   const [result, setResult] = useState<Finding[] | null>(null);
   const part = entry.meta.part;
+  const course = entry.meta.course;
 
   useEffect(() => {
     let cancelled = false;
-    window.__reactSlidesCheck = { part, done: false, findings: [], measurements: [], slides: [] };
+    window.__reactSlidesCheck = { course, part, done: false, findings: [], measurements: [], slides: [] };
     (async () => {
       const expected = entry.meta.slideCount * FRAMES.length;
       for (let waited = 0; waited < WAIT_LIMIT_MS; waited += WAIT_MS) {
@@ -126,12 +127,12 @@ export function CheckPage({ entry }: { entry: PartEntry }) {
       const all = findings(measurements, fonts, consoleErrors());
       const found = [...all.filter((f) => f.level === 'problem'), ...budget.filter((f) => f.level === 'problem'), ...all.filter((f) => f.level === 'note'), ...budget.filter((f) => f.level === 'note')];
       setResult(found);
-      window.__reactSlidesCheck = { part, done: true, findings: found, measurements, slides };
+      window.__reactSlidesCheck = { course, part, done: true, findings: found, measurements, slides };
     })();
     return () => {
       cancelled = true;
     };
-  }, [entry, part]);
+  }, [entry, course, part]);
 
   return (
     <div className="rs-check" ref={root}>

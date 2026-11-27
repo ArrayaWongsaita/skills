@@ -35,8 +35,8 @@ def test_the_briefs_name_the_commands_the_scripts_really_have(skill_dir):
     for flag in ("--part", "--slug", "--part-title", "--sync-count", "--language", "--title"):
         assert flag in text, flag
     scaffold = _read(skill_dir, "scripts/scaffold.py")
-    for flag in re.findall(r"(?<![-\w])(--[a-z][a-z-]*)", text):
-        if flag in {"--dir", "--headless", "--screenshot", "--window-size", "--virtual-time-budget", "--dump-dom"}:
+    for flag in re.findall(r"(?<![-\w])(--[a-z][a-zA-Z-]*)", text):
+        if flag in {"--dir", "--strictPort", "--port", "--headless", "--screenshot", "--window-size", "--virtual-time-budget", "--dump-dom"}:
             continue
         assert flag in scaffold, f"{flag} is not a scaffold.py option"
 
@@ -62,6 +62,11 @@ def test_slides_md_says_never_to_put_a_label_on_a_hachure_fill(skill_dir):
     slides = _read(skill_dir, "references/slides.md")
     assert "never put a label on a hachure fill" in slides.lower()
     assert "`fillOpacity`" in slides
+
+
+def test_the_preview_refuses_a_busy_port(skill_dir):
+    check = _read(skill_dir, "references/check-and-revise.md")
+    assert "--strictPort" in check and "`course`" in check
 
 
 def test_the_plan_says_a_two_idea_topic_is_two_topics(skill_dir):

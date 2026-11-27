@@ -22,7 +22,7 @@ export type FindingKind = 'prose-overflow' | 'out-of-canvas' | 'fallback' | 'fon
 export type Finding = { slide: string; frame: string; kind: FindingKind; level: 'problem' | 'note'; detail: string };
 /** What the check page knows about one slide, for the readability budgets and for the agent's slide list. */
 export type SlideInfo = { id: string; section: string; phase?: Phase; divider: boolean; title: string; chars: number };
-export type CheckResult = { part: number; done: boolean; findings: Finding[]; measurements: Measurement[]; slides: SlideInfo[] };
+export type CheckResult = { course: string; part: number; done: boolean; findings: Finding[]; measurements: Measurement[]; slides: SlideInfo[] };
 
 declare global {
   interface Window {
