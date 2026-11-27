@@ -78,6 +78,14 @@ Rules for a drawing:
 ## Code
 
 A topic with code shows the real program and its real output.
+
+**A Part of a course with a playground** (`<course_dir>/playground` exists): the code is the playground's, never typed here, so a slide cannot drift from the repo.
+1. Declare each listing in `<web>/src/parts/part-NN.sources.json` by its branch and path in the playground: `{"answer": {"branch": "solutions", "path": "lessons/03-click/Click.test.tsx", "lang": "tsx", "output": "runs/03-solutions.txt"}}`. `output` is optional: the chapter's real run on that branch, which course-builder saves under `<course_dir>/runs/`.
+2. Run `python3 <skill>/scripts/sync_listings.py <course_dir> --part <N>`. It writes `part-NN.playground.ts` from the playground; never edit that file.
+3. In `part-NN.data.ts`, import `playgroundListings` and `playgroundOutputs` from `./part-NN.playground` and spread them first: `export const listings: Record<string, Listing> = { ...playgroundListings };`, and the same for `outputs`. A listing that is not in the playground (a one-line illustration) goes after the spread, as below.
+4. Show the lines a slide needs with `lines`: a whole exercise file is longer than a slide.
+
+Otherwise:
 1. Write the program in `part-NN.data.ts`: `listings.<name> = { lang: 'python', status: 'verified', reason: '', code: '…' }`.
 2. **Run it** with the real interpreter (Bash). Put exactly what it printed in `outputs.<name> = { lang: 'text', info: 'text', text: '…' }`.
 3. When you cannot run it, set `status: 'unverified'`, give a `reason`, mark the output `info: 'text illustrative'` and put a `notice` on the slide that says so. Tell the user.

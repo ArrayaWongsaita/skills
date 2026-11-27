@@ -34,11 +34,21 @@ def test_the_briefs_name_the_commands_the_scripts_really_have(skill_dir):
     text = _read(skill_dir, "SKILL.md") + _read(skill_dir, "references/check-and-revise.md")
     for flag in ("--part", "--slug", "--part-title", "--sync-count", "--language", "--title"):
         assert flag in text, flag
-    scaffold = _read(skill_dir, "scripts/scaffold.py")
-    for flag in re.findall(r"(?<![-\w])(--[a-z][a-z-]*)", text):
-        if flag in {"--dir", "--headless", "--screenshot", "--window-size", "--virtual-time-budget", "--dump-dom"}:
-            continue
-        assert flag in scaffold, f"{flag} is not a scaffold.py option"
+    # A flag is checked against the script named on its line: sync_listings.py when it is named, else scaffold.py.
+    for line in text.splitlines():
+        script = "sync_listings.py" if "sync_listings.py" in line else "scaffold.py"
+        source = _read(skill_dir, f"scripts/{script}")
+        for flag in re.findall(r"(?<![-\w])(--[a-z][a-z-]*)", line):
+            if flag in {"--dir", "--headless", "--screenshot", "--window-size", "--virtual-time-budget", "--dump-dom"}:
+                continue
+            assert f'"{flag}"' in source, f"{flag} is not a {script} option"
+
+
+def test_a_part_with_a_playground_takes_its_code_from_sync_listings(skill_dir):
+    slides = _read(skill_dir, "references/slides.md")
+    for needle in ("sync_listings.py", "part-NN.sources.json", "...playgroundListings", "playgroundOutputs", "never edit that file"):
+        assert needle in slides, needle
+    assert "sync_listings.py <course_dir> --part <N> --check" in _read(skill_dir, "references/check-and-revise.md")
 
 
 def test_the_briefs_say_to_number_slides_in_the_order_they_run_and_to_renumber(skill_dir):
