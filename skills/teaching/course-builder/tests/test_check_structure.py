@@ -99,3 +99,10 @@ def test_only_checks_one_chapter(tmp_path):
 def test_a_finding_prints_as_one_line():
     assert cp.Finding("run-failed", "01", "main", "exit 1").line() == "run-failed 01 main: exit 1"
     assert cp.Finding("readme", None, "main", "x").line() == "readme - main: x"
+
+
+def test_solutions_copies_in_a_dot_folder_are_not_the_exercise_file(tmp_path):
+    root = make_tree(tmp_path, {"01-first": EXERCISE}, "01-first")
+    (root / "lessons" / "01-first" / ".solutions").mkdir()
+    (root / "lessons" / "01-first" / ".solutions" / "a.test.ts").write_text(SOLVED, encoding="utf-8")
+    assert cp.check_tree(root, course(("01", "first", "pilot")), "main") == []

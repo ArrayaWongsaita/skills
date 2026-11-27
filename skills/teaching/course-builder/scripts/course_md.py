@@ -142,7 +142,11 @@ def chapter_folder(course: Course, chapter: Chapter) -> str:
 
 
 def chapter_command(course: Course, chapter: Chapter) -> str:
-    return course.commands["chapter"].format(nn=chapter.nn, slug=chapter.slug, folder=chapter_folder(course, chapter))
+    # str.replace, not str.format: a shell variable such as ${PLAYGROUND_PORT} must pass through untouched.
+    command = course.commands["chapter"]
+    for key, value in (("{folder}", chapter_folder(course, chapter)), ("{nn}", chapter.nn), ("{slug}", chapter.slug)):
+        command = command.replace(key, value)
+    return command
 
 
 def main(argv: list[str]) -> int:

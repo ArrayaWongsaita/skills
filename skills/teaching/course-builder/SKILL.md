@@ -68,7 +68,7 @@ Follow `references/waves.md`: the remaining chapters in waves of 3–4, through 
 
 ## Step 6: finish
 
-1. Bring the README's contents table and `docs/cheatsheet.md` up to date with every chapter, through a unit like any other (`units/NN/…` holds only those files; apply it with the last chapter's number).
+1. Bring the README's contents table and `docs/cheatsheet.md` up to date with every chapter: write them, as they should be on each branch, into `<course_dir>/units/finish/main/` and `units/finish/solutions/`, then run `python3 <skill>/scripts/apply_unit.py <course_dir> finish`. It checks every chapter, commits on both branches and changes no chapter's status.
 2. Run the whole playground:
 
    ```bash

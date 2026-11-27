@@ -16,7 +16,9 @@ It prints one line per finding and exits 1 if there is any (an `uncommitted` not
 from __future__ import annotations
 
 import argparse
+import os
 import re
+import socket
 import subprocess
 import sys
 import tempfile
@@ -60,8 +62,8 @@ def exercise_shape(text: str) -> tuple[int, int, int]:
 
 
 def exercise_file(folder: Path) -> Path | None:
-    """The file of a chapter that holds its numbered exercises."""
-    for path in sorted(p for p in folder.rglob("*") if p.is_file()):
+    """The file of a chapter that holds its numbered exercises; copies in a dot-folder such as .solutions/ are not it."""
+    for path in sorted(p for p in folder.rglob("*") if p.is_file() and not any(part.startswith(".") for part in p.relative_to(folder).parts[:-1])):
         if EXERCISE_RE.search(_text(path)):
             return path
     return None
@@ -119,12 +121,27 @@ def worktree(repo: Path, branch: str) -> Iterator[Path]:
         subprocess.run(["rm", "-rf", str(holder)])
 
 
+def free_port() -> int:
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        return probe.getsockname()[1]
+
+
 def run(cmd: str, cwd: Path, timeout: int = 900) -> tuple[int, str]:
+    """Run a playground command. PLAYGROUND_PORT is a free port of its own, so two checks at once never share a dev server."""
+    env = {**os.environ, "PLAYGROUND_PORT": str(free_port())}
     try:
-        result = subprocess.run(cmd, cwd=cwd, shell=True, capture_output=True, text=True, timeout=timeout)
+        result = subprocess.run(cmd, cwd=cwd, shell=True, capture_output=True, text=True, timeout=timeout, env=env)
     except subprocess.TimeoutExpired:
         return 124, f"timed out after {timeout} s: {cmd}"
     return result.returncode, (result.stdout or "") + (result.stderr or "")
+
+
+def _clean(output: str, tree: Path) -> str:
+    """The run's output with the temporary worktree's path shown as `.`: it changes every run and means nothing on a slide."""
+    for path in sorted({str(tree.resolve()), str(tree)}, key=len, reverse=True):
+        output = output.replace(path, ".")
+    return output
 
 
 def _tail(output: str) -> str:
@@ -133,6 +150,7 @@ def _tail(output: str) -> str:
 
 def run_chapter(tree: Path, course: Course, chapter: course_md.Chapter, branch: str, save_output: Path | None = None) -> list[Finding]:
     code, output = run(course_md.chapter_command(course, chapter), tree)
+    output = _clean(output, tree)
     if save_output is not None:
         save_output.mkdir(parents=True, exist_ok=True)
         (save_output / f"{chapter.nn}-{branch}.txt").write_text(output, encoding="utf-8")

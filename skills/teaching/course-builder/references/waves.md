@@ -34,8 +34,11 @@ and <course_skill>/references/playground.md (what a chapter must contain).
 
 2. The slides. Follow part-slides for Part <N> of this course, steps 1 to 4 (brief from course.md, research,
    plan, write), with no interview: <course_dir>/parts/<NN>-<slug>/ and <course_dir>/web/src/parts/part-<NN>.*.
-   Declare each code listing in part-<NN>.sources.json by its branch and path in the playground; never type
-   playground code into the data file. Do not build or start the slides app: the foreman does that.
+   Declare each code listing in part-<NN>.sources.json by its branch and the path it will have in the playground
+   (the path under units/<NN>/<branch>/), and give a listing's output as "runs/<NN>-solutions.txt" or
+   "runs/<NN>-main.txt". Read the code you plan around from units/<NN>/. Do not run sync_listings.py: your
+   chapter is not in the playground yet, so it would fail; the foreman runs it after applying your chapter.
+   Never type playground code into the data file. Do not build or start the slides app: the foreman does that.
 
 Done when: apply_unit.py --check passes, and brief.md, plan.md, the data file and sources.json are written.
 Reply with what you made, anything in pattern.md that did not fit this chapter, and, when something in a brief,

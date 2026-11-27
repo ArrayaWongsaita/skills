@@ -2,6 +2,7 @@
 """Bring one worker's chapter into the playground, on both branches, only when it passes.
 
     apply_unit.py <course_dir> <NN> [--check]
+    apply_unit.py <course_dir> finish [--check]
 
 A worker writes the chapter's files as they should be on each branch into <course_dir>/units/<NN>/main/ and
 <course_dir>/units/<NN>/solutions/, with paths relative to the playground root. This script copies each into a
@@ -9,6 +10,8 @@ temporary worktree of its branch (the chapter's folder is replaced, not merged),
 its commands there. Only when both branches pass does it commit "feat: chapter <NN> <slug>" on each branch that
 changed and set the chapter's status in course.md to `review`. If either branch fails, nothing is committed.
 With --check it does every check and commits nothing: the done-command a worker runs on its own chapter.
+`finish` applies <course_dir>/units/finish/ (the README and the cheatsheet at the end), checks every built chapter,
+commits "docs: finish the course" and changes no status.
 
 The user's own checkout is never switched. If it is on one of the two branches, it is moved forward like a
 fast-forward pull; a unit that changes a file the user has uncommitted edits in is refused before anything moves.
@@ -40,8 +43,8 @@ def _out(repo: Path, *args: str) -> str:
     return result.stdout.strip()
 
 
-def _copy_unit(unit: Path, tree: Path, chapter_folder: str) -> None:
-    if (unit / chapter_folder).is_dir() and (tree / chapter_folder).exists():
+def _copy_unit(unit: Path, tree: Path, chapter_folder: str | None) -> None:
+    if chapter_folder and (unit / chapter_folder).is_dir() and (tree / chapter_folder).exists():
         shutil.rmtree(tree / chapter_folder)
     shutil.copytree(unit, tree, dirs_exist_ok=True)
 
@@ -58,9 +61,10 @@ def _dirty_paths(repo: Path) -> set[str]:
 def apply(course_dir: Path, nn: str, commit: bool = True) -> str:
     """"committed", "unchanged", or with commit=False "passed"; raises ApplyError when a branch fails."""
     course_dir = Path(course_dir)
+    finish = nn == "finish"
     try:
         course = course_md.read(course_dir)
-        chapter = course.chapter(nn)
+        chapter = None if finish else course.chapter(nn)
     except CourseError as error:
         raise ApplyError(str(error)) from error
     repo = course_dir / "playground"
@@ -68,7 +72,9 @@ def apply(course_dir: Path, nn: str, commit: bool = True) -> str:
     for branch, unit in units.items():
         if not unit.is_dir():
             raise ApplyError(f"units/{nn}/{branch} does not exist: the worker writes the chapter's files there")
-    folder = course_md.chapter_folder(course, chapter)
+
+    folder = None if chapter is None else course_md.chapter_folder(course, chapter)
+    message = "docs: finish the course" if chapter is None else f"feat: chapter {nn} {chapter.slug}"
     current = _git(repo, "symbolic-ref", "-q", "--short", "HEAD").stdout.strip()
 
     with ExitStack() as stack:
@@ -84,7 +90,7 @@ def apply(course_dir: Path, nn: str, commit: bool = True) -> str:
 
         found = []
         for branch in BRANCHES:
-            found.extend(f for f in check_branch_tree(trees[branch], course, branch, nn, True, None) if f.kind not in NOTES)
+            found.extend(f for f in check_branch_tree(trees[branch], course, branch, None if finish else nn, True, None) if f.kind not in NOTES)
         if found:
             raise ApplyError("nothing was committed:\n" + "\n".join(f.line() for f in found))
         if not commit:
@@ -93,7 +99,7 @@ def apply(course_dir: Path, nn: str, commit: bool = True) -> str:
         commits = {}
         for branch in changed:
             old = _out(repo, "rev-parse", f"refs/heads/{branch}")
-            _out(trees[branch], "commit", "-q", "-m", f"feat: chapter {nn} {chapter.slug}")
+            _out(trees[branch], "commit", "-q", "-m", message)
             commits[branch] = (old, _out(trees[branch], "rev-parse", "HEAD"))
 
         if current in commits:
@@ -109,7 +115,8 @@ def apply(course_dir: Path, nn: str, commit: bool = True) -> str:
             else:
                 _out(repo, "update-ref", f"refs/heads/{branch}", new, old)
 
-    course_md.set_status(course_dir, nn, "review")
+    if not finish:
+        course_md.set_status(course_dir, nn, "review")
     return "committed"
 
 

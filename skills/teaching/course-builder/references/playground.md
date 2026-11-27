@@ -29,7 +29,9 @@ Record in `course.md` under `## Playground`:
 - `Setup check:` the setup check;
 - `Run chapter:` the command that runs one chapter's folder, with `{folder}`.
 
-Each must exit 0 when things are right, from the playground's root, with no prompt. On `main` a chapter's exercises are pending (`test.todo`, `test.fixme`, or the tool's skip), and **a pending exercise must not fail the run**: try it once. If the tool exits non-zero when a folder has only pending tests, add the tool's own pass-with-no-tests or equivalent option to `Run chapter:`.
+Each must exit 0 when things are right, from the playground's root, with no prompt.
+
+**A test tool that starts a server** (Playwright's `webServer`, a dev server): the scripts give every command its own free port in the environment variable `PLAYGROUND_PORT`, because workers check their chapters at the same time. Make the tool's config read the port from `PLAYGROUND_PORT` (with a fixed default for the learner), and never reuse a server that is already running, or one worker's tests run against another worker's pages. On `main` a chapter's exercises are pending (`test.todo`, `test.fixme`, or the tool's skip), and **a pending exercise must not fail the run**: try it once. If the tool exits non-zero when a folder has only pending tests, add the tool's own pass-with-no-tests or equivalent option to `Run chapter:`.
 
 ## A chapter, whatever the stack
 

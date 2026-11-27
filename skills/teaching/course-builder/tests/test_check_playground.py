@@ -57,3 +57,24 @@ def test_no_run_checks_structure_only(git_playground):
 
 def test_a_chapter_flag_checks_only_that_chapter(git_playground, capsys):
     assert cp.main([str(git_playground), "--chapter", "01", "--no-run"]) == 0
+
+
+def test_each_run_gets_a_free_port_of_its_own(tmp_path):
+    code1, out1 = cp.run('python3 -c "import os; print(os.environ[\'PLAYGROUND_PORT\'])"', tmp_path)
+    code2, out2 = cp.run('echo ${PLAYGROUND_PORT}', tmp_path)
+    assert code1 == code2 == 0
+    assert int(out1) > 1024 and int(out2) > 1024
+
+
+def test_saved_output_does_not_show_the_temporary_worktree(git_playground, tmp_path):
+    repo = git_playground / "playground"
+    (repo / "run_chapter.py").write_text("import os, sys\nprint('in', os.getcwd(), os.path.realpath(os.getcwd()))\n", encoding="utf-8")
+    git(repo, "commit", "-qam", "print cwd")
+    git(repo, "checkout", "-q", "solutions")
+    git(repo, "checkout", "-q", "main", "--", "run_chapter.py")
+    git(repo, "commit", "-qam", "print cwd")
+    git(repo, "checkout", "-q", "main")
+    out = tmp_path / "runs"
+    cp.check(git_playground, save_output=out)
+    text = (out / "01-main.txt").read_text(encoding="utf-8")
+    assert "playground-" not in text and text.startswith("in . .")

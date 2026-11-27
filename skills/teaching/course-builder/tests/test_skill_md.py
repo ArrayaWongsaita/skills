@@ -60,3 +60,12 @@ def test_the_outline_reference_shows_the_format_the_parser_reads(tmp_path):
     example = re.search(r"```markdown\n(.*?)```", outline, re.S).group(1)
     course = course_md.parse(example)
     assert course.chapters and set(course.commands) == {"install", "setup", "chapter"}
+
+
+def test_the_worker_brief_keeps_the_worker_away_from_sync_and_the_finish_has_its_own_unit():
+    waves = (SKILL_DIR / "references" / "waves.md").read_text(encoding="utf-8")
+    brief = waves.split("```")[1]
+    assert "Do not run sync_listings.py" in brief and "runs/<NN>-solutions.txt" in brief
+    skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+    assert "apply_unit.py <course_dir> finish" in skill and "units/finish/" in skill
+    assert "PLAYGROUND_PORT" in (SKILL_DIR / "references" / "playground.md").read_text(encoding="utf-8")

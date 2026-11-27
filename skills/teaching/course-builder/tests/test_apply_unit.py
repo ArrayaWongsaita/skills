@@ -106,3 +106,18 @@ def test_check_only_runs_everything_and_commits_nothing(git_playground, capsys):
 def test_check_only_reports_a_failing_unit(git_playground):
     stage(git_playground, solved_text="// ข้อ 1: แรก\n// แนวทาง: x\nFAIL\n")
     assert apply_unit.main([str(git_playground), "02", "--check"]) == 1
+
+
+def test_the_finish_unit_is_applied_without_changing_any_status(git_playground):
+    stage(git_playground)
+    apply_unit.apply(git_playground, "02")
+    course_md.set_status(git_playground, "02", "done")
+    for branch in ("main", "solutions"):
+        (git_playground / "units" / "finish" / branch / "docs").mkdir(parents=True)
+        (git_playground / "units" / "finish" / branch / "docs" / "cheatsheet.md").write_text("# cheatsheet\n", encoding="utf-8")
+    assert apply_unit.apply(git_playground, "finish") == "committed"
+    repo = git_playground / "playground"
+    assert git(repo, "show", "solutions:docs/cheatsheet.md") == "# cheatsheet"
+    assert git(repo, "log", "-1", "--format=%s", "main") == "docs: finish the course"
+    assert [c.status for c in course_md.read(git_playground).chapters] == ["pilot", "done"]
+    assert (git_playground / "units" / "02" / "main").is_dir()
