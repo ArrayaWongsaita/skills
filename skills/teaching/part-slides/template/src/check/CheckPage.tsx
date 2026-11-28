@@ -64,6 +64,9 @@ function measure(root: HTMLElement): Measurement[] {
         textOverlaps: [...stage.querySelectorAll('svg')].reduce((sum, svg) => sum + countOverlaps([...svg.querySelectorAll('text')].map((label) => label.getBoundingClientRect())), 0),
         outOfCanvas: [...new Set(outside.filter(Boolean))],
         fallback: stage.querySelector('[data-fallback]') !== null,
+        clippedText: [...stage.querySelectorAll<HTMLElement>('.rs-panel, .rs-takeaway')]
+          .filter((el) => el.scrollWidth > el.clientWidth + 1)
+          .map((el) => ({ where: el.classList.contains('rs-panel') ? 'a Compare panel' : 'the takeaway', scrollW: el.scrollWidth, clientW: el.clientWidth })),
       });
     }
   }

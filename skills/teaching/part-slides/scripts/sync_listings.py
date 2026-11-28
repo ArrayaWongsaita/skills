@@ -11,7 +11,8 @@ It reads <course_dir>/web/src/parts/part-NN.sources.json:
 and writes part-NN.playground.ts next to it, with `playgroundListings` (each file read with
 `git show <branch>:<path>` in <course_dir>/playground, so the user's checkout is never switched) and
 `playgroundOutputs` (for a source with `output`: that file, relative to <course_dir>, as saved by course-builder's
-`check_playground.py --save-output`). The Part's data file spreads them into its own:
+`check_playground.py --save-output`). An optional `outputLines` keeps an excerpt of the real file: "last:3" (its last
+3 lines), "5-8" (lines 5 to 8, counted from 1) or "5-" (line 5 to the end); --check compares the excerpt. The Part's data file spreads them into its own:
 
     export const listings = { ...playgroundListings, … };
     export const outputs = { ...playgroundOutputs, … };
@@ -81,6 +82,26 @@ def _one_newline_off(text: str) -> str:
     return text[:-1] if text.endswith("\n") else text
 
 
+LINES_RE = re.compile(r"^(?:last:(\d+)|(\d+)-(\d*))$")
+
+
+def excerpt(text: str, spec: str) -> str:
+    """The lines of a run that `outputLines` names; raises ValueError when the spec does not fit the run."""
+    lines = text.split("\n")
+    match = LINES_RE.match(spec.strip())
+    if not match:
+        raise ValueError(f'"{spec}" is not "last:N", "A-B" or "A-"')
+    if match.group(1):
+        count = int(match.group(1))
+        if not 1 <= count <= len(lines):
+            raise ValueError(f'"{spec}": the run has {len(lines)} line(s)')
+        return "\n".join(lines[-count:])
+    first, last = int(match.group(2)), int(match.group(3) or len(lines))
+    if not 1 <= first <= last <= len(lines):
+        raise ValueError(f'"{spec}": the run has {len(lines)} line(s)')
+    return "\n".join(lines[first - 1:last])
+
+
 def entries(course_dir: Path, srcs: dict[str, dict[str, str]]) -> tuple[dict[str, str], dict[str, str]]:
     """name -> the listing's line, name -> the output's line; raises SyncError naming every source it cannot read."""
     course_dir = Path(course_dir)
@@ -105,7 +126,13 @@ def entries(course_dir: Path, srcs: dict[str, dict[str, str]]) -> tuple[dict[str
             if not output.is_file():
                 problems.append(f"listing {name}: output {source['output']} does not exist (run check_playground.py --save-output)")
                 continue
-            text = _one_newline_off(output.read_text(encoding="utf-8"))
+            text = _one_newline_off(output.read_text(encoding="utf-8").replace("\r\n", "\n"))
+            if source.get("outputLines"):
+                try:
+                    text = excerpt(text, str(source["outputLines"]))
+                except ValueError as error:
+                    problems.append(f"listing {name}: outputLines {error}")
+                    continue
             outputs[name] = f"  {json.dumps(name, ensure_ascii=False)}: {{ lang: 'text', info: 'text', text: {json.dumps(text, ensure_ascii=False)} }},"
     if problems:
         raise SyncError("nothing was written:\n" + "\n".join(problems))
