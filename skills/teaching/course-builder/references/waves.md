@@ -15,7 +15,7 @@ The workers of one wave may run at the same time: each writes only its own `unit
 
 ## The worker brief
 
-One per chapter. Fill the angle brackets (`<course_skill>` is this skill's base directory, `<skill>` above; `<part-slides>` is part-slides' base directory) and send it as written:
+One per chapter. Fill the angle brackets (`<course_skill>` is this skill's base directory, `<skill>` above; `<part-slides>` is part-slides' base directory; `<port>` is a port you give each worker of the wave, a different one for each, since several workers asked for "a free port" pick the same one) and send it as written:
 
 ```
 You are building chapter <NN> (<title>) of the course in <course_dir>.
@@ -54,7 +54,7 @@ and <course_skill>/references/playground.md (what a chapter must contain).
      python3 <part-slides>/scripts/sync_listings.py <course_dir> --part <N> --unit <NN>
      python3 <part-slides>/scripts/scaffold.py <course_dir> --sync-count <N>
      pnpm --dir <course_dir>/web exec vite build --outDir <course_dir>/parts/<NN>-<slug>/check-dist
-     pnpm --dir <course_dir>/web exec vite preview --outDir <course_dir>/parts/<NN>-<slug>/check-dist --port <a free port> --strictPort
+     pnpm --dir <course_dir>/web exec vite preview --outDir <course_dir>/parts/<NN>-<slug>/check-dist --port <port> --strictPort
    Then the check page and the screenshots of part-slides' references/check-and-revise.md at that port. Fix
    every problem, stop your preview server, and delete check-dist/. A build error in another Part's files is
    another worker's: build again a minute later. The foreman syncs again from the playground after applying
