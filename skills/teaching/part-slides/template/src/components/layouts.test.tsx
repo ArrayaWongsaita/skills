@@ -240,6 +240,23 @@ test('anatomy shows each piece with its numbered marker and a numbered legend', 
   expect(strip.querySelector('[data-field]')).toBeNull();
 });
 
+test('an anatomy legend item with inline code stays one line of text beside its marker', () => {
+  // the li is a flex row (marker, text): loose text and <code> straight inside it would each become a column
+  const { container } = render(
+    <DeckFixture topics={fixtureTopics}>
+      <Anatomy
+        {...inTopic('1-041', 'parts')} title={<>หน้าตา</>} body={<>เส้นเดียว</>}
+        pieces={[{ text: 'ls', n: 1 }]}
+        items={[<><b>ไฟล์</b> — ทุกไฟล์ <C>.txt</C> ในโฟลเดอร์</>]}
+      />
+    </DeckFixture>,
+  );
+  const li = container.querySelector('[data-field="items"] [data-item]')!;
+  expect(li.childNodes).toHaveLength(1);
+  expect(li.firstElementChild!.tagName).toBe('SPAN');
+  expect(li.firstElementChild).toHaveTextContent('ไฟล์ — ทุกไฟล์ .txt ในโฟลเดอร์');
+});
+
 test('anatomy renders awkward text verbatim', () => {  // Review Focus 3
   const pieces = AWKWARD.map((text, index) => ({ text, n: index + 1 }));
   const { container } = render(
