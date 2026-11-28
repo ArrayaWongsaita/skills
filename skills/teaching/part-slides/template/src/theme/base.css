@@ -91,7 +91,8 @@ a {
 @media (prefers-reduced-motion: reduce) {
   .rs-draw,
   .rs-fade,
-  .rs-fade-slide {
+  .rs-fade-slide,
+  .rs-illustration.rs-draw-in path[pathLength] {
     animation: none;
     stroke-dashoffset: 0;
     opacity: 1;
@@ -889,8 +890,8 @@ a {
 }
 
 .rs-divider .rs-title {
-  font-family: var(--rs-mono);
-  font-variant-ligatures: none;
+  /* The text font: the mono font has no Thai, and a Thai title in it shows its marks pulled apart. */
+  font-family: var(--rs-font);
   font-size: 3.2em;
   line-height: 1.1;
 }

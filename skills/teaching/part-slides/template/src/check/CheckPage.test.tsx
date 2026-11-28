@@ -3,7 +3,7 @@ import { expect, test, vi } from 'vitest';
 import { MiniPart, miniMeta } from '../__fixtures__/MiniPart';
 import { TopicPart, topicMeta } from '../__fixtures__/TopicPart';
 import { Deck } from '../components/Deck';
-import { Anatomy, Code, Error as ErrorSlide, Explain, Output, Topic } from '../components/layouts';
+import { Anatomy, Code, Compare, Error as ErrorSlide, Explain, Output, Topic } from '../components/layouts';
 import type { PartMeta } from '../components/types';
 import { CheckPage } from './CheckPage';
 
@@ -217,4 +217,30 @@ test('the text count leaves out the code of an Anatomy strip and the labels of a
   const [anatomy, error] = window.__reactSlidesCheck!.slides;
   expect(anatomy.chars).toBe('ค กขง'.length);
   expect(error.chars).toBe('ค งกข'.length);
+});
+
+// A long inline code or a run line in a Compare half runs out of the panel; only the panel's own width shows it.
+const cmpMeta: PartMeta = { course: 'c', part: 1, slug: 'cmp', title: 'Compare', language: 'th', slideCount: 1 };
+function Compared() {
+  return (
+    <Deck meta={cmpMeta} diagrams={{}} listings={{}} outputs={{}}>
+      <Compare id="1-001" section="Opening" title={<>สองแบบ</>} left={<>ซ้าย</>} right={<>ขวา</>} takeaway={<>สรุป</>} />
+    </Deck>
+  );
+}
+
+test('text wider than a Compare panel is a clipped-text problem', async () => {
+  const isPanel = (el: Element) => el.classList.contains('rs-panel');
+  const content = vi.spyOn(Element.prototype, 'scrollWidth', 'get').mockImplementation(function (this: Element) { return isPanel(this) ? 700 : 100; });
+  const box = vi.spyOn(Element.prototype, 'clientWidth', 'get').mockImplementation(function (this: Element) { return isPanel(this) ? 520 : 100; });
+  try {
+    render(<CheckPage entry={{ meta: cmpMeta, load: () => Promise.resolve({ default: Compared }) }} />);
+    await vi.waitFor(() => expect(window.__reactSlidesCheck?.done).toBe(true), { timeout: 6000 });
+    const found = window.__reactSlidesCheck!.findings.filter((f) => f.kind === 'clipped-text');
+    expect(found).toEqual([expect.objectContaining({ slide: '1-001', level: 'problem' })]);
+    expect(found[0]!.detail).toContain('700');
+  } finally {
+    content.mockRestore();
+    box.mockRestore();
+  }
 });

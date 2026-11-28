@@ -83,3 +83,11 @@ test('labels of a drawing that overlap are one problem per slide, in either fram
   expect(found[0]!.detail).toContain('2');
   expect(findings([m({ textOverlaps: 0 })], fonts, [])).toEqual([]);
 });
+
+test('text wider than its Compare panel or takeaway is a clipped-text problem, once per slide', () => {
+  const clipped = [{ where: 'a Compare panel', scrollW: 700, clientW: 520 }];
+  const found = findings([m({ clippedText: clipped }), m({ frame: 'phone', clippedText: clipped, prose: [prose({ clientW: 358, scrollW: 358 })] })], fonts, []);
+  expect(found).toEqual([expect.objectContaining({ slide: '1-001', kind: 'clipped-text', level: 'problem', frame: 'both' })]);
+  expect(found[0].detail).toContain('a Compare panel');
+  expect(findings([m({ clippedText: [] })], fonts, [])).toEqual([]);
+});

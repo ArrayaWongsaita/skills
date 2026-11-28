@@ -39,7 +39,7 @@ def test_the_briefs_name_the_commands_the_scripts_really_have(skill_dir):
         script = "sync_listings.py" if "sync_listings.py" in line else "scaffold.py"
         source = _read(skill_dir, f"scripts/{script}")
         for flag in re.findall(r"(?<![-\w])(--[a-z][a-zA-Z-]*)", line):
-            if flag in {"--dir", "--strictPort", "--port", "--headless", "--screenshot", "--window-size", "--virtual-time-budget", "--dump-dom"}:
+            if flag in {"--dir", "--strictPort", "--port", "--headless", "--screenshot", "--window-size", "--virtual-time-budget", "--dump-dom", "--force-prefers-reduced-motion"}:
                 continue
             assert f'"{flag}"' in source, f"{flag} is not a {script} option"
 
@@ -96,3 +96,9 @@ def test_the_budget_lists_what_the_check_page_counts(skill_dir):
     budgets = plan[plan.index("## The budgets"):plan.index("## Rules for the content")]
     for word in ("notice", "symptom", "cause", "fix", "takeaway", "not code"):
         assert word in budgets, word
+
+
+def test_screenshots_have_one_folder_and_wait_for_a_settled_slide(skill_dir):
+    check = _read(skill_dir, "references/check-and-revise.md")
+    assert "`<work>/screenshots/`" in check and "--force-prefers-reduced-motion" in check and "document.fonts.ready" in check
+    assert "clipped-text" in check and "outputLines" in _read(skill_dir, "references/slides.md")

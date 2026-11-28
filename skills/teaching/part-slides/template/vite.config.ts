@@ -8,5 +8,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['src/test-setup.ts'],
     passWithNoTests: true,
+    // base.test.ts reads the stylesheet's rules; other CSS stays stubbed.
+    css: { include: [/theme\/base\.css/] },
   },
 });

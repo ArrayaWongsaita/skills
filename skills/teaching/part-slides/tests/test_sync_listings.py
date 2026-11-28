@@ -136,3 +136,41 @@ def test_a_file_that_is_not_utf8_is_named_not_a_crash(course, capsys):
     git(repo, "commit", "-qam", "binary")
     assert sync_listings.main([str(course), "--part", "3"]) == 1
     assert "UTF-8" in capsys.readouterr().err
+
+
+def _with_output(course, lines):
+    (course / "runs").mkdir(exist_ok=True)
+    (course / "runs" / "03-solutions.txt").write_text("collecting\nlessons/03 .\n\n  ✓ ข้อ 1\n1 passed in 0.1s\n", encoding="utf-8")
+    parts = course / "web" / "src" / "parts"
+    sources = json.loads((parts / "part-03.sources.json").read_text(encoding="utf-8"))
+    sources["answer"]["output"] = "runs/03-solutions.txt"
+    sources["answer"]["outputLines"] = lines
+    (parts / "part-03.sources.json").write_text(json.dumps(sources), encoding="utf-8")
+
+
+def _output_text(course):
+    line = next(l for l in generated(course).split("playgroundOutputs")[1].splitlines() if '"answer":' in l)
+    return json.loads(re.search(r"text: (\".*\") \}", line).group(1))
+
+
+@pytest.mark.parametrize("lines, text", [("last:2", "  ✓ ข้อ 1\n1 passed in 0.1s"), ("2-2", "lessons/03 ."), ("4-", "  ✓ ข้อ 1\n1 passed in 0.1s")])
+def test_output_lines_keep_an_excerpt_of_the_real_run(course, lines, text):
+    _with_output(course, lines)
+    assert sync_listings.main([str(course), "--part", "3"]) == 0
+    assert _output_text(course) == text
+    assert sync_listings.main([str(course), "--part", "3", "--check"]) == 0
+
+
+def test_check_finds_an_excerpt_that_no_longer_matches_the_run(course, capsys):
+    _with_output(course, "last:1")
+    sync_listings.main([str(course), "--part", "3"])
+    (course / "runs" / "03-solutions.txt").write_text("1 failed\n", encoding="utf-8")
+    assert sync_listings.main([str(course), "--part", "3", "--check"]) == 1
+    assert "output answer" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("lines", ["first:2", "5-3", "9-10", "last:0"])
+def test_output_lines_that_do_not_fit_the_run_are_named(course, capsys, lines):
+    _with_output(course, lines)
+    assert sync_listings.main([str(course), "--part", "3"]) == 1
+    assert "outputLines" in capsys.readouterr().err
