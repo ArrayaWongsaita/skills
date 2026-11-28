@@ -174,3 +174,13 @@ def test_check_can_save_the_chapters_real_runs(git_playground):
     assert apply_unit.main([str(git_playground), "02", "--check", "--save-output", str(runs)]) == 0
     assert sorted(p.name for p in runs.iterdir()) == ["02-main.txt", "02-solutions.txt"]
     assert "lessons/02-second" in (runs / "02-solutions.txt").read_text(encoding="utf-8")
+
+
+def test_a_commit_prints_each_branch_and_its_last_commit_for_the_report(git_playground, capsys):
+    stage(git_playground)
+    assert apply_unit.main([str(git_playground), "02"]) == 0
+    out = capsys.readouterr().out
+    repo = git_playground / "playground"
+    for branch in ("main", "solutions"):
+        sha = git(repo, "rev-parse", "--short", branch)
+        assert f"{branch} {sha} " in out

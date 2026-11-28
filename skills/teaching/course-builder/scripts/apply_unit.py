@@ -154,6 +154,10 @@ def main(argv: list[str]) -> int:
     for note in notes:
         print(note)
     print(f"chapter {args.nn}: {result}")
+    if result == "committed":
+        repo = args.course_dir / "playground"
+        for branch in ("main", "solutions"):
+            print(f"{branch} {_out(repo, 'log', '-1', '--format=%h %s', branch)}")
     if _dirty_paths(args.course_dir / "playground"):
         print("note: the playground has uncommitted changes; they were not checked (only committed branches are)")
     return 0

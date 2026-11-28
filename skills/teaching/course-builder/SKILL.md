@@ -76,7 +76,7 @@ Follow `references/waves.md`: the remaining chapters in waves of 3–4, through 
    ```
 
    It must print `ok`.
-3. Report: the chapters, the branches and their last commits, the slides app's address, and that the repository is ready for the user to push when they choose. You never push.
+3. Report: the chapters, the branches and their last commits (`apply_unit.py` prints them after each commit), the slides app's address, and that the repository is ready for the user to push when they choose. You never push.
 
 ## From an existing playground
 
