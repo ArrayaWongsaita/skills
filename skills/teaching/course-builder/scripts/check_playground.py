@@ -42,6 +42,7 @@ NOTES = {"uncommitted"}
 # while an exercise file has edits.
 LOCAL_SOLUTIONS_RE = re.compile(r"git[ \t]+(?:show[ \t]+solutions:|diff(?:[ \t]+[^\s`]+)*?[ \t]+solutions\b)")
 SWITCH_RE = re.compile(r"git[ \t]+(?:switch|checkout)[ \t]+solutions\b")
+PLAYGROUND_STANDIN = "~/playground"  # what a run shows in place of the worktree it ran in
 TAIL_LINES = 80  # enough for one wrong answer per exercise of a chapter
 
 
@@ -204,9 +205,10 @@ def run(cmd: str, cwd: Path, timeout: int = 900) -> tuple[int, str]:
 
 
 def _clean(output: str, tree: Path) -> str:
-    """The run's output with the temporary worktree's path shown as `.`: it changes every run and means nothing on a slide."""
+    """The run's output with the temporary worktree's path shown as `~/playground`: it changes every run and means
+    nothing on a slide, and a stand-in that stays absolute keeps an absolute path (`pwd`'s answer) absolute."""
     for path in sorted({str(tree.resolve()), str(tree)}, key=len, reverse=True):
-        output = output.replace(path, ".")
+        output = output.replace(path, PLAYGROUND_STANDIN)
     return output
 
 
