@@ -97,3 +97,9 @@ test('a drawing cut off by its slide is a clipped-drawing problem, and one that 
   expect(found).toEqual([expect.objectContaining({ slide: '1-001', kind: 'clipped-drawing', level: 'problem', frame: 'phone' })]);
   expect(findings([m({ clippedDrawings: [] })], fonts, [])).toEqual([]);
 });
+
+test('an Anatomy piece that wraps inside itself is a split-piece problem, and none is not', () => {
+  const found = findings([m({ frame: 'phone', splitPieces: [2], prose: [prose({ clientW: 358, scrollW: 358 })] })], fonts, []);
+  expect(found).toEqual([expect.objectContaining({ slide: '1-001', kind: 'split-piece', level: 'problem', frame: 'phone' })]);
+  expect(findings([m({ splitPieces: [] })], fonts, [])).toEqual([]);
+});

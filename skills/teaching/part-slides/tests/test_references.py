@@ -113,3 +113,7 @@ def test_the_text_budget_says_inline_code_counts(skill_dir):
 
 def test_slides_warn_that_a_line_number_excerpt_moves(skill_dir):
     assert "pick a line that can move by its text with `has:`" in _read(skill_dir, "references/slides.md")
+
+
+def test_the_check_reference_explains_split_piece(skill_dir):
+    assert "`split-piece`" in _read(skill_dir, "references/check-and-revise.md")
