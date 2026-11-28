@@ -108,6 +108,16 @@ def test_solutions_copies_in_a_dot_folder_are_not_the_exercise_file(tmp_path):
     assert cp.check_tree(root, course(("01", "first", "pilot")), "main") == []
 
 
+def test_a_given_test_that_names_its_exercises_is_not_the_exercise_file(tmp_path):
+    # The learner writes the code; the given tests are named after the exercises and sort before the exercise file.
+    root = make_tree(tmp_path, {"01-first": EXERCISE}, "| 01 | `01-first` |")
+    folder = root / "lessons" / "01-first"
+    (folder / "thing.test.ts").rename(folder / "thing.ts")
+    (folder / "app.test.ts").write_text('test("ข้อ 1: one", () => {});\ntest("ข้อ 2: two", () => {});\n', encoding="utf-8")
+    assert cp.exercise_file(folder).name == "thing.ts"
+    assert cp.check_tree(root, course(("01", "first", "pilot")), "main") == []
+
+
 def test_a_building_chapter_not_applied_yet_is_not_a_missing_folder(tmp_path):
     root = make_tree(tmp_path, {"01-first": EXERCISE}, "01-first 02-second")
     assert cp.check_tree(root, course(("01", "first", "done"), ("02", "second", "building")), "main") == []
