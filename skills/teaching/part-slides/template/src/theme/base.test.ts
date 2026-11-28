@@ -12,3 +12,9 @@ test('a divider title is set in the text font, which has Thai, not the mono font
   expect(rule('.rs-divider .rs-title')).not.toContain('var(--rs-mono)');
   expect(css).toMatch(/--rs-font: 'Mali'/);
 });
+
+test('reduced motion stops every entry animation, so a screenshot never catches a slide mid-draw', () => {
+  const start = css.indexOf('@media (prefers-reduced-motion: reduce)');
+  const reduced = css.slice(start, css.indexOf('\n}\n', start));
+  expect(reduced).toContain('.rs-illustration.rs-draw-in path[pathLength]');
+});

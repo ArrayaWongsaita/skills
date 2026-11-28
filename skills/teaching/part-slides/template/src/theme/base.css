@@ -91,7 +91,8 @@ a {
 @media (prefers-reduced-motion: reduce) {
   .rs-draw,
   .rs-fade,
-  .rs-fade-slide {
+  .rs-fade-slide,
+  .rs-illustration.rs-draw-in path[pathLength] {
     animation: none;
     stroke-dashoffset: 0;
     opacity: 1;
