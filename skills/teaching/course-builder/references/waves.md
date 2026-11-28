@@ -4,7 +4,7 @@ Read this at Step 5, to build the remaining chapters through `foreman`, and when
 
 ## A wave
 
-A wave is the next 3–4 chapters at `outline`, in order, whose `builds on` chapters are already `done` or in the same wave. Hand the wave to `foreman` as one job; each chapter is one unit. The intake questions are already answered by this page and `course.md`: put them in the foreman's brief as decided, and tell the user only the wave's chapters and that it starts.
+A wave is the next 3–4 chapters at `outline`, in order, whose `builds on` chapters are already `done` or in the same wave. Two chapters that must change the same file outside their folders go in different waves: workers cannot see each other's units. Hand the wave to `foreman` as one job; each chapter is one unit. The intake questions are already answered by this page and `course.md`: put them in the foreman's brief as decided, and tell the user only the wave's chapters and that it starts.
 
 Before handing it over, for each chapter of the wave:
 
@@ -30,17 +30,27 @@ and <course_skill>/references/playground.md (what a chapter must contain).
    Your row's "under test" is the thing the exercises test; use only what the "builds on" chapters taught.
    If the thing under test lives outside the chapter folder (a page the test tool serves, say), put it in the
    unit too, at its own path from the playground's root.
-   Check it, as often as you need:
-     python3 <course_skill>/scripts/apply_unit.py <course_dir> <NN> --check
-   It must print "chapter <NN>: passed". It commits nothing; never run git in <course_dir>/playground yourself.
+   Never rewrite a file outside your chapter folder that another chapter uses; if your chapter seems to need
+   that, say so in your reply instead.
+   Check it, as often as you need, saving your chapter's real runs for the slides:
+     python3 <course_skill>/scripts/apply_unit.py <course_dir> <NN> --check --save-output <course_dir>/runs
+   It must print "chapter <NN>: passed", and writes runs/<NN>-main.txt and runs/<NN>-solutions.txt. It commits
+   nothing; never run git in <course_dir>/playground yourself, and never copy the playground to run it by hand.
 
 2. The slides. Follow part-slides for Part <N> of this course, steps 1 to 4 (brief from course.md, research,
    plan, write), with no interview: <course_dir>/parts/<NN>-<slug>/ and <course_dir>/web/src/parts/part-<NN>.*.
+   No one approves your plan: pattern.md and the approved pilot (Part 01) are the approval. Write plan.md, check
+   it against pattern.md's slide rules and the budgets, write "Status: approved (pattern.md)" and go on; say in
+   your reply where the plan departs from pattern.md, and the foreman decides.
    Declare each code listing in part-<NN>.sources.json by its branch and the path it will have in the playground
    (the path under units/<NN>/<branch>/), and give a listing's output as "runs/<NN>-solutions.txt" or
-   "runs/<NN>-main.txt". Read the code you plan around from units/<NN>/. Do not run sync_listings.py: your
+   "runs/<NN>-main.txt", the files the check above saved. An output a slide shows is part of the chapter's run:
+   when a slide needs something else (a query's rows, a value), make the chapter's run print it, never a
+   hand-written file. Read the code you plan around from units/<NN>/. Do not run sync_listings.py: your
    chapter is not in the playground yet, so it would fail; the foreman runs it after applying your chapter.
-   Never type playground code into the data file. Do not build or start the slides app: the foreman does that.
+   Never type playground code into the data file. Do not build or start the slides app: the foreman does that,
+   and sends you the check page's findings and screenshots to fix. Keep every text within part-slides' limits
+   as you write, since you cannot see the page.
 
 Done when: apply_unit.py --check passes, and brief.md, plan.md, the data file and sources.json are written.
 Reply with what you made, anything in pattern.md that did not fit this chapter, and, when something in a brief,
@@ -53,11 +63,11 @@ When a worker is finished, one chapter at a time:
 
 1. `python3 <skill>/scripts/apply_unit.py <course_dir> NN`: must print `committed` or `unchanged`; the chapter is now `review`.
 2. `python3 <skill>/scripts/check_playground.py <course_dir> --chapter NN --save-output <course_dir>/runs`: must print `ok`.
-3. `part-slides`' `sync_listings.py <course_dir> --part N`, then its `scaffold.py <course_dir> --sync-count <N>`, the build and the check page (its `references/check-and-revise.md`): no problems.
+3. `part-slides`' `sync_listings.py <course_dir> --part N`, then its `scaffold.py <course_dir> --sync-count <N>`, the build and the check page (its `references/check-and-revise.md`): no problems. Take the screenshots that page asks for and look at each drawing: the worker could not.
 4. `sync_listings.py <course_dir> --part N --check`: no listing differs from the playground.
 5. `python3 <skill>/scripts/course_md.py <course_dir> --set NN done`
 
-A failure goes back to the same worker with the script's output, by `foreman`'s own retry rules. Copy each `Skill problem:` line into `<course_dir>/skill-problems.md`.
+A failure, including a check-page problem or an overlap you see in a screenshot, goes back to the same worker with the script's output or the screenshot, by `foreman`'s own retry rules; the worker fixes `units/NN/` or its Part, and you run the check again from step 1. Copy each `Skill problem:` line into `<course_dir>/skill-problems.md`.
 
 ## Between waves
 

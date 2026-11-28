@@ -144,3 +144,33 @@ def test_apply_says_the_users_uncommitted_changes_were_not_checked(git_playgroun
     stage(git_playground)
     assert apply_unit.main([str(git_playground), "02", "--check"]) == 0
     assert "uncommitted" in capsys.readouterr().out
+
+
+def test_a_unit_that_changes_a_file_outside_its_folder_runs_every_built_chapter(git_playground, capsys):
+    stage(git_playground)
+    # The unit also brings chapter 01's file, as a worker's copy of a shared module would: chapter 01 now fails.
+    broken = git_playground / "units" / "02" / "solutions" / "lessons" / "01-first"
+    broken.mkdir(parents=True)
+    (broken / "thing.test.ts").write_text("// ข้อ 1: แรก\n// แนวทาง: x\nFAIL\n", encoding="utf-8")
+    assert apply_unit.main([str(git_playground), "02", "--check"]) == 1
+    out = capsys.readouterr()
+    assert "run-failed 01 solutions" in out.err and "lessons/01-first/thing.test.ts" in out.out
+
+
+def test_a_unit_outside_its_folder_also_runs_run_all(git_playground):
+    path = git_playground / "course.md"
+    path.write_text(path.read_text(encoding="utf-8").replace("Run chapter:", "Run all: python3 -c \"raise SystemExit(4)\"\nRun chapter:"), encoding="utf-8")
+    stage(git_playground)
+    assert apply_unit.apply(git_playground, "02", commit=False) == "passed"
+    for branch in ("main", "solutions"):
+        (git_playground / "units" / "02" / branch / "shared.py").write_text("x = 1\n", encoding="utf-8")
+    with pytest.raises(apply_unit.ApplyError, match="exited 4"):
+        apply_unit.apply(git_playground, "02", commit=False)
+
+
+def test_check_can_save_the_chapters_real_runs(git_playground):
+    stage(git_playground)
+    runs = git_playground / "runs"
+    assert apply_unit.main([str(git_playground), "02", "--check", "--save-output", str(runs)]) == 0
+    assert sorted(p.name for p in runs.iterdir()) == ["02-main.txt", "02-solutions.txt"]
+    assert "lessons/02-second" in (runs / "02-solutions.txt").read_text(encoding="utf-8")

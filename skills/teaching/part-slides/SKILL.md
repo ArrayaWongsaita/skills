@@ -48,7 +48,7 @@ Follow `references/research.md`: research only this Part's subject, write `<work
 
 ## Step 3: the plan list
 
-Follow `references/plan-list.md`: the story and one table per topic, each slide in words with its picture in words. The user edits it until they approve; then write `Status: approved` in `<work>/plan.md`. **Do not build before that.**
+Follow `references/plan-list.md`: the story and one table per topic, each slide in words with its picture in words. The user edits it until they approve; then write `Status: approved` in `<work>/plan.md`. **Do not build before that.** (A `course-builder` wave worker, which has no user, is the one exception: `references/plan-list.md`, Presenting it.)
 
 ## Step 4: build
 

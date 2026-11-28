@@ -38,6 +38,10 @@ HINT = "แนวทาง:"
 MARKER = "👉"
 BRANCHES = ("main", "solutions")
 NOTES = {"uncommitted"}
+# README commands that fail in a learner's clone: a fresh clone has only `origin/solutions`, and a switch is refused
+# while an exercise file has edits.
+LOCAL_SOLUTIONS_RE = re.compile(r"git[ \t]+(?:show[ \t]+solutions:|diff(?:[ \t]+[^\s`]+)*?[ \t]+solutions\b)")
+SWITCH_RE = re.compile(r"git[ \t]+(?:switch|checkout)[ \t]+solutions\b")
 TAIL_LINES = 20
 
 
@@ -115,7 +119,18 @@ def check_tree(root: Path, course: Course, branch: str, only: str | None = None,
             found.append(Finding("readme", None, branch, f"README.md does not give the setup check `{course.commands['setup']}`"))
         if "solutions" not in text:
             found.append(Finding("readme", None, branch, "README.md does not say the answers are on the `solutions` branch"))
+        found.extend(Finding("readme", None, branch, detail) for detail in answer_command_problems(text))
     return found
+
+
+def answer_command_problems(readme: str) -> list[str]:
+    """The README's ways to see an answer that fail in a learner's clone with work in progress."""
+    problems = []
+    for match in LOCAL_SOLUTIONS_RE.finditer(readme):
+        problems.append(f"README.md gives `{match.group(0)}`, which a fresh clone cannot run: use origin/solutions")
+    if SWITCH_RE.search(readme) and "stash" not in readme:
+        problems.append(f"README.md gives `{SWITCH_RE.search(readme).group(0)}` with no `git stash` first: it is refused once an exercise file has edits")
+    return problems
 
 
 def _git(repo: Path, *args: str) -> subprocess.CompletedProcess:
@@ -183,8 +198,9 @@ def run_chapter(tree: Path, course: Course, chapter: course_md.Chapter, branch: 
     return []
 
 
-def check_branch_tree(tree: Path, course: Course, branch: str, chapter: str | None, run_commands: bool, save_output: Path | None) -> list[Finding]:
-    """Everything check() does for one branch, on a tree that is already checked out."""
+def check_branch_tree(tree: Path, course: Course, branch: str, chapter: str | None, run_commands: bool, save_output: Path | None, others: bool = False) -> list[Finding]:
+    """Everything check() does for one branch, on a tree that is already checked out. With `others`, a one-chapter
+    check also runs every other built chapter and `Run all`, without saving their output."""
     found = check_tree(tree, course, branch, only=chapter, readme_sections=chapter is None)
     if not run_commands:
         return found
@@ -198,7 +214,11 @@ def check_branch_tree(tree: Path, course: Course, branch: str, chapter: str | No
     for each in _checked(course, chapter):
         if (tree / course.chapters_dir / each.folder_name).is_dir():
             found.extend(run_chapter(tree, course, each, branch, save_output))
-    if chapter is None and course.commands.get("all"):
+    if chapter is not None and others:
+        for each in _checked(course, None):
+            if each.nn != chapter and (tree / course.chapters_dir / each.folder_name).is_dir():
+                found.extend(run_chapter(tree, course, each, branch))
+    if (chapter is None or others) and course.commands.get("all"):
         code, output = run(course.commands["all"], tree)
         if code != 0:
             found.append(Finding("run-failed", None, branch, f"`{course.commands['all']}` exited {code}:\n{_tail(_clean(output, tree))}"))

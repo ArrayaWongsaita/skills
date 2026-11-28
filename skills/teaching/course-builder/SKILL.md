@@ -21,7 +21,7 @@ Paths below are relative to this skill's base directory, written `<skill>/…`; 
 | `<course_dir>/pattern.md` | what the pilot settled, as short rules every later chapter follows | you, after the pilot |
 | `<playground>/` | the playground git repository: `main` (exercises pending) and `solutions` (written) | `init_playground.py`, then `apply_unit.py` only |
 | `<course_dir>/units/NN/main/`, `units/NN/solutions/` | one chapter's files as they should be on each branch, before they enter the repo | you (pilot) or a worker |
-| `<course_dir>/runs/` | each chapter run's real output, for the slides | `check_playground.py --save-output` |
+| `<course_dir>/runs/` | each chapter run's real output, for the slides | `check_playground.py --save-output` or `apply_unit.py --check --save-output` |
 | `<course_dir>/parts/NN-<slug>/`, `<course_dir>/web/` | the chapter's slides: brief, research, plan, and the app | `part-slides` |
 | `<course_dir>/skill-problems.md` | problems with this skill, for reporting | you |
 
@@ -97,7 +97,7 @@ When the interview finds the user already has a playground, Step 2 reads its cha
 | `python3 <skill>/scripts/course_md.py <course_dir>` | prints the outline as JSON; `--set NN STATUS` changes one chapter's status |
 | `python3 <skill>/scripts/init_playground.py <course_dir>` | the first commit on `main` and `solutions`, after the setup check passes |
 | `python3 <skill>/scripts/check_playground.py <course_dir> --chapter NN --save-output <course_dir>/runs` | checks the shape of both branches and runs their commands; `--no-run` checks the shape only |
-| `python3 <skill>/scripts/apply_unit.py <course_dir> NN` | brings `units/NN/` into both branches when both pass, and sets the chapter to `review`; `--check` checks and commits nothing |
+| `python3 <skill>/scripts/apply_unit.py <course_dir> NN` | brings `units/NN/` into both branches when both pass, and sets the chapter to `review`; `--check` checks and commits nothing; `--save-output <course_dir>/runs` saves the chapter's runs; a unit that changes files outside its folder runs every built chapter too |
 
 Each prints one line per problem and exits 1 when there is any.
 
