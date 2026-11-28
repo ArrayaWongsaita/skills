@@ -28,3 +28,11 @@ test('a divider title leaves room for Thai marks above and below its lines', () 
 test('on a phone a run wraps, so the end of a long line (a test name) stays in view', () => {
   expect(rule('.rs-phone .rs-output pre')).toContain('white-space: pre-wrap');
 });
+
+test('a run wraps on a desktop too, so a long line (a compiler error) is read in full instead of cut at the edge', () => {
+  // The last `.rs-output pre` rule is the one that wins over the shared `.rs-code, .rs-output pre` rule above it.
+  const start = css.lastIndexOf('\n.rs-output pre {');
+  const own = css.slice(start, css.indexOf('}', start));
+  expect(own).toContain('white-space: pre-wrap');
+  expect(own).toContain('overflow-wrap: anywhere');
+});

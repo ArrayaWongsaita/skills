@@ -586,11 +586,14 @@ a {
   background: #f3f1ec;
 }
 
-/* A program's output is a light result card under its code, set apart by its blue tint: a solid dark block weighed more than the code it answers. */
+/* A program's output is a light result card under its code, set apart by its blue tint: a solid dark block weighed more than the code it answers.
+   A run is read, not copied, so a long line (a compiler error, a test's name) wraps instead of running past the edge. */
 .rs-output pre {
   background: #f2f7fc;
   color: var(--rs-ink);
   border: 1.5px solid #d8e4f0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .rs-output figcaption {
@@ -603,7 +606,7 @@ a {
   max-height: none;
 }
 
-/* A run is read, not copied: on a phone it wraps, so the end of a long line (a test's name) stays in view. */
+/* On a phone a run grows with its wrapped lines. */
 .rs-phone .rs-output pre {
   max-height: none;
   white-space: pre-wrap;
