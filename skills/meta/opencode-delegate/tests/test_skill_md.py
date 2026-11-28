@@ -73,3 +73,8 @@ def test_the_skill_shows_how_to_start_wait_for_and_cancel_a_detached_turn(skill_
 def test_the_skill_says_a_failed_turn_with_a_cause_may_be_finished(skill_md):
     assert "cause=input-cancelled" in skill_md and "cause=connection-reset" in skill_md
     assert "read the files" in skill_md
+
+
+def test_the_skill_stops_only_the_server_listening_on_a_port(skill_md):
+    assert "lsof -ti tcp:<port> -sTCP:LISTEN" in skill_md
+    assert not re.search(r"lsof -ti tcp:<port>`", skill_md)  # never the bare form, which matches connected processes too

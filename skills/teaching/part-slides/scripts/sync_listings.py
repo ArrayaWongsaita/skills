@@ -90,16 +90,21 @@ def _one_newline_off(text: str) -> str:
 LINES_RE = re.compile(r"^(?:last:(\d+)|(\d+)(-(\d*))?)$")
 
 
+SELECTOR_SPLIT = re.compile(r",(?=has:|last:|\d)")
+
+
 def excerpt(text: str, spec: str) -> str:
-    """The lines of a run that `outputLines` names (ranges may be joined with commas); raises ValueError when the
-    spec does not fit the run."""
+    """The lines of a run that `outputLines` names (selectors may be joined with commas); raises ValueError when the
+    spec does not fit the run. A comma starts a new selector only when `has:`, `last:` or a line number follows it, so
+    a comma inside a `has:` text stays in the text."""
+    parts = SELECTOR_SPLIT.split(spec)
+    if len(parts) > 1:
+        return "\n".join(excerpt(text, part) for part in parts)
     if spec.startswith("has:"):
         found = [line for line in text.split("\n") if spec[4:] in line]
         if not found:
             raise ValueError(f'"{spec}": no line of the run has that text')
         return "\n".join(found)
-    if "," in spec:
-        return "\n".join(excerpt(text, part) for part in spec.split(","))
     lines = text.split("\n")
     match = LINES_RE.match(spec.strip())
     if not match:

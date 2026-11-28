@@ -95,11 +95,11 @@ def hint_answers(main_text: str, solved_text: str) -> list[str]:
 
 
 def exercise_file(folder: Path) -> Path | None:
-    """The file of a chapter that holds its numbered exercises; copies in a dot-folder such as .solutions/ are not it."""
-    for path in sorted(p for p in folder.rglob("*") if p.is_file() and not any(part.startswith(".") for part in p.relative_to(folder).parts[:-1])):
-        if EXERCISE_RE.search(_text(path)):
-            return path
-    return None
+    """The file of a chapter that holds its numbered exercises; copies in a dot-folder such as .solutions/ are not it.
+    A file with hints wins over one that only names the exercises (given tests called `ข้อ 1: …`)."""
+    named = [p for p in sorted(p for p in folder.rglob("*") if p.is_file() and not any(part.startswith(".") for part in p.relative_to(folder).parts[:-1]))
+             if EXERCISE_RE.search(_text(p))]
+    return next((p for p in named if HINT in _text(p)), named[0] if named else None)
 
 
 def _checked(course: Course, only: str | None) -> list[course_md.Chapter]:

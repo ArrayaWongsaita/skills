@@ -32,7 +32,7 @@ It runs `opencode run --auto -s <id> …` in `<project>`, writes everything open
 
 Pass `--model` on every turn: the account's default model may be a free one with a usage limit. Before a long turn or several at once, check the model answers with one line: `opencode run -m <provider/model> "Reply with ok"`.
 
-- **Why not call `opencode run` yourself:** when a task starts a background job (a preview server, a watcher), opencode does not exit. It prints `waiting for 1 background job` and stays. The script stops it once the log has ended on that line for `--grace` seconds, and stops everything opencode started with it. A server it started as a background job dies with the turn; start your own afterwards if you need one. A server the worker detached itself (`nohup … &`, `setsid`) is outside that group and outlives the turn, so check `lsof -ti tcp:<port>` afterwards and stop what you find.
+- **Why not call `opencode run` yourself:** when a task starts a background job (a preview server, a watcher), opencode does not exit. It prints `waiting for 1 background job` and stays. The script stops it once the log has ended on that line for `--grace` seconds, and stops everything opencode started with it. A server it started as a background job dies with the turn; start your own afterwards if you need one. A server the worker detached itself (`nohup … &`, `setsid`) is outside that group and outlives the turn, so check `lsof -ti tcp:<port> -sTCP:LISTEN` afterwards and stop what you find (without `-sTCP:LISTEN`, lsof also lists every process connected to that port, such as another worker reading the page, and a `kill` stops them too).
 - **Exit codes:** 0 finished or stopped while only waiting, 1 opencode failed, 2 timed out, 3 could not start (no `opencode`, no such folder, a session id that does not start with `ses`), 4 cancelled.
 - **`--session`:** an id that starts with `ses`, such as `ses_fixlogin01` (`ses_`, then letters and digits). opencode rejects any other, so the script stops with exit 3 before it starts. It continues that session if it exists and creates it if not. Use one id per task and reuse it for every follow-up turn.
 - **`--dir`:** opencode takes its folder from `$PWD`, so a plain `cd` in a shell works and a subprocess `cwd` alone does not. The script sets both. If you run `opencode run` yourself, `cd` into the project first.
@@ -61,7 +61,7 @@ It has none of your context. State the goal, the files and folders it may touch,
 |---|---|---|
 | The call never returns; the log ends `waiting for N background job` | A background job keeps opencode alive | Use `opencode_turn.py` |
 | The turn sits waiting for approval | `--auto` was left out | `opencode_turn.py` always adds it |
-| A page or a check shows another project's content | An earlier run's server still holds the port | `lsof -ti tcp:<port>` before you start; stop what you find |
+| A page or a check shows another project's content | An earlier run's server still holds the port | `lsof -ti tcp:<port> -sTCP:LISTEN` before you start; stop what you find |
 | Files appear in the folder you ran from, not the project | `$PWD` still pointed at your folder | Use `opencode_turn.py --dir`, or `cd` first |
 | Files changed outside the task's folder | It ran in the user's only copy | Run in a scratch copy or a worktree |
 | It says "done" and the result is wrong | Nobody ran the check | Check it yourself, then send the failure back in the same session |

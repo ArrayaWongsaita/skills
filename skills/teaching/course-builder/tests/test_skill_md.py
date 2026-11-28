@@ -85,3 +85,24 @@ def test_the_playground_brief_names_both_kinds_of_exercise_and_readable_failures
         assert needle in playground, needle
     pilot = (SKILL_DIR / "references" / "pilot-and-pattern.md").read_text(encoding="utf-8")
     assert "No slide shows an exercise's answer" in pilot and 'section: "Closing"' in pilot
+
+
+def test_the_outline_says_a_chapter_has_one_exercise_file_before_the_user_approves():
+    outline = (SKILL_DIR / "references" / "outline.md").read_text(encoding="utf-8")
+    proposing = outline.split("## Proposing the outline")[1]
+    assert "one exercise file" in proposing and "a file per exercise" in proposing
+
+
+def test_a_stand_in_names_what_the_folder_is_not_always_the_playground():
+    text = (SKILL_DIR / "references" / "playground.md").read_text(encoding="utf-8")
+    assert "Never show a folder that is not the playground as `~/playground`" in text
+
+
+def test_commands_typed_into_a_script_are_the_code_kind_of_exercise():
+    text = (SKILL_DIR / "references" / "playground.md").read_text(encoding="utf-8")
+    assert "the commands of a command-line tool" in text
+
+
+def test_a_wave_worker_stops_only_its_own_listening_server():
+    brief = (SKILL_DIR / "references" / "waves.md").read_text(encoding="utf-8").split("```")[1]
+    assert "lsof -ti tcp:<port> -sTCP:LISTEN" in brief

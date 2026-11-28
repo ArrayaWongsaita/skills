@@ -270,3 +270,27 @@ test('a drawing that runs past the edge of its slide is a clipped-drawing proble
     spy.mockRestore();
   }
 });
+
+function LongPiece() {
+  return (
+    <Deck meta={cutMeta} diagrams={{}} listings={{}} outputs={{}}>
+      <Anatomy id="1-001" section="Opening" title={<>ส่วน</>} body={<>b</>} pieces={[{ text: 'f(' }, { text: '"a long format string; want %d"', n: 1 }, { text: ')' }]} items={[<>ข้อความ</>]} />
+    </Deck>
+  );
+}
+
+test('an Anatomy piece that wraps inside its own box is a split-piece problem', async () => {
+  const rect = (height: number) => ({ x: 0, y: 0, top: 0, left: 0, width: 300, height, right: 300, bottom: height, toJSON: () => ({}) }) as DOMRect;
+  const spy = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+    return rect(this.matches('[data-piece-n]') ? 80 : 30); // a piece two lines tall, everything else one line
+  });
+  try {
+    render(<CheckPage entry={{ meta: cutMeta, load: () => Promise.resolve({ default: LongPiece }) }} />);
+    await vi.waitFor(() => expect(window.__reactSlidesCheck?.done).toBe(true), { timeout: 6000 });
+    const found = window.__reactSlidesCheck!.findings.filter((f) => f.kind === 'split-piece');
+    expect(found).toEqual([expect.objectContaining({ slide: '1-001', level: 'problem', frame: 'both' })]); // tall in both frames
+    expect(found[0]!.detail).toContain('piece 1');
+  } finally {
+    spy.mockRestore();
+  }
+});

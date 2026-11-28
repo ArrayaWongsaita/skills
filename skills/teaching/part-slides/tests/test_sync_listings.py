@@ -222,3 +222,10 @@ def test_output_lines_may_pick_lines_by_their_text_when_a_tool_reorders_its_run(
 def test_output_lines_by_text_that_matches_nothing_is_an_error(course):
     _with_output(course, "has:ข้อ 9")
     assert sync_listings.main([str(course), "--part", "3"]) == 1
+
+
+def test_several_has_selectors_and_ranges_join_with_commas():
+    run = "head\n--- FAIL: TestA\nnoise\n--- FAIL: TestB\nwant 3, got 4\nFAIL"
+    assert sync_listings.excerpt(run, "has:FAIL: TestA,has:FAIL: TestB") == "--- FAIL: TestA\n--- FAIL: TestB"
+    assert sync_listings.excerpt(run, "1,has:TestB") == "head\n--- FAIL: TestB"
+    assert sync_listings.excerpt(run, "has:want 3, got 4") == "want 3, got 4"  # a comma inside the text stays in the text

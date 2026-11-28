@@ -114,3 +114,8 @@ def test_waiting_starts_a_turn_with_a_session_id_opencode_takes():
 def test_waiting_says_a_failed_turn_with_a_cause_may_be_finished():
     waiting = reference("waiting.md")
     assert "cause=" in waiting and "may be finished" in waiting
+
+
+def test_clean_up_stops_only_the_server_listening_on_a_port(everything):
+    # A bare `lsof -ti tcp:<port>` also lists processes only connected to it, such as another worker.
+    assert "lsof -ti tcp:<port> -sTCP:LISTEN" in everything

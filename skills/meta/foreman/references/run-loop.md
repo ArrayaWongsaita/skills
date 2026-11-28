@@ -45,4 +45,4 @@ The final report, in the user's language:
 - what is `blocked`, with each question and your recommendation;
 - the three places to look first.
 
-Then clean up what the run started: end each worker session with `opencode session delete <id>` (a stand-in or an older opencode may lack it: say so in the report), stop the servers you started (`lsof -ti tcp:<port>` shows what holds a port), and remove the scratch copies you made. Offer the problem list as the last section of `SKILL.md` says.
+Then clean up what the run started: end each worker session with `opencode session delete <id>` (a stand-in or an older opencode may lack it: say so in the report), stop the servers you started (`lsof -ti tcp:<port> -sTCP:LISTEN` shows the server that holds a port; the bare form also lists every process connected to it, and a `kill` would stop those too), and remove the scratch copies you made. Offer the problem list as the last section of `SKILL.md` says.

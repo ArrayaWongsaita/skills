@@ -59,6 +59,19 @@ function cutDrawings(slide: HTMLElement): { bottom: number; right: number }[] {
     .filter((cut) => cut.bottom > 1 || cut.right > 1);
 }
 
+/** The Anatomy pieces of a slide whose text runs onto a second line inside the piece's box (a piece is a flex item, so it grows taller). */
+function splitPieces(stage: HTMLElement): number[] {
+  return [...stage.querySelectorAll<HTMLElement>('.rs-anatomy-strip [data-piece-n]')]
+    .filter((piece) => {
+      const style = getComputedStyle(piece);
+      const px = (value: string) => Number.parseFloat(value) || 0;
+      const line = px(style.lineHeight) || (px(style.fontSize) || 16) * 1.2;
+      const text = piece.getBoundingClientRect().height - px(style.paddingTop) - px(style.paddingBottom) - px(style.borderTopWidth) - px(style.borderBottomWidth);
+      return text > line * 1.5;
+    })
+    .map((piece) => Number(piece.dataset.pieceN));
+}
+
 function measure(root: HTMLElement): Measurement[] {
   const out: Measurement[] = [];
   for (const frameEl of root.querySelectorAll<HTMLElement>('[data-frame]')) {
@@ -82,6 +95,7 @@ function measure(root: HTMLElement): Measurement[] {
           .filter((el) => el.scrollWidth > el.clientWidth + 1)
           .map((el) => ({ where: el.classList.contains('rs-panel') ? 'a Compare panel' : 'the takeaway', scrollW: el.scrollWidth, clientW: el.clientWidth })),
         clippedDrawings: slide ? cutDrawings(slide) : [],
+        splitPieces: splitPieces(stage),
       });
     }
   }
