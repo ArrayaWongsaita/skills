@@ -184,3 +184,13 @@ def test_a_commit_prints_each_branch_and_its_last_commit_for_the_report(git_play
     for branch in ("main", "solutions"):
         sha = git(repo, "rev-parse", "--short", branch)
         assert f"{branch} {sha} " in out
+
+
+def test_caches_a_run_left_in_the_unit_are_not_copied(git_playground):
+    stage(git_playground)
+    for branch in ("main", "solutions"):
+        cache = git_playground / "units" / "02" / branch / "lessons" / "02-second" / "__pycache__"
+        cache.mkdir()
+        (cache / "thing.cpython-312.pyc").write_bytes("ข้อ 1: compiled".encode() + b"\x00\x01")
+    assert apply_unit.apply(git_playground, "02") == "committed"
+    assert "__pycache__" not in git(git_playground / "playground", "ls-tree", "-r", "--name-only", "main")

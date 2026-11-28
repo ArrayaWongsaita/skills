@@ -48,10 +48,14 @@ def _out(repo: Path, *args: str) -> str:
     return result.stdout.strip()
 
 
+# What running a chapter inside its unit leaves behind; never part of the chapter.
+RUN_LEFTOVERS = shutil.ignore_patterns("__pycache__", "*.pyc", ".pytest_cache", "node_modules", ".DS_Store", "test-results", "playwright-report")
+
+
 def _copy_unit(unit: Path, tree: Path, chapter_folder: str | None) -> None:
     if chapter_folder and (unit / chapter_folder).is_dir() and (tree / chapter_folder).exists():
         shutil.rmtree(tree / chapter_folder)
-    shutil.copytree(unit, tree, dirs_exist_ok=True)
+    shutil.copytree(unit, tree, dirs_exist_ok=True, ignore=RUN_LEFTOVERS)
 
 
 def _dirty_paths(repo: Path) -> set[str]:
