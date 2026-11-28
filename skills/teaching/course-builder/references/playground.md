@@ -16,7 +16,7 @@ Write these into `<playground>/` before `init_playground.py`:
   - install, then the setup check, which must pass;
   - how to do an exercise: open the chapter's exercise file, read the header, write the test under each `👉`;
   - how to run one chapter and all of them, and how to read the result (a pending test is not a failure);
-  - how to look at the answers: the `solutions` branch (a whole check fails when the README does not name it, or does not give the setup-check command exactly as `course.md` has it);
+  - how to look at the answers: the `solutions` branch (a whole check fails when the README does not name it, or does not give the setup-check command exactly as `course.md` has it). Give the commands that work in a learner's fresh clone while they have edits in progress: `git show origin/solutions:<chapter's exercise file>` and `git diff main origin/solutions -- <chapter folder>`, with the path pattern or one example per chapter, not chapter 01's only. A clone has no local `solutions` until the first switch, and `git switch solutions` is refused once an exercise file has edits, so give a switch only after `git stash` (and `git stash pop` back on `main`). A whole check flags `git show solutions:`, `git diff main solutions` and a switch with no stash;
   - **the contents table, grouped by stage, with every chapter of the outline**, each naming its folder (`01-first-render`). Writing every row now means a chapter's unit never has to touch the README.
 - **`docs/cheatsheet.md`**: a short skeleton; the finish step fills it.
 - **The chapters folder** (`Chapters folder:` in `course.md`), empty.

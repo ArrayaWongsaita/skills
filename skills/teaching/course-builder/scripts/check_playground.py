@@ -38,6 +38,10 @@ HINT = "แนวทาง:"
 MARKER = "👉"
 BRANCHES = ("main", "solutions")
 NOTES = {"uncommitted"}
+# README commands that fail in a learner's clone: a fresh clone has only `origin/solutions`, and a switch is refused
+# while an exercise file has edits.
+LOCAL_SOLUTIONS_RE = re.compile(r"git[ \t]+(?:show[ \t]+solutions:|diff(?:[ \t]+[^\s`]+)*?[ \t]+solutions\b)")
+SWITCH_RE = re.compile(r"git[ \t]+(?:switch|checkout)[ \t]+solutions\b")
 TAIL_LINES = 20
 
 
@@ -115,7 +119,18 @@ def check_tree(root: Path, course: Course, branch: str, only: str | None = None,
             found.append(Finding("readme", None, branch, f"README.md does not give the setup check `{course.commands['setup']}`"))
         if "solutions" not in text:
             found.append(Finding("readme", None, branch, "README.md does not say the answers are on the `solutions` branch"))
+        found.extend(Finding("readme", None, branch, detail) for detail in answer_command_problems(text))
     return found
+
+
+def answer_command_problems(readme: str) -> list[str]:
+    """The README's ways to see an answer that fail in a learner's clone with work in progress."""
+    problems = []
+    for match in LOCAL_SOLUTIONS_RE.finditer(readme):
+        problems.append(f"README.md gives `{match.group(0)}`, which a fresh clone cannot run: use origin/solutions")
+    if SWITCH_RE.search(readme) and "stash" not in readme:
+        problems.append(f"README.md gives `{SWITCH_RE.search(readme).group(0)}` with no `git stash` first: it is refused once an exercise file has edits")
+    return problems
 
 
 def _git(repo: Path, *args: str) -> subprocess.CompletedProcess:

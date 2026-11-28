@@ -133,3 +133,26 @@ def test_the_readme_must_name_the_setup_check_and_the_solutions_branch(tmp_path)
     root = make_tree(tmp_path, {"01-first": EXERCISE}, "01-first")
     kinds = [f.detail for f in cp.check_tree(root, c, "main", readme_sections=True)]
     assert any("pnpm test setup-check" in d for d in kinds) and any("solutions" in d for d in kinds)
+
+
+def _readme_details(tmp_path, readme):
+    c = course(("01", "first", "pilot"))
+    root = make_tree(tmp_path, {"01-first": EXERCISE}, f"`true` first. 01-first\n{readme}\n")
+    return [f.detail for f in cp.check_tree(root, c, "main", readme_sections=True)]
+
+
+def test_the_readme_may_not_switch_to_solutions_without_a_stash(tmp_path):
+    [detail] = _readme_details(tmp_path, "Answers: `git switch solutions`")
+    assert "git switch solutions" in detail and "stash" in detail
+
+
+def test_the_readme_may_not_read_a_local_solutions_branch_a_clone_does_not_have(tmp_path):
+    details = _readme_details(tmp_path, "`git show solutions:lessons/01-first/thing.test.ts`\n`git diff main solutions -- lessons/01-first`")
+    assert len(details) == 2 and all("origin/solutions" in d for d in details)
+
+
+def test_the_readme_forms_that_work_in_a_learners_clone_pass(tmp_path):
+    readme = ("`git show origin/solutions:lessons/01-first/thing.test.ts`\n"
+              "`git diff main origin/solutions -- lessons/01-first`\n"
+              "`git stash` then `git switch solutions`, and `git switch main` then `git stash pop`")
+    assert _readme_details(tmp_path, readme) == []
