@@ -101,3 +101,8 @@ def test_a_stand_in_names_what_the_folder_is_not_always_the_playground():
 def test_commands_typed_into_a_script_are_the_code_kind_of_exercise():
     text = (SKILL_DIR / "references" / "playground.md").read_text(encoding="utf-8")
     assert "the commands of a command-line tool" in text
+
+
+def test_a_wave_worker_stops_only_its_own_listening_server():
+    brief = (SKILL_DIR / "references" / "waves.md").read_text(encoding="utf-8").split("```")[1]
+    assert "lsof -ti tcp:<port> -sTCP:LISTEN" in brief
