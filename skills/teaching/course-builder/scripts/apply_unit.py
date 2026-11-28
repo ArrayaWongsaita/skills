@@ -75,6 +75,7 @@ def apply(course_dir: Path, nn: str, commit: bool = True, save_output: Path | No
     finish = nn == "finish"
     try:
         course = course_md.read(course_dir)
+        course_md.require_commands(course)
         chapter = None if finish else course.chapter(nn)
     except CourseError as error:
         raise ApplyError(str(error)) from error
@@ -153,6 +154,10 @@ def main(argv: list[str]) -> int:
     for note in notes:
         print(note)
     print(f"chapter {args.nn}: {result}")
+    if result == "committed":
+        repo = args.course_dir / "playground"
+        for branch in ("main", "solutions"):
+            print(f"{branch} {_out(repo, 'log', '-1', '--format=%h %s', branch)}")
     if _dirty_paths(args.course_dir / "playground"):
         print("note: the playground has uncommitted changes; they were not checked (only committed branches are)")
     return 0

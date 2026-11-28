@@ -11,11 +11,11 @@ Before handing it over, for each chapter of the wave:
 - `python3 <skill>/scripts/course_md.py <course_dir> --set NN building`
 - create the Part's skeleton with `part-slides`' `scaffold.py` (`--part N --slug <slug> --part-title "<title>"`), one Part at a time.
 
-The workers of one wave may run at the same time: each writes only its own `units/NN/` and its own Part's files. Everything that touches the playground's git or the slides app runs one chapter at a time.
+The workers of one wave may run at the same time: each writes only its own `units/NN/` and its own Part's files. Everything that touches the playground's git, and the slides' shared `web/dist`, runs one chapter at a time; a worker checks its own Part in a build folder and on a port of its own.
 
 ## The worker brief
 
-One per chapter. Fill the angle brackets (`<course_skill>` is this skill's base directory, `<skill>` above) and send it as written:
+One per chapter. Fill the angle brackets (`<course_skill>` is this skill's base directory, `<skill>` above; `<part-slides>` is part-slides' base directory) and send it as written:
 
 ```
 You are building chapter <NN> (<title>) of the course in <course_dir>.
@@ -46,13 +46,22 @@ and <course_skill>/references/playground.md (what a chapter must contain).
    (the path under units/<NN>/<branch>/), and give a listing's output as "runs/<NN>-solutions.txt" or
    "runs/<NN>-main.txt", the files the check above saved. An output a slide shows is part of the chapter's run:
    when a slide needs something else (a query's rows, a value), make the chapter's run print it, never a
-   hand-written file. Read the code you plan around from units/<NN>/. Do not run sync_listings.py: your
-   chapter is not in the playground yet, so it would fail; the foreman runs it after applying your chapter.
-   Never type playground code into the data file. Do not build or start the slides app: the foreman does that,
-   and sends you the check page's findings and screenshots to fix. Keep every text within part-slides' limits
-   as you write, since you cannot see the page.
+   hand-written file. Read the code you plan around from units/<NN>/. Never type playground code into the data
+   file.
 
-Done when: apply_unit.py --check passes, and brief.md, plan.md, the data file and sources.json are written.
+3. Check your Part yourself. Your chapter is not in the playground yet, so sync from your unit, and build into
+   a folder and a port of your own (other workers build at the same time; never use web/dist or port 4173):
+     python3 <part-slides>/scripts/sync_listings.py <course_dir> --part <N> --unit <NN>
+     python3 <part-slides>/scripts/scaffold.py <course_dir> --sync-count <N>
+     pnpm --dir <course_dir>/web exec vite build --outDir <course_dir>/parts/<NN>-<slug>/check-dist
+     pnpm --dir <course_dir>/web exec vite preview --outDir <course_dir>/parts/<NN>-<slug>/check-dist --port <a free port> --strictPort
+   Then the check page and the screenshots of part-slides' references/check-and-revise.md at that port. Fix
+   every problem, stop your preview server, and delete check-dist/. A build error in another Part's files is
+   another worker's: build again a minute later. The foreman syncs again from the playground after applying
+   your chapter, checks the Part again and sends you what it still finds.
+
+Done when: apply_unit.py --check passes, brief.md, plan.md, the data file and sources.json are written, and
+your Part's check page has no problems.
 Reply with what you made, anything in pattern.md that did not fit this chapter, and, when something in a brief,
 a script or a template got in your way, one line: Skill problem: <what got in the way, and where>.
 ```
@@ -63,7 +72,7 @@ When a worker is finished, one chapter at a time:
 
 1. `python3 <skill>/scripts/apply_unit.py <course_dir> NN`: must print `committed` or `unchanged`; the chapter is now `review`.
 2. `python3 <skill>/scripts/check_playground.py <course_dir> --chapter NN --save-output <course_dir>/runs`: must print `ok`.
-3. `part-slides`' `sync_listings.py <course_dir> --part N`, then its `scaffold.py <course_dir> --sync-count <N>`, the build and the check page (its `references/check-and-revise.md`): no problems. Take the screenshots that page asks for and look at each drawing: the worker could not.
+3. `part-slides`' `sync_listings.py <course_dir> --part N`, then its `scaffold.py <course_dir> --sync-count <N>`, the build and the check page (its `references/check-and-revise.md`): no problems. Look at the screenshots of each drawing again: a worker's check ran before the apply.
 4. `sync_listings.py <course_dir> --part N --check`: no listing differs from the playground.
 5. `python3 <skill>/scripts/course_md.py <course_dir> --set NN done`
 

@@ -46,12 +46,14 @@ Decide at this step which kind of exercise the course has, from the learner, and
 What `check_playground.py` checks, and what a worker writes:
 
 - one folder per chapter, `<Chapters folder>/NN-<slug>`, holding the small thing under test and **one exercise file**. When the tool needs the thing under test elsewhere (a page its server serves), it goes there, at its own path, in the same unit. **The thing under test belongs to its chapter**: never one module at the root that every chapter adds to. Workers run at the same time, and a unit replaces a whole file, so a chapter that extends a shared file drops what another chapter added. A file several chapters use (a helper, a fixture) is written once, in the skeleton or by the pilot, and later chapters only read it. `apply_unit.py` runs every built chapter and `Run all` when a unit changes a file outside its folder, and names those files;
-- the exercise file opens with a header comment: the chapter, what it practises, the idea in a few lines, and one worked example;
+- the exercise file opens with a header comment: the chapter, what it practises, the idea in a few lines, and one worked example. Give the worked example as real code that runs too (a finished test above the exercises, or an example file in the chapter folder), so the slides can show it with its real output;
 - then numbered exercises, `ข้อ N: <what to do>`, about three, each with:
   - one line `แนวทาง: <a hint>`: a direction (which function, which idea, where to look), never the code to write, the expected value, or the worked example again;
   - a pending test, or, for given checks, a pending check;
   - a `👉` line where the learner writes;
-  - a check that fails on a plausible wrong answer: an assertion that is true whatever the learner does (a text checked against part of itself, a value compared with itself) teaches nothing. Try one wrong answer per exercise before the chapter is applied;
+  - when the chapter teaches reading a failure, a real failure the slides can show: an example that fails on purpose, run so that the chapter's run prints its output and still exits 0 (a small script the `Run chapter:` command calls), never a failure typed on a slide;
+- an exercise that practises something the chapter's other exercises do not: two exercises that differ only in their values teach the same thing twice;
+- a check that fails on a plausible wrong answer, including a mistyped name or text: a check that something is absent, hidden or empty also passes when it finds nothing, so first check the thing exists; an assertion that is true whatever the learner does (a text checked against part of itself, a value compared with itself) teaches nothing. Try one wrong answer per exercise before the chapter is applied;
 - on `solutions`, the same file with each test written and **no `👉` left**;
 - if `pattern.md` says so, copies of the answers in `.solutions/` on `main` too;
 - file names unique across chapters when the tool imports test files by name (pytest's default import mode, for one): two chapters' `test_shop.py` collide in `Run all`. Put the chapter's number or slug in the name.

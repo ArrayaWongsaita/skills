@@ -21,12 +21,15 @@ import course_md  # noqa: E402
 from check_playground import _git, _tail, run  # noqa: E402
 from course_md import CourseError  # noqa: E402
 
+# The lockfile an install writes is part of the skeleton: it is committed, never ignored.
+LOCKFILES = {"pnpm-lock.yaml", "package-lock.json", "yarn.lock", "bun.lock", "bun.lockb", "uv.lock", "poetry.lock", "Pipfile.lock", "Cargo.lock", "go.sum", "Gemfile.lock", "composer.lock"}
 # Folders an install or a test run makes; they must be git-ignored before the first commit.
 MADE_BY_TOOLS = {"node_modules", ".venv", "venv", "__pycache__", ".pytest_cache", "target", "dist", "build", "coverage", "test-results", "playwright-report", ".pnpm-store"}
 
 
 def init(course_dir: Path) -> None:
     course = course_md.read(course_dir)
+    course_md.require_commands(course)
     repo = Path(course_dir) / "playground"
     if not repo.is_dir():
         raise CourseError(f"{repo} does not exist: write the playground skeleton first")
@@ -37,7 +40,7 @@ def init(course_dir: Path) -> None:
         code, output = run(course.commands[name], repo)
         if code != 0:
             raise CourseError(f"`{course.commands[name]}` exited {code}; nothing was committed:\n{_tail(output)}")
-    made = sorted(p.name for p in repo.iterdir() if p.name not in before or p.name in MADE_BY_TOOLS)
+    made = sorted(p.name for p in repo.iterdir() if (p.name not in before or p.name in MADE_BY_TOOLS) and p.name not in LOCKFILES)
     result = _git(repo, "init", "-q", "-b", "main")
     if result.returncode != 0:
         raise CourseError(f"git init failed: {result.stderr.strip()}")

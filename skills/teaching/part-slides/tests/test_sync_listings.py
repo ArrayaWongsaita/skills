@@ -153,7 +153,7 @@ def _output_text(course):
     return json.loads(re.search(r"text: (\".*\") \}", line).group(1))
 
 
-@pytest.mark.parametrize("lines, text", [("last:2", "  ✓ ข้อ 1\n1 passed in 0.1s"), ("2-2", "lessons/03 ."), ("4-", "  ✓ ข้อ 1\n1 passed in 0.1s")])
+@pytest.mark.parametrize("lines, text", [("last:2", "  ✓ ข้อ 1\n1 passed in 0.1s"), ("2-2", "lessons/03 ."), ("2", "lessons/03 ."), ("4-", "  ✓ ข้อ 1\n1 passed in 0.1s")])
 def test_output_lines_keep_an_excerpt_of_the_real_run(course, lines, text):
     _with_output(course, lines)
     assert sync_listings.main([str(course), "--part", "3"]) == 0
@@ -174,3 +174,22 @@ def test_output_lines_that_do_not_fit_the_run_are_named(course, capsys, lines):
     _with_output(course, lines)
     assert sync_listings.main([str(course), "--part", "3"]) == 1
     assert "outputLines" in capsys.readouterr().err
+
+
+def test_output_lines_may_join_ranges_so_a_table_keeps_its_header(course):
+    _with_output(course, "1,4-5")
+    assert sync_listings.main([str(course), "--part", "3"]) == 0
+    assert _output_text(course) == "collecting\n  ✓ ข้อ 1\n1 passed in 0.1s"
+
+
+def test_a_worker_syncs_a_chapter_not_applied_yet_from_its_unit(course):
+    parts = course / "web" / "src" / "parts"
+    sources = {"new": {"branch": "solutions", "path": "lessons/04-type/Type.test.tsx", "lang": "tsx"}}
+    (parts / "part-03.sources.json").write_text(json.dumps(sources), encoding="utf-8")
+    unit = course / "units" / "04" / "solutions" / "lessons" / "04-type"
+    unit.mkdir(parents=True)
+    (unit / "Type.test.tsx").write_text("test('typed', () => {});\n", encoding="utf-8")
+    assert sync_listings.main([str(course), "--part", "3"]) == 1
+    assert sync_listings.main([str(course), "--part", "3", "--unit", "04"]) == 0
+    assert code_of(generated(course), "new") == "test('typed', () => {});"
+    assert "unit 04" in generated(course)
