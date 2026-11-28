@@ -297,3 +297,13 @@ def test_a_done_turn_never_gets_a_cause(fake_opencode, project, tmp_path, capsys
     fake = fake_opencode("print('Error: read ECONNRESET', flush=True)")
     turn(fake, project, tmp_path)
     assert "cause=" not in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("line, cause", [
+    ("Error: Free usage limit reached. Connect a provider or switch models.", "usage-limit"),
+    ("Error: Model access is disabled. Change model access in the console.", "model-access"),
+])
+def test_a_turn_refused_by_its_model_names_why(fake_opencode, project, tmp_path, capsys, line, cause):
+    fake = fake_opencode(f"print('> build · some-model', flush=True); print({line!r}, flush=True); sys.exit(1)")
+    turn(fake, project, tmp_path)
+    assert f"cause={cause}" in capsys.readouterr().out

@@ -28,7 +28,9 @@ python3 <skill>/scripts/opencode_turn.py --dir <project> --session <id> --out <l
   [--status-file <file>] [--detach] "<message>"
 ```
 
-It runs `opencode run --auto -s <id> …` in `<project>`, writes everything opencode prints to `<log>`, and prints one line: `status=<done|stopped|failed|timeout|cancelled> exit=<n> log=<path>`. A failed turn whose last lines show a cancelled input request or a dropped connection says so before the log: `cause=input-cancelled` or `cause=connection-reset`.
+It runs `opencode run --auto -s <id> …` in `<project>`, writes everything opencode prints to `<log>`, and prints one line: `status=<done|stopped|failed|timeout|cancelled> exit=<n> log=<path>`. A failed turn whose last lines show a cancelled input request or a dropped connection says so before the log: `cause=input-cancelled` or `cause=connection-reset`; a turn the model refused says `cause=usage-limit` or `cause=model-access`.
+
+Pass `--model` on every turn: the account's default model may be a free one with a usage limit. Before a long turn or several at once, check the model answers with one line: `opencode run -m <provider/model> "Reply with ok"`.
 
 - **Why not call `opencode run` yourself:** when a task starts a background job (a preview server, a watcher), opencode does not exit. It prints `waiting for 1 background job` and stays. The script stops it once the log has ended on that line for `--grace` seconds, and stops everything opencode started with it. A server it started as a background job dies with the turn; start your own afterwards if you need one. A server the worker detached itself (`nohup … &`, `setsid`) is outside that group and outlives the turn, so check `lsof -ti tcp:<port>` afterwards and stop what you find.
 - **Exit codes:** 0 finished or stopped while only waiting, 1 opencode failed, 2 timed out, 3 could not start (no `opencode`, no such folder, a session id that does not start with `ses`), 4 cancelled.
@@ -65,6 +67,8 @@ It has none of your context. State the goal, the files and folders it may touch,
 | It says "done" and the result is wrong | Nobody ran the check | Check it yourself, then send the failure back in the same session |
 | `status=failed … cause=input-cancelled` | The worker asked for something `--auto` cannot answer (such as a web search), often after the work was done | The work may be finished: read the files before you send the task again |
 | `status=failed … cause=connection-reset` | The connection dropped at the end of the turn | The work may be finished: read the files before you send the task again |
+| `status=failed … cause=usage-limit` | The model's usage limit is reached (often the account's free default model) | Nothing was done: send the turn again with another `--model` |
+| `status=failed … cause=model-access` | The account has no access to that model | Nothing was done: choose a model the account can use, or ask the user to turn its access on |
 | `status=stopped`, and the worker started a background job | It was waiting on its own job when it was stopped | The work may be finished: read the files, and run the job yourself if its result is missing |
 
 ## Reporting problems with this skill

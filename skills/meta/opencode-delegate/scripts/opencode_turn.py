@@ -13,7 +13,8 @@ It prints one line, `status=<done|stopped|failed|timeout|cancelled> exit=<code> 
 finished or was stopped while waiting, 1 when opencode failed, 2 on a timeout, 3 when it could not start (including a
 session id that does not start with "ses", which opencode rejects), 4 when the turn was cancelled with SIGTERM
 (opencode and what it started are stopped first). A failed turn whose last lines show a cancelled input request or a
-dropped connection gets `cause=input-cancelled` or `cause=connection-reset`: the work may still be finished.
+dropped connection gets `cause=input-cancelled` or `cause=connection-reset`: the work may still be finished. A turn the model
+refused gets `cause=usage-limit` or `cause=model-access`: nothing was done.
 
 With `--status-file` the same line is also written to FILE when the turn ends, in one atomic step, so a reader sees
 either no file or the whole line. A file left by an earlier turn is removed when the turn starts.
@@ -43,6 +44,9 @@ CAUSE_LINES = 5  # a cause counts only in the last few lines of output: an earli
 CAUSES = (
     ("input-cancelled", re.compile(r"Cancelled a request for input")),
     ("connection-reset", re.compile(r"ECONNRESET")),
+    # The model refused the turn before any work: pick another model, or turn its access on.
+    ("usage-limit", re.compile(r"usage limit reached", re.I)),
+    ("model-access", re.compile(r"Model access is disabled", re.I)),
 )
 POLL_SECONDS = 0.2
 TERM_SECONDS = 5
@@ -74,7 +78,7 @@ def ends_waiting(log: Path) -> bool:
 
 
 def failure_cause(log: Path) -> str | None:
-    """A known cause in the last lines of a failed turn's log that can come after the work was done, or None."""
+    """A known cause in the last lines of a failed turn's log, or None."""
     last = "\n".join([line for line in log_tail(log).splitlines() if line.strip()][-CAUSE_LINES:])
     return next((name for name, pattern in CAUSES if pattern.search(last)), None)
 
