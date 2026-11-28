@@ -91,3 +91,8 @@ def test_the_outline_says_a_chapter_has_one_exercise_file_before_the_user_approv
     outline = (SKILL_DIR / "references" / "outline.md").read_text(encoding="utf-8")
     proposing = outline.split("## Proposing the outline")[1]
     assert "one exercise file" in proposing and "a file per exercise" in proposing
+
+
+def test_a_stand_in_names_what_the_folder_is_not_always_the_playground():
+    text = (SKILL_DIR / "references" / "playground.md").read_text(encoding="utf-8")
+    assert "Never show a folder that is not the playground as `~/playground`" in text
