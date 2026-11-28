@@ -51,7 +51,8 @@ What `check_playground.py` checks, and what a worker writes:
   - one line `แนวทาง: <a hint>`: a direction (which function, which idea, where to look), never the code to write, the expected value, or the worked example again;
   - a pending test, or, for given checks, a pending check;
   - a `👉` line where the learner writes;
-  - an exercise that practises something the chapter's other exercises do not: two exercises that differ only in their values teach the same thing twice;
+  - when the chapter teaches reading a failure, a real failure the slides can show: an example that fails on purpose, run so that the chapter's run prints its output and still exits 0 (a small script the `Run chapter:` command calls), never a failure typed on a slide;
+- an exercise that practises something the chapter's other exercises do not: two exercises that differ only in their values teach the same thing twice;
 - a check that fails on a plausible wrong answer, including a mistyped name or text: a check that something is absent, hidden or empty also passes when it finds nothing, so first check the thing exists; an assertion that is true whatever the learner does (a text checked against part of itself, a value compared with itself) teaches nothing. Try one wrong answer per exercise before the chapter is applied;
 - on `solutions`, the same file with each test written and **no `👉` left**;
 - if `pattern.md` says so, copies of the answers in `.solutions/` on `main` too;

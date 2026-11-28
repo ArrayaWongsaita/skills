@@ -88,7 +88,7 @@ When the interview finds the user already has a playground, Step 2 reads its cha
 - **Never switch the user's checkout of the playground.** The scripts read other branches in temporary worktrees. A chapter enters the repository only through `apply_unit.py`, which commits only when both branches pass.
 - **Workers never touch the playground's git.** A worker writes `units/NN/`, checks it with `apply_unit.py <course_dir> NN --check`, and the foreman applies one chapter at a time.
 - **Slide code is never typed by hand.** A slide's code comes from the playground through `part-slides`' `sync_listings.py`, and its output from a real run.
-- **One slides build at a time**, on one preview port.
+- **One build into `web/dist` at a time**, on one preview port. A wave worker checks its own Part in a build folder and on a port of its own (`references/waves.md`).
 
 ## Scripts
 

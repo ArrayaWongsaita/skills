@@ -12,11 +12,14 @@ and writes part-NN.playground.ts next to it, with `playgroundListings` (each fil
 `git show <branch>:<path>` in <course_dir>/playground, so the user's checkout is never switched) and
 `playgroundOutputs` (for a source with `output`: that file, relative to <course_dir>, as saved by course-builder's
 `check_playground.py --save-output`). An optional `outputLines` keeps an excerpt of the real file: "last:3" (its last
-3 lines), "5" (line 5, counted from 1), "5-8" (lines 5 to 8) or "5-" (line 5 to the end); --check compares the excerpt. The Part's data file spreads them into its own:
+3 lines), "5" (line 5, counted from 1), "5-8" (lines 5 to 8), "5-" (line 5 to the end), or several joined with
+commas ("1-2,15-18": a table's header and four of its rows); --check compares the excerpt. The Part's data file spreads them into its own:
 
     export const listings = { ...playgroundListings, … };
     export const outputs = { ...playgroundOutputs, … };
 
+With --unit NN, a file the course's units/NN/<branch>/ holds is read from there instead: a course-builder worker
+syncs its chapter before the foreman applies it, to check its Part; the foreman syncs again without it after the apply.
 With --check it writes nothing, and exits 1 naming each listing whose code or output differs from the playground.
 """
 
@@ -86,7 +89,10 @@ LINES_RE = re.compile(r"^(?:last:(\d+)|(\d+)(-(\d*))?)$")
 
 
 def excerpt(text: str, spec: str) -> str:
-    """The lines of a run that `outputLines` names; raises ValueError when the spec does not fit the run."""
+    """The lines of a run that `outputLines` names (ranges may be joined with commas); raises ValueError when the
+    spec does not fit the run."""
+    if "," in spec:
+        return "\n".join(excerpt(text, part) for part in spec.split(","))
     lines = text.split("\n")
     match = LINES_RE.match(spec.strip())
     if not match:
@@ -103,15 +109,23 @@ def excerpt(text: str, spec: str) -> str:
     return "\n".join(lines[first - 1:last])
 
 
-def entries(course_dir: Path, srcs: dict[str, dict[str, str]]) -> tuple[dict[str, str], dict[str, str]]:
+def entries(course_dir: Path, srcs: dict[str, dict[str, str]], unit: str | None = None) -> tuple[dict[str, str], dict[str, str]]:
     """name -> the listing's line, name -> the output's line; raises SyncError naming every source it cannot read."""
     course_dir = Path(course_dir)
     repo = course_dir / "playground"
     listings, outputs, problems = {}, {}, []
     for name, source in srcs.items():
         where = f"{source['branch']}:{source['path']}"
+        staged = course_dir / "units" / unit / source["branch"] / source["path"] if unit else None
         try:
-            code = _show(repo, source["branch"], source["path"])
+            if staged is not None and staged.is_file():
+                where = f"unit {unit} {where}"
+                try:
+                    code = staged.read_text(encoding="utf-8")
+                except UnicodeDecodeError as error:
+                    raise NotText(str(error)) from error
+            else:
+                code = _show(repo, source["branch"], source["path"])
         except NotText:
             problems.append(f"listing {name}: {where} is not UTF-8 text")
             continue
@@ -153,10 +167,11 @@ def main(argv: list[str]) -> int:
     parser.add_argument("course_dir", type=Path)
     parser.add_argument("--part", type=int, required=True)
     parser.add_argument("--check", action="store_true", help="write nothing; exit 1 if a listing differs from the playground")
+    parser.add_argument("--unit", help="read files from <course_dir>/units/NN/<branch>/ first: a chapter not applied yet")
     args = parser.parse_args(argv)
     target = _parts(args.course_dir) / f"part-{args.part:02d}.playground.ts"
     try:
-        listings, outputs = entries(args.course_dir, sources(args.course_dir, args.part))
+        listings, outputs = entries(args.course_dir, sources(args.course_dir, args.part), args.unit)
     except SyncError as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
