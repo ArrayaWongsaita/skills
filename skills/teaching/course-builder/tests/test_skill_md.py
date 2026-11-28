@@ -96,3 +96,8 @@ def test_the_outline_says_a_chapter_has_one_exercise_file_before_the_user_approv
 def test_a_stand_in_names_what_the_folder_is_not_always_the_playground():
     text = (SKILL_DIR / "references" / "playground.md").read_text(encoding="utf-8")
     assert "Never show a folder that is not the playground as `~/playground`" in text
+
+
+def test_commands_typed_into_a_script_are_the_code_kind_of_exercise():
+    text = (SKILL_DIR / "references" / "playground.md").read_text(encoding="utf-8")
+    assert "the commands of a command-line tool" in text
