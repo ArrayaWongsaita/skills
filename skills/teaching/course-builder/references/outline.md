@@ -9,8 +9,8 @@ Read this at Step 2, and whenever you change `course.md`.
 ```markdown
 # Testing React components
 
-Learner: writes React, has never written a test
-Goal: writes a test that renders a component, acts on it like a user, and checks what changed
+Learner: เขียน React ได้ แต่ยังไม่เคยเขียนเทสต์
+Goal: เขียนเทสต์ที่ render component กดเหมือนผู้ใช้ แล้วตรวจว่าอะไรเปลี่ยน
 Stack: TypeScript, React, Vitest, Testing Library, pnpm, Node 20
 Slides language: th
 
@@ -40,13 +40,13 @@ Run all: pnpm vitest run
 - The keys (`Learner:`, `Goal:`, …) and the column names stay as they are: the parser reads them. The values are in the slides' language (`Slides language:`), except `slug`, the commands, and names of the tool's API in `practises`, which stay as the tool writes them.
 - `slug` is lowercase letters, digits and hyphens; the chapter's folder is `<Chapters folder>/NN-<slug>`.
 - `builds on` names the chapters this one needs, or `–`.
-- `under test` is the small thing the chapter's exercises test: a component, a function, a page.
+- `under test` is the small thing the chapter's exercises test or work on: a component, a function, a page, a table or a small data set.
 - `status` starts at `outline` for every row. The scripts change it; to change it yourself, run `python3 <skill>/scripts/course_md.py <course_dir> --set NN STATUS`.
 
 ## Proposing the outline
 
 1. Research the order in which this subject is learnt: the tool's own guide, two or three well-regarded courses or tutorials. Note what each step needs from the ones before it.
-2. Order the chapters for this learner, not for the sources: each chapter practises one new thing, and uses only what earlier chapters taught. A chapter whose `builds on` names a later chapter is in the wrong place.
+2. Order the chapters for this learner, not for the sources: each chapter practises one new thing, and uses only what earlier chapters taught. A chapter whose `builds on` names a later chapter is in the wrong place. When the goal names more skills than the user's chapter count, either propose more chapters or pair two skills a learner uses together in one chapter, name both in `practises`, and say which you paired when you show the table.
 3. Group them in stages (ช่วง) of 3–5 chapters, each with a name a learner understands. A course of 6 chapters or fewer may have stages of 2; never one stage that holds the whole course.
 4. Give each row a small `under test`: something a beginner reads in one screen. A chapter that needs a big example to be interesting is two chapters.
 5. Show the user the table and the stages, with one line on why the order is what it is. Let them edit it, as often as they like. Nothing is built until they approve it.

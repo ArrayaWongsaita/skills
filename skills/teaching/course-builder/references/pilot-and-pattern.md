@@ -15,7 +15,7 @@ The pilot is where systemic mistakes are cheap: one chapter, built for real, loo
    ```
 
    It copies each into a temporary worktree of its branch, checks the shape and runs the commands, and commits on both branches only when both pass. Fix and run it again until it prints `chapter 01: committed`.
-4. Read it as the learner: on a copy of the unit (never the playground), write one plausible wrong answer per exercise, run the chapter with `apply_unit.py <course_dir> 01 --check`, and read what the learner would see. Each wrong answer must fail, and its output must say which exercise and what was wrong in words this learner reads (`playground.md`, A chapter). Fix the unit until it does, and show the user one such output at the review.
+4. Read it as the learner: copy `units/01/main/` aside, write one plausible wrong answer per exercise into `units/01/main/` (never the playground), run `apply_unit.py <course_dir> 01 --check --save-output <course_dir>/.wrong-runs`, read `.wrong-runs/01-main.txt` as the learner would, then put the copy back and delete `.wrong-runs/`. Include a mistyped name or text among the wrong answers. Each wrong answer must fail, and its output must say which exercise and what was wrong in words this learner reads (`playground.md`, A chapter). Fix the unit until it does, and show the user one such output at the review.
 5. Save the real runs for the slides:
 
    ```bash
@@ -23,8 +23,8 @@ The pilot is where systemic mistakes are cheap: one chapter, built for real, loo
    ```
 
 6. Build the chapter's slides with `part-slides`, as Part 1 of the same course. It writes the brief from `course.md` instead of interviewing, and takes code from the playground with its `sync_listings.py` (its `references/slides.md`, Code). The slides explain what the exercises have the learner do, mostly with pictures; the code on a slide is the playground's code. Two rules every chapter's slides keep:
-   - **No slide shows an exercise's answer.** A listing from `solutions` that is an exercise's test or code gives the exercise away; show the worked example of the header, or a separate example file in the chapter folder, instead.
-   - **The Closing shows how to do the chapter**, before the summary: one `Steps` slide (open which file, write under each `👉`, run which command) and one slide with the real run on `main` (pending) and on `solutions` (passing), from `runs/01-main.txt` and `runs/01-solutions.txt`. These slides have `section: "Closing"`, so they need no divider.
+   - **No slide shows an exercise's answer**, not even a watchout's fix line or an Anatomy strip. A listing from `solutions` that is an exercise's test or code gives the exercise away; show the worked example of the header, or a separate example file in the chapter folder, instead.
+   - **The Closing shows how to do the chapter**, before the summary: one `Steps` slide (open which file, write under each `👉`, run which command) and the real run on `main` (pending) and on `solutions` (passing), from `runs/01-main.txt` and `runs/01-solutions.txt`, each as an excerpt with `outputLines`: a `Compare` with `leftBlocks` and `rightBlocks` when both lines fit a half (about 45 characters), else two `Output` slides. These slides have `section: "Closing"`, so they need no divider.
 
 ## The user's review
 
