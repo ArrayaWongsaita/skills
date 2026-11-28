@@ -19,8 +19,10 @@ export type Measurement = {
   fallback: boolean;
   /** Text boxes that do not scroll (a Compare panel, its takeaway) whose content is wider than they are: the rest is cut off. */
   clippedText?: { where: string; scrollW: number; clientW: number }[];
+  /** Drawings that run past the slide's bottom or right edge, by how many px: the slide cuts that part off. */
+  clippedDrawings?: { bottom: number; right: number }[];
 };
-export type FindingKind = 'prose-overflow' | 'out-of-canvas' | 'fallback' | 'font-missing' | 'console-error' | 'scrolling-block' | 'clipped-code' | 'wide-line' | 'highlight' | 'text-overlap' | 'budget' | 'id-order' | 'clipped-text';
+export type FindingKind = 'prose-overflow' | 'out-of-canvas' | 'fallback' | 'font-missing' | 'console-error' | 'scrolling-block' | 'clipped-code' | 'wide-line' | 'highlight' | 'text-overlap' | 'budget' | 'id-order' | 'clipped-text' | 'clipped-drawing';
 export type Finding = { slide: string; frame: string; kind: FindingKind; level: 'problem' | 'note'; detail: string };
 /** What the check page knows about one slide, for the readability budgets and for the agent's slide list. */
 export type SlideInfo = { id: string; section: string; phase?: Phase; divider: boolean; title: string; chars: number };
@@ -66,6 +68,10 @@ export function findings(ms: Measurement[], fontsOk: { mali: boolean; mono: bool
     }
     for (const clip of m.clippedText ?? []) {
       perSlide(m, 'clipped-text', `${clip.where} holds text ${clip.scrollW} px wide in ${clip.clientW} px: the rest is cut off; shorten it, excerpt the output, or break the line`);
+    }
+    for (const cut of m.clippedDrawings ?? []) {
+      const where = [cut.bottom > 0 ? `${cut.bottom} px past the bottom` : '', cut.right > 0 ? `${cut.right} px past the right edge` : ''].filter(Boolean).join(' and ');
+      perSlide(m, 'clipped-drawing', `a drawing runs ${where} of the slide, where it is cut off: draw it smaller, with fewer rows, or shorten the text beside it`);
     }
     for (const block of m.blocks) {
       if (block.hiddenRows > 0) {

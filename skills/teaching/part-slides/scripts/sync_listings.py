@@ -13,7 +13,8 @@ and writes part-NN.playground.ts next to it, with `playgroundListings` (each fil
 `playgroundOutputs` (for a source with `output`: that file, relative to <course_dir>, as saved by course-builder's
 `check_playground.py --save-output`). An optional `outputLines` keeps an excerpt of the real file: "last:3" (its last
 3 lines), "5" (line 5, counted from 1), "5-8" (lines 5 to 8), "5-" (line 5 to the end), or several joined with
-commas ("1-2,15-18": a table's header and four of its rows); --check compares the excerpt. The Part's data file spreads them into its own:
+commas ("1-2,15-18": a table's header and four of its rows), or "has:<text>": every line holding that text, for a
+tool that prints its results in a different order on each run (Vitest prints test files as they finish); --check compares the excerpt. The Part's data file spreads them into its own:
 
     export const listings = { ...playgroundListings, … };
     export const outputs = { ...playgroundOutputs, … };
@@ -91,12 +92,17 @@ LINES_RE = re.compile(r"^(?:last:(\d+)|(\d+)(-(\d*))?)$")
 def excerpt(text: str, spec: str) -> str:
     """The lines of a run that `outputLines` names (ranges may be joined with commas); raises ValueError when the
     spec does not fit the run."""
+    if spec.startswith("has:"):
+        found = [line for line in text.split("\n") if spec[4:] in line]
+        if not found:
+            raise ValueError(f'"{spec}": no line of the run has that text')
+        return "\n".join(found)
     if "," in spec:
         return "\n".join(excerpt(text, part) for part in spec.split(","))
     lines = text.split("\n")
     match = LINES_RE.match(spec.strip())
     if not match:
-        raise ValueError(f'"{spec}" is not "last:N", "A", "A-B" or "A-"')
+        raise ValueError(f'"{spec}" is not "last:N", "A", "A-B", "A-" or "has:<text>"')
     if match.group(1):
         count = int(match.group(1))
         if not 1 <= count <= len(lines):

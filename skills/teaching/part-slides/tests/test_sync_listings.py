@@ -193,3 +193,15 @@ def test_a_worker_syncs_a_chapter_not_applied_yet_from_its_unit(course):
     assert sync_listings.main([str(course), "--part", "3", "--unit", "04"]) == 0
     assert code_of(generated(course), "new") == "test('typed', () => {});"
     assert "unit 04" in generated(course)
+
+
+def test_output_lines_may_pick_lines_by_their_text_when_a_tool_reorders_its_run(course):
+    # Vitest prints test files in the order they finish, so line numbers move between runs; the text does not.
+    _with_output(course, "has:✓ ข้อ 1")
+    assert sync_listings.main([str(course), "--part", "3"]) == 0
+    assert _output_text(course) == "  ✓ ข้อ 1"
+
+
+def test_output_lines_by_text_that_matches_nothing_is_an_error(course):
+    _with_output(course, "has:ข้อ 9")
+    assert sync_listings.main([str(course), "--part", "3"]) == 1

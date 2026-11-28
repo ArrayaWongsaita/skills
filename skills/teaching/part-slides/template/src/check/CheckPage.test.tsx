@@ -244,3 +244,29 @@ test('text wider than a Compare panel is a clipped-text problem', async () => {
     box.mockRestore();
   }
 });
+
+// On a phone a drawing below the text can run past the slide's bottom edge, where the slide cuts it off.
+const cutMeta: PartMeta = { course: 'c', part: 1, slug: 'cut', title: 'Cut', language: 'th', slideCount: 1 };
+function CutDrawing() {
+  return (
+    <Deck meta={cutMeta} diagrams={{}} listings={{}} outputs={{}}>
+      <Explain id="1-001" section="Opening" title={<>ภาพ</>} body={<>b</>} visual={<svg className="rs-figure" />} />
+    </Deck>
+  );
+}
+
+test('a drawing that runs past the edge of its slide is a clipped-drawing problem', async () => {
+  const rect = (bottom: number) => ({ x: 0, y: 0, top: 0, left: 0, width: 300, height: bottom, right: 300, bottom, toJSON: () => ({}) }) as DOMRect;
+  const spy = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+    return rect(this.tagName.toLowerCase() === 'svg' ? 900 : 844);
+  });
+  try {
+    render(<CheckPage entry={{ meta: cutMeta, load: () => Promise.resolve({ default: CutDrawing }) }} />);
+    await vi.waitFor(() => expect(window.__reactSlidesCheck?.done).toBe(true), { timeout: 6000 });
+    const found = window.__reactSlidesCheck!.findings.filter((f) => f.kind === 'clipped-drawing');
+    expect(found).toEqual([expect.objectContaining({ slide: '1-001', level: 'problem' })]);
+    expect(found[0]!.detail).toContain('56 px');
+  } finally {
+    spy.mockRestore();
+  }
+});
