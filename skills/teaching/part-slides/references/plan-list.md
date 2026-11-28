@@ -14,7 +14,7 @@ The plan list is the one thing the user approves. It shows each slide in words, 
   4. **example** (ตัวอย่าง): one working example. For code, the code and its real output on one slide.
   5. **watchout** (ระวัง): only for a mistake a beginner really makes at that point, and never about something not yet taught. Draw the mistake: the topic's picture with the wrong thing highlighted, or the wrong way next to the right way. The code and its output may come on the same slide.
   6. **check** (ทบทวน): off unless the user asks for it.
-- **Closing:** what the learner can now do, the bridge to the next Part, and one sources slide (the only place source names and URLs appear).
+- **Closing:** what the learner can now do, the bridge to the next Part, and one sources slide (the only place source names and URLs appear). A Part that goes with a practice repo (`course-builder`) first shows, in the Closing, how to do the chapter there: which file, which command, and the real run before and after (`course-builder`'s `pilot-and-pattern.md`).
 
 A topic that carries two ideas that each need their own picture (such as what a cache is, and when to clear it) is two topics, each with its own divider and its own know, parts and example: the know rhythm has room for one picture. A phase with nothing to say is left out. Fewer slides is better: a topic of five slides that is clear beats nine that repeat.
 
@@ -82,3 +82,5 @@ Choosing a layout:
 2. Name each phase once in plain words, so the user can read the tables.
 3. Ask what to change. Accept any edit: add, remove, merge, split, move, reword, a different picture, a different example. Apply each edit to `plan.md`, show only the rows that changed, and keep inside the budgets (say so when an edit would break one, and offer the nearest fit).
 4. When the user approves, change the line to `Status: approved` and go on to build. Do not build before that.
+
+The one exception: a worker building one chapter of a course for `course-builder`'s waves has no user to ask. The course's `pattern.md` and its approved pilot Part stand in for the approval: the worker checks the plan against them, writes `Status: approved (pattern.md)` and goes on, and reports any departure from `pattern.md` to the foreman.
