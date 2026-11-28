@@ -169,6 +169,23 @@ def test_check_finds_an_excerpt_that_no_longer_matches_the_run(course, capsys):
     assert "output answer" in capsys.readouterr().out
 
 
+def test_check_ignores_a_run_time_that_changed_between_two_runs(course, capsys):
+    _with_output(course, "last:1")
+    sync_listings.main([str(course), "--part", "3"])
+    (course / "runs" / "03-solutions.txt").write_text("collecting\n  ✓ ข้อ 1\n1 passed in 0.37s\n", encoding="utf-8")
+    assert sync_listings.main([str(course), "--part", "3", "--check"]) == 0
+    (course / "runs" / "03-solutions.txt").write_text("collecting\n  ✓ ข้อ 1\n2 passed in 0.1s\n", encoding="utf-8")
+    assert sync_listings.main([str(course), "--part", "3", "--check"]) == 1
+
+
+def test_check_ignores_a_time_at_the_start_of_an_output_line(course):
+    _with_output(course, "last:2")
+    (course / "runs" / "03-solutions.txt").write_text("ok\n512ms total\n", encoding="utf-8")
+    sync_listings.main([str(course), "--part", "3"])
+    (course / "runs" / "03-solutions.txt").write_text("ok\n498ms total\n", encoding="utf-8")
+    assert sync_listings.main([str(course), "--part", "3", "--check"]) == 0
+
+
 @pytest.mark.parametrize("lines", ["first:2", "5-3", "9-10", "last:0"])
 def test_output_lines_that_do_not_fit_the_run_are_named(course, capsys, lines):
     _with_output(course, lines)
