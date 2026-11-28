@@ -38,7 +38,7 @@ Each must exit 0 when things are right, from the playground's root, with no prom
 
 What `check_playground.py` checks, and what a worker writes:
 
-- one folder per chapter, `<Chapters folder>/NN-<slug>`, holding the small thing under test and **one exercise file**. When the tool needs the thing under test elsewhere (a page its server serves), it goes there, at its own path, in the same unit;
+- one folder per chapter, `<Chapters folder>/NN-<slug>`, holding the small thing under test and **one exercise file**. When the tool needs the thing under test elsewhere (a page its server serves), it goes there, at its own path, in the same unit. **The thing under test belongs to its chapter**: never one module at the root that every chapter adds to. Workers run at the same time, and a unit replaces a whole file, so a chapter that extends a shared file drops what another chapter added. A file several chapters use (a helper, a fixture) is written once, in the skeleton or by the pilot, and later chapters only read it. `apply_unit.py` runs every built chapter and `Run all` when a unit changes a file outside its folder, and names those files;
 - the exercise file opens with a header comment: the chapter, what it practises, the idea in a few lines, and one worked example;
 - then numbered exercises, `ข้อ N: <what to do>`, about three, each with:
   - one line `แนวทาง: <a hint>`;

@@ -198,8 +198,9 @@ def run_chapter(tree: Path, course: Course, chapter: course_md.Chapter, branch: 
     return []
 
 
-def check_branch_tree(tree: Path, course: Course, branch: str, chapter: str | None, run_commands: bool, save_output: Path | None) -> list[Finding]:
-    """Everything check() does for one branch, on a tree that is already checked out."""
+def check_branch_tree(tree: Path, course: Course, branch: str, chapter: str | None, run_commands: bool, save_output: Path | None, others: bool = False) -> list[Finding]:
+    """Everything check() does for one branch, on a tree that is already checked out. With `others`, a one-chapter
+    check also runs every other built chapter and `Run all`, without saving their output."""
     found = check_tree(tree, course, branch, only=chapter, readme_sections=chapter is None)
     if not run_commands:
         return found
@@ -213,7 +214,11 @@ def check_branch_tree(tree: Path, course: Course, branch: str, chapter: str | No
     for each in _checked(course, chapter):
         if (tree / course.chapters_dir / each.folder_name).is_dir():
             found.extend(run_chapter(tree, course, each, branch, save_output))
-    if chapter is None and course.commands.get("all"):
+    if chapter is not None and others:
+        for each in _checked(course, None):
+            if each.nn != chapter and (tree / course.chapters_dir / each.folder_name).is_dir():
+                found.extend(run_chapter(tree, course, each, branch))
+    if (chapter is None or others) and course.commands.get("all"):
         code, output = run(course.commands["all"], tree)
         if code != 0:
             found.append(Finding("run-failed", None, branch, f"`{course.commands['all']}` exited {code}:\n{_tail(_clean(output, tree))}"))
