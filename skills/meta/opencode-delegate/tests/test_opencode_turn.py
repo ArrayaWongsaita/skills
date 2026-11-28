@@ -51,6 +51,20 @@ def test_a_run_that_only_waits_for_its_own_background_job_is_stopped_after_the_g
     assert not alive(pid)
 
 
+def test_a_group_the_system_will_not_signal_still_stops_opencode_and_writes_the_status(fake_opencode, project, tmp_path, capsys, monkeypatch):
+    # macOS answers killpg with EPERM when the group's leader has already exited and only a zombie is left.
+    fake = fake_opencode(f"print('all done', flush=True); {WAITING}; time.sleep(60)")
+    def refuse(pgid, sig):
+        raise PermissionError(1, "Operation not permitted")
+    monkeypatch.setattr(opencode_turn.os, "killpg", refuse)
+    status = tmp_path / "turn.status"
+    started = time.time()
+    code, text = turn(fake, project, tmp_path, "--grace", "0.5", "--status-file", str(status))
+    assert code == 0 and time.time() - started < 20
+    assert "status=stopped" in capsys.readouterr().out
+    assert status.read_text().startswith("status=stopped")
+
+
 def test_a_run_that_keeps_working_after_the_wait_line_is_not_stopped(fake_opencode, project, tmp_path, capsys):
     fake = fake_opencode(f"{WAITING}; time.sleep(0.4); print('AFTER', flush=True)")
     code, text = turn(fake, project, tmp_path, "--grace", "1.5")
