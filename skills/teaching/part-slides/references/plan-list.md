@@ -25,7 +25,7 @@ The check page reports a `budget` finding when a Part breaks one of these, so pl
 <!-- budgets: topic 9 · opening 3 · part 40 · note 35 · prose th 160 · prose other 220 -->
 
 - A topic has at most 9 slides including its divider; the Opening at most 3; the Part at most 40 (a note from 35).
-- A slide's text is at most 160 characters in Thai and 220 in other languages. More than that is two slides. The text is the title and everything written beside the picture: the body, the items, a notice, a `Compare`'s left, right and takeaway, an `Error`'s symptom, cause and fix, a `Question`'s question and an `Answer`'s answer and why. It is not code, its output, an `Anatomy` strip, or the labels the template prints (such as "symptom").
+- A slide's text is at most 160 characters in Thai and 220 in other languages. More than that is two slides. The text is the title and everything written beside the picture: the body, the items, a notice, a `Compare`'s left, right and takeaway, an `Error`'s symptom, cause and fix, a `Question`'s question and an `Answer`'s answer and why. It is not a code block, its output, an `Anatomy` strip, or the labels the template prints (such as "symptom"). Inline code in a sentence (`<C>`) counts: it is read with the sentence.
 - Phases run in order: know, parts, example, watchout, check. A topic starts with its divider.
 - Slide ids ascend in the order the slides run (an `id-order` finding when they do not).
 

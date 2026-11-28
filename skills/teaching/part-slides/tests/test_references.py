@@ -95,7 +95,7 @@ def test_the_plan_says_what_to_do_when_parts_exceed_the_cap(skill_dir):
 def test_the_budget_lists_what_the_check_page_counts(skill_dir):
     plan = _read(skill_dir, "references/plan-list.md")
     budgets = plan[plan.index("## The budgets"):plan.index("## Rules for the content")]
-    for word in ("notice", "symptom", "cause", "fix", "takeaway", "not code"):
+    for word in ("notice", "symptom", "cause", "fix", "takeaway", "not a code block"):
         assert word in budgets, word
 
 
@@ -105,3 +105,11 @@ def test_screenshots_have_one_folder_and_wait_for_a_settled_slide(skill_dir):
     script = _read(skill_dir, "template/scripts/screenshots.mjs")
     assert "prefers-reduced-motion" in script and "document.fonts.ready" in script
     assert "clipped-text" in check and "outputLines" in _read(skill_dir, "references/slides.md")
+
+
+def test_the_text_budget_says_inline_code_counts(skill_dir):
+    assert "Inline code in a sentence (`<C>`) counts" in _read(skill_dir, "references/plan-list.md")
+
+
+def test_slides_warn_that_a_line_number_excerpt_moves(skill_dir):
+    assert "pick a line that can move by its text with `has:`" in _read(skill_dir, "references/slides.md")
