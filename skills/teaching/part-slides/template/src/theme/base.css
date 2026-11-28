@@ -599,9 +599,15 @@ a {
   margin-bottom: 0.3em;
 }
 
-.rs-phone .rs-code,
+.rs-phone .rs-code {
+  max-height: none;
+}
+
+/* A run is read, not copied: on a phone it wraps, so the end of a long line (a test's name) stays in view. */
 .rs-phone .rs-output pre {
   max-height: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .hljs-keyword,
@@ -893,7 +899,8 @@ a {
   /* The text font: the mono font has no Thai, and a Thai title in it shows its marks pulled apart. */
   font-family: var(--rs-font);
   font-size: 3.2em;
-  line-height: 1.1;
+  /* Thai stacks marks above and below a line: 1.25 keeps them off the kicker and the next line. */
+  line-height: 1.25;
 }
 
 .rs-divider .rs-prose [data-field='body'] {

@@ -15,7 +15,7 @@ The pilot is where systemic mistakes are cheap: one chapter, built for real, loo
    ```
 
    It copies each into a temporary worktree of its branch, checks the shape and runs the commands, and commits on both branches only when both pass. Fix and run it again until it prints `chapter 01: committed`.
-4. Read it as the learner: copy `units/01/main/` aside, write one plausible wrong answer per exercise into `units/01/main/` (never the playground), run `apply_unit.py <course_dir> 01 --check --save-output <course_dir>/.wrong-runs`, read `.wrong-runs/01-main.txt` as the learner would, then put the copy back and delete `.wrong-runs/`. Include a mistyped name or text among the wrong answers. Each wrong answer must fail, and its output must say which exercise and what was wrong in words this learner reads (`playground.md`, A chapter). Fix the unit until it does, and show the user one such output at the review.
+4. Read it as the learner: copy `units/01/main/` aside, write one plausible wrong answer per exercise into `units/01/main/` (never the playground), under each `👉` line, keeping the `ข้อ N`, `แนวทาง:` and `👉` lines (the shape check runs before the tests), run `apply_unit.py <course_dir> 01 --check --save-output <course_dir>/.wrong-runs`, read `.wrong-runs/01-main.txt` as the learner would, then put the copy back and delete `.wrong-runs/`. Include a mistyped name or text among the wrong answers. Each wrong answer must fail, and its output must say which exercise and what was wrong in words this learner reads (`playground.md`, A chapter). Fix the unit until it does, and show the user one such output at the review.
 5. Save the real runs for the slides:
 
    ```bash

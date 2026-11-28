@@ -91,3 +91,9 @@ test('text wider than its Compare panel or takeaway is a clipped-text problem, o
   expect(found[0].detail).toContain('a Compare panel');
   expect(findings([m({ clippedText: [] })], fonts, [])).toEqual([]);
 });
+
+test('a drawing cut off by its slide is a clipped-drawing problem, and one that fits is not', () => {
+  const found = findings([m({ frame: 'phone', clippedDrawings: [{ bottom: 56, right: 0 }], prose: [prose({ clientW: 358, scrollW: 358 })] })], fonts, []);
+  expect(found).toEqual([expect.objectContaining({ slide: '1-001', kind: 'clipped-drawing', level: 'problem', frame: 'phone' })]);
+  expect(findings([m({ clippedDrawings: [] })], fonts, [])).toEqual([]);
+});

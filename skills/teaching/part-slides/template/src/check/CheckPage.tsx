@@ -45,6 +45,20 @@ function readOverflow(box: HTMLElement): BoxOverflow {
   };
 }
 
+/** The drawings of a slide that run past its bottom or right edge, where a slide that does not scroll cuts them off. */
+function cutDrawings(slide: HTMLElement): { bottom: number; right: number }[] {
+  const overflow = getComputedStyle(slide).overflowY;
+  if (overflow === 'auto' || overflow === 'scroll') return [];
+  const edge = slide.getBoundingClientRect();
+  return [...slide.querySelectorAll('svg')]
+    .filter((svg) => !svg.parentElement?.closest('svg'))
+    .map((svg) => {
+      const box = svg.getBoundingClientRect();
+      return { bottom: Math.max(0, Math.round(box.bottom - edge.bottom)), right: Math.max(0, Math.round(box.right - edge.right)) };
+    })
+    .filter((cut) => cut.bottom > 1 || cut.right > 1);
+}
+
 function measure(root: HTMLElement): Measurement[] {
   const out: Measurement[] = [];
   for (const frameEl of root.querySelectorAll<HTMLElement>('[data-frame]')) {
@@ -67,6 +81,7 @@ function measure(root: HTMLElement): Measurement[] {
         clippedText: [...stage.querySelectorAll<HTMLElement>('.rs-panel, .rs-takeaway')]
           .filter((el) => el.scrollWidth > el.clientWidth + 1)
           .map((el) => ({ where: el.classList.contains('rs-panel') ? 'a Compare panel' : 'the takeaway', scrollW: el.scrollWidth, clientW: el.clientWidth })),
+        clippedDrawings: slide ? cutDrawings(slide) : [],
       });
     }
   }

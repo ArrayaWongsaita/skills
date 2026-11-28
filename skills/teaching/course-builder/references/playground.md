@@ -8,7 +8,7 @@ No stack is built in. This page says what each part of a playground must do; you
 
 Write these into `<playground>/` before `init_playground.py`:
 
-- **The package files** for the stack (`package.json` and lockfile, `pyproject.toml`, …) with exact versions, and the test tool's config.
+- **The package files** for the stack (`package.json` and lockfile, `pyproject.toml`, …) with exact versions, and the test tool's config. Run the Install command once yourself before `init_playground.py`: it writes the lockfile, and shows what the package manager needs first (pnpm 10 and later stop on a dependency's build script, such as esbuild's, until it is allowed: `pnpm.onlyBuiltDependencies` in `package.json`, or `allowBuilds` in `pnpm-workspace.yaml`).
 - **A `.gitignore`** that leaves out installed packages, build output and test reports: `init_playground.py` refuses to commit when the install or the setup check made something it does not leave out.
 - **A setup check**: one tiny test or script that passes only when the install works (in the examples, `pnpm test setup-check`). The learner runs it first.
 - **`README.md`**, in the playground's language:
@@ -43,10 +43,12 @@ Decide at this step which kind of exercise the course has, from the learner, and
 
 **A wrong answer's output must be readable by this course's learner.** A test tool's traceback is fine for someone who writes code; a learner who has never programmed needs one line per failed exercise, in the playground's language, saying which exercise and what was wrong (`ข้อ 2: ได้ 3 แถว ควรได้ 2 แถว`). When the given checks call a helper, the helper catches the tool's errors and prints that line. The pilot tries one wrong answer per exercise (`pilot-and-pattern.md`).
 
+**The run names every exercise.** On `main`, the learner sees which exercises are still to do, by name, not only a count (`3 skipped`, `3 todo`): choose the `Run chapter:` flags for it (pytest's `-rs` shows each skip's reason, Vitest's `--reporter=verbose` lists each test), or have the helper print one line per exercise. When the tool's own progress marks (pytest's `.sss`) get in the way of those lines, turn them off. A pending test the tool marks as todo (`test.todo`) is replaced by the learner's test, so the `👉` line says to replace it.
+
 What `check_playground.py` checks, and what a worker writes:
 
 - one folder per chapter, `<Chapters folder>/NN-<slug>`, holding the small thing under test and **one exercise file**. When the tool needs the thing under test elsewhere (a page its server serves), it goes there, at its own path, in the same unit. **The thing under test belongs to its chapter**: never one module at the root that every chapter adds to. Workers run at the same time, and a unit replaces a whole file, so a chapter that extends a shared file drops what another chapter added. A file several chapters use (a helper, a fixture) is written once, in the skeleton or by the pilot, and later chapters only read it. `apply_unit.py` runs every built chapter and `Run all` when a unit changes a file outside its folder, and names those files;
-- the exercise file opens with a header comment: the chapter, what it practises, the idea in a few lines, and one worked example. Give the worked example as real code that runs too (a finished test above the exercises, or an example file in the chapter folder), so the slides can show it with its real output;
+- the exercise file opens with a header comment: the chapter, what it practises, the idea in a few lines, and one worked example. Give the worked example as real code that runs too (a finished test above the exercises, or an example file in the chapter folder), so the slides can show it with its real output: the run prints that output (a passing assertion prints nothing, so print the value, or run the example file as a script);
 - then numbered exercises, `ข้อ N: <what to do>`, about three, each with:
   - one line `แนวทาง: <a hint>`: a direction (which function, which idea, where to look), never the code to write, the expected value, or the worked example again;
   - a pending test, or, for given checks, a pending check;
