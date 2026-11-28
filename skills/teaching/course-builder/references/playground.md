@@ -43,6 +43,8 @@ Decide at this step which kind of exercise the course has, from the learner, and
 
 **A wrong answer's output must be readable by this course's learner.** A test tool's traceback is fine for someone who writes code; a learner who has never programmed needs one line per failed exercise, in the playground's language, saying which exercise and what was wrong (`ข้อ 2: ได้ 3 แถว ควรได้ 2 แถว`). When the given checks call a helper, the helper catches the tool's errors and prints that line. The pilot tries one wrong answer per exercise (`pilot-and-pattern.md`).
 
+**A run is the same on every machine.** Output that shows a path of the machine it ran on (`pwd`, an error naming a file) keeps the path's kind: shorten the part before the playground to a fixed stand-in (`~/playground/…`), and leave an absolute path absolute. A slide that teaches absolute paths cannot show `./lessons/…` as `pwd`'s answer.
+
 **The run names every exercise.** On `main`, the learner sees which exercises are still to do, by name, not only a count (`3 skipped`, `3 todo`): choose the `Run chapter:` flags for it (pytest's `-v -rs`: `-rs` alone gives each skip's reason but not its test, Vitest's `--reporter=verbose` lists each test), or have the helper print one line per exercise. When the tool's own progress marks (pytest's `.sss`) get in the way of those lines, turn them off. A pending test the tool marks as todo (`test.todo`) is replaced by the learner's test, so the `👉` line says to replace it.
 
 What `check_playground.py` checks, and what a worker writes:
