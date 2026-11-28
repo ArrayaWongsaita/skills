@@ -21,7 +21,8 @@ tool that prints its results in a different order on each run (Vitest prints tes
 
 With --unit NN, a file the course's units/NN/<branch>/ holds is read from there instead: a course-builder worker
 syncs its chapter before the foreman applies it, to check its Part; the foreman syncs again without it after the apply.
-With --check it writes nothing, and exits 1 naming each listing whose code or output differs from the playground.
+With --check it writes nothing, and exits 1 naming each listing whose code or output differs from the playground;
+a duration in an output (`0.05s`, `512ms`) may differ, since every run prints a new one.
 """
 
 from __future__ import annotations
@@ -160,6 +161,14 @@ def entries(course_dir: Path, srcs: dict[str, dict[str, str]], unit: str | None 
     return listings, outputs
 
 
+DURATION = re.compile(r"(?<![\d.])\d+(?:\.\d+)?\s?(?:ms|s)\b")
+
+
+def _timeless(line: str) -> str:
+    """The line with each duration (`0.05s`, `512ms`) blanked: a run prints a new time on every run."""
+    return DURATION.sub("<time>", line)
+
+
 def render(listings: dict[str, str], outputs: dict[str, str]) -> str:
     return (
         HEADER
@@ -188,7 +197,8 @@ def main(argv: list[str]) -> int:
         text = target.read_text(encoding="utf-8")
         have = set(text.splitlines())
         drifted = [f"listing {name}" for name, line in listings.items() if line not in have]
-        drifted += [f"output {name}" for name, line in outputs.items() if line not in have]
+        timeless = {_timeless(line) for line in have}
+        drifted += [f"output {name}" for name, line in outputs.items() if _timeless(line) not in timeless]
         # A name the generated file still has but the sources no longer declare.
         written = {json.loads(m) for m in re.findall(r'^  ("(?:[^"\\]|\\.)*"): \{', text, re.M)}
         drifted += [f"listing {name}" for name in sorted(written - set(listings) - set(outputs))]

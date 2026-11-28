@@ -24,7 +24,7 @@ The pilot is where systemic mistakes are cheap: one chapter, built for real, loo
 
 6. Build the chapter's slides with `part-slides`, as Part 1 of the same course. It writes the brief from `course.md` instead of interviewing, and takes code from the playground with its `sync_listings.py` (its `references/slides.md`, Code). The slides explain what the exercises have the learner do, mostly with pictures; the code on a slide is the playground's code. Two rules every chapter's slides keep:
    - **No slide shows an exercise's answer**, not even a watchout's fix line or an Anatomy strip. A listing from `solutions` that is an exercise's test or code gives the exercise away; show the worked example of the header, or a separate example file in the chapter folder, instead.
-   - **The Closing shows how to do the chapter**, before the summary: one `Steps` slide (open which file, write under each `👉`, run which command) and the real run on `main` (pending) and on `solutions` (passing), from `runs/01-main.txt` and `runs/01-solutions.txt`, each as an excerpt with `outputLines`: a `Compare` with `leftBlocks` and `rightBlocks` when both lines fit a half (about 45 characters), else two `Output` slides. These slides have `section: "Closing"`, so they need no divider.
+   - **The Closing shows how to do the chapter**, before the summary: one `Steps` slide (open which file, write under each `👉`, run which command; a command too long for the slide's text goes on a `Code` slide after it) and the real run on `main` (pending) and on `solutions` (passing), from `runs/01-main.txt` and `runs/01-solutions.txt`, each as an excerpt with `outputLines`: a `Compare` with `leftBlocks` and `rightBlocks` when both lines fit a half (about 45 characters), else two `Output` slides. These slides have `section: "Closing"`, so they need no divider.
 
 ## The user's review
 
@@ -37,7 +37,7 @@ Write what the review settled as short rules a worker can follow without seeing 
 - **The exercise file:** the kind of exercise (the learner writes the test, or the code), the header's parts and length, the hint style (one line, a direction not the answer), the number of exercises per chapter, how a pending test or check is written, and what a wrong answer prints (quote the output the user saw).
 - **The thing under test:** about how big, how it is named, what it may use.
 - **Solutions:** the `solutions` branch only, or `.solutions/` copies on `main` too.
-- **The slides of a chapter:** the topics a chapter usually has, which example each topic's code comes from (never an exercise's answer), what a picture shows, which output is shown, and the Closing's how-to slides.
+- **The slides of a chapter:** the topics a chapter usually has, which example each topic's code comes from (never an exercise's answer), what a picture shows, which output is shown, and the Closing's how-to slides. A drawing the rule tells later chapters to reuse must take what changes between chapters (a file name, the labels) as props: a worker may not edit Part 1's files, so a drawing with chapter 1's names written into it gets copied instead of reused.
 - **Words:** the terms the course uses for its ideas, in the playground's language.
 
 Quote chapter 1's files by path as the example of each rule; do not copy them in. When a later review changes a rule, change `pattern.md` and say from which wave it applies.

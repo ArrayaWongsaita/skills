@@ -33,7 +33,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import course_md  # noqa: E402
-from check_playground import BRANCHES, NOTES, _git, check_branch_tree, worktree  # noqa: E402
+from check_playground import BRANCHES, NOTES, Finding, _git, _text, check_branch_tree, exercise_file, hint_answers, worktree  # noqa: E402
 from course_md import CourseError  # noqa: E402
 
 
@@ -70,6 +70,15 @@ def _dirty_paths(repo: Path) -> set[str]:
 def outside_paths(tree: Path, folder: str) -> set[str]:
     """The paths a staged unit changes outside its chapter's folder."""
     return {path for path in _out(tree, "diff", "--cached", "--name-only").splitlines() if path and not path.startswith(folder + "/")}
+
+
+def given_answers(trees: dict[str, Path], folder: str) -> list[str]:
+    """The hints of the chapter's exercise file on main that hold a line its solutions file adds."""
+    on_main = exercise_file(trees["main"] / folder)
+    if on_main is None:
+        return []
+    solved = trees["solutions"] / on_main.relative_to(trees["main"])
+    return hint_answers(_text(on_main), _text(solved)) if solved.is_file() else []
 
 
 def apply(course_dir: Path, nn: str, commit: bool = True, save_output: Path | None = None, notes: list[str] | None = None) -> str:
@@ -111,6 +120,8 @@ def apply(course_dir: Path, nn: str, commit: bool = True, save_output: Path | No
         found = []
         for branch in BRANCHES:
             found.extend(f for f in check_branch_tree(trees[branch], course, branch, None if finish else nn, True, save_output, others=bool(shared)) if f.kind not in NOTES)
+        if folder is not None:
+            found.extend(Finding("hint-gives-answer", nn, "main", problem) for problem in given_answers(trees, folder))
         if found:
             raise ApplyError("nothing was committed:\n" + "\n".join(f.line() for f in found))
         if not commit:

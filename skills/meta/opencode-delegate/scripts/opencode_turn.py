@@ -90,6 +90,12 @@ def stop(proc: subprocess.Popen) -> None:
             os.killpg(proc.pid, sig)
         except ProcessLookupError:
             break
+        except PermissionError:
+            # macOS refuses a group whose leader is a zombie: signal opencode itself instead.
+            try:
+                proc.send_signal(sig)
+            except ProcessLookupError:
+                break
         try:
             proc.wait(timeout=wait)
             break

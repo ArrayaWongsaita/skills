@@ -163,7 +163,7 @@ export function Anatomy(props: Base & { title: Rich; items: Rich[]; body?: Rich;
       <ol className="rs-items rs-anatomy-legend" data-field="items">
         {props.items.map((item, index) => (
           <li key={index} data-item="" style={{ ['--rs-piece' as string]: pieceColour(index + 1) }}>
-            {item}
+            <span>{item}</span>
           </li>
         ))}
       </ol>

@@ -194,3 +194,18 @@ def test_caches_a_run_left_in_the_unit_are_not_copied(git_playground):
         (cache / "thing.cpython-312.pyc").write_bytes("ข้อ 1: compiled".encode() + b"\x00\x01")
     assert apply_unit.apply(git_playground, "02") == "committed"
     assert "__pycache__" not in git(git_playground / "playground", "ls-tree", "-r", "--name-only", "main")
+
+
+def test_a_hint_that_holds_the_answer_commits_nothing(git_playground):
+    main = "// บทที่ 02\n// ข้อ 1: บอกโฟลเดอร์\n// แนวทาง: คำสั่งที่ใช้คือ pwd\n// 👉 เขียนตรงนี้\n"
+    solved = "// บทที่ 02\n// ข้อ 1: บอกโฟลเดอร์\n// แนวทาง: คำสั่งที่ใช้คือ pwd\npwd\n"
+    stage(git_playground, main_text=main, solved_text=solved)
+    with pytest.raises(apply_unit.ApplyError, match="hint-gives-answer.*pwd"):
+        apply_unit.apply(git_playground, "02")
+
+
+def test_a_hint_that_names_only_a_direction_passes(git_playground):
+    main = "// บทที่ 02\n// ข้อ 1: บอกโฟลเดอร์\n// แนวทาง: ดูคำสั่งที่พิมพ์ที่อยู่ปัจจุบันในตัวอย่าง\n// 👉 เขียนตรงนี้\n"
+    solved = "// บทที่ 02\n// ข้อ 1: บอกโฟลเดอร์\n// แนวทาง: ดูคำสั่งที่พิมพ์ที่อยู่ปัจจุบันในตัวอย่าง\npwd\n}\n"
+    stage(git_playground, main_text=main, solved_text=solved)
+    assert apply_unit.apply(git_playground, "02") == "committed"

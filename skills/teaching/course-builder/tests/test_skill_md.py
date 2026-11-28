@@ -66,6 +66,7 @@ def test_the_worker_brief_keeps_the_worker_away_from_sync_and_the_finish_has_its
     waves = (SKILL_DIR / "references" / "waves.md").read_text(encoding="utf-8")
     brief = waves.split("```")[1]
     assert "--unit <NN>" in brief and "runs/<NN>-solutions.txt" in brief and "check-dist" in brief and "--port <port>" in brief
+    assert "exec tsc --noEmit" in brief  # vite build alone does not type-check the slides
     skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
     assert "apply_unit.py <course_dir> finish" in skill and "units/finish/" in skill
     assert "PLAYGROUND_PORT" in (SKILL_DIR / "references" / "playground.md").read_text(encoding="utf-8")

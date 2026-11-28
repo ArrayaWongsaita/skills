@@ -42,6 +42,7 @@ NOTES = {"uncommitted"}
 # while an exercise file has edits.
 LOCAL_SOLUTIONS_RE = re.compile(r"git[ \t]+(?:show[ \t]+solutions:|diff(?:[ \t]+[^\s`]+)*?[ \t]+solutions\b)")
 SWITCH_RE = re.compile(r"git[ \t]+(?:switch|checkout)[ \t]+solutions\b")
+PLAYGROUND_STANDIN = "~/playground"  # what a run shows in place of the worktree it ran in
 TAIL_LINES = 80  # enough for one wrong answer per exercise of a chapter
 
 
@@ -64,6 +65,33 @@ def exercise_shape(text: str) -> tuple[int, int, int]:
     """(numbered exercises, hints, markers) in an exercise file."""
     text = text.replace("\r\n", "\n")
     return len(set(EXERCISE_RE.findall(text))), text.count(HINT), text.count(MARKER)
+
+
+def _by_exercise(text: str) -> dict[str, list[str]]:
+    """The lines of an exercise file, grouped under the `ข้อ N:` that opens each exercise."""
+    groups: dict[str, list[str]] = {}
+    current = None
+    for line in text.splitlines():
+        match = EXERCISE_RE.search(line)
+        if match:
+            current = match.group(1)
+        if current is not None:
+            groups.setdefault(current, []).append(line)
+    return groups
+
+
+def hint_answers(main_text: str, solved_text: str) -> list[str]:
+    """The exercises whose hint on main holds their whole answer, every line the solution adds: a hint is a
+    direction, never the code to write. Naming a function the answer also uses is a direction, and passes."""
+    solved = _by_exercise(solved_text)
+    found = []
+    for number, lines in _by_exercise(main_text).items():
+        hints = [line.split(HINT, 1)[1].strip() for line in lines if HINT in line]
+        on_main = {line.strip() for line in lines}
+        answer = [line.strip() for line in solved.get(number, []) if len(line.strip()) >= 2 and line.strip() not in on_main and any(ch.isalnum() for ch in line)]
+        if hints and answer and all(any(re.search(rf"(?<!\w){re.escape(part)}(?!\w)", hint) for hint in hints) for part in answer):
+            found.append(f"ข้อ {number}: `{HINT} {hints[0]}` holds the whole answer ({'; '.join(answer)})")
+    return found
 
 
 def exercise_file(folder: Path) -> Path | None:
@@ -177,9 +205,10 @@ def run(cmd: str, cwd: Path, timeout: int = 900) -> tuple[int, str]:
 
 
 def _clean(output: str, tree: Path) -> str:
-    """The run's output with the temporary worktree's path shown as `.`: it changes every run and means nothing on a slide."""
+    """The run's output with the temporary worktree's path shown as `~/playground`: it changes every run and means
+    nothing on a slide, and a stand-in that stays absolute keeps an absolute path (`pwd`'s answer) absolute."""
     for path in sorted({str(tree.resolve()), str(tree)}, key=len, reverse=True):
-        output = output.replace(path, ".")
+        output = output.replace(path, PLAYGROUND_STANDIN)
     return output
 
 

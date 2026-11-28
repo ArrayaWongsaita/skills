@@ -77,7 +77,7 @@ def test_saved_output_does_not_show_the_temporary_worktree(git_playground, tmp_p
     out = tmp_path / "runs"
     cp.check(git_playground, save_output=out)
     text = (out / "01-main.txt").read_text(encoding="utf-8")
-    assert "playground-" not in text and text.startswith("in . .")
+    assert "playground-" not in text and text.startswith("in ~/playground ~/playground")
 
 
 def test_a_timed_out_command_leaves_no_process_behind(tmp_path):
@@ -114,3 +114,11 @@ def test_a_failed_chapter_run_shows_enough_of_its_output_to_see_every_exercise(g
     longer = "\n".join(f"line {n}" for n in range(1, 201))
     cut = cp2._tail(longer)
     assert "line 200" in cut and "line 1\n" not in cut and "--save-output" in cut
+
+
+def test_a_run_shows_the_worktree_as_an_absolute_stand_in_so_a_path_keeps_its_kind(tmp_path):
+    # pwd prints an absolute path; shown as "./lessons" it would contradict a slide on absolute paths.
+    tree = tmp_path / "wt"
+    tree.mkdir()
+    out = cp._clean(f"{tree}/lessons/01\nrootdir: {tree}\n", tree)
+    assert out == "~/playground/lessons/01\nrootdir: ~/playground\n"
