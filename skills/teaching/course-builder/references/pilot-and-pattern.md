@@ -37,7 +37,7 @@ Write what the review settled as short rules a worker can follow without seeing 
 - **The exercise file:** the kind of exercise (the learner writes the test, or the code), the header's parts and length, the hint style (one line, a direction not the answer), the number of exercises per chapter, how a pending test or check is written, and what a wrong answer prints (quote the output the user saw).
 - **The thing under test:** about how big, how it is named, what it may use.
 - **Solutions:** the `solutions` branch only, or `.solutions/` copies on `main` too.
-- **The slides of a chapter:** the topics a chapter usually has, which example each topic's code comes from (never an exercise's answer), what a picture shows, which output is shown, and the Closing's how-to slides.
+- **The slides of a chapter:** the topics a chapter usually has, which example each topic's code comes from (never an exercise's answer), what a picture shows, which output is shown, and the Closing's how-to slides. A drawing the rule tells later chapters to reuse must take what changes between chapters (a file name, the labels) as props: a worker may not edit Part 1's files, so a drawing with chapter 1's names written into it gets copied instead of reused.
 - **Words:** the terms the course uses for its ideas, in the playground's language.
 
 Quote chapter 1's files by path as the example of each rule; do not copy them in. When a later review changes a rule, change `pattern.md` and say from which wave it applies.
