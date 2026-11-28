@@ -26,7 +26,13 @@ The page does not see everything. Two labels that overlap, a number badge on top
 
 ## Look at the slides
 
-Save every screenshot in `<work>/screenshots/`, named `<slide id>-desktop.png` or `<slide id>-phone.png`, and nowhere else. Take each one after the fonts have loaded and with the entry animations off, or it catches a drawing mid-fade or a title before it wraps: with headless Chrome, `--headless=new --force-prefers-reduced-motion --virtual-time-budget=8000 --window-size=1280,720 --screenshot=<work>/screenshots/<slide id>-desktop.png http://localhost:4173/#/part-NN/<slide id>` (headless Chrome lays a page out at least 500 px wide, so `--window-size=390,844` gives a cropped wrong picture: take the phone shots with a browser tool's device emulation at 390 × 844, or screenshot the slide's element in the check page's phone frame, `[data-frame="phone"] [data-check-slide="<slide id>"]`); with a browser tool, emulate `prefers-reduced-motion: reduce` and wait for `document.fonts.ready` first. Take a screenshot of:
+Save every screenshot in `<work>/screenshots/`, named `<slide id>-desktop.png` or `<slide id>-phone.png`, and nowhere else. Take them with the app's own script, which needs Chrome or Chromium on the machine (or `CHROME=<path>`) and no browser tool:
+
+```bash
+node <course_dir>/web/scripts/screenshots.mjs --url http://localhost:4173 --part N --out <work>/screenshots [--frame phone|desktop] [slide id ...]
+```
+
+It takes each slide on a phone (390 × 844) and a desktop (1280 × 720) after the fonts have loaded and with the entry animations off, every slide of the Part when you name none. Do not use headless Chrome's `--screenshot` for the phone: it lays a page out at least 500 px wide, so `--window-size=390,844` gives a cropped, wrong picture. Look closely at:
 - every slide the check page flagged,
 - every distinct drawing,
 - the divider, one `parts` slide, the example, and one slide per other layout the Part uses.

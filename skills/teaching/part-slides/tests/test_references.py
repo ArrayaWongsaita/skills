@@ -36,12 +36,13 @@ def test_the_briefs_name_the_commands_the_scripts_really_have(skill_dir):
         assert flag in text, flag
     # A flag is checked against the script named on its line: sync_listings.py when it is named, else scaffold.py.
     for line in text.splitlines():
-        script = "sync_listings.py" if "sync_listings.py" in line else "scaffold.py"
-        source = _read(skill_dir, f"scripts/{script}")
+        script = next((name for name in ("sync_listings.py", "screenshots.mjs") if name in line), "scaffold.py")
+        source = _read(skill_dir, "template/scripts/screenshots.mjs" if script == "screenshots.mjs" else f"scripts/{script}")
+        quote = "'" if script == "screenshots.mjs" else '"'
         for flag in re.findall(r"(?<![-\w])(--[a-z][a-zA-Z-]*)", line):
             if flag in {"--dir", "--strictPort", "--port", "--headless", "--screenshot", "--window-size", "--virtual-time-budget", "--dump-dom", "--force-prefers-reduced-motion"}:
                 continue
-            assert f'"{flag}"' in source, f"{flag} is not a {script} option"
+            assert f"{quote}{flag}{quote}" in source, f"{flag} is not a {script} option"
 
 
 def test_a_part_with_a_playground_takes_its_code_from_sync_listings(skill_dir):
@@ -100,5 +101,7 @@ def test_the_budget_lists_what_the_check_page_counts(skill_dir):
 
 def test_screenshots_have_one_folder_and_wait_for_a_settled_slide(skill_dir):
     check = _read(skill_dir, "references/check-and-revise.md")
-    assert "`<work>/screenshots/`" in check and "--force-prefers-reduced-motion" in check and "document.fonts.ready" in check
+    assert "`<work>/screenshots/`" in check and "web/scripts/screenshots.mjs" in check  # no browser tool needed
+    script = _read(skill_dir, "template/scripts/screenshots.mjs")
+    assert "prefers-reduced-motion" in script and "document.fonts.ready" in script
     assert "clipped-text" in check and "outputLines" in _read(skill_dir, "references/slides.md")

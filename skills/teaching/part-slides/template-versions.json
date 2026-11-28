@@ -15,6 +15,9 @@
  "pnpm-lock.yaml": [
   "e3c169d2dea2f6c0c04b7eb92ac694c114fce7d08bf4d5651ca3445394deb129"
  ],
+ "scripts/screenshots.mjs": [
+  "567d27e443a30abc5d62e949d851b966373bbfed269789b4558ea09936b22a4c"
+ ],
  "src/App.tsx": [
   "2f7bcbdf3f6294c82bbf5eccda6622acdbf64aa0840fceb18464603f48d42125",
   "c41583b56a08a6b96cb26de566949e6e1422bed6c49dcf36db4bcc46b2bd6ea5"
