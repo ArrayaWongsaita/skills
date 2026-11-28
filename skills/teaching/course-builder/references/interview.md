@@ -18,7 +18,7 @@ One conversation, one question at a time, each with your proposal so the user ca
 The head of `<course_dir>/course.md`, in the format of `outline.md`, without the outline rows yet:
 
 - the title, `Learner:`, `Goal:`, `Stack:`, `Slides language:`;
-- `## Playground` with `Chapters folder:` and the three commands left as `Install: (Step 3)` and so on until Step 3 fills them;
+- `## Playground` with `Chapters folder:` and the three commands left as `Install: (Step 3)` and so on until Step 3 fills them (the scripts refuse to run a placeholder);
 - `## Outline` with the header row only.
 
 Make `<course_dir>` if it does not exist. Tell the user in two lines what you wrote, and go on to the outline.

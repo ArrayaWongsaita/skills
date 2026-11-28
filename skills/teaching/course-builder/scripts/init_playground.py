@@ -27,6 +27,7 @@ MADE_BY_TOOLS = {"node_modules", ".venv", "venv", "__pycache__", ".pytest_cache"
 
 def init(course_dir: Path) -> None:
     course = course_md.read(course_dir)
+    course_md.require_commands(course)
     repo = Path(course_dir) / "playground"
     if not repo.is_dir():
         raise CourseError(f"{repo} does not exist: write the playground skeleton first")

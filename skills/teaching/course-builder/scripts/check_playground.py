@@ -42,7 +42,7 @@ NOTES = {"uncommitted"}
 # while an exercise file has edits.
 LOCAL_SOLUTIONS_RE = re.compile(r"git[ \t]+(?:show[ \t]+solutions:|diff(?:[ \t]+[^\s`]+)*?[ \t]+solutions\b)")
 SWITCH_RE = re.compile(r"git[ \t]+(?:switch|checkout)[ \t]+solutions\b")
-TAIL_LINES = 20
+TAIL_LINES = 80  # enough for one wrong answer per exercise of a chapter
 
 
 @dataclass(frozen=True)
@@ -184,7 +184,10 @@ def _clean(output: str, tree: Path) -> str:
 
 
 def _tail(output: str) -> str:
-    return "\n".join(output.rstrip().splitlines()[-TAIL_LINES:])
+    lines = output.rstrip().splitlines()
+    if len(lines) <= TAIL_LINES:
+        return "\n".join(lines)
+    return f"({len(lines) - TAIL_LINES} earlier lines cut; --save-output keeps the whole run)\n" + "\n".join(lines[-TAIL_LINES:])
 
 
 def run_chapter(tree: Path, course: Course, chapter: course_md.Chapter, branch: str, save_output: Path | None = None) -> list[Finding]:
@@ -227,6 +230,7 @@ def check_branch_tree(tree: Path, course: Course, branch: str, chapter: str | No
 
 def check(course_dir: Path, chapter: str | None = None, run_commands: bool = True, save_output: Path | None = None) -> list[Finding]:
     course = course_md.read(course_dir)
+    course_md.require_commands(course)
     repo = Path(course_dir) / "playground"
     if not (repo / ".git").exists():
         raise CourseError(f"{repo} is not a git repository: run init_playground.py first")

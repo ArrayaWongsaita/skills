@@ -78,3 +78,10 @@ def test_run_all_is_optional():
     assert "all" not in course_md.parse(COURSE).commands
     course = course_md.parse(COURSE.replace("Run chapter:", "Run all: pnpm test\nRun chapter:"))
     assert course.commands["all"] == "pnpm test"
+
+
+def test_a_step_3_placeholder_is_not_a_command_the_scripts_run():
+    course = course_md.parse(COURSE.replace("Install: pnpm install", "Install: (Step 3)"))
+    with pytest.raises(course_md.CourseError, match=r"Install.*\(Step 3\).*not recorded"):
+        course_md.require_commands(course)
+    course_md.require_commands(course_md.parse(COURSE))

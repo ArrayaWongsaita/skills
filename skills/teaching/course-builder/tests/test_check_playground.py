@@ -104,3 +104,13 @@ def test_run_all_runs_on_both_branches_in_a_whole_check(git_playground):
     assert sorted((f.kind, f.branch) for f in found) == [("run-failed", "main"), ("run-failed", "solutions")]
     assert all("exited 4" in f.detail for f in found)
     assert cp.check(git_playground, chapter="01") == []
+
+
+def test_a_failed_chapter_run_shows_enough_of_its_output_to_see_every_exercise(git_playground):
+    import check_playground as cp2
+    long = "\n".join(f"line {n}" for n in range(1, 61))
+    detail = cp2._tail(long)
+    assert "line 1\n" in detail and "line 60" in detail
+    longer = "\n".join(f"line {n}" for n in range(1, 201))
+    cut = cp2._tail(longer)
+    assert "line 200" in cut and "line 1\n" not in cut and "--save-output" in cut

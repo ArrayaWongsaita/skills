@@ -141,6 +141,14 @@ def set_status(course_dir: Path, nn: str, status: str) -> None:
     path.write_text("".join(out), encoding="utf-8", newline="")
 
 
+def require_commands(course: Course) -> None:
+    """Raise when a command is still the interview's placeholder, such as `(Step 3)`: nothing can run it."""
+    names = {name: key for key, name in {**COMMAND_KEYS, **OPTIONAL_KEYS}.items()}
+    for name, value in course.commands.items():
+        if value.startswith("("):
+            raise CourseError(f"course.md, ## Playground: '{names[name]}: {value}' is not recorded yet: write the real command (Step 3) first")
+
+
 def chapter_folder(course: Course, chapter: Chapter) -> str:
     return f"{course.chapters_dir}/{chapter.folder_name}"
 
