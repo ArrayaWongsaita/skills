@@ -53,10 +53,11 @@ and <course_skill>/references/playground.md (what a chapter must contain).
    a folder and a port of your own (other workers build at the same time; never use web/dist or port 4173):
      python3 <part-slides>/scripts/sync_listings.py <course_dir> --part <N> --unit <NN>
      python3 <part-slides>/scripts/scaffold.py <course_dir> --sync-count <N>
+     pnpm --dir <course_dir>/web exec tsc --noEmit
      pnpm --dir <course_dir>/web exec vite build --outDir <course_dir>/parts/<NN>-<slug>/check-dist
      pnpm --dir <course_dir>/web exec vite preview --outDir <course_dir>/parts/<NN>-<slug>/check-dist --port <port> --strictPort
    Then the check page and the screenshots of part-slides' references/check-and-revise.md at that port. Fix
-   every problem, stop your preview server, and delete check-dist/. A build error in another Part's files is
+   every problem, stop your preview server, and delete check-dist/. A build or type error in another Part's files is
    another worker's: build again a minute later. The foreman syncs again from the playground after applying
    your chapter, checks the Part again and sends you what it still finds.
 
