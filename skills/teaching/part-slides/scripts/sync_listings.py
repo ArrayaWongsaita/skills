@@ -12,7 +12,7 @@ and writes part-NN.playground.ts next to it, with `playgroundListings` (each fil
 `git show <branch>:<path>` in <course_dir>/playground, so the user's checkout is never switched) and
 `playgroundOutputs` (for a source with `output`: that file, relative to <course_dir>, as saved by course-builder's
 `check_playground.py --save-output`). An optional `outputLines` keeps an excerpt of the real file: "last:3" (its last
-3 lines), "5-8" (lines 5 to 8, counted from 1) or "5-" (line 5 to the end); --check compares the excerpt. The Part's data file spreads them into its own:
+3 lines), "5" (line 5, counted from 1), "5-8" (lines 5 to 8) or "5-" (line 5 to the end); --check compares the excerpt. The Part's data file spreads them into its own:
 
     export const listings = { ...playgroundListings, … };
     export const outputs = { ...playgroundOutputs, … };
@@ -82,7 +82,7 @@ def _one_newline_off(text: str) -> str:
     return text[:-1] if text.endswith("\n") else text
 
 
-LINES_RE = re.compile(r"^(?:last:(\d+)|(\d+)-(\d*))$")
+LINES_RE = re.compile(r"^(?:last:(\d+)|(\d+)(-(\d*))?)$")
 
 
 def excerpt(text: str, spec: str) -> str:
@@ -90,13 +90,14 @@ def excerpt(text: str, spec: str) -> str:
     lines = text.split("\n")
     match = LINES_RE.match(spec.strip())
     if not match:
-        raise ValueError(f'"{spec}" is not "last:N", "A-B" or "A-"')
+        raise ValueError(f'"{spec}" is not "last:N", "A", "A-B" or "A-"')
     if match.group(1):
         count = int(match.group(1))
         if not 1 <= count <= len(lines):
             raise ValueError(f'"{spec}": the run has {len(lines)} line(s)')
         return "\n".join(lines[-count:])
-    first, last = int(match.group(2)), int(match.group(3) or len(lines))
+    first = int(match.group(2))
+    last = first if match.group(3) is None else int(match.group(4) or len(lines))
     if not 1 <= first <= last <= len(lines):
         raise ValueError(f'"{spec}": the run has {len(lines)} line(s)')
     return "\n".join(lines[first - 1:last])

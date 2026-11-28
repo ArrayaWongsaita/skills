@@ -153,7 +153,7 @@ def _output_text(course):
     return json.loads(re.search(r"text: (\".*\") \}", line).group(1))
 
 
-@pytest.mark.parametrize("lines, text", [("last:2", "  ✓ ข้อ 1\n1 passed in 0.1s"), ("2-2", "lessons/03 ."), ("4-", "  ✓ ข้อ 1\n1 passed in 0.1s")])
+@pytest.mark.parametrize("lines, text", [("last:2", "  ✓ ข้อ 1\n1 passed in 0.1s"), ("2-2", "lessons/03 ."), ("2", "lessons/03 ."), ("4-", "  ✓ ข้อ 1\n1 passed in 0.1s")])
 def test_output_lines_keep_an_excerpt_of_the_real_run(course, lines, text):
     _with_output(course, lines)
     assert sync_listings.main([str(course), "--part", "3"]) == 0
