@@ -11,7 +11,7 @@ pnpm --dir <course_dir>/web run build                                # tsc and v
 pnpm --dir <course_dir>/web run preview --strictPort                # in the background: http://localhost:4173/; it stops if the port is taken
 ```
 
-When the preview stops because port 4173 is taken, an earlier run's server is probably still on it, serving another course. Stop it (`lsof -ti tcp:4173`, then `kill` what that prints if it is yours), or start the preview with `--port <a free port>` and use that port in every address below.
+When the preview stops because port 4173 is taken, an earlier run's server is probably still on it, serving another course. Stop it (`lsof -ti tcp:4173 -sTCP:LISTEN`, then `kill` what that prints if it is yours), or start the preview with `--port <a free port>` and use that port in every address below.
 
 A build error is yours to fix: read it, correct the file. For a Part with a playground, `python3 <skill>/scripts/sync_listings.py <course_dir> --part <N> --check` writes nothing and names each listing whose code no longer matches the playground: run it again without `--check`. A prop the layout does not know, or a required prop you left out, is a compile error here.
 
