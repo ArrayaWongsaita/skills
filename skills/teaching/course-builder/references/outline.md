@@ -39,13 +39,13 @@ Run all: pnpm vitest run
 - `Run chapter:` may use `{folder}` (`lessons/01-first-render`), `{nn}` (`01`) and `{slug}`.
 - The keys (`Learner:`, `Goal:`, …) and the column names stay as they are: the parser reads them. The values are in the slides' language (`Slides language:`), except `slug`, the commands, and names of the tool's API in `practises`, which stay as the tool writes them.
 - `slug` is lowercase letters, digits and hyphens; the chapter's folder is `<Chapters folder>/NN-<slug>`.
-- `builds on` names the chapters this one needs, or `–`.
+- `builds on` names the chapters this one needs, separated by commas (`01, 02`), or `–`.
 - `under test` is the small thing the chapter's exercises test or work on: a component, a function, a page, a table or a small data set.
 - `status` starts at `outline` for every row. The scripts change it; to change it yourself, run `python3 <skill>/scripts/course_md.py <course_dir> --set NN STATUS`.
 
 ## Proposing the outline
 
-1. Research the order in which this subject is learnt: the tool's own guide, two or three well-regarded courses or tutorials. Note what each step needs from the ones before it.
+1. Research the order in which this subject is learnt: the tool's own guide, two or three well-regarded courses or tutorials. Note what each step needs from the ones before it. Read the documentation of the version in `Stack:` (a docs site's default page is often a newer version, with features the course's version lacks). When the tool's own documentation is a reference manual with no learning order, take the order from the tutorials, and the details from the manual.
 2. Order the chapters for this learner, not for the sources: each chapter practises one new thing, and uses only what earlier chapters taught. A chapter whose `builds on` names a later chapter is in the wrong place. When the goal names more skills than the user's chapter count, either propose more chapters or pair two skills a learner uses together in one chapter, name both in `practises`, and say which you paired when you show the table.
 3. Group them in stages (ช่วง) of 3–5 chapters, each with a name a learner understands. A course of 6 chapters or fewer may have stages of 2; never one stage that holds the whole course.
 4. Give each row a small `under test`: something a beginner reads in one screen. A chapter that needs a big example to be interesting is two chapters.
