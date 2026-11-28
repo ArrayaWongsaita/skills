@@ -39,6 +39,9 @@ and <course_skill>/references/playground.md (what a chapter must contain).
 
 2. The slides. Follow part-slides for Part <N> of this course, steps 1 to 4 (brief from course.md, research,
    plan, write), with no interview: <course_dir>/parts/<NN>-<slug>/ and <course_dir>/web/src/parts/part-<NN>.*.
+   No one approves your plan: pattern.md and the approved pilot (Part 01) are the approval. Write plan.md, check
+   it against pattern.md's slide rules and the budgets, write "Status: approved (pattern.md)" and go on; say in
+   your reply where the plan departs from pattern.md, and the foreman decides.
    Declare each code listing in part-<NN>.sources.json by its branch and the path it will have in the playground
    (the path under units/<NN>/<branch>/), and give a listing's output as "runs/<NN>-solutions.txt" or
    "runs/<NN>-main.txt", the files the check above saved. An output a slide shows is part of the chapter's run:

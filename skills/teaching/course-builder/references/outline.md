@@ -37,6 +37,7 @@ Run all: pnpm vitest run
 
 - `Run all:` is optional: a whole check (`check_playground.py` with no `--chapter`) runs it on both branches too.
 - `Run chapter:` may use `{folder}` (`lessons/01-first-render`), `{nn}` (`01`) and `{slug}`.
+- The keys (`Learner:`, `Goal:`, …) and the column names stay as they are: the parser reads them. The values are in the slides' language (`Slides language:`), except `slug`, the commands, and names of the tool's API in `practises`, which stay as the tool writes them.
 - `slug` is lowercase letters, digits and hyphens; the chapter's folder is `<Chapters folder>/NN-<slug>`.
 - `builds on` names the chapters this one needs, or `–`.
 - `under test` is the small thing the chapter's exercises test: a component, a function, a page.
@@ -46,7 +47,7 @@ Run all: pnpm vitest run
 
 1. Research the order in which this subject is learnt: the tool's own guide, two or three well-regarded courses or tutorials. Note what each step needs from the ones before it.
 2. Order the chapters for this learner, not for the sources: each chapter practises one new thing, and uses only what earlier chapters taught. A chapter whose `builds on` names a later chapter is in the wrong place.
-3. Group them in stages (ช่วง) of 3–5 chapters, each with a name a learner understands.
+3. Group them in stages (ช่วง) of 3–5 chapters, each with a name a learner understands. A course of 6 chapters or fewer may have stages of 2; never one stage that holds the whole course.
 4. Give each row a small `under test`: something a beginner reads in one screen. A chapter that needs a big example to be interesting is two chapters.
 5. Show the user the table and the stages, with one line on why the order is what it is. Let them edit it, as often as they like. Nothing is built until they approve it.
 

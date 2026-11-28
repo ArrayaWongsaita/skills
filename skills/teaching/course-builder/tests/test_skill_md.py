@@ -69,3 +69,18 @@ def test_the_worker_brief_keeps_the_worker_away_from_sync_and_the_finish_has_its
     skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
     assert "apply_unit.py <course_dir> finish" in skill and "units/finish/" in skill
     assert "PLAYGROUND_PORT" in (SKILL_DIR / "references" / "playground.md").read_text(encoding="utf-8")
+
+
+def test_the_worker_brief_approves_the_plan_by_pattern_and_saves_real_runs():
+    brief = (SKILL_DIR / "references" / "waves.md").read_text(encoding="utf-8").split("```")[1]
+    assert "Status: approved (pattern.md)" in brief
+    assert "--check --save-output <course_dir>/runs" in brief
+
+
+def test_the_playground_brief_names_both_kinds_of_exercise_and_readable_failures():
+    playground = (SKILL_DIR / "references" / "playground.md").read_text(encoding="utf-8")
+    for needle in ("The learner writes the test.", "The learner writes the code, and the checks are given.",
+                   "A wrong answer's output must be readable", "never the code to write", "origin/solutions"):
+        assert needle in playground, needle
+    pilot = (SKILL_DIR / "references" / "pilot-and-pattern.md").read_text(encoding="utf-8")
+    assert "No slide shows an exercise's answer" in pilot and 'section: "Closing"' in pilot
