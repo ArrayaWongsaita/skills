@@ -23,7 +23,7 @@ The user often has only an idea: a broad subject, a few details they care about,
 
 ## What you write down
 
-At the end of the interview write `<work>/brief.md`, five lines at most, so a resumed run does not ask again:
+At the end of the interview write `<work>/brief.md`, the six lines below and no more, so a resumed run does not ask again:
 
 ```
 Subject: …

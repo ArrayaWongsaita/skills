@@ -57,3 +57,12 @@ def test_init_refuses_to_commit_what_the_install_made_unless_it_is_ignored(tmp_p
     (course_dir / "playground" / ".gitignore").write_text("node_modules/\n", encoding="utf-8")
     init_playground.init(course_dir)
     assert "node_modules" not in git(course_dir / "playground", "ls-files")
+
+
+def test_a_lockfile_the_install_writes_is_committed_not_refused(tmp_path):
+    course_dir = skeleton(tmp_path)
+    md = course_dir / "course.md"
+    md.write_text(md.read_text(encoding="utf-8").replace("Install: true", "Install: echo lock > pnpm-lock.yaml && echo lock > uv.lock"), encoding="utf-8")
+    init_playground.init(course_dir)
+    files = git(course_dir / "playground", "ls-files").splitlines()
+    assert "pnpm-lock.yaml" in files and "uv.lock" in files
