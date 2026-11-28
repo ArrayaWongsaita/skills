@@ -85,3 +85,9 @@ def test_the_playground_brief_names_both_kinds_of_exercise_and_readable_failures
         assert needle in playground, needle
     pilot = (SKILL_DIR / "references" / "pilot-and-pattern.md").read_text(encoding="utf-8")
     assert "No slide shows an exercise's answer" in pilot and 'section: "Closing"' in pilot
+
+
+def test_the_outline_says_a_chapter_has_one_exercise_file_before_the_user_approves():
+    outline = (SKILL_DIR / "references" / "outline.md").read_text(encoding="utf-8")
+    proposing = outline.split("## Proposing the outline")[1]
+    assert "one exercise file" in proposing and "a file per exercise" in proposing

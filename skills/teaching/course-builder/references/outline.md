@@ -49,6 +49,7 @@ Run all: pnpm vitest run
 2. Order the chapters for this learner, not for the sources: each chapter practises one new thing, and uses only what earlier chapters taught. A chapter whose `builds on` names a later chapter is in the wrong place. When the goal names more skills than the user's chapter count, either propose more chapters or pair two skills a learner uses together in one chapter, name both in `practises`, and say which you paired when you show the table.
 3. Group them in stages (ช่วง) of 3–5 chapters, each with a name a learner understands. A course of 6 chapters or fewer may have stages of 2; never one stage that holds the whole course.
 4. Give each row a small `under test`: something a beginner reads in one screen. A chapter that needs a big example to be interesting is two chapters.
+   Each chapter gets one exercise file that holds all its exercises (the slides, the checks and the scripts read that one file). When the user asks for a file per exercise, say so when you show the table, and propose one file per chapter with each exercise a marked section, which the checks can still run one at a time.
 5. Show the user the table and the stages, with one line on why the order is what it is. Let them edit it, as often as they like. Nothing is built until they approve it.
 
 When the outline is approved, run `python3 <skill>/scripts/course_md.py <course_dir>` once: it prints the outline as JSON when the file parses, and names the row and the cell when it does not.
